@@ -6,7 +6,7 @@ use super::{CommandNode, JobListNode, JobNode, NodeContext, expand_user, propose
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, compile_error};
 use crate::lang::job::Job;
 use crate::lang::value::{Value, ValueDefinition};
 use crate::util::escape::{unescape, unescape_file};
@@ -152,24 +152,30 @@ impl Node {
             } => match operation.deref() {
                 "=" => {
                     return match target.as_ref() {
-                        Node::String(t, TextLiteralStyle::Unquoted) | Node::Identifier(t) => {
+                        Node::String(t, TextLiteralStyle::Unquoted) => {
                             Ok(ArgumentDefinition::named_with_style(
                                 &ctx.source.subtrackedstring(t),
                                 *style,
                                 propose_name(&t, value.compile_argument(ctx)?.unnamed_value()?),
                             ))
                         }
-                        _ => error(format!(
-                            "Invalid left side in named argument. Expected a string or identifier, got a {}",
-                            target.type_name()
-                        )),
+                        _ => compile_error(
+                            format!(
+                                "Invalid left side in named argument. Expected `string literal`, got `{}`.",
+                                target.type_name()
+                            ),
+                            &ctx.source.substring(target.location()),
+                        ),
                     };
                 }
                 s => {
-                    return error(format!(
-                        "Invalid assignment operator, can't use the {} operator inside a parameter list",
-                        s
-                    ));
+                    return compile_error(
+                        format!(
+                            "Invalid assignment operator, can't use the {} operator inside a parameter list.",
+                            s
+                        ),
+                        &ctx.source.substring(target.location()),
+                    );
                 }
             },
 
@@ -189,7 +195,12 @@ impl Node {
                         r.compile_argument(ctx)?.unnamed_value()?,
                     ));
                 }
-                _ => return error("Unknown operator"),
+                v => {
+                    return compile_error(
+                        format!("Unknown operator {}", v),
+                        &ctx.source.substring(op.location()),
+                    );
+                }
             },
             Node::Identifier(l) => ValueDefinition::Identifier(ctx.source.subtrackedstring(l)),
             Node::Regex(l) => ValueDefinition::Value(
@@ -297,7 +308,13 @@ impl Node {
                     true,
                 ),
 
-                _ => error("Invalid left side in assignment"),
+                n => compile_error(
+                    format!(
+                        "Invalid left side in assignment. Expected `identifier`, got `{}`.  Try `$foo = 1`.",
+                        n.type_name()
+                    ),
+                    &ctx.source.substring(n.location()),
+                ),
             },
             ":=" => match target.as_ref() {
                 Node::Identifier(t) => Node::function_invocation(
@@ -309,9 +326,18 @@ impl Node {
                     )],
                     ctx,
                 ),
-                _ => error("Invalid left side in declaration"),
+                n => compile_error(
+                    format!(
+                        "Invalid left side in declaration. Expected `identifier`, got `{}`. Try `$foo := 1`",
+                        n.type_name()
+                    ),
+                    &ctx.source.substring(n.location()),
+                ),
             },
-            _ => error("Unknown assignment operator"),
+            s => compile_error(
+                format!("Unknown assignment operator `{}`", s),
+                &ctx.source.substring(target.location()),
+            ),
         }
     }
 
@@ -336,7 +362,7 @@ impl Node {
 
             Node::Unary(op, _) => match op.string.as_ref() {
                 "@" | "@@" => Ok(None),
-                _ => error("Unknown operator"),
+                _ => compile_error("Unknown operator", &ctx.source.substring(op.location())),
             },
 
             Node::Glob(_)

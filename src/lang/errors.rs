@@ -493,6 +493,10 @@ pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(GenericError(message.into()).into())
 }
 
+pub fn compile_error<T>(message: impl Into<String>, source: &Source) -> CrushResult<T> {
+    Err(CrushError::from(GenericError(message.into())).with_source(source))
+}
+
 /// Utility methods for dealing with Crush results
 pub trait CrushResultExtra {
     /// If this result is an error, fill in the command name into the error data.

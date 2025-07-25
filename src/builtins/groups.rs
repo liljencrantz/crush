@@ -1,7 +1,6 @@
-use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
@@ -51,10 +50,10 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
-        .send(get_group_value(&cfg.name, &context.source)?)
+        .send(get_group_value(&cfg.name)?)
 }
 
-fn get_group_value(input_name: &str, source: &Source) -> CrushResult<Value> {
+fn get_group_value(input_name: &str) -> CrushResult<Value> {
     let groups = sysinfo::Groups::new_with_refreshed_list();
     for g in groups.list() {
         if g.name() == input_name {
@@ -67,7 +66,7 @@ fn get_group_value(input_name: &str, source: &Source) -> CrushResult<Value> {
             )));
         }
     }
-    argument_error(format!("unknown group {}.", input_name), source)
+    command_error(format!("unknown group {}.", input_name))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

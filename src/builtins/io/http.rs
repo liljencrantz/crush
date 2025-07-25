@@ -1,5 +1,4 @@
-use crate::lang::ast::source::Source;
-use crate::lang::errors::{CrushResult, argument_error, command_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
     data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType,
@@ -10,7 +9,7 @@ use reqwest::header::HeaderMap;
 use reqwest::{Method, StatusCode};
 use signature::signature;
 
-fn parse_method(m: &str, source: &Source) -> CrushResult<Method> {
+fn parse_method(m: &str) -> CrushResult<Method> {
     Ok(match m {
         "GET" => Method::GET,
         "POST" => Method::POST,
@@ -21,7 +20,7 @@ fn parse_method(m: &str, source: &Source) -> CrushResult<Method> {
         "CONNECT" => Method::CONNECT,
         "PATCH" => Method::PATCH,
         "TRACE" => Method::TRACE,
-        _ => return argument_error(format!("Unknown method {}", m), source),
+        _ => return command_error(format!("Unknown method {}", m)),
     })
 }
 
@@ -68,7 +67,7 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
         .ok_or("Out of bounds timeout")?;
     let mut request = client
         .request(
-            parse_method(&cfg.method, &context.source)?,
+            parse_method(&cfg.method)?,
             cfg.uri.as_str(),
         )
         .timeout(t);

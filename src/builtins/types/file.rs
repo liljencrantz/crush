@@ -1,9 +1,8 @@
 use crate::data::binary::BinaryReader;
-use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, argument_error, command_error, data_error, error};
+use crate::lang::errors::{CrushResult, command_error, data_error, error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
@@ -113,7 +112,7 @@ const READ: u32 = 4;
 const WRITE: u32 = 2;
 const EXECUTE: u32 = 1;
 
-fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
+fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
     let mut class_done = false;
     let mut classes = HashSet::new();
     let mut adjustments = PermissionAdjustment::Add;
@@ -148,9 +147,8 @@ fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
                     class_done = true;
                 }
                 c => {
-                    return argument_error(
+                    return command_error(
                         format!("Illegal character in class-part of permission: {}", c),
-                        source,
                     );
                 }
             },
@@ -159,9 +157,8 @@ fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
                 'w' => modes |= WRITE,
                 'x' => modes |= EXECUTE,
                 c => {
-                    return argument_error(
+                    return command_error(
                         format!("Illegal character in mode-part of permission: {}.", c),
-                        source,
                     );
                 }
             },
@@ -169,11 +166,11 @@ fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
     }
 
     if !class_done {
-        return argument_error("Premature end of permission.", source);
+        return command_error("Premature end of permission.");
     }
 
     if classes.is_empty() {
-        return argument_error("No user classes specified in permission.", source);
+        return command_error("No user classes specified in permission.");
     }
 
     for cl in classes {
@@ -206,7 +203,7 @@ pub fn chmod(mut context: CommandContext) -> CrushResult<()> {
     let mut current: u32 = metadata.permissions().mode();
 
     for perm in cfg.permissions {
-        current = apply(&perm, current, &context.source)?;
+        current = apply(&perm, current)?;
     }
 
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(current))?;
@@ -461,12 +458,11 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         None => command_error("`Expected `this` to be a `file`, but it was not set."),
-        Some(v) => argument_error(
+        Some(v) => command_error(
             &format!(
                 "Expected `this` to be of type `file`, but is of type `{}`.",
                 v.value_type()
             ),
-            &context.source,
         ),
     }
 }
@@ -482,7 +478,7 @@ struct MkDir {}
 fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
     if path.exists() && path.is_dir() {
         if leaf {
-            data_error("`file:mkdir`: Directory already exists")
+            data_error("Directory already exists")
         } else {
             Ok(())
         }

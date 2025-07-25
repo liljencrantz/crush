@@ -2,7 +2,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::find_string_columns;
-use crate::lang::errors::{CrushResult, argument_error, command_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -176,13 +176,12 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
                     }
                 }
                 v => {
-                    return argument_error(
+                    return command_error(
                         format!(
-                            "`re:filter`: Expected column `{}` to be `oneof $string $file`, but was `{}`",
+                            "Expected column `{}` to be `oneof $string $file`, but was `{}`.",
                             input.types()[*idx].name(),
                             v.value_type(),
                         ),
-                        &context.source,
                     );
                 }
             }

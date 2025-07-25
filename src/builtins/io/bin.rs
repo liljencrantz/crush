@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -42,12 +42,11 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
-        v => argument_error(
+        v => command_error(
             format!(
                 "`bin:to`: Expected input to be a binary stream, got a value of type `{}`",
                 v.value_type()
             ),
-            &context.source,
         ),
     }
 }

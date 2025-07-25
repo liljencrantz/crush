@@ -2,7 +2,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
-use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::table::ColumnType;
@@ -14,7 +13,7 @@ use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
-fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Value> {
+fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
     match yaml_value {
         serde_yaml::Value::Null => Ok(Value::Empty),
         serde_yaml::Value::Bool(b) => Ok(Value::Bool(*b)),
@@ -25,7 +24,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Val
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
                 Ok(Value::Float(
-                    f.as_f64().ok_or("`yaml:from`: Not a valid number")?,
+                    f.as_f64().ok_or("Not a valid number")?,
                 ))
             }
         }
@@ -33,7 +32,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Val
         serde_yaml::Value::Sequence(arr) => {
             let mut lst = arr
                 .iter()
-                .map(|v| from_yaml(v, source))
+                .map(|v| from_yaml(v))
                 .collect::<CrushResult<Vec<Value>>>()?;
             let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
             let struct_types: HashSet<Vec<ColumnType>> = lst
@@ -71,19 +70,19 @@ fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Val
         serde_yaml::Value::Mapping(o) => {
             let d = Dict::new(ValueType::Any, ValueType::Any)?;
             for (k, v) in o.into_iter() {
-                d.insert(from_yaml(k, source)?, from_yaml(v, source)?)?;
+                d.insert(from_yaml(k)?, from_yaml(v)?)?;
             }
             Ok(d.into())
         }
 
-        serde_yaml::Value::Tagged(t) => from_yaml(&t.value, source),
+        serde_yaml::Value::Tagged(t) => from_yaml(&t.value),
     }
 }
 
 fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     match value.materialize()? {
         Value::File(s) => Ok(serde_yaml::Value::from(
-            s.to_str().ok_or("`yaml:to`: Invalid filename")?,
+            s.to_str().ok_or("Invalid filename")?,
         )),
 
         Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),
@@ -147,7 +146,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = serde_yaml::from_reader(reader)?;
-    let crush_value = from_yaml(&serde_value, &context.source)?;
+    let crush_value = from_yaml(&serde_value)?;
     context.output.send(crush_value)
 }
 

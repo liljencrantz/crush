@@ -1,6 +1,5 @@
-use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -41,7 +40,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let mut done = false;
     let mut bufin = [0; 4096];
     let mut bufout = [0; 1024 * 3];
-    let codec = codec(&cfg.alphabet, &context.source)?;
+    let codec = codec(&cfg.alphabet)?;
 
     loop {
         let mut pos = 0;
@@ -88,18 +87,18 @@ struct To {
     alphabet: String,
 }
 
-fn codec(name: &str, source: &Source) -> CrushResult<GeneralPurpose> {
+fn codec(name: &str) -> CrushResult<GeneralPurpose> {
     match name {
         "standard" => Ok(base64::prelude::BASE64_STANDARD),
         "urlsafe" => Ok(base64::prelude::BASE64_URL_SAFE),
-        _ => argument_error("Unknown base64 alphabet", source),
+        _ => command_error(format!("Unknown base64 alphabet `{}`", name)),
     }
 }
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg = To::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut out = cfg.file.writer(context.output)?;
-    let codec = codec(&cfg.alphabet, &context.source)?;
+    let codec = codec(&cfg.alphabet)?;
 
     match context.input.recv()? {
         Value::String(str) => {
@@ -138,12 +137,11 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return argument_error(
+            return command_error(
                 format!(
                     "`base64:to`: Expected a binary stream or a string, encountered `{}`",
                     v.value_type().to_string()
-                ),
-                &context.source,
+                )
             );
         }
     }

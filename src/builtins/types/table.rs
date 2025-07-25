@@ -1,7 +1,7 @@
 use crate::builtins::types::column_types;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error, command_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -50,9 +50,8 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
             } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::Table(c)))
             } else {
-                argument_error(
+                command_error(
                     "Tried to set columns on a table type that already has columns",
-                    &context.source,
                 )
             }
         }

@@ -1,6 +1,6 @@
 use super::argument::ArgumentDefinition;
 use super::command_invocation::CommandInvocation;
-use super::errors::{CrushResult, error};
+use super::errors::{CrushResult, compile_error};
 use super::job::Job;
 use super::state::scope::Scope;
 use super::value::ValueDefinition;
@@ -190,18 +190,18 @@ impl CommandNode {
         }
     }
 
-    pub fn compile(&self, env: &NodeContext) -> CrushResult<CommandInvocation> {
-        if let Some(c) = self.expressions[0].compile_as_special_command(env)? {
+    pub fn compile(&self, ctx: &NodeContext) -> CrushResult<CommandInvocation> {
+        if let Some(c) = self.expressions[0].compile_as_special_command(ctx)? {
             if self.expressions.len() == 1 {
                 Ok(c)
             } else {
-                error("Stray arguments")
+                compile_error("Stray arguments", &ctx.source)
             }
         } else {
-            let cmd = self.expressions[0].compile_command(env)?;
+            let cmd = self.expressions[0].compile_command(ctx)?;
             let arguments = self.expressions[1..]
                 .iter()
-                .map(|e| e.compile_argument(env))
+                .map(|e| e.compile_argument(ctx))
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
             Ok(CommandInvocation::new(
                 cmd.unnamed_value()?,

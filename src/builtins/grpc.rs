@@ -2,13 +2,12 @@ use crate::CrushResult;
 use crate::builtins::io::json::{json_to_value, value_to_json};
 use crate::data::r#struct::Struct;
 use crate::lang::any_str::AnyStr;
-use crate::lang::ast::source::Source;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::list::List;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::{argument_error, command_error, error};
+use crate::lang::errors::{command_error, error};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -246,9 +245,8 @@ fn parse_message_type<'a>(
 fn connect(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Connect = Connect::parse(context.remove_arguments(), &context.global_state.printer())?;
     if cfg.service.is_empty() {
-        return argument_error(
+        return command_error(
             "You must specify at least one service to connect to. You can use globs, such as `*`.",
-            &context.source,
         );
     }
     let tmp = Struct::new(
@@ -271,13 +269,12 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<&str>>();
 
     if services.is_empty() {
-        return argument_error(
+        return command_error(
             format!(
                 "No match for service pattern `{}`. Found services `{}`.",
                 cfg.service.to_string(),
                 list.lines().join(", ")
             ),
-            &context.source,
         );
     }
 
@@ -295,7 +292,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                     vec!["describe".to_string(), format!("{}.{}", service, method)],
                 )?;
                 let input_type_name =
-                    parse_input_type_from_signature(method, signature.as_str(), &context.source)?;
+                    parse_input_type_from_signature(method, signature.as_str())?;
                 println!("{:?}", input_type_name);
                 let input_type =
                     parse_message_type(&context, &input_type_name, &g, &mut known_types)?;
@@ -340,24 +337,22 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
 fn parse_input_type_from_signature<'a>(
     method_name: &str,
     signature: &'a str,
-    source: &Source,
 ) -> CrushResult<&'a str> {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     let re = REGEX.get_or_init(|| Regex::new(r"\((.*)\).*\(.*\)").unwrap());
     for line in signature.lines() {
         if line.starts_with("rpc") {
             return match re.captures(line) {
-                None => argument_error("Failed to parse signature.", source),
+                None => command_error("Failed to parse signature."),
                 Some(c) => match c.get(1) {
-                    None => argument_error("Failed to parse signature.", source),
+                    None => command_error("Failed to parse signature."),
                     Some(m) => Ok(m.as_str().trim()),
                 },
             };
         }
     }
-    argument_error(
+    command_error(
         format!("Failed to parse signature of method `{}`.", method_name),
-        source,
     )
 }
 
@@ -372,9 +367,8 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
                 if let Some(name) = a.argument_type {
                     fields.push((name, a.value));
                 } else {
-                    return argument_error(
+                    return command_error(
                         "gRPC method invocations can only use named arguments.",
-                        &context.source,
                     );
                 }
             }

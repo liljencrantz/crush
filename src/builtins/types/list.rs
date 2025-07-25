@@ -1,7 +1,7 @@
 use crate::data::table::ColumnVec;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, argument_error, command_error, data_error};
+use crate::lang::errors::{CrushResult, command_error, data_error};
 use crate::lang::pipe::{Stream, ValueSender};
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
@@ -92,12 +92,8 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::List(Box::from(c))))
                 } else {
-                    argument_error(
-                        format!(
-                            "Tried to set subtype on a `list` that already has the subtype `{}`.",
-                            c
-                        ),
-                        &context.source,
+                    command_error(
+                        format!("Tried to set subtype on a `list` that already has the subtype `{}`.", c),
                     )
                 }
             }
@@ -240,13 +236,12 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
 
     for el in &cfg.values {
         if el.value_type() != l.element_type() && l.element_type() != ValueType::Any {
-            return argument_error(
+            return command_error(
                 format!(
                     "Invalid element type, tried to push en element of type `{}` into a list of `{}`.",
                     el.value_type().to_string(),
                     l.element_type().to_string()
                 ),
-                &context.source,
             );
         }
     }

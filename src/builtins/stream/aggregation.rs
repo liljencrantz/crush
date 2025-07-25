@@ -1,7 +1,6 @@
-use crate::lang::ast::source::Source;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{CrushResult, argument_error, command_error, error};
+use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::pipe::Stream;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{value::Value, value::ValueType};
@@ -112,16 +111,15 @@ fn avg(mut context: CommandContext) -> CrushResult<()> {
         ValueType::Integer => context.output.send(avg_int(input, column)?),
         ValueType::Float => context.output.send(avg_float(input, column)?),
         ValueType::Duration => context.output.send(avg_duration(input, column)?),
-        t => argument_error(
+        t => command_error(
             &format!("Can't calculate average of elements of type {}", t),
-            &context.source,
         ),
     }
 }
 
 macro_rules! median_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident, $count_type:ident, $halver:expr) => {
-        fn $name(source: &Source, mut s: Stream, column: usize) -> CrushResult<Value> {
+        fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: Vec<$var_type> = Vec::new();
             loop {
                 match s.read() {
@@ -134,7 +132,7 @@ macro_rules! median_function {
             }
             res.sort_by(|a, b| a.partial_cmp(b).unwrap());
             if (res.is_empty()) {
-                argument_error("Can't calculate median of empty set", source)
+                command_error("Can't calculate median of empty set")
             } else if (res.len() % 2 == 1) {
                 Ok(Value::$value_type(res[(res.len() - 1) / 2]))
             } else {
@@ -177,7 +175,6 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
             context
                 .output
                 .send(crate::builtins::stream::aggregation::median_int(
-                    &context.source,
                     input,
                     column,
                 )?)
@@ -186,7 +183,6 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
             context
                 .output
                 .send(crate::builtins::stream::aggregation::median_float(
-                    &context.source,
                     input,
                     column,
                 )?)
@@ -195,14 +191,12 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
             context
                 .output
                 .send(crate::builtins::stream::aggregation::median_duration(
-                    &context.source,
                     input,
                     column,
                 )?)
         }
-        t => argument_error(
+        t => command_error(
             &format!("Can't calculate average of elements of type {}", t),
-            &context.source,
         ),
     }
 }
@@ -339,9 +333,8 @@ fn prod(mut context: CommandContext) -> CrushResult<()> {
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(prod_int(input, column)?),
         ValueType::Float => context.output.send(prod_float(input, column)?),
-        t => argument_error(
+        t => command_error(
             &format!("Can't calculate product of elements of type {}", t),
-            &context.source,
         ),
     }
 }

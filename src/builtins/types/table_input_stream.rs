@@ -4,7 +4,7 @@ use crate::lang::command::Command;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{CrushResult, argument_error, command_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::streams;
 use crate::lang::state::contexts::CommandContext;
@@ -89,9 +89,8 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                     .output
                     .send(Value::Type(ValueType::TableInputStream(c)))
             } else {
-                argument_error(
+                command_error(
                     "Tried to set columns on a `table_input_stream` type that already has columns.",
-                    &context.source,
                 )
             }
         }

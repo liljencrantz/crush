@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -82,12 +82,11 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return argument_error(
+            return command_error(
                 format!(
                     "`hex:to`: Expected a binary stream or a string, encountered `{}`",
                     v.value_type().to_string()
                 ),
-                &context.source,
             );
         }
     }

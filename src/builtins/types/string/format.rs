@@ -1,8 +1,7 @@
 use crate::builtins::types::OrderedStringMap;
 use crate::builtins::types::string::format::FormatState::*;
-use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
@@ -33,7 +32,7 @@ fn argument_by_name<'a>(name: &str, param: &'a [Argument]) -> Option<&'a Argumen
     None
 }
 
-fn do_format(format: &str, param: Vec<Argument>, source: &Source) -> CrushResult<String> {
+fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     let mut implicit_idx = 0;
     let mut res = String::new();
     let mut state = Normal;
@@ -53,7 +52,7 @@ fn do_format(format: &str, param: Vec<Argument>, source: &Source) -> CrushResult
                     res.push('}');
                     Normal
                 }
-                _ => return argument_error("Unmatched closing brace.", source),
+                _ => return command_error("Unmatched closing brace."),
             },
 
             OpenBrace => match ch {
@@ -68,7 +67,7 @@ fn do_format(format: &str, param: Vec<Argument>, source: &Source) -> CrushResult
                 }
                 '0'..='9' => Index(ch.to_digit(10).unwrap() as usize),
                 'a'..='z' | 'A'..='Z' => Name(ch.to_string()),
-                _ => return argument_error("Invalid format string.", source),
+                _ => return command_error("Invalid format string."),
             },
 
             Index(idx) => match ch {
@@ -77,7 +76,7 @@ fn do_format(format: &str, param: Vec<Argument>, source: &Source) -> CrushResult
                     Normal
                 }
                 '0'..='9' => Index(idx * 10 + ch.to_digit(10).unwrap() as usize),
-                _ => return argument_error("Invalid format string", source),
+                _ => return command_error("Invalid format string"),
             },
 
             Name(name) => match ch {
@@ -113,6 +112,5 @@ pub fn format(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(do_format(
         &format,
         context.arguments,
-        &context.source,
     )?))
 }
