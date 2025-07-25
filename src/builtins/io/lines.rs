@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, data_error, command_error};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -79,30 +79,29 @@ struct To {
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let mut out = cfg.file.writer(context.output)?;
-            if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
-                return data_error(
-                    "`lines:to`: Expected an input iterator containing a single column of type string",
-                );
-            }
-            while let Ok(row) = input.read() {
-                match Vec::from(row).remove(0) {
-                    Value::String(s) => {
-                        let mut s = s.to_string();
-                        s.push('\n');
-                        out.write(s.as_bytes())?;
-                    }
-                    _ => {
-                        return data_error(format!("Expected the `{}` column to be a string.", input.types()[0].name()));
-                    }
-                }
-            }
-            Ok(())
-        }
-        None => command_error("Expected input to be a stream."),
+    let mut input = context.input.recv()?.stream()?;
+    let mut out = cfg.file.writer(context.output)?;
+    if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
+        return data_error(
+            "`lines:to`: Expected an input iterator containing a single column of type string",
+        );
     }
+    while let Ok(row) = input.read() {
+        match Vec::from(row).remove(0) {
+            Value::String(s) => {
+                let mut s = s.to_string();
+                s.push('\n');
+                out.write(s.as_bytes())?;
+            }
+            _ => {
+                return data_error(format!(
+                    "Expected the `{}` column to be a string.",
+                    input.types()[0].name()
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {

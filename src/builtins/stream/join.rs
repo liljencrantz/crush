@@ -98,9 +98,9 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
     let r = context.arguments.remove(0);
     match (
         l.argument_type,
-        l.value.stream()?.ok_or("Expected a stream")?,
+        l.value.stream()?,
         r.argument_type,
-        r.value.stream()?.ok_or("Expected a stream")?,
+        r.value.stream()?,
     ) {
         (Some(left_name), left_stream, Some(right_name), right_stream) => {
             let left_idx = left_stream.types().find(&left_name)?;

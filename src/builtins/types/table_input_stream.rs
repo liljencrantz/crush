@@ -191,7 +191,7 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     let pipe = context.this.r#struct()?;
     match pipe.get("output") {
         Some(Value::TableOutputStream(output_stream)) => {
-            let mut stream = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
+            let mut stream = context.input.recv()?.stream()?;
 
             while let Ok(row) = stream.read() {
                 output_stream.send(row)?;

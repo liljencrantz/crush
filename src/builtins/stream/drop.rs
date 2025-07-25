@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::table::{ColumnVec, Row};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use std::collections::HashSet;
@@ -21,36 +21,35 @@ pub struct Drop {
 }
 
 fn drop(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Drop::parse(context.remove_arguments().clone(), &context.global_state.printer())?;
+    let cfg = Drop::parse(
+        context.remove_arguments().clone(),
+        &context.global_state.printer(),
+    )?;
     let input = context.input.recv()?;
-    match input.stream()? {
-        Some(mut input) => {
-            let t = input.types();
-            let drop = cfg
-                .drop
-                .iter()
-                .map(|f| t.find(f))
-                .collect::<CrushResult<HashSet<usize>>>()?;
-            let inc: Vec<bool> = (0..t.len())
-                .into_iter()
-                .map(|idx| drop.contains(&idx))
-                .collect();
-            let mut it = inc.iter();
-            let output = context.output.initialize(
-                &t.to_vec()
-                    .drain(..)
-                    .filter(|_| !*(it.next().unwrap()))
-                    .collect::<Vec<_>>(),
-            )?;
-            while let Ok(row) = input.read() {
-                let mut row = Vec::from(row);
-                let mut it = inc.iter();
-                output.send(Row::new(
-                    row.drain(..).filter(|_| !*(it.next().unwrap())).collect(),
-                ))?;
-            }
-            Ok(())
-        }
-        None => error(format!("Expected a stream, got a value of type `{}`", input.value_type())),
+    let mut input = input.stream()?;
+    let t = input.types();
+    let drop = cfg
+        .drop
+        .iter()
+        .map(|f| t.find(f))
+        .collect::<CrushResult<HashSet<usize>>>()?;
+    let inc: Vec<bool> = (0..t.len())
+        .into_iter()
+        .map(|idx| drop.contains(&idx))
+        .collect();
+    let mut it = inc.iter();
+    let output = context.output.initialize(
+        &t.to_vec()
+            .drain(..)
+            .filter(|_| !*(it.next().unwrap()))
+            .collect::<Vec<_>>(),
+    )?;
+    while let Ok(row) = input.read() {
+        let mut row = Vec::from(row);
+        let mut it = inc.iter();
+        output.send(Row::new(
+            row.drain(..).filter(|_| !*(it.next().unwrap())).collect(),
+        ))?;
     }
+    Ok(())
 }

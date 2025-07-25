@@ -1,12 +1,12 @@
+use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType::Empty;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
-use crate::lang::ast::source::Source;
 
 #[signature(
     stream.r#each,
@@ -38,22 +38,21 @@ fn run(
 }
 
 pub fn each(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Each::parse(context.remove_arguments().clone(), &context.global_state.printer())?;
+    let cfg = Each::parse(
+        context.remove_arguments().clone(),
+        &context.global_state.printer(),
+    )?;
     let source = &context.arguments[0].source;
     context.output.send(Value::Empty)?;
 
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let base_context = context.empty();
+    let mut input = context.input.recv()?.stream()?;
+    let base_context = context.empty();
 
-            while let Ok(row) = input.read() {
-                match run(&cfg.body, source, &row, input.types(), &base_context) {
-                    Ok(_) => (),
-                    Err(e) => base_context.global_state.printer().crush_error(e),
-                }
-            }
-            Ok(())
+    while let Ok(row) = input.read() {
+        match run(&cfg.body, source, &row, input.types(), &base_context) {
+            Ok(_) => (),
+            Err(e) => base_context.global_state.printer().crush_error(e),
         }
-        None => error("Expected a stream"),
     }
+    Ok(())
 }

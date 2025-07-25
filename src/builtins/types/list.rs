@@ -150,7 +150,7 @@ fn collect_internal(
 
 fn collect(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Collect = Collect::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
+    let input = context.input.recv()?.stream()?;
     let input_type = input.types().to_vec();
     match (input_type.len(), cfg.column) {
         (_, Some(name)) => match input_type.as_slice().find(&name) {

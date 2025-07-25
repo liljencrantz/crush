@@ -143,8 +143,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context
         .input
         .recv()?
-        .stream()?
-        .ok_or("Expected input to be a stream")?;
+        .stream()?;
     let input_type = input.types().to_vec();
     let indices: Vec<usize> = cfg
         .group_by

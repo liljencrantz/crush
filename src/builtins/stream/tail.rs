@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{command_error, CrushResult};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use std::collections::VecDeque;
@@ -19,21 +19,17 @@ pub struct Tail {
 
 fn tail(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Tail::parse(context.remove_arguments(), &context.global_state.printer())?;
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let output = context.output.initialize(input.types())?;
-            let mut q: VecDeque<Row> = VecDeque::new();
-            while let Ok(row) = input.read() {
-                if q.len() >= cfg.rows as usize {
-                    q.pop_front();
-                }
-                q.push_back(row);
-            }
-            for row in q.drain(..) {
-                output.send(row)?;
-            }
-            Ok(())
+    let mut input = context.input.recv()?.stream()?;
+    let output = context.output.initialize(input.types())?;
+    let mut q: VecDeque<Row> = VecDeque::new();
+    while let Ok(row) = input.read() {
+        if q.len() >= cfg.rows as usize {
+            q.pop_front();
         }
-        None => command_error("Expected a stream."),
+        q.push_back(row);
     }
+    for row in q.drain(..) {
+        output.send(row)?;
+    }
+    Ok(())
 }

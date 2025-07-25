@@ -19,7 +19,7 @@ use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, table::ColumnType,
     table::TableReader,
 };
-use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::errors::{CrushResult, command_error, data_error};
 use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
 use crate::lang::state::scope::Scope;
 use crate::util::time::duration_format;
@@ -402,23 +402,23 @@ impl Value {
         }
     }
 
-    pub fn stream(&self) -> CrushResult<Option<Stream>> {
+    pub fn stream(&self) -> CrushResult<Stream> {
         Ok(match self {
-            Value::TableInputStream(s) => Some(Box::from(s.clone())),
-            Value::Table(r) => Some(Box::from(TableReader::new(r.clone()))),
-            Value::List(l) => Some(l.stream()),
-            Value::Dict(d) => Some(Box::from(DictReader::new(d.clone()))),
-            Value::Struct(s) => Some(Box::from(StructReader::new(s.clone()))),
-            Value::Scope(s) => Some(Box::from(ScopeReader::new(s.clone()))),
+            Value::TableInputStream(s) => Box::from(s.clone()),
+            Value::Table(r) => Box::from(TableReader::new(r.clone())),
+            Value::List(l) => l.stream(),
+            Value::Dict(d) => Box::from(DictReader::new(d.clone())),
+            Value::Struct(s) => Box::from(StructReader::new(s.clone())),
+            Value::Scope(s) => Box::from(ScopeReader::new(s.clone())),
             Value::Glob(l) => {
                 let mut paths = Vec::<PathBuf>::new();
                 l.glob_files(&cwd()?, &mut paths)?;
-                Some(Box::from(VecReader::new(
+                Box::from(VecReader::new(
                     paths.iter().map(|e| Value::from(e.to_path_buf())).collect(),
                     ValueType::File,
-                )))
+                ))
             }
-            _ => None,
+            v => return data_error(format!("Expected a value that can be streamed, got a value of type `{}`", v.value_type())),
         })
     }
 

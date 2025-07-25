@@ -30,7 +30,7 @@ pub fn time_run(it: &Command, context: &CommandContext) -> CrushResult<Duration>
 
     let c = context.spawn("output consumer", move || {
         let res = reciever.recv()?;
-        if let Ok(Some(mut stream)) = res.stream() {
+        if let Ok(mut stream) = res.stream() {
             while let Ok(_) = stream.read() {}
         }
         Ok(())

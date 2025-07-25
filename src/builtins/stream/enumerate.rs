@@ -1,5 +1,5 @@
 use crate::lang::data::table::ColumnType;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;
@@ -22,21 +22,17 @@ pub struct Enumerate {
 
 fn enumerate(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Enumerate::parse(context.remove_arguments(), &context.global_state.printer())?;
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let mut output_type = vec![ColumnType::new_from_string(cfg.name, ValueType::Integer)];
-            output_type.extend(input.types().to_vec());
-            let output = context.output.initialize(&output_type)?;
+    let mut input = context.input.recv()?.stream()?;
+    let mut output_type = vec![ColumnType::new_from_string(cfg.name, ValueType::Integer)];
+    output_type.extend(input.types().to_vec());
+    let output = context.output.initialize(&output_type)?;
 
-            let mut line: i128 = cfg.start_index;
-            while let Ok(row) = input.read() {
-                let mut out = vec![Value::Integer(line)];
-                out.extend(Vec::from(row));
-                output.send(Row::new(out))?;
-                line += cfg.step;
-            }
-            Ok(())
-        }
-        None => error("Expected a stream"),
+    let mut line: i128 = cfg.start_index;
+    while let Ok(row) = input.read() {
+        let mut out = vec![Value::Integer(line)];
+        out.extend(Vec::from(row));
+        output.send(Row::new(out))?;
+        line += cfg.step;
     }
+    Ok(())
 }

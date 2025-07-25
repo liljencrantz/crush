@@ -1,3 +1,4 @@
+use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{CrushResult, error};
@@ -6,7 +7,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::{argument::Argument, data::table::ColumnType};
 use crate::lang::{data::table::Row, value::Value};
 use signature::signature;
-use crate::lang::ast::source::Source;
 
 #[signature(
     stream.r#where,
@@ -45,7 +45,10 @@ fn evaluate(
 
     match receiver.recv()? {
         Value::Bool(b) => Ok(b),
-        v => error(format!("Expected a boolean result, got a value of type `{}`", v.value_type())),
+        v => error(format!(
+            "Expected a boolean result, got a value of type `{}`",
+            v.value_type()
+        )),
     }
 }
 
@@ -53,29 +56,25 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
     let source = context.arguments[0].source.clone();
     let cfg = Where::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let base_context = context.empty();
+    let mut input = context.input.recv()?.stream()?;
+    let base_context = context.empty();
 
-            let output = context.output.initialize(input.types())?;
-            while let Ok(row) = input.read() {
-                match evaluate(
-                    cfg.condition.clone(),
-                    &source,
-                    &row,
-                    input.types(),
-                    &base_context,
-                ) {
-                    Ok(val) => {
-                        if val && output.send(row).is_err() {
-                            break;
-                        }
-                    }
-                    Err(e) => base_context.global_state.printer().crush_error(e),
+    let output = context.output.initialize(input.types())?;
+    while let Ok(row) = input.read() {
+        match evaluate(
+            cfg.condition.clone(),
+            &source,
+            &row,
+            input.types(),
+            &base_context,
+        ) {
+            Ok(val) => {
+                if val && output.send(row).is_err() {
+                    break;
                 }
             }
-            Ok(())
+            Err(e) => base_context.global_state.printer().crush_error(e),
         }
-        None => error("Expected a stream"),
     }
+    Ok(())
 }

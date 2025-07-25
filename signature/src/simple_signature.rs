@@ -179,7 +179,7 @@ impl SimpleSignature {
                 SimpleSignature::Stream => {
                     quote! {
                         // Fixme: Losing location information here!
-                        _value.stream()?.ok_or(format!("Expected a type that can be streamed"))?,
+                        _value.stream()?,
                     }
                 }
                 _ => quote! {_value},

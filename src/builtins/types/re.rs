@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{CrushResult, error, argument_error, command_error};
+use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -150,8 +150,7 @@ struct Filter {
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Filter = Filter::parse(context.remove_arguments(), &context.global_state.printer())?;
     let re = context.this.re()?.1;
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
+    let mut input = context.input.recv()?.stream()?;
             let columns = find_string_columns(input.types(), cfg.columns);
             let output = context.output.initialize(input.types())?;
             while let Ok(row) = input.read() {
@@ -187,7 +186,4 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
             Ok(())
-        }
-        None => error("`re:filter`: Expected input to be a stream"),
-    }
 }

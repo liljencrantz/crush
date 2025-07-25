@@ -2,7 +2,8 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::list::List;
-use crate::lang::errors::{CrushResult, error, argument_error};
+use crate::lang::data::table::find_string_columns;
+use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -14,7 +15,6 @@ use ordered_map::OrderedMap;
 use signature::signature;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use crate::lang::data::table::find_string_columns;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -41,51 +41,55 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 )]
 struct Filter {
     #[unnamed()]
-    #[description("Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used.")]
+    #[description(
+        "Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used."
+    )]
     columns: Vec<String>,
 }
 
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Filter = Filter::parse(context.remove_arguments(), &context.global_state.printer())?;
     let glob = context.this.glob()?;
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let columns = find_string_columns(input.types(), cfg.columns);
-            let output = context.output.initialize(input.types())?;
-            while let Ok(row) = input.read() {
-                let mut found = false;
-                for idx in &columns {
-                    match &row.cells()[*idx] {
-                        Value::String(s) => {
-                            if glob.matches(&s) {
-                                found = true;
-                                break;
-                            }
-                        }
-                        Value::File(s) => {
-                            s.to_str().map(|s| {
-                                if glob.matches(s) {
-                                    found = true;
-                                }
-                            });
-                            if found {
-                                break;
-                            }
-                        }
-                        v => return argument_error(format!(
-                            "`glob:filter`: Expected column `{}` to be `oneof $string $file`, but was `{}`",
-                            input.types()[*idx].name(), v.value_type(),
-                        ), &context.source),
+    let mut input = context.input.recv()?.stream()?;
+    let columns = find_string_columns(input.types(), cfg.columns);
+    let output = context.output.initialize(input.types())?;
+    while let Ok(row) = input.read() {
+        let mut found = false;
+        for idx in &columns {
+            match &row.cells()[*idx] {
+                Value::String(s) => {
+                    if glob.matches(&s) {
+                        found = true;
+                        break;
                     }
                 }
-                if found {
-                    output.send(row)?;
+                Value::File(s) => {
+                    s.to_str().map(|s| {
+                        if glob.matches(s) {
+                            found = true;
+                        }
+                    });
+                    if found {
+                        break;
+                    }
+                }
+                v => {
+                    return argument_error(
+                        format!(
+                            "`glob:filter`: Expected column `{}` to be `oneof $string $file`, but was `{}`",
+                            input.types()[*idx].name(),
+                            v.value_type(),
+                        ),
+                        &context.source,
+                    );
                 }
             }
-            Ok(())
         }
-        None => error("`glob:filter`: Expected a stream"),
+        if found {
+            output.send(row)?;
+        }
     }
+    Ok(())
 }
 
 #[signature(

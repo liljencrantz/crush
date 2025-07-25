@@ -1,6 +1,7 @@
+use crate::lang::ast::source::Source;
 use crate::lang::command::{Command, OutputType};
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{CrushResult, argument_error, error, command_error};
+use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::pipe::{Stream, pipe};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
@@ -9,7 +10,6 @@ use crate::{
     lang::{argument::Argument, data::table::Row, value::Value},
     util::replace::Replace,
 };
-use crate::lang::ast::source::Source;
 
 enum Action {
     Replace(usize),
@@ -101,62 +101,60 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
 }
 
 pub fn select(mut context: CommandContext) -> CrushResult<()> {
-    match context.input.clone().recv()?.stream()? {
-        Some(input) => {
-            let mut copy = false;
-            let mut columns = Vec::new();
+    let input = context.input.clone().recv()?.stream()?;
+    let mut copy = false;
+    let mut columns = Vec::new();
 
-            if context.arguments.len() == 0 {
-                return command_error("No columns selected.");
-            }
-
-            let source = context.arguments[0].source.clone();
-
-            if let Value::Glob(g) = &context.arguments[0].value {
-                if context.arguments[0].argument_type.is_none() && &g.to_string() == "*" {
-                    copy = true;
-                    context.arguments.remove(0);
-                } else {
-                    return argument_error("Invalid argument", &context.arguments[0].source);
-                }
-            }
-
-            let input_type = input.types();
-            for a in &context.arguments {
-                match (a.argument_type.as_deref(), a.value.clone()) {
-                    (Some(name), Value::Command(closure)) => match (copy, input_type.find(name)) {
-                        (true, Ok(idx)) => {
-                            columns.push((Action::Replace(idx), ValueSource::Closure(closure)))
-                        }
-
-                        _ => columns
-                            .push((Action::Append(name.to_string()), ValueSource::Closure(closure))),
-                    },
-                    (None, Value::String(name)) => match (copy, input_type.find(name.as_ref())) {
-                        (false, Ok(idx)) => {
-                            columns.push((Action::Append(name.to_string()), ValueSource::Argument(idx)))
-                        }
-                        _ => {
-                            return argument_error(
-                                format!("Unknown column `{}`", name).as_str(),
-                                &a.source,
-                            );
-                        }
-                    },
-                    _ => return argument_error("Invalid argument", &a.source),
-                }
-            }
-
-            run(
-                Config {
-                    columns,
-                    copy,
-                    source,
-                },
-                input,
-                context,
-            )
-        }
-        _ => error("Expected a stream"),
+    if context.arguments.len() == 0 {
+        return command_error("No columns selected.");
     }
+
+    let source = context.arguments[0].source.clone();
+
+    if let Value::Glob(g) = &context.arguments[0].value {
+        if context.arguments[0].argument_type.is_none() && &g.to_string() == "*" {
+            copy = true;
+            context.arguments.remove(0);
+        } else {
+            return argument_error("Invalid argument", &context.arguments[0].source);
+        }
+    }
+
+    let input_type = input.types();
+    for a in &context.arguments {
+        match (a.argument_type.as_deref(), a.value.clone()) {
+            (Some(name), Value::Command(closure)) => match (copy, input_type.find(name)) {
+                (true, Ok(idx)) => {
+                    columns.push((Action::Replace(idx), ValueSource::Closure(closure)))
+                }
+
+                _ => columns.push((
+                    Action::Append(name.to_string()),
+                    ValueSource::Closure(closure),
+                )),
+            },
+            (None, Value::String(name)) => match (copy, input_type.find(name.as_ref())) {
+                (false, Ok(idx)) => {
+                    columns.push((Action::Append(name.to_string()), ValueSource::Argument(idx)))
+                }
+                _ => {
+                    return argument_error(
+                        format!("Unknown column `{}`", name).as_str(),
+                        &a.source,
+                    );
+                }
+            },
+            _ => return argument_error("Invalid argument", &a.source),
+        }
+    }
+
+    run(
+        Config {
+            columns,
+            copy,
+            source,
+        },
+        input,
+        context,
+    )
 }

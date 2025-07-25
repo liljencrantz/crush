@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use signature::signature;
@@ -21,32 +21,28 @@ pub struct Uniq {
 }
 
 pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
-            let cfg = Uniq::parse(context.remove_arguments(), &context.global_state.printer())?;
-            let output = context.output.initialize(input.types())?;
-            match cfg.field.map(|f| input.types().find(&f)).transpose()? {
-                None => {
-                    let mut seen: HashSet<Row> = HashSet::new();
-                    while let Ok(row) = input.read() {
-                        if !seen.contains(&row) {
-                            seen.insert(row.clone());
-                            output.send(row)?;
-                        }
-                    }
-                }
-                Some(idx) => {
-                    let mut seen: HashSet<Value> = HashSet::new();
-                    while let Ok(row) = input.read() {
-                        if !seen.contains(&row.cells()[idx]) {
-                            seen.insert(row.cells()[idx].clone());
-                            output.send(row)?;
-                        }
-                    }
+    let mut input = context.input.recv()?.stream()?;
+    let cfg = Uniq::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let output = context.output.initialize(input.types())?;
+    match cfg.field.map(|f| input.types().find(&f)).transpose()? {
+        None => {
+            let mut seen: HashSet<Row> = HashSet::new();
+            while let Ok(row) = input.read() {
+                if !seen.contains(&row) {
+                    seen.insert(row.clone());
+                    output.send(row)?;
                 }
             }
-            Ok(())
         }
-        _ => error("Expected input to be a stream"),
+        Some(idx) => {
+            let mut seen: HashSet<Value> = HashSet::new();
+            while let Ok(row) = input.read() {
+                if !seen.contains(&row.cells()[idx]) {
+                    seen.insert(row.cells()[idx].clone());
+                    output.send(row)?;
+                }
+            }
+        }
     }
+    Ok(())
 }

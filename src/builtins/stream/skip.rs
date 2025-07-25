@@ -1,6 +1,5 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::CrushResult;
-use crate::lang::errors::command_error;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 #[signature(
@@ -17,8 +16,7 @@ pub struct Skip {
 
 fn skip(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Skip::parse(context.remove_arguments(), &context.global_state.printer())?;
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
+    let mut input = context.input.recv()?.stream()?;
             let output = context.output.initialize(input.types())?;
             let mut res: i128 = 0;
             while res < cfg.rows {
@@ -31,7 +29,4 @@ fn skip(mut context: CommandContext) -> CrushResult<()> {
                 output.send(row)?;
             }
             Ok(())
-        }
-        None => command_error("Expected a stream."),
-    }
 }

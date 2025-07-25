@@ -82,23 +82,19 @@ impl Files {
             Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files)?,
             Value::String(f) => self.files.push(PathBuf::from(f.deref())),
-            value => match value.stream()? {
-                None => return command_error("Expected a file name"),
-                Some(mut s) => {
-                    let t = s.types();
-                    if t.len() == 1 && t[0].cell_type == ValueType::File {
-                        while let Ok(row) = s.read() {
-                            if let Value::File(f) = Vec::from(row).remove(0) {
-                                self.files.push(f.to_path_buf());
-                            }
+            value => {
+                let mut input = value.stream()?;
+                let types = input.types();
+                if types.len() == 1 && types[0].cell_type == ValueType::File {
+                    while let Ok(row) = input.read() {
+                        if let Value::File(f) = Vec::from(row).remove(0) {
+                            self.files.push(f.to_path_buf());
                         }
-                    } else {
-                        return command_error(
-                            "Table stream must contain one column of type file",
-                        );
                     }
+                } else {
+                    return command_error("Table stream must contain one column of type file");
                 }
-            },
+            }
         }
         self.had_entries = true;
         Ok(())

@@ -2,7 +2,7 @@ use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::errors::command_error;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ComparisonMode::{CaseInsensitive, Regular};
 use signature::signature;
@@ -28,8 +28,7 @@ pub struct Sort {
 }
 
 fn sort(mut context: CommandContext) -> CrushResult<()> {
-    match context.input.recv()?.stream()? {
-        Some(mut input) => {
+    let mut input = context.input.recv()?.stream()?;
             let output = context.output.initialize(input.types())?;
             let cfg = Sort::parse(context.remove_arguments(), &context.global_state.printer())?;
             let indices = if cfg.field.is_empty() {
@@ -91,7 +90,4 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
             }
 
             Ok(())
-        }
-        None => error("Expected a stream"),
-    }
 }
