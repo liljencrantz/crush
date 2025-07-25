@@ -1,3 +1,4 @@
+use crate::lang::ast::source::Source;
 use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
@@ -8,7 +9,6 @@ use chrono::Duration;
 use reqwest::header::HeaderMap;
 use reqwest::{Method, StatusCode};
 use signature::signature;
-use crate::lang::ast::source::Source;
 
 fn parse_method(m: &str, source: &Source) -> CrushResult<Method> {
     Ok(match m {
@@ -67,7 +67,10 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
         .map(|us| core::time::Duration::from_nanos(us as u64))
         .ok_or("Out of bounds timeout")?;
     let mut request = client
-        .request(parse_method(&cfg.method, &context.source)?, cfg.uri.as_str())
+        .request(
+            parse_method(&cfg.method, &context.source)?,
+            cfg.uri.as_str(),
+        )
         .timeout(t);
 
     for t in cfg.header.iter() {

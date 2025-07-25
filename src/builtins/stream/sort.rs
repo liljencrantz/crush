@@ -1,8 +1,8 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
+use crate::lang::errors::CrushResult;
 use crate::lang::errors::command_error;
-use crate::lang::errors::{CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ComparisonMode::{CaseInsensitive, Regular};
 use signature::signature;
@@ -29,65 +29,68 @@ pub struct Sort {
 
 fn sort(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input.recv()?.stream()?;
-            let output = context.output.initialize(input.types())?;
-            let cfg = Sort::parse(context.remove_arguments(), &context.global_state.printer())?;
-            let indices = if cfg.field.is_empty() {
-                if input.types().len() == 1 {
-                    vec![0]
-                } else {
-                    return command_error("Missing comparison key.");
-                }
-            } else {
-                cfg.field
-                    .iter()
-                    .map(|f| input.types().find(f))
-                    .collect::<CrushResult<Vec<_>>>()?
-            };
+    let output = context.output.initialize(input.types())?;
+    let cfg = Sort::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let indices = if cfg.field.is_empty() {
+        if input.types().len() == 1 {
+            vec![0]
+        } else {
+            return command_error("Missing comparison key.");
+        }
+    } else {
+        cfg.field
+            .iter()
+            .map(|f| input.types().find(f))
+            .collect::<CrushResult<Vec<_>>>()?
+    };
 
+    for idx in &indices {
+        if !input.types()[*idx].cell_type.is_comparable() {
+            return command_error(format!(
+                "Bad comparison key. `{}` is not comparable.",
+                input.types()[*idx].name()
+            ));
+        }
+    }
+
+    let mut res: Vec<Row> = Vec::new();
+
+    while let Ok(row) = input.read() {
+        res.push(row);
+    }
+
+    let comparison_mode = match cfg.case_insensitive {
+        true => CaseInsensitive,
+        false => Regular,
+    };
+
+    if cfg.reverse {
+        res.sort_by(|a, b| {
             for idx in &indices {
-                if !input.types()[*idx].cell_type.is_comparable() {
-                    return command_error(format!("Bad comparison key. `{}` is not comparable.", input.types()[*idx].name()));
+                match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
+                    None => panic!("Unexpected sort failure"),
+                    Some(Ordering::Equal) => {}
+                    Some(ordering) => return ordering,
                 }
             }
-
-            let mut res: Vec<Row> = Vec::new();
-
-            while let Ok(row) = input.read() {
-                res.push(row);
+            Ordering::Equal
+        });
+    } else {
+        res.sort_by(|b, a| {
+            for idx in &indices {
+                match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
+                    None => panic!("Unexpected sort failure"),
+                    Some(Ordering::Equal) => {}
+                    Some(ordering) => return ordering,
+                }
             }
+            Ordering::Equal
+        });
+    }
 
-            let comparison_mode = match cfg.case_insensitive {
-                true => CaseInsensitive,
-                false => Regular,
-            };
+    for row in res {
+        output.send(row)?;
+    }
 
-            if cfg.reverse {
-                res.sort_by(|a, b| {
-                    for idx in &indices {
-                        match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
-                            None => panic!("Unexpected sort failure"),
-                            Some(Ordering::Equal) => {}
-                            Some(ordering) => return ordering,
-                        }
-                    }
-                    Ordering::Equal
-                });
-            } else {
-                res.sort_by(|b, a| {
-                    for idx in &indices {
-                        match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
-                            None => panic!("Unexpected sort failure"),
-                            Some(Ordering::Equal) => {}
-                            Some(ordering) => return ordering,
-                        }
-                    }
-                    Ordering::Equal
-                });
-            }
-
-            for row in res {
-                output.send(row)?;
-            }
-
-            Ok(())
+    Ok(())
 }

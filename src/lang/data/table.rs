@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use crate::lang::any_str::AnyStr;
 /**
 Code related to Table, TableInputStream and
@@ -10,6 +9,7 @@ use crate::lang::serialization::{DeserializationState, Serializable, Serializati
 use crate::lang::value::ValueType;
 use crate::lang::{data::r#struct::Struct, value::Value};
 use chrono::Duration;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 

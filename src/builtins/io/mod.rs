@@ -150,7 +150,8 @@ struct Readline {
 }
 
 fn readline(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Readline = Readline::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Readline =
+        Readline::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let mut rl = Editor::<(), DefaultHistory>::new()?;
 

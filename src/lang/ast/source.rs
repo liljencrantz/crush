@@ -46,7 +46,6 @@ impl Source {
         }
     }
 
-
     pub fn start_line(&self) -> usize {
         self.string[0..self.location.start].lines().count()
     }
@@ -101,7 +100,9 @@ impl Source {
             let name = name.as_ref().map(|s| s.as_str()).unwrap_or(&"<anonymous>");
             let mut res = match &self.source_type {
                 SourceType::Input => format!("<input> ({}):", name),
-                SourceType::File(file) => format!("File {}, line {} ({}):", file.display(), line_number, name),
+                SourceType::File(file) => {
+                    format!("File {}, line {} ({}):", file.display(), line_number, name)
+                }
             };
 
             res.push('\n');
@@ -117,20 +118,23 @@ impl Source {
 
         match &self.source_type {
             SourceType::Input => Ok(current_line),
-            SourceType::File(file) => {
-                match previous_line {
-                    None => Ok(format!("{}:\n{} {}", file.display(), line_number, current_line)),
-                    Some(previous) => Ok(format!(
-                        "{}:\n{:<3} {}\n{:<3} {}",
-                        file.display(),
-                        line_number - 1,
-                        previous,
-                        line_number,
-                        current_line)),
-                }
-            }
+            SourceType::File(file) => match previous_line {
+                None => Ok(format!(
+                    "{}:\n{} {}",
+                    file.display(),
+                    line_number,
+                    current_line
+                )),
+                Some(previous) => Ok(format!(
+                    "{}:\n{:<3} {}\n{:<3} {}",
+                    file.display(),
+                    line_number - 1,
+                    previous,
+                    line_number,
+                    current_line
+                )),
+            },
         }
-
     }
 
     pub fn show_internal(&self) -> CrushResult<(usize, Option<String>, String)> {
@@ -169,7 +173,11 @@ impl Source {
         }
         match previous_line {
             None => Ok((line, None, String::try_from(current_line)?)),
-            Some(p) => Ok((line, Some(String::try_from(p)?), String::try_from(current_line)?)),
+            Some(p) => Ok((
+                line,
+                Some(String::try_from(p)?),
+                String::try_from(current_line)?,
+            )),
         }
     }
 }
@@ -207,7 +215,10 @@ impl Serializable<Source> for Source {
                     source_type,
                 })
             }
-            _ => error(format!("Expected a source, got something else on index {}", id)),
+            _ => error(format!(
+                "Expected a source, got something else on index {}",
+                id
+            )),
         }
     }
 

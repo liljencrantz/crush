@@ -1,4 +1,5 @@
 use crate::lang::ast::location::Location;
+use crate::lang::ast::source::Source;
 /// The definition of a value, as found in a Job.
 use crate::lang::command::ParameterDefinition;
 use crate::lang::pipe::black_hole;
@@ -9,7 +10,6 @@ use crate::{
     lang::errors::CrushResult, lang::pipe::empty_channel, lang::pipe::pipe, lang::value::Value,
 };
 use std::fmt::{Display, Formatter, Pointer};
-use crate::lang::ast::source::Source;
 
 /// The definition of a value, as found in a Job.
 #[derive(Clone)]
@@ -44,15 +44,12 @@ impl ValueDefinition {
 
     pub fn source(&self) -> &Source {
         match self {
-            ValueDefinition::Identifier(source) 
+            ValueDefinition::Identifier(source)
             | ValueDefinition::GetAttr(_, source)
-            | ValueDefinition::Value(_, source) 
+            | ValueDefinition::Value(_, source)
             | ValueDefinition::ClosureDefinition { source, .. } => source,
-             ValueDefinition::JobDefinition(j) => j.source(),
-            ValueDefinition::JobListDefinition(j) => j
-                .last()
-                .map(|j| j.source())
-                .unwrap(),
+            ValueDefinition::JobDefinition(j) => j.source(),
+            ValueDefinition::JobListDefinition(j) => j.last().map(|j| j.source()).unwrap(),
         }
     }
 
@@ -97,7 +94,11 @@ impl ValueDefinition {
             } => (
                 None,
                 Value::Command(match signature {
-                    None => <dyn CrushCommand>::closure_block(jobs.clone(), &context.env, source.clone()),
+                    None => <dyn CrushCommand>::closure_block(
+                        jobs.clone(),
+                        &context.env,
+                        source.clone(),
+                    ),
                     Some(signature) => <dyn CrushCommand>::closure_command(
                         name.clone(),
                         signature.clone(),

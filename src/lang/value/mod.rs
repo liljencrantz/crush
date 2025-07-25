@@ -418,7 +418,12 @@ impl Value {
                     ValueType::File,
                 ))
             }
-            v => return data_error(format!("Expected a value that can be streamed, got a value of type `{}`", v.value_type())),
+            v => {
+                return data_error(format!(
+                    "Expected a value that can be streamed, got a value of type `{}`",
+                    v.value_type()
+                ));
+            }
         })
     }
 

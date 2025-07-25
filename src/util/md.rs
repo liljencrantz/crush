@@ -1,9 +1,9 @@
-use std::cmp::{max, min};
-use std::collections::HashMap;
-use markdown::{to_mdast, ParseOptions};
-use markdown::mdast::Node;
 use crate::lang::errors::CrushResult;
 use crate::util::highlight::syntax_highlight;
+use markdown::mdast::Node;
+use markdown::{ParseOptions, to_mdast};
+use std::cmp::{max, min};
+use std::collections::HashMap;
 
 static HEADER_START: &str = "\x1b[4m";
 static HEADER_END: &str = "\x1b[0m";

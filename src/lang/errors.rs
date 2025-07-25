@@ -149,10 +149,10 @@ impl CrushError {
     }
 
     /// Fills in the source with the specified value if no other value already exists.
-    /// If a value already exists, use that instead. 
-    /// 
+    /// If a value already exists, use that instead.
+    ///
     /// Parse errors include the offest into the source code, but do not include
-    /// the full text. For parse errors, calling this method on the output of 
+    /// the full text. For parse errors, calling this method on the output of
     /// the AST build phase is necessary in order to get readable error messages.
     pub fn with_source_fallback(self, source: &Source) -> CrushError {
         match (&self.error_type, &self.source) {
@@ -475,7 +475,7 @@ pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(InvalidData(message.into()).into())
 }
 
-/// Emit this error when attempting to jump in an invalid way, e.g. calling continue outside of a 
+/// Emit this error when attempting to jump in an invalid way, e.g. calling continue outside of a
 /// loop.
 pub fn invalid_jump<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(InvalidJump(message.into()).into())
@@ -499,7 +499,7 @@ pub trait CrushResultExtra {
     fn with_command(self, cmd: impl Into<String>) -> Self;
 
     fn with_source_fallback(self, source: &Source) -> Self;
-    
+
     /// If this result is an error, populate its stack trace based ob the supplied scope.
     fn with_trace(self, scope: &Scope) -> Self;
 }

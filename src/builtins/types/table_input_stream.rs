@@ -76,7 +76,8 @@ struct Call {
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::TableInputStream(c) => {
-            let cfg: Call = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
+            let cfg: Call =
+                Call::parse(context.remove_arguments(), &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output

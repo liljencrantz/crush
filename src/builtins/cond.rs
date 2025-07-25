@@ -33,10 +33,13 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                         }
                     }
                     v => {
-                        return argument_error(format!(
-                            "Expected boolean values, got a value of type {}",
-                            v.value_type().to_string()
-                        ), &arg.source);
+                        return argument_error(
+                            format!(
+                                "Expected boolean values, got a value of type {}",
+                                v.value_type().to_string()
+                            ),
+                            &arg.source,
+                        );
                     }
                 }
             }

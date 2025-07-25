@@ -63,8 +63,8 @@ impl Serializable<Location> for Location {
         _state: &mut SerializationState,
     ) -> CrushResult<usize> {
         let idx = elements.len();
-        elements.push( Element {
-            element: Some(element::Element::Location(model::Location{
+        elements.push(Element {
+            element: Some(element::Element::Location(model::Location {
                 start: self.start as u64,
                 end: self.end as u64,
             })),

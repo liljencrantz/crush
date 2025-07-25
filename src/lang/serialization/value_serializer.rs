@@ -1,4 +1,3 @@
-use std::collections::hash_map::Entry;
 use crate::lang::command::CrushCommand;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
@@ -14,6 +13,7 @@ use crate::util::glob::Glob;
 use chrono::offset::TimeZone;
 use chrono::{Duration, Local};
 use regex::Regex;
+use std::collections::hash_map::Entry;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
@@ -49,14 +49,22 @@ fn serialize_simple(
 }
 
 impl Serializable<PathBuf> for PathBuf {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<PathBuf> {
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<PathBuf> {
         match Value::deserialize(id, elements, state)? {
             Value::File(p) => Ok(p.to_path_buf()),
             _ => error("Expected file"),
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         Value::File(Arc::from(self.as_path())).serialize(elements, state)
     }
 }
@@ -72,7 +80,9 @@ impl Serializable<Value> for Value {
             Entry::Vacant(_) => {
                 let value = match elements[id].element.as_ref().unwrap() {
                     element::Element::String(s) => Ok(Value::from(s.as_str())),
-                    element::Element::File(f) => Ok(Value::from(PathBuf::from(OsStr::from_bytes(&f[..])))),
+                    element::Element::File(f) => {
+                        Ok(Value::from(PathBuf::from(OsStr::from_bytes(&f[..]))))
+                    }
                     element::Element::Float(v) => Ok(Value::Float(*v)),
                     element::Element::Binary(v) => Ok(Value::from(v)),
                     element::Element::Glob(v) => Ok(Value::Glob(Glob::new(v))),
@@ -102,9 +112,9 @@ impl Serializable<Value> for Value {
 
                     element::Element::Command(_)
                     | element::Element::BoundCommand(_)
-                    | element::Element::Closure(_) => Ok(Value::Command(<dyn CrushCommand>::deserialize(
-                        id, elements, state,
-                    )?)),
+                    | element::Element::Closure(_) => Ok(Value::Command(
+                        <dyn CrushCommand>::deserialize(id, elements, state)?,
+                    )),
 
                     element::Element::UserScope(_) | element::Element::InternalScope(_) => {
                         Ok(Value::Scope(Scope::deserialize(id, elements, state)?))

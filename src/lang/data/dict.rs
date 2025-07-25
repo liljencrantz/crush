@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, error, command_error};
+use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::display_non_recursive::DisplayNonRecursive;
@@ -106,7 +106,7 @@ impl Dict {
         entries.insert(key, value);
         Ok(())
     }
-    
+
     pub fn key_type(&self) -> ValueType {
         self.key_type.clone()
     }

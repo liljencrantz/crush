@@ -1,6 +1,8 @@
+use crate::CrushResult;
 use crate::builtins::io::json::{json_to_value, value_to_json};
 use crate::data::r#struct::Struct;
 use crate::lang::any_str::AnyStr;
+use crate::lang::ast::source::Source;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::list::List;
@@ -13,7 +15,6 @@ use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::{CrushResult};
 use chrono::Duration;
 use crossbeam::channel::bounded;
 use itertools::Itertools;
@@ -24,7 +25,6 @@ use std::io::Read;
 use std::process;
 use std::process::Stdio;
 use std::sync::OnceLock;
-use crate::lang::ast::source::Source;
 
 #[signature(
     grpc.connect,
@@ -271,11 +271,14 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<&str>>();
 
     if services.is_empty() {
-        return argument_error(format!(
-            "No match for service pattern `{}`. Found services `{}`.",
-            cfg.service.to_string(),
-            list.lines().join(", ")
-        ), &context.source);
+        return argument_error(
+            format!(
+                "No match for service pattern `{}`. Found services `{}`.",
+                cfg.service.to_string(),
+                list.lines().join(", ")
+            ),
+            &context.source,
+        );
     }
 
     let mut known_types = HashMap::new();
@@ -291,7 +294,8 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                     None,
                     vec!["describe".to_string(), format!("{}.{}", service, method)],
                 )?;
-                let input_type_name = parse_input_type_from_signature(method, signature.as_str(), &context.source)?;
+                let input_type_name =
+                    parse_input_type_from_signature(method, signature.as_str(), &context.source)?;
                 println!("{:?}", input_type_name);
                 let input_type =
                     parse_message_type(&context, &input_type_name, &g, &mut known_types)?;
@@ -351,10 +355,10 @@ fn parse_input_type_from_signature<'a>(
             };
         }
     }
-    argument_error(format!(
-        "Failed to parse signature of method `{}`.",
-        method_name
-    ), source)
+    argument_error(
+        format!("Failed to parse signature of method `{}`.", method_name),
+        source,
+    )
 }
 
 fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {

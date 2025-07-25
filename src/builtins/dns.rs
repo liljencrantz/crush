@@ -1,3 +1,4 @@
+use crate::CrushResult;
 use crate::data::list::List;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::command::OutputType::Known;
@@ -5,7 +6,6 @@ use crate::lang::errors::{command_error, data_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
-use crate::CrushResult;
 use chrono::Duration;
 use signature::signature;
 use std::fs::File;

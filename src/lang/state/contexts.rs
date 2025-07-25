@@ -1,4 +1,5 @@
 use crate::lang::argument::Argument;
+use crate::lang::ast::source::Source;
 use crate::lang::errors::CrushResult;
 use crate::lang::pipe::{ValueReceiver, ValueSender, black_hole, empty_channel};
 use crate::lang::state::global_state::{GlobalState, JobHandle};
@@ -6,7 +7,6 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
 use std::thread::ThreadId;
-use crate::lang::ast::source::Source;
 
 /**
 The data needed to be passed around while calling eval on a ValueDefinition.
@@ -93,7 +93,12 @@ impl JobContext {
         }
     }
 
-    pub fn command_context(&self, source: &Source, arguments: Vec<Argument>, this: Option<Value>) -> CommandContext {
+    pub fn command_context(
+        &self,
+        source: &Source,
+        arguments: Vec<Argument>,
+        this: Option<Value>,
+    ) -> CommandContext {
         CommandContext {
             arguments,
             this,
@@ -220,7 +225,7 @@ impl CommandContext {
             this: self.this,
             global_state: self.global_state,
             handle: self.handle,
-            source: self.source,       
+            source: self.source,
         }
     }
 
@@ -236,7 +241,7 @@ impl CommandContext {
             this: self.this,
             global_state: self.global_state,
             handle: self.handle.clone(),
-            source: self.source,       
+            source: self.source,
         }
     }
 

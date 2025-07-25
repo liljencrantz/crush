@@ -389,9 +389,7 @@ pub fn parse(
                         }))
                     }
 
-                    _ => {
-                        command_error(format!("Invalid argument name {}", arg.type_name()))
-                    }
+                    _ => command_error(format!("Invalid argument name {}", arg.type_name())),
                 }
             } else {
                 if arg.location().contains(cursor) {

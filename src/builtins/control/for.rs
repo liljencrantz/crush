@@ -38,7 +38,10 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
     let mut cfg = For::parse(context.remove_arguments(), context.global_state.printer())?;
 
     if cfg.iterator.len() != 1 {
-        return command_error(format!("Expected exactly one stream to iterate over, got {}", cfg.iterator.len()));
+        return command_error(format!(
+            "Expected exactly one stream to iterate over, got {}",
+            cfg.iterator.len()
+        ));
     }
 
     let (name, mut input) = cfg

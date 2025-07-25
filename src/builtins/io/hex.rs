@@ -82,10 +82,13 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return argument_error(format!(
-                "`hex:to`: Expected a binary stream or a string, encountered `{}`",
-                v.value_type().to_string()
-            ), &context.source);
+            return argument_error(
+                format!(
+                    "`hex:to`: Expected a binary stream or a string, encountered `{}`",
+                    v.value_type().to_string()
+                ),
+                &context.source,
+            );
         }
     }
     Ok(())

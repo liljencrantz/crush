@@ -4,21 +4,21 @@ use rustyline;
 use std::fs;
 
 use crate::lang::ast::lexer::LanguageMode;
+use crate::lang::ast::source::{Source, SourceType};
+use crate::lang::command::Command;
+use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, data_error, error};
 use crate::lang::execute;
 use crate::lang::pipe::{ValueSender, black_hole, empty_channel, pipe};
+use crate::lang::state::contexts::JobContext;
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
+use crate::lang::value::{Value, ValueDefinition};
 use crate::util::file::home;
 use rustyline::error::ReadlineError;
 use rustyline::{CompletionType, Config, EditMode, Editor};
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::lang::ast::source::{Source, SourceType};
-use crate::lang::command::Command;
-use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::state::contexts::JobContext;
-use crate::lang::state::global_state::GlobalState;
-use crate::lang::value::{Value, ValueDefinition};
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
@@ -44,7 +44,10 @@ fn execute_command(
         None => Ok(None),
         Some(prompt) => {
             let cmd = CommandInvocation::new(
-                ValueDefinition::Value(Value::Command(prompt), Source::new(SourceType::Input, Arc::from(""))),
+                ValueDefinition::Value(
+                    Value::Command(prompt),
+                    Source::new(SourceType::Input, Arc::from("")),
+                ),
                 Source::new(SourceType::Input, Arc::from("")),
                 vec![],
             );

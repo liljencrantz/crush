@@ -2,10 +2,11 @@ mod closure;
 
 use crate::lang::any_str::AnyStr;
 use crate::lang::argument::ArgumentDefinition;
+use crate::lang::ast::source::Source;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::PartialCommandResult;
-use crate::lang::errors::{CrushResult, error, CrushResultExtra};
+use crate::lang::errors::{CrushResult, CrushResultExtra, error};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::serialization::model;
@@ -19,7 +20,6 @@ use closure::Closure;
 use ordered_map::OrderedMap;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
-use crate::lang::ast::source::Source;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
@@ -266,7 +266,9 @@ impl CrushCommand for SimpleCommand {
         let c = self.call;
         let source = context.source.clone();
         c(context)
-            .with_command(Foo{path: &self.full_name})
+            .with_command(Foo {
+                path: &self.full_name,
+            })
             .with_source_fallback(&source)
     }
 
@@ -357,7 +359,9 @@ impl CrushCommand for ConditionCommand {
         let c = self.call;
         let source = context.source.clone();
         c(context)
-            .with_command(Foo{path: &self.full_name} )
+            .with_command(Foo {
+                path: &self.full_name,
+            })
             .with_source_fallback(&source)
     }
 
@@ -542,7 +546,8 @@ impl CrushCommand for BoundCommand {
     fn eval(&self, mut context: CommandContext) -> CrushResult<()> {
         context.this = Some(self.this.clone());
         let source = context.source.clone();
-        self.command.eval(context)
+        self.command
+            .eval(context)
             .with_command(self.name())
             .with_source_fallback(&source)
     }

@@ -4,20 +4,20 @@ use super::errors::{CrushResult, error};
 use super::job::Job;
 use super::state::scope::Scope;
 use super::value::ValueDefinition;
+use crate::lang::ast::source::Source;
 use crate::util::user_map::get_current_username;
 use crate::util::user_map::get_user;
 use location::Location;
 use node::Node;
 use tracked_string::TrackedString;
-use crate::lang::ast::source::Source;
 
 pub mod lexer;
 pub mod location;
 pub mod node;
 pub mod parameter_node;
+pub mod source;
 pub mod token;
 pub mod tracked_string;
-pub mod source;
 
 pub struct NodeContext {
     env: Scope,
@@ -203,7 +203,11 @@ impl CommandNode {
                 .iter()
                 .map(|e| e.compile_argument(env))
                 .collect::<CrushResult<Vec<ArgumentDefinition>>>()?;
-            Ok(CommandInvocation::new(cmd.unnamed_value()?, cmd.source, arguments))
+            Ok(CommandInvocation::new(
+                cmd.unnamed_value()?,
+                cmd.source,
+                arguments,
+            ))
         }
     }
 }

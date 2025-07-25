@@ -42,10 +42,13 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
-        v => argument_error(format!(
-            "`bin:to`: Expected input to be a binary stream, got a value of type `{}`",
-            v.value_type()
-        ), &context.source),
+        v => argument_error(
+            format!(
+                "`bin:to`: Expected input to be a binary stream, got a value of type `{}`",
+                v.value_type()
+            ),
+            &context.source,
+        ),
     }
 }
 

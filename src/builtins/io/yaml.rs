@@ -2,6 +2,7 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
 
+use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::table::ColumnType;
@@ -12,7 +13,6 @@ use crate::lang::{data::list::List, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
-use crate::lang::ast::source::Source;
 
 fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Value> {
     match yaml_value {
@@ -24,7 +24,9 @@ fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Val
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(f.as_f64().ok_or("`yaml:from`: Not a valid number")?))
+                Ok(Value::Float(
+                    f.as_f64().ok_or("`yaml:from`: Not a valid number")?,
+                ))
             }
         }
         serde_yaml::Value::String(s) => Ok(Value::from(s.as_str())),

@@ -1,4 +1,5 @@
-use crate::lang::errors::{CrushResult, error, serialization_error, data_error};
+use crate::lang::ast::source::Source;
+use crate::lang::errors::{CrushResult, data_error, error, serialization_error};
 use crate::lang::serialization::model;
 use crate::lang::serialization::model::scope::ReturnValue::ReturnValueValue;
 use crate::lang::serialization::model::{Element, element, scope};
@@ -12,7 +13,6 @@ use model::scope::Description::{DescriptionValue, HasDescription};
 use model::scope::Name::{HasName, NameValue};
 use model::scope::Parent::ParentValue;
 use std::collections::hash_map::Entry;
-use crate::lang::ast::source::Source;
 
 fn deserialize_scope_type(value: i32, source: Option<Source>) -> CrushResult<ScopeType> {
     match (value, source) {
@@ -50,7 +50,9 @@ impl Serializable<Scope> for Scope {
                     let maybe_source = match s.source.as_ref() {
                         None => return data_error("Missing source"),
                         Some(scope::Source::HasSource(_)) => None,
-                        Some(scope::Source::SourceValue(id)) => Some(Source::deserialize(*id as usize, elements, state)?),
+                        Some(scope::Source::SourceValue(id)) => {
+                            Some(Source::deserialize(*id as usize, elements, state)?)
+                        }
                     };
                     let res = Scope::create(
                         name,
@@ -143,11 +145,13 @@ impl Serializable<Scope> for Scope {
                         sscope.is_stopped = scope_data.is_stopped;
 
                         sscope.source = match &scope_data.scope_type {
-                            ScopeType::Command { source, .. } => Some(scope::Source::SourceValue(source.serialize(elements, state)? as u64)),
+                            ScopeType::Command { source, .. } => Some(scope::Source::SourceValue(
+                                source.serialize(elements, state)? as u64,
+                            )),
                             _ => Some(scope::Source::HasSource(false)),
                         };
                         sscope.scope_type = scope_data.scope_type.into();
-                        
+
                         for u in scope_data.uses.iter() {
                             sscope.uses.push(u.serialize(elements, state)? as u64);
                         }

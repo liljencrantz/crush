@@ -1,5 +1,6 @@
 use crate::builtins::types::OrderedStringMap;
 use crate::builtins::types::string::format::FormatState::*;
+use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::state::contexts::CommandContext;
@@ -7,7 +8,6 @@ use crate::lang::state::this::This;
 use crate::lang::value::ValueType;
 use crate::lang::{argument::Argument, value::Value};
 use signature::signature;
-use crate::lang::ast::source::Source;
 
 enum FormatState {
     Normal,
@@ -93,8 +93,8 @@ fn do_format(format: &str, param: Vec<Argument>, source: &Source) -> CrushResult
 }
 
 #[signature(
-    types.string.format, 
-    can_block = false, 
+    types.string.format,
+    can_block = false,
     output = Known(ValueType::String),
     short = "Format arguments into a string",
     example = "\"Hello {name}\":format name=$name")]
@@ -110,7 +110,9 @@ pub struct Format {
 
 pub fn format(mut context: CommandContext) -> CrushResult<()> {
     let format = context.this.string()?;
-    context
-        .output
-        .send(Value::from(do_format(&format, context.arguments, &context.source)?))
+    context.output.send(Value::from(do_format(
+        &format,
+        context.arguments,
+        &context.source,
+    )?))
 }

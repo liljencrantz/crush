@@ -1,3 +1,4 @@
+use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, argument_error};
 use crate::lang::signature::files::Files;
@@ -8,7 +9,6 @@ use base64::Engine;
 use base64::engine::GeneralPurpose;
 use signature::signature;
 use std::io::{BufReader, Read, Write};
-use crate::lang::ast::source::Source;
 
 #[signature(
     io.base64.from,
@@ -138,10 +138,13 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return argument_error(format!(
-                "`base64:to`: Expected a binary stream or a string, encountered `{}`",
-                v.value_type().to_string()
-            ), &context.source);
+            return argument_error(
+                format!(
+                    "`base64:to`: Expected a binary stream or a string, encountered `{}`",
+                    v.value_type().to_string()
+                ),
+                &context.source,
+            );
         }
     }
     Ok(())

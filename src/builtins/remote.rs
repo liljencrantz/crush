@@ -391,7 +391,8 @@ mod host {
     }
 
     fn remove(mut context: CommandContext) -> CrushResult<()> {
-        let cfg: Remove = Remove::parse(context.remove_arguments(), &context.global_state.printer())?;
+        let cfg: Remove =
+            Remove::parse(context.remove_arguments(), &context.global_state.printer())?;
         let host_file = if cfg.host_file.had_entries() {
             cfg.host_file.clone().try_into()?
         } else {

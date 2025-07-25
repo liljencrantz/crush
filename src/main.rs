@@ -121,7 +121,12 @@ fn run() -> CrushResult<i32> {
             execute::pup(local_scope, &buff, &global_state)?;
         }
 
-        Mode::File(f) => global_state.printer().handle_error(execute::file(&local_scope, f.as_path(), &pretty_printer, &global_state)),
+        Mode::File(f) => global_state.printer().handle_error(execute::file(
+            &local_scope,
+            f.as_path(),
+            &pretty_printer,
+            &global_state,
+        )),
 
         Mode::Help => print_help(&global_state.printer()),
     }

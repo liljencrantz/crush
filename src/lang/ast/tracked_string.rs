@@ -11,7 +11,7 @@ pub struct TrackedString {
 impl TrackedString {
     pub fn new(string: &str, location: Location) -> TrackedString {
         if string.len() != location.len() {
-//            panic!()
+            //            panic!()
         }
         TrackedString {
             string: string.to_string(),

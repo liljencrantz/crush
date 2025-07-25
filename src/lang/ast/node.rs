@@ -2,7 +2,7 @@ use super::location::Location;
 use super::node::TextLiteralStyle::{Quoted, Unquoted};
 use super::parameter_node::ParameterNode;
 use super::tracked_string::TrackedString;
-use super::{CommandNode, JobListNode, JobNode, expand_user, propose_name, NodeContext};
+use super::{CommandNode, JobListNode, JobNode, NodeContext, expand_user, propose_name};
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
@@ -191,15 +191,15 @@ impl Node {
                 }
                 _ => return error("Unknown operator"),
             },
-            Node::Identifier(l) => ValueDefinition::Identifier(ctx.source.subtrackedstring(l),
-            ),
+            Node::Identifier(l) => ValueDefinition::Identifier(ctx.source.subtrackedstring(l)),
             Node::Regex(l) => ValueDefinition::Value(
                 Value::Regex(l.string.clone(), Regex::new(&l.string.clone())?),
                 ctx.source.subtrackedstring(l),
             ),
-            Node::String(t, TextLiteralStyle::Quoted) => {
-                ValueDefinition::Value(Value::from(unescape(&t.string)?), ctx.source.subtrackedstring(t))
-            }
+            Node::String(t, TextLiteralStyle::Quoted) => ValueDefinition::Value(
+                Value::from(unescape(&t.string)?),
+                ctx.source.subtrackedstring(t),
+            ),
             Node::String(f, TextLiteralStyle::Unquoted) => {
                 if is_command {
                     ValueDefinition::Identifier(ctx.source.subtrackedstring(f))
@@ -239,7 +239,10 @@ impl Node {
                     source: ctx.source.substring(*location),
                 }
             }
-            Node::Glob(g) => ValueDefinition::Value(Value::Glob(Glob::new(&g.string)), ctx.source.subtrackedstring(g)),
+            Node::Glob(g) => ValueDefinition::Value(
+                Value::Glob(Glob::new(&g.string)),
+                ctx.source.subtrackedstring(g),
+            ),
             Node::File(s, quote_style) => ValueDefinition::Value(
                 Value::from(match quote_style {
                     Quoted => unescape_file(&s.string)?,
@@ -302,7 +305,7 @@ impl Node {
                     t.location,
                     vec![ArgumentDefinition::named(
                         &ctx.source.subtrackedstring(t),
-                            propose_name(&t, value.compile_argument(ctx)?.unnamed_value()?),
+                        propose_name(&t, value.compile_argument(ctx)?.unnamed_value()?),
                     )],
                     ctx,
                 ),

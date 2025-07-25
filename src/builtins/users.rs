@@ -3,7 +3,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{CrushResult, error, command_error};
+use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;

@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 

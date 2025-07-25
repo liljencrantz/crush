@@ -29,13 +29,12 @@ pub struct HelpSignature {
     format: String,
 }
 
-
 pub fn help(mut context: CommandContext) -> CrushResult<()> {
     let cfg: HelpSignature =
         HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let map = highlight_colors(&context.scope);
-    
+
     let s = match cfg.topic {
         None => {
             r#"
@@ -68,11 +67,14 @@ members of a value, write `dir <value>`.
         "markdown" => context.output.send(Value::from(s)),
         "html" => context.output.send(Value::from(markdown::to_html(s))),
         "terminal" => {
-            context.global_state.printer().line(&crate::util::md::render(
-                s,
-                context.global_state.printer().width(),
-                map,
-            )?);
+            context
+                .global_state
+                .printer()
+                .line(&crate::util::md::render(
+                    s,
+                    context.global_state.printer().width(),
+                    map,
+                )?);
             context.output.send(Value::Empty)
         }
         _ => unreachable!(),

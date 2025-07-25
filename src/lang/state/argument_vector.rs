@@ -14,9 +14,7 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() == len {
             Ok(())
         } else {
-            command_error(
-                format!("Expected {} arguments, got {}", len, self.len()).as_str(),
-            )
+            command_error(format!("Expected {} arguments, got {}", len, self.len()).as_str())
         }
     }
 

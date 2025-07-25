@@ -1,17 +1,17 @@
+use crate::CrushResult;
 use crate::data::dict::Dict;
 use crate::data::list::List;
 use crate::data::r#struct::Struct;
 use crate::data::table::Table;
+use crate::lang::errors::command_error;
 use crate::lang::pipe::{TableInputStream, TableOutputStream};
 use crate::lang::value::{Value, ValueType};
 use crate::state::scope::Scope;
 use crate::util::glob::Glob;
-use crate::CrushResult;
 use chrono::{DateTime, Duration, Local};
 use regex::Regex;
 use std::mem::swap;
 use std::path::PathBuf;
-use crate::lang::errors::command_error;
 
 macro_rules! this_method {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
@@ -25,11 +25,14 @@ macro_rules! this_method {
                     $description,
                     "`, but was not set."
                 )),
-                Some(v) => command_error(
-                    format!(
-                        concat!("Expected `this` to be a `", $description, "`, but it was a `{}`."),
-                        v.value_type().to_string()
-                    )),
+                Some(v) => command_error(format!(
+                    concat!(
+                        "Expected `this` to be a `",
+                        $description,
+                        "`, but it was a `{}`."
+                    ),
+                    v.value_type().to_string()
+                )),
             }
         }
     };
@@ -64,14 +67,13 @@ impl This for Option<Value> {
         swap(self, &mut this);
         match this {
             Some(Value::String(l)) => Ok(l.to_string()),
-            None => {
-                command_error(concat!("Expected `this` to be a `string`, but was not set."))
-            }
-            Some(v) => command_error(
-                format!(
-                    concat!("Expected `this` to be a `string`, but it was a `{}`."),
-                    v.value_type().to_string()
-                )),
+            None => command_error(concat!(
+                "Expected `this` to be a `string`, but was not set."
+            )),
+            Some(v) => command_error(format!(
+                concat!("Expected `this` to be a `string`, but it was a `{}`."),
+                v.value_type().to_string()
+            )),
         }
     }
 
@@ -80,15 +82,11 @@ impl This for Option<Value> {
         swap(self, &mut this);
         match this {
             Some(Value::File(l)) => Ok(l.to_path_buf()),
-            None => {
-                command_error("Expected `this` to be a `file`, but was not set.")
-            }
-            Some(v) => command_error(
-                format!(
-                    concat!("Expected `this` to be a `file`, but it was a `{}`."),
-                    v.value_type().to_string()
-                )
-            ),
+            None => command_error("Expected `this` to be a `file`, but was not set."),
+            Some(v) => command_error(format!(
+                concat!("Expected `this` to be a `file`, but it was a `{}`."),
+                v.value_type().to_string()
+            )),
         }
     }
 
@@ -98,10 +96,11 @@ impl This for Option<Value> {
 
         match this {
             Some(Value::Regex(s, b)) => Ok((s, b)),
-            None => {
-                command_error("Expected `this` to be a `re`, but was not set.")
-            }
-            Some(v) => command_error(format!("Expected `this` to be a `re`, but it was a `{}`.", v.value_type())),
+            None => command_error("Expected `this` to be a `re`, but was not set."),
+            Some(v) => command_error(format!(
+                "Expected `this` to be a `re`, but it was a `{}`.",
+                v.value_type()
+            )),
         }
     }
 
@@ -132,14 +131,13 @@ impl This for Option<Value> {
         swap(self, &mut this);
         match this {
             Some(Value::Binary(l)) => Ok(l.to_vec()),
-            None => {
-                command_error(concat!("Expected `this` to be a `string`, but it was not set."))
-            }
-            Some(v) => command_error(
-                format!(
-                    concat!("Expected `this` to be a `string`, but it was a `{}`."),
-                    v.value_type().to_string()
-                )),
+            None => command_error(concat!(
+                "Expected `this` to be a `string`, but it was not set."
+            )),
+            Some(v) => command_error(format!(
+                concat!("Expected `this` to be a `string`, but it was a `{}`."),
+                v.value_type().to_string()
+            )),
         }
     }
 }

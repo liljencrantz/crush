@@ -58,9 +58,13 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
-                let cfg: Call = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
+                let cfg: Call =
+                    Call::parse(context.remove_arguments(), &context.global_state.printer())?;
                 if !cfg.key_type.is_hashable() {
-                    return command_error(format!("`Tried to create a `dict` subtype with the key type `{}`, which is not hashable.", cfg.key_type));
+                    return command_error(format!(
+                        "`Tried to create a `dict` subtype with the key type `{}`, which is not hashable.",
+                        cfg.key_type
+                    ));
                 }
                 context.output.send(Value::Type(ValueType::Dict(
                     Box::new(cfg.key_type),
@@ -99,7 +103,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
         if !key_type.is_hashable() {
-            command_error(format!("Tried to create a `dict` instance with the key type `{}`, which is not hashable.", key_type))
+            command_error(format!(
+                "Tried to create a `dict` instance with the key type `{}`, which is not hashable.",
+                key_type
+            ))
         } else {
             context
                 .output

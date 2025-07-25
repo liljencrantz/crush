@@ -1,4 +1,5 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchStyle};
+use crate::lang::ast::source::Source;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::command::{
     BoundCommand, Command, CrushCommand, OutputType, Parameter, ParameterDefinition,
@@ -6,7 +7,9 @@ use crate::lang::command::{
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
-use crate::lang::errors::{CrushResult, argument_error, error, serialization_error, CrushResultExtra};
+use crate::lang::errors::{
+    CrushResult, CrushResultExtra, argument_error, error, serialization_error,
+};
 use crate::lang::help::Help;
 use crate::lang::job::Job;
 use crate::lang::pipe::{black_hole, empty_channel, pipe};
@@ -24,7 +27,6 @@ use ordered_map::{Entry, OrderedMap};
 use std::collections::VecDeque;
 use std::fmt::Display;
 use std::sync::Arc;
-use crate::lang::ast::source::Source;
 
 enum ClosureType {
     Block,
@@ -49,7 +51,10 @@ impl ClosureType {
     fn scope_type(&self, source: &Source) -> ScopeType {
         match self {
             ClosureType::Block => ScopeType::Block,
-            ClosureType::Command { name, .. } => ScopeType::Command{source: source.clone(), name: name.clone()},
+            ClosureType::Command { name, .. } => ScopeType::Command {
+                source: source.clone(),
+                name: name.clone(),
+            },
         }
     }
 
@@ -156,7 +161,10 @@ impl ClosureType {
                                     nn.insert(Value::from(argument_name.clone()), arg.value);
                                 } else {
                                     return argument_error(
-                                        format!("`{}`: Unknown named argument `{}`.", closure_name, argument_name),
+                                        format!(
+                                            "`{}`: Unknown named argument `{}`.",
+                                            closure_name, argument_name
+                                        ),
                                         &arg.source,
                                     );
                                 }
@@ -175,11 +183,13 @@ impl ClosureType {
                                             l
                                         }
                                         _ => {
-                                            return argument_error(format!(
-                                                "`{}`: Invalid state during argument parsing for named argument `{}`.",
-                                                closure_name,
-                                                argument_name
-                                            ), source);
+                                            return argument_error(
+                                                format!(
+                                                    "`{}`: Invalid state during argument parsing for named argument `{}`.",
+                                                    closure_name, argument_name
+                                                ),
+                                                source,
+                                            );
                                         }
                                     };
                                     if let Value::List(arg_as_list) = arg.value {
@@ -189,13 +199,15 @@ impl ClosureType {
                                         {
                                             list.append(&mut arg_as_list.iter().collect())?;
                                         } else {
-                                            return argument_error(format!(
-                                                "`{}`: List of elements of type `{}` can't be inserted into list of type `{}`.",
-                                                closure_name,
-                                                arg_as_list.element_type(),
-                                                list.element_type()
-                                            ),
-                                            &arg.source);
+                                            return argument_error(
+                                                format!(
+                                                    "`{}`: List of elements of type `{}` can't be inserted into list of type `{}`.",
+                                                    closure_name,
+                                                    arg_as_list.element_type(),
+                                                    list.element_type()
+                                                ),
+                                                &arg.source,
+                                            );
                                         }
                                     } else {
                                         if list
@@ -204,14 +216,16 @@ impl ClosureType {
                                         {
                                             list.append(&mut vec![arg.value])?;
                                         } else {
-                                            return argument_error(format!(
-                                                "`{}`: Wrong type for argument `{}`, expected `{}`, got `{}`.",
-                                                closure_name,
-                                                argument_name,
-                                                list.element_type(),
-                                                arg.value.value_type()
-                                            ),
-                                            &arg.source);
+                                            return argument_error(
+                                                format!(
+                                                    "`{}`: Wrong type for argument `{}`, expected `{}`, got `{}`.",
+                                                    closure_name,
+                                                    argument_name,
+                                                    list.element_type(),
+                                                    arg.value.value_type()
+                                                ),
+                                                &arg.source,
+                                            );
                                         }
                                     }
                                 } else {
@@ -223,14 +237,16 @@ impl ClosureType {
                                             default: None,
                                         });
                                     } else {
-                                        return argument_error(format!(
-                                            "`{}`: Wrong type `{}` for argument `{}`, expected `{}`.",
-                                            closure_name,
-                                            arg.value.value_type(),
-                                            argument_name,
-                                            e.value().value_type,
-                                        ),
-                                        &arg.source);
+                                        return argument_error(
+                                            format!(
+                                                "`{}`: Wrong type `{}` for argument `{}`, expected `{}`.",
+                                                closure_name,
+                                                arg.value.value_type(),
+                                                argument_name,
+                                                e.value().value_type,
+                                            ),
+                                            &arg.source,
+                                        );
                                     }
                                 }
                             }
@@ -252,21 +268,25 @@ impl ClosureType {
                                 if data.1.value_type.is(&arg.value) {
                                     context.env.redeclare(&data.0, arg.value)?;
                                 } else {
-                                    return argument_error(format!(
-                                        "`{}`: Wrong type `{}` for argument `{}`, expected `{}`.",
-                                        closure_name,
-                                        arg.value.value_type(),
-                                        data.0,
-                                        data.1.value_type
-                                    ),
-                                    &arg.source);
+                                    return argument_error(
+                                        format!(
+                                            "`{}`: Wrong type `{}` for argument `{}`, expected `{}`.",
+                                            closure_name,
+                                            arg.value.value_type(),
+                                            data.0,
+                                            data.1.value_type
+                                        ),
+                                        &arg.source,
+                                    );
                                 }
                             } else {
-                                return argument_error(format!(
-                                    "`{}`: No argument supplied for parameter `{}`.",
-                                    closure_name,
-                                    data.0
-                                ), source);
+                                return argument_error(
+                                    format!(
+                                        "`{}`: No argument supplied for parameter `{}`.",
+                                        closure_name, data.0
+                                    ),
+                                    source,
+                                );
                             }
                         }
                     }
@@ -277,7 +297,8 @@ impl ClosureType {
                         if let Some(argument) = &unnamed.pop_front() {
                             return argument_error(
                                 format!("`{}`: Stray unnamed argument.", closure_name),
-                                &argument.source);
+                                &argument.source,
+                            );
                         }
                     }
                     Some(name) => {
@@ -295,7 +316,10 @@ impl ClosureType {
                 match (named, named_remainder) {
                     (None, None) => {}
                     (Some(_), None) => {
-                        argument_error(format!("`{}`: Unknown named arguments.", closure_name), source)?;
+                        argument_error(
+                            format!("`{}`: Unknown named arguments.", closure_name),
+                            source,
+                        )?;
                     }
                     (None, Some(name)) => {
                         context.env.redeclare(
@@ -342,7 +366,8 @@ impl CrushCommand for Closure {
         let s = context.scope.clone();
         let source = context.source.clone();
         self.eval_inner(context)
-            .with_command(self.name()).with_trace(&s)
+            .with_command(self.name())
+            .with_trace(&s)
             .with_source_fallback(&source)
     }
 
@@ -407,7 +432,7 @@ fn compile_signature(
                     _ => {
                         return argument_error(
                             format!("Invalid type for argument `{}`.", &name.string),
-                            value_type.source()
+                            value_type.source(),
                         );
                     }
                 };
@@ -561,12 +586,7 @@ impl Closure {
         })
     }
 
-    pub fn block(
-        job_definitions:
-        Vec<Job>, 
-        parent_scope: &Scope,
-        source: Source,
-    ) -> Closure {
+    pub fn block(job_definitions: Vec<Job>, parent_scope: &Scope, source: Source) -> Closure {
         Closure {
             jobs: job_definitions,
             parent_scope: parent_scope.clone(),
@@ -591,13 +611,13 @@ impl Closure {
 
         let env = parent_env.create_child(&context.scope, scope_type);
 
-        let mut cc =
-            EvalContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
+        let mut cc = EvalContext::from(&context.clone().with_output(black_hole())).with_scope(&env);
         if let Some(this) = context.this {
             env.redeclare("this", this)?;
         }
 
-        self.closure_type.push_arguments_to_env(&context.source, context.arguments, &mut cc)?;
+        self.closure_type
+            .push_arguments_to_env(&context.source, context.arguments, &mut cc)?;
 
         if env.is_stopped() {
             return Ok(());
@@ -715,11 +735,11 @@ impl<'a> ClosureSerializer<'a> {
                 ));
             }
         }
-        
+
         let source = closure.source.serialize(self.elements, self.state)? as u64;
 
         serialized.source = source;
-        
+
         for j in &closure.jobs {
             serialized.job_definitions.push(self.job(j)?)
         }
@@ -727,7 +747,9 @@ impl<'a> ClosureSerializer<'a> {
         serialized.env = closure.parent_scope.serialize(self.elements, self.state)? as u64;
 
         let idx = self.elements.len();
-        self.elements.push(model::Element {element: Some(model::element::Element::Closure(serialized))});
+        self.elements.push(model::Element {
+            element: Some(model::element::Element::Closure(serialized)),
+        });
         Ok(idx)
     }
 
@@ -749,7 +771,9 @@ impl<'a> ClosureSerializer<'a> {
             }),
             description: Some(match &signature.description {
                 None => model::parameter::Description::HasDescription(false),
-                Some(allowed) => model::parameter::Description::DescriptionValue(allowed.serialize(self.elements, self.state)? as u64),
+                Some(allowed) => model::parameter::Description::DescriptionValue(
+                    allowed.serialize(self.elements, self.state)? as u64,
+                ),
             }),
         })
     }
@@ -934,9 +958,11 @@ impl<'a> ClosureSerializer<'a> {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
                 }
 
-                ValueDefinition::Identifier(l) => model::value_definition::ValueDefinition::Identifier(
-                    l.serialize(self.elements, self.state)? as u64,
-                ),
+                ValueDefinition::Identifier(l) => {
+                    model::value_definition::ValueDefinition::Identifier(
+                        l.serialize(self.elements, self.state)? as u64,
+                    )
+                }
 
                 ValueDefinition::GetAttr(parent, element) => {
                     model::value_definition::ValueDefinition::GetAttr(Box::from(model::Attr {
@@ -971,7 +997,11 @@ impl<'a> ClosureDeserializer<'a> {
     }
 
     pub fn closure(&mut self, id: usize) -> CrushResult<Command> {
-        match self.elements[id].element.as_ref().ok_or(format!("Error while deserializing closure at index {}", id))? {
+        match self.elements[id]
+            .element
+            .as_ref()
+            .ok_or(format!("Error while deserializing closure at index {}", id))?
+        {
             element::Element::Closure(s) => {
                 let env = Scope::deserialize(s.env as usize, self.elements, self.state)?;
                 Ok(Arc::from(Closure {
@@ -1215,9 +1245,9 @@ impl<'a> ClosureDeserializer<'a> {
                     ValueDefinition::ClosureDefinition {
                         name: match c.name {
                             None | Some(model::closure_definition::Name::HasName(_)) => None,
-                            Some(model::closure_definition::Name::NameValue(id)) => Some(
-                                Source::deserialize(id as usize, self.elements, self.state)?,
-                            ),
+                            Some(model::closure_definition::Name::NameValue(id)) => {
+                                Some(Source::deserialize(id as usize, self.elements, self.state)?)
+                            }
                         },
                         signature: match &c.signature {
                             None | Some(model::closure_definition::Signature::HasSignature(_)) => {
@@ -1258,9 +1288,13 @@ impl<'a> ClosureDeserializer<'a> {
                     ValueDefinition::JobListDefinition(res)
                 }
 
-                model::value_definition::ValueDefinition::Identifier(s) => ValueDefinition::Identifier(
-                    Source::deserialize(*s as usize, self.elements, self.state)?,
-                ),
+                model::value_definition::ValueDefinition::Identifier(s) => {
+                    ValueDefinition::Identifier(Source::deserialize(
+                        *s as usize,
+                        self.elements,
+                        self.state,
+                    )?)
+                }
                 model::value_definition::ValueDefinition::GetAttr(a) => {
                     ValueDefinition::GetAttr(
                         Box::from(self.value_definition(

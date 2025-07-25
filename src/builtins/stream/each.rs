@@ -1,7 +1,7 @@
 use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType::Empty;
 use crate::lang::{argument::Argument, data::table::ColumnType};

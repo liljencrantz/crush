@@ -2,9 +2,7 @@ use crate::data::r#struct::Struct;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
-use crate::lang::errors::{
-    CrushError, CrushResult, command_error, error, invalid_jump,
-};
+use crate::lang::errors::{CrushError, CrushResult, command_error, error, invalid_jump};
 use crate::lang::help::Help;
 use crate::lang::pipe::CrushStream;
 use crate::lang::{value::Value, value::ValueType};
@@ -102,7 +100,10 @@ impl ScopeLoader {
 #[derive(Clone)]
 pub enum ScopeType {
     Loop,
-    Command { source: Source, name: Option<String> },
+    Command {
+        source: Source,
+        name: Option<String>,
+    },
     Conditional,
     Namespace,
     Block,
@@ -393,7 +394,7 @@ impl Scope {
         let mut data = self.lock()?;
         if data.is_readonly {
             invalid_jump("`return` command outside of command definition")
-        } else if matches!(data.scope_type, ScopeType::Command{..}) {
+        } else if matches!(data.scope_type, ScopeType::Command { .. }) {
             data.is_stopped = true;
             data.return_value = value;
             Ok(())
@@ -606,10 +607,7 @@ impl Scope {
     /// Redeclare a variable.
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("$") {
-            return command_error(format!(
-                "Illegal name, starts with underscore. ({})",
-                name
-            ));
+            return command_error(format!("Illegal name, starts with underscore. ({})", name));
         }
         if name.starts_with("__") {
             return command_error(format!(

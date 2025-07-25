@@ -1,7 +1,7 @@
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{data_error, CrushResult};
+use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use model::Element;
@@ -110,14 +110,22 @@ pub trait Serializable<T> {
 }
 
 impl Serializable<Arc<str>> for Arc<str> {
-    fn deserialize(id: usize, elements: &[Element], state: &mut DeserializationState) -> CrushResult<Arc<str>> {
+    fn deserialize(
+        id: usize,
+        elements: &[Element],
+        state: &mut DeserializationState,
+    ) -> CrushResult<Arc<str>> {
         match Value::deserialize(id, elements, state)? {
             Value::String(s) => Ok(s),
-            _ => data_error("Expected string"),       
+            _ => data_error("Expected string"),
         }
     }
 
-    fn serialize(&self, elements: &mut Vec<Element>, state: &mut SerializationState) -> CrushResult<usize> {
+    fn serialize(
+        &self,
+        elements: &mut Vec<Element>,
+        state: &mut SerializationState,
+    ) -> CrushResult<usize> {
         Value::String(self.clone()).serialize(elements, state)
     }
 }

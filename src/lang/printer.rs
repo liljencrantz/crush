@@ -4,6 +4,9 @@
 */
 use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
 use crate::lang::printer::PrinterMessage::*;
+use crate::lang::state::scope::Scope;
+use crate::util::highlight::highlight_colors;
+use crate::util::md::render;
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use crossbeam::channel::bounded;
@@ -12,9 +15,6 @@ use std::collections::HashMap;
 use std::thread;
 use std::thread::JoinHandle;
 use termion::terminal_size;
-use crate::lang::state::scope::Scope;
-use crate::util::highlight::highlight_colors;
-use crate::util::md::render;
 
 pub enum PrinterMessage {
     Ping,
@@ -67,14 +67,18 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
                         }
                         Error(err) => eprintln!("{}", err),
                         CrushError(err) => {
-                            let colors = scope.as_ref().map(|s| highlight_colors(s)).unwrap_or_else(|| HashMap::new());
+                            let colors = scope
+                                .as_ref()
+                                .map(|s| highlight_colors(s))
+                                .unwrap_or_else(|| HashMap::new());
                             let message = match err.command() {
-                                Some(cmd) if !err.message().starts_with('`')=> {
+                                Some(cmd) if !err.message().starts_with('`') => {
                                     format!("`{}`: {}", cmd, err.message())
-                                },
+                                }
                                 _ => err.message(),
                             };
-                            let rendered = render(&message, 80, colors).unwrap_or_else(|_| err.message());
+                            let rendered =
+                                render(&message, 80, colors).unwrap_or_else(|_| err.message());
                             eprintln!("{}", rendered);
                             if let Some(ctx) = err.source() {
                                 match ctx.show() {
@@ -162,7 +166,7 @@ impl Printer {
             let _ = self.pong_receiver.recv();
         }
     }
-    
+
     /**
        Print information about the passed in error.
     */
@@ -170,9 +174,7 @@ impl Printer {
         match &err.error_type() {
             CrushErrorType::SendError(_) => {}
             _ => {
-                _ = self
-                    .sender
-                    .send(PrinterMessage::CrushError(err));
+                _ = self.sender.send(PrinterMessage::CrushError(err));
             }
         }
     }

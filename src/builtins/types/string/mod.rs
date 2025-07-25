@@ -63,9 +63,9 @@ struct Len {}
 
 fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Integer(context.this.string()?.chars().count() as i128))
+    context.output.send(Value::Integer(
+        context.this.string()?.chars().count() as i128
+    ))
 }
 
 #[signature(
@@ -141,8 +141,8 @@ fn split(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.string.trim, 
-    can_block = false, 
+    types.string.trim,
+    can_block = false,
     output = Known(ValueType::String),
     short = "Returns a string with all whitespace trimmed from both ends")]
 struct Trim {}
@@ -284,7 +284,8 @@ struct EndsWith {
 }
 
 fn ends_with(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: EndsWith = EndsWith::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: EndsWith =
+        EndsWith::parse(context.remove_arguments(), &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(s.ends_with(&cfg.suffix)))
 }
@@ -301,7 +302,8 @@ struct StartsWith {
 }
 
 fn starts_with(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: StartsWith = StartsWith::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: StartsWith =
+        StartsWith::parse(context.remove_arguments(), &context.global_state.printer())?;
     let s = context.this.string()?;
     context.output.send(Value::Bool(s.starts_with(&cfg.prefix)))
 }

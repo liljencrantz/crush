@@ -1,19 +1,19 @@
+use crate::CrushResult;
 use crate::lang::argument::{Argument, SwitchStyle};
 use crate::lang::command::OutputType::Known;
 use crate::lang::command_invocation::resolve_external_command;
+use crate::lang::errors::{argument_error, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::value::Value;
 use crate::lang::value::Value::{Binary, BinaryInputStream};
 use crate::lang::value::ValueType;
 use crate::state::contexts::CommandContext;
 use crate::util::file::cwd;
-use crate::CrushResult;
 use signature::signature;
 use std::borrow::BorrowMut;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::Stdio;
-use crate::lang::errors::{argument_error, command_error};
 
 #[signature(
     control.cmd,
@@ -188,10 +188,13 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             if let Some(file) = file {
                 cmd_internal(context, file, arguments)
             } else {
-                argument_error(format!(
-                    "Unknown command {}",
-                    f.to_str().unwrap_or("<encoding error>")
-                ), &context.source)
+                argument_error(
+                    format!(
+                        "Unknown command {}",
+                        f.to_str().unwrap_or("<encoding error>")
+                    ),
+                    &context.source,
+                )
             }
         }
         Value::String(s) => {

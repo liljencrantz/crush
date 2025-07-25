@@ -1,8 +1,9 @@
 use crate::data::binary::BinaryReader;
+use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, data_error, error, argument_error, command_error};
+use crate::lang::errors::{CrushResult, argument_error, command_error, data_error, error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
@@ -23,7 +24,6 @@ use std::ops::{Add, Deref};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
-use crate::lang::ast::source::Source;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -148,10 +148,10 @@ fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
                     class_done = true;
                 }
                 c => {
-                    return argument_error(format!(
-                        "Illegal character in class-part of permission: {}",
-                        c
-                    ), source);
+                    return argument_error(
+                        format!("Illegal character in class-part of permission: {}", c),
+                        source,
+                    );
                 }
             },
             true => match c {
@@ -159,10 +159,10 @@ fn apply(perm: &str, mut current: u32, source: &Source) -> CrushResult<u32> {
                 'w' => modes |= WRITE,
                 'x' => modes |= EXECUTE,
                 c => {
-                    return argument_error(format!(
-                        "Illegal character in mode-part of permission: {}.",
-                        c
-                    ), source);
+                    return argument_error(
+                        format!("Illegal character in mode-part of permission: {}.", c),
+                        source,
+                    );
                 }
             },
         }
@@ -295,7 +295,9 @@ struct Name {}
 
 fn name(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
-        context.this.file()?
+        context
+            .this
+            .file()?
             .file_name()
             .ok_or("`file:name`: Invalid file path")?
             .to_str()
@@ -313,7 +315,11 @@ struct Parent {}
 
 fn parent(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
-        context.this.file()?.parent().ok_or("`file:parent`: Invalid file path.")?,
+        context
+            .this
+            .file()?
+            .parent()
+            .ok_or("`file:parent`: Invalid file path.")?,
     ))
 }
 
@@ -455,10 +461,13 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         None => command_error("`Expected `this` to be a `file`, but it was not set."),
-        Some(v) => argument_error(&format!(
-            "Expected `this` to be of type `file`, but is of type `{}`.",
-            v.value_type()
-        ), &context.source),
+        Some(v) => argument_error(
+            &format!(
+                "Expected `this` to be of type `file`, but is of type `{}`.",
+                v.value_type()
+            ),
+            &context.source,
+        ),
     }
 }
 

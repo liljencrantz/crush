@@ -1,10 +1,10 @@
 use crate::builtins::control::timeit::time_run;
 use crate::lang::command::Command;
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::{Value, ValueType};
 use signature::signature;
-use crate::lang::command::OutputType::Known;
 
 #[signature(
     control.timer,

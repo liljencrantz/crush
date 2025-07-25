@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{command_error, CrushResult};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::{TableInputStream, pipe};
 use crate::lang::printer::Printer;
@@ -140,10 +140,7 @@ fn create_worker_thread(
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut input = context
-        .input
-        .recv()?
-        .stream()?;
+    let mut input = context.input.recv()?.stream()?;
     let input_type = input.types().to_vec();
     let indices: Vec<usize> = cfg
         .group_by

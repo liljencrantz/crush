@@ -1,5 +1,5 @@
 use crate::lang::data::table::ColumnType;
-use crate::lang::errors::{CrushResult};
+use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use signature::signature;

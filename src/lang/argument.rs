@@ -1,3 +1,4 @@
+use crate::lang::ast::source::Source;
 /**
 Code for managing arguments passed in to commands
  */
@@ -9,7 +10,6 @@ use crate::lang::value::ValueDefinition;
 use crate::util::repr::Repr;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use crate::lang::ast::source::Source;
 
 #[derive(Debug, Clone)]
 pub enum ArgumentType {
@@ -216,10 +216,13 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                             }
                         }
                         v => {
-                            return argument_error(format!(
-                                "Argument list must be of type list, was of type {}",
-                                v.value_type()
-                            ), &a.source);
+                            return argument_error(
+                                format!(
+                                    "Argument list must be of type list, was of type {}",
+                                    v.value_type()
+                                ),
+                                &a.source,
+                            );
                         }
                     },
 
@@ -230,17 +233,18 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                                 if let Value::String(name) = key {
                                     res.push(Argument::named(&name, value, &a.source));
                                 } else {
-                                    return command_error(
-                                        "Argument dict must have string keys",
-                                    );
+                                    return command_error("Argument dict must have string keys");
                                 }
                             }
                         }
                         v => {
-                            return argument_error(format!(
-                                "Argument dict must be of type dict, was of type {}",
-                                v.value_type()
-                            ), &a.source);
+                            return argument_error(
+                                format!(
+                                    "Argument dict must be of type dict, was of type {}",
+                                    v.value_type()
+                                ),
+                                &a.source,
+                            );
                         }
                     },
                 }

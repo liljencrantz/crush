@@ -1,4 +1,5 @@
 use crate::lang::ast::location::Location;
+use crate::lang::ast::source::Source;
 /// An executable pipeline of one or more commands.
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
@@ -6,7 +7,6 @@ use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::{EvalContext, JobContext};
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
-use crate::lang::ast::source::Source;
 
 /// An executable pipeline of one or more commands.
 #[derive(Clone)]
@@ -23,7 +23,7 @@ impl Job {
     pub fn source(&self) -> &Source {
         &self.source
     }
-    
+
     pub fn new(commands: Vec<CommandInvocation>, source: Source) -> Job {
         Job { commands, source }
     }

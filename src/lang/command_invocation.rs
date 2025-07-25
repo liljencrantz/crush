@@ -1,4 +1,5 @@
 use crate::data::r#struct::Struct;
+use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 /// A single command from a larger Job.
 ///
@@ -20,7 +21,6 @@ use crate::util::repr::Repr;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::thread::ThreadId;
-use crate::lang::ast::source::Source;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -39,14 +39,22 @@ fn arg_can_block(local_arguments: &Vec<ArgumentDefinition>, context: &mut EvalCo
 }
 
 impl CommandInvocation {
-    pub fn new(command: ValueDefinition, source: Source, arguments: Vec<ArgumentDefinition>) -> CommandInvocation {
-        CommandInvocation { source, command, arguments }
+    pub fn new(
+        command: ValueDefinition,
+        source: Source,
+        arguments: Vec<ArgumentDefinition>,
+    ) -> CommandInvocation {
+        CommandInvocation {
+            source,
+            command,
+            arguments,
+        }
     }
 
     pub fn source(&self) -> &Source {
         &self.source
     }
-    
+
     /** Extracts the help message from a closure definition */
     pub fn extract_help_message(&self) -> Option<String> {
         if self.arguments.len() != 0 {
@@ -77,8 +85,7 @@ impl CommandInvocation {
         mut this: Option<Value>,
         job_context: JobContext,
     ) -> CrushResult<CommandContext> {
-        let (arguments, arg_this) =
-            local_arguments.eval(&mut EvalContext::from(&job_context))?;
+        let (arguments, arg_this) = local_arguments.eval(&mut EvalContext::from(&job_context))?;
 
         if arg_this.is_some() {
             this = arg_this;
@@ -113,9 +120,7 @@ pub fn eval_non_blocking(
 ) -> CrushResult<Option<ThreadId>> {
     match command.eval(&mut EvalContext::from(&context)) {
         // Try to find the command in this thread. This may fail if the command is found via a subshell, in which case we need to spawn a thread
-        Ok((this, value)) => {
-            eval_internal(this, value, arguments.clone(), context, source)
-        }
+        Ok((this, value)) => eval_internal(this, value, arguments.clone(), context, source),
         Err(err) => {
             if let ValueDefinition::Identifier(str) = command {
                 try_external_command(str, arguments.clone(), context)
@@ -260,7 +265,7 @@ fn eval_struct(
 }
 
 fn eval_command(
-    source: &Source,   
+    source: &Source,
     command: Command,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
@@ -281,8 +286,12 @@ fn eval_command(
         let local_source = source.clone();
         let local_context = context.clone();
         Ok(Some(context.spawn(&name, move || {
-            let res =
-                CommandInvocation::command_context(&local_source, local_arguments, this, local_context)?;
+            let res = CommandInvocation::command_context(
+                &local_source,
+                local_arguments,
+                this,
+                local_context,
+            )?;
             command.eval(res)
         })?))
     }
@@ -316,10 +325,7 @@ fn try_external_command(
         Some(path) => {
             arguments.insert(
                 0,
-                ArgumentDefinition::unnamed(ValueDefinition::Value(
-                    Value::from(path),
-                    cmd.clone(),
-                )),
+                ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(path), cmd.clone())),
             );
             let call = CommandInvocation {
                 command: ValueDefinition::Value(
@@ -331,7 +337,7 @@ fn try_external_command(
                     cmd.clone(),
                 ),
                 arguments,
-                source: cmd.clone(),           
+                source: cmd.clone(),
             };
             call.eval(context)
         }

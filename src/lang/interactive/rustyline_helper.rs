@@ -4,6 +4,7 @@ use crate::lang::errors::CrushResult;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::util::directory_lister::directory_lister;
+use crate::util::highlight::highlight_colors;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{CmdKind, Highlighter};
@@ -13,7 +14,6 @@ use rustyline::{Context, validate};
 use rustyline_derive::Helper;
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
-use crate::util::highlight::highlight_colors;
 
 #[derive(Helper)]
 pub struct RustylineHelper {
