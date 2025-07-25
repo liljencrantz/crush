@@ -13,7 +13,7 @@ use std::borrow::BorrowMut;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::Stdio;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::{argument_error, command_error};
 
 #[signature(
     control.cmd,
@@ -145,7 +145,7 @@ fn cmd_internal(
                     Ok(())
                 })?;
             }
-            _ => return argument_error("Invalid input: Expected binary data", &context.source),
+            _ => return command_error("Invalid input: Expected binary data"),
         }
 
         context
@@ -175,7 +175,7 @@ fn cmd_internal(
 fn cmd(mut context: CommandContext) -> CrushResult<()> {
     let mut arguments = context.remove_arguments();
     if arguments.is_empty() {
-        return argument_error("No command given", &context.source);
+        return command_error("No command given");
     }
     match arguments.remove(0).value {
         Value::File(f) => {
@@ -198,10 +198,10 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             if let Some(file) = resolve_external_command(s.as_ref(), &context.scope)? {
                 cmd_internal(context, file, arguments)
             } else {
-                argument_error(format!("Unknown command `{}`", s), &context.source)
+                command_error(format!("Unknown command `{}`", s))
             }
         }
 
-        _ => argument_error("Not a valid command", &context.source),
+        _ => command_error("Not a valid command"),
     }
 }

@@ -1,5 +1,5 @@
 use crate::lang::data::binary::{BinaryReader, binary_channel};
-use crate::lang::errors::{CrushError, CrushResult, argument_error_legacy, data_error};
+use crate::lang::errors::{CrushError, CrushResult, command_error, data_error};
 use crate::lang::pipe::{ValueReceiver, ValueSender};
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::cwd;
@@ -56,7 +56,7 @@ impl Files {
                 Value::BinaryInputStream(b) => Ok(b),
                 Value::Binary(b) => Ok(<dyn BinaryReader>::vec(&b)),
                 Value::String(s) => Ok(<dyn BinaryReader>::vec(s.as_bytes())),
-                _ => argument_error_legacy("Expected either a file to read or binary pipe io"),
+                _ => command_error("Expected either a file to read or binary pipe io"),
             }
         } else {
             <dyn BinaryReader>::paths(self.files)
@@ -72,7 +72,7 @@ impl Files {
             output.send(Value::Empty)?;
             Ok(Box::from(File::create(self.files[0].clone())?))
         } else {
-            argument_error_legacy("Expected at most one destination file")
+            command_error("Expected at most one destination file")
         }
     }
 
@@ -83,7 +83,7 @@ impl Files {
             Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files)?,
             Value::String(f) => self.files.push(PathBuf::from(f.deref())),
             value => match value.stream()? {
-                None => return argument_error_legacy("Expected a file name"),
+                None => return command_error("Expected a file name"),
                 Some(mut s) => {
                     let t = s.types();
                     if t.len() == 1 && t[0].cell_type == ValueType::File {
@@ -93,7 +93,7 @@ impl Files {
                             }
                         }
                     } else {
-                        return argument_error_legacy(
+                        return command_error(
                             "Table stream must contain one column of type file",
                         );
                     }

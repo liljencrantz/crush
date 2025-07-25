@@ -130,11 +130,10 @@ impl Signature {
                                 &_source,
                             ),
                         _ =>
-                            return crate::lang::errors::argument_error(
+                            return crate::lang::errors::command_error(
                                 format!(
                                     "No value provided for parameter `{}`",
                                     #name_literal),
-                                &_command_source,
                             ),
                     }
                 }
@@ -186,9 +185,9 @@ impl Signature {
                                     value.value_type().to_string()),
                                     &_source),
                             _ =>
-                                return crate::lang::errors::argument_error(format ! (
+                                return crate::lang::errors::command_error(format ! (
                                     "No value provided for parameter `{}`",
-                                    # name_literal), _command_source),
+                                    # name_literal)),
                         }
                     }
                 })
@@ -254,9 +253,9 @@ impl Signature {
                                     value.value_type().to_string()),
                                     &_source),
                             _ =>
-                                return crate::lang::errors::argument_error(format ! (
+                                return crate::lang::errors::command_error(format ! (
                                     "No value provided for parameter `{}`",
-                                    # name_literal), _command_source),
+                                    # name_literal)),
                         }
                     }
                 })
@@ -351,9 +350,9 @@ impl Signature {
                                     value.value_type().to_string()),
                                     &_source),
                             _ =>
-                                return crate::lang::errors::argument_error(format ! (
+                                return crate::lang::errors::command_error(format ! (
                                     "No value provided for parameter `{}`",
-                                    #name_literal), _command_source),
+                                    #name_literal)),
                         }
                     }
                 })
@@ -396,10 +395,10 @@ impl Signature {
                             &_source,
                         ),
                     _ =>
-                        return crate::lang::errors::argument_error(
+                        return crate::lang::errors::command_error(
                             format!(
                                     "No value provided for parameter `{}`",
-                                    #name_literal), _command_source),
+                                    #name_literal)),
                 }
             }
             }),
@@ -470,8 +469,8 @@ impl Signature {
                                 &_source,
                             ),
                         _ =>
-                            return crate::lang::errors::argument_error(
-                                format!("No value provided for parameter `{}`", #name_literal), _command_source),
+                            return crate::lang::errors::command_error(
+                                format!("No value provided for parameter `{}`", #name_literal)),
                         }
                     }
                 })

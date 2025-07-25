@@ -417,7 +417,7 @@ struct Signal {
 }
 
 fn signal(mut context: CommandContext) -> CrushResult<()> {
-    let sig = Signal::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let sig = Signal::parse(context.remove_arguments(), &context.global_state.printer())?;
     for pid in sig.pid {
         signal::kill(
             Pid::from_raw(pid as i32),

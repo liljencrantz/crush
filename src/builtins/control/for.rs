@@ -2,7 +2,7 @@ use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::Stream;
 use crate::lang::state::contexts::CommandContext;
@@ -32,13 +32,13 @@ pub struct For {
 
 fn r#for(mut context: CommandContext) -> CrushResult<()> {
     if context.arguments.len() != 2 {
-        return argument_error("Expected two parameters: A stream and a command", &context.source);
+        return command_error("Expected two parameters: A stream and a command");
     }
     let source = context.arguments[0].source.clone();
-    let mut cfg = For::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let mut cfg = For::parse(context.remove_arguments(), context.global_state.printer())?;
 
     if cfg.iterator.len() != 1 {
-        return argument_error(format!("Expected exactly one stream to iterate over, got {}", cfg.iterator.len()), &context.source);
+        return command_error(format!("Expected exactly one stream to iterate over, got {}", cfg.iterator.len()));
     }
 
     let (name, mut input) = cfg

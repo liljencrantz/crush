@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -28,7 +28,7 @@ struct Let {
 }
 
 pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Let::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Let::parse(context.remove_arguments(), context.global_state.printer())?;
     for arg in cfg.variables {
         context.scope.declare(&arg.0, arg.1)?;
     }
@@ -58,7 +58,7 @@ struct Set {
 }
 
 pub fn set(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Set::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Set::parse(context.remove_arguments(), context.global_state.printer())?;
     for arg in cfg.variables {
         context.scope.set(&arg.0, arg.1)?;
     }
@@ -85,9 +85,9 @@ struct Get {
 }
 
 pub fn get(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Get::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Get::parse(context.remove_arguments(), context.global_state.printer())?;
     match context.scope.get(&cfg.name)? {
-        None => argument_error(format!("Unknown variable `{}`.", &cfg.name), &context.source),
+        None => command_error(format!("Unknown variable `{}`.", &cfg.name)),
         Some(value) => context.output.send(value),
     }
 }
@@ -107,10 +107,10 @@ struct Unset {
 }
 
 pub fn unset(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Unset::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Unset::parse(context.remove_arguments(), context.global_state.printer())?;
     for s in cfg.name {
         if s.len() == 0 {
-            return argument_error(format!("Illegal variable name {}.", &s), &context.source);
+            return command_error(format!("Illegal variable name {}.", &s));
         } else {
             context.scope.remove_str(&s)?;
         }
@@ -134,7 +134,7 @@ struct Use {
 }
 
 pub fn r#use(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Use::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Use::parse(context.remove_arguments(), context.global_state.printer())?;
     for e in cfg.name {
         context.scope.r#use(&e);
     }
@@ -160,7 +160,7 @@ struct Unuse {
 }
 
 pub fn unuse(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Unuse::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Unuse::parse(context.remove_arguments(), context.global_state.printer())?;
     for e in cfg.name {
         context.scope.unuse(&e);
     }

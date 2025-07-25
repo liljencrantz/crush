@@ -3,7 +3,7 @@ use crate::data::table::{ColumnType, Row};
 use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::errors::{
-    CrushError, CrushResult, argument_error_legacy, error, invalid_jump,
+    CrushError, CrushResult, command_error, error, invalid_jump,
 };
 use crate::lang::help::Help;
 use crate::lang::pipe::CrushStream;
@@ -585,7 +585,7 @@ impl Scope {
 
     pub fn declare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Illegal operation: Can't declare variables beginning with double underscores. ({})",
                 name
             ));
@@ -606,13 +606,13 @@ impl Scope {
     /// Redeclare a variable.
     pub fn redeclare(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("$") {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Illegal name, starts with underscore. ({})",
                 name
             ));
         }
         if name.starts_with("__") {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Illegal operation: Can't redeclare variables beginning with double underscores. ({})",
                 name
             ));
@@ -634,7 +634,7 @@ impl Scope {
     /// Set a new value for an existing variable
     pub fn set(&self, name: &str, value: Value) -> CrushResult<()> {
         if name.starts_with("__") {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Illegal operation: Can't set variables beginning with double underscores. ({})",
                 name
             ));
@@ -690,7 +690,7 @@ impl Scope {
 
     fn remove_here(&self, key: &str) -> CrushResult<Option<Value>> {
         if key.starts_with("__") {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Illegal operation: Can't remove variables beginning with double underscores. ({})",
                 key
             ));

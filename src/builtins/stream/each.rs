@@ -38,7 +38,7 @@ fn run(
 }
 
 pub fn each(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Each::parse(context.remove_arguments(), &context.source.clone(), &context.global_state.printer())?;
+    let cfg = Each::parse(context.remove_arguments().clone(), &context.global_state.printer())?;
     let source = &context.arguments[0].source;
     context.output.send(Value::Empty)?;
 

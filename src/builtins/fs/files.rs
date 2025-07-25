@@ -327,7 +327,7 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
 
 fn files(mut context: CommandContext) -> CrushResult<()> {
     let config: FilesSignature =
-        FilesSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        FilesSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let (types, cols) = column_data(&config);
 

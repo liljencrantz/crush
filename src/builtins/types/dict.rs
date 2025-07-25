@@ -1,7 +1,7 @@
 use crate::data::table::ColumnVec;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
@@ -55,12 +55,12 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    match context.this.r#type(&context.source)? {
+    match context.this.r#type()? {
         ValueType::Dict(t1, t2) => match (*t1, *t2) {
             (ValueType::Empty, ValueType::Empty) => {
-                let cfg: Call = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+                let cfg: Call = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
                 if !cfg.key_type.is_hashable() {
-                    return argument_error(format!("`Tried to create a `dict` subtype with the key type `{}`, which is not hashable.", cfg.key_type), &context.source);
+                    return command_error(format!("`Tried to create a `dict` subtype with the key type `{}`, which is not hashable.", cfg.key_type));
                 }
                 context.output.send(Value::Type(ValueType::Dict(
                     Box::new(cfg.key_type),
@@ -80,7 +80,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
         },
-        _ => argument_error("Invalid `this`, expected type `dict`.", &context.source),
+        _ => command_error("Invalid `this`, expected type `dict`."),
     }
 }
 
@@ -96,17 +96,17 @@ struct New {}
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    let t = context.this.r#type(&context.source)?;
+    let t = context.this.r#type()?;
     if let ValueType::Dict(key_type, value_type) = t {
         if !key_type.is_hashable() {
-            argument_error(format!("Tried to create a `dict` instance with the key type `{}`, which is not hashable.", key_type), &context.source)
+            command_error(format!("Tried to create a `dict` instance with the key type `{}`, which is not hashable.", key_type))
         } else {
             context
                 .output
                 .send(Dict::new(*key_type, *value_type)?.into())
         }
     } else {
-        argument_error("Expected a dict type as this value.", &context.source)
+        command_error("Expected a dict type as this value.")
     }
 }
 
@@ -131,11 +131,11 @@ struct Of {
 }
 
 fn of(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Of::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = Of::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     match (cfg.elements.is_empty(), cfg.values.is_empty()) {
-        (false, false) => argument_error("Cannot specify both elements and values.", &context.source),
-        (true, true) => argument_error("No values specified.", &context.source),
+        (false, false) => command_error("Cannot specify both elements and values."),
+        (true, true) => command_error("No values specified."),
         (true, false) => {
             let mut value_types = HashSet::new();
             let mut entries = OrderedMap::new();
@@ -159,7 +159,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
         }
         (false, true) => {
             if cfg.elements.len() % 2 == 1 {
-                argument_error("Expected an even number of arguments", &context.source)
+                command_error("Expected an even number of arguments")
             } else {
                 let mut key_types = HashSet::new();
                 let mut value_types = HashSet::new();
@@ -174,7 +174,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
                 }
 
                 if key_types.len() != 1 {
-                    return argument_error("Multiple key types specified in `dict`.", &context.source);
+                    return command_error("Multiple key types specified in `dict`.");
                 }
 
                 let key_type = key_types.drain().next().unwrap();
@@ -212,8 +212,8 @@ struct SetItem {
 }
 
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
-    let dict = context.this.dict(&context.source)?;
-    let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let dict = context.this.dict()?;
+    let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     dict.insert(cfg.key, cfg.value)?;
     context.output.empty()
 }
@@ -235,8 +235,8 @@ struct GetItem {
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let dict = context.this.dict(&context.source)?;
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let dict = context.this.dict()?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(dict.get(&cfg.key).unwrap_or(Value::Empty))
@@ -254,9 +254,9 @@ struct Contains {
 }
 
 fn contains(mut context: CommandContext) -> CrushResult<()> {
-    let dict = context.this.dict(&context.source)?;
+    let dict = context.this.dict()?;
     let cfg: Contains =
-        Contains::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        Contains::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::Bool(dict.contains(&cfg.key)))
 }
 
@@ -273,8 +273,8 @@ struct Remove {
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
-    let dict = context.this.dict(&context.source)?;
-    let cfg: Remove = Remove::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let dict = context.this.dict()?;
+    let cfg: Remove = Remove::parse(context.remove_arguments(), &context.global_state.printer())?;
     let o = context.output;
     dict.remove(&cfg.key).map(|c| o.send(c));
     Ok(())
@@ -292,7 +292,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Integer(context.this.dict(&context.source)?.len() as i128))
+        .send(Value::Integer(context.this.dict()?.len() as i128))
 }
 
 #[signature(
@@ -305,7 +305,7 @@ struct Clear {}
 
 fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    let d = context.this.dict(&context.source)?;
+    let d = context.this.dict()?;
     d.clear();
     context.output.send(d.into())
 }
@@ -320,7 +320,7 @@ struct CloneCmd {}
 
 fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    let d = context.this.dict(&context.source)?;
+    let d = context.this.dict()?;
     context.output.send(d.copy().into())
 }
 
@@ -336,7 +336,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Bool(context.this.dict(&context.source)?.len() == 0))
+        .send(Value::Bool(context.this.dict()?.len() == 0))
 }
 
 #[signature(
@@ -351,7 +351,7 @@ fn key_type(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Type(context.this.dict(&context.source)?.key_type()))
+        .send(Value::Type(context.this.dict()?.key_type()))
 }
 
 #[signature(
@@ -366,7 +366,7 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Type(context.this.dict(&context.source)?.value_type()))
+        .send(Value::Type(context.this.dict()?.value_type()))
 }
 
 #[signature(
@@ -383,7 +383,7 @@ struct Collect {
 }
 
 fn collect(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Collect = Collect::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg: Collect = Collect::parse(context.remove_arguments(), context.global_state.printer())?;
     let mut input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
     let input_type = input.types().to_vec();
     let mut res = OrderedMap::new();
@@ -425,7 +425,7 @@ struct Join {
 }
 
 fn join(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Join = Join::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg: Join = Join::parse(context.remove_arguments(), context.global_state.printer())?;
     let mut dicts = cfg.dicts;
 
     if let Some(Value::Dict(this)) = context.this {
@@ -448,7 +448,7 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
     }
 
     if key_types.len() != 1 {
-        argument_error("Multiple key types specified in dict", &context.source)
+        command_error("Multiple key types specified in dict")
     } else {
         let key_type = key_types.drain().next().unwrap();
         let value_type = if value_types.len() == 1 {

@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{command_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 use std::collections::VecDeque;
@@ -18,7 +18,7 @@ pub struct Tail {
 }
 
 fn tail(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Tail::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = Tail::parse(context.remove_arguments(), &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;
@@ -34,6 +34,6 @@ fn tail(mut context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error("Expected a stream.", &context.source),
+        None => command_error("Expected a stream."),
     }
 }

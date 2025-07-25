@@ -1,4 +1,4 @@
-use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::errors::{CrushResult, error, command_error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::display_non_recursive::DisplayNonRecursive;
@@ -90,14 +90,14 @@ impl Dict {
     pub fn insert(&self, key: Value, value: Value) -> CrushResult<()> {
         let mut entries = self.entries.lock().unwrap();
         if !self.key_type.is(&key) {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Invalid key type, expected {}, got {}.",
                 self.key_type.to_string(),
                 key.value_type().to_string()
             ));
         }
         if !self.value_type.is(&value) {
-            return argument_error_legacy(format!(
+            return command_error(format!(
                 "Invalid value type, expected {}, got {}.",
                 self.value_type.to_string(),
                 value.value_type().to_string()
@@ -106,7 +106,7 @@ impl Dict {
         entries.insert(key, value);
         Ok(())
     }
-
+    
     pub fn key_type(&self) -> ValueType {
         self.key_type.clone()
     }

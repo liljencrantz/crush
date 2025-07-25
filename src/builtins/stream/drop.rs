@@ -21,7 +21,7 @@ pub struct Drop {
 }
 
 fn drop(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Drop::parse(context.remove_arguments(), &context.source.clone(), &context.global_state.printer())?;
+    let cfg = Drop::parse(context.remove_arguments().clone(), &context.global_state.printer())?;
     let input = context.input.recv()?;
     match input.stream()? {
         Some(mut input) => {

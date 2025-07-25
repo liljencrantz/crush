@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
@@ -11,15 +11,15 @@ macro_rules! cmp {
     ($struct_name:ident, $name:ident, $op:expr) => {
         pub fn $name(mut context: CommandContext) -> CrushResult<()> {
             let cfg =
-                $struct_name::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+                $struct_name::parse(context.remove_arguments(), &context.global_state.printer())?;
             match cfg.left.partial_cmp(&cfg.right) {
                 Some(ordering) => context.output.send(Value::Bool($op(ordering))),
                 None => {
-                    return argument_error(format!(
+                    return command_error(format!(
                         "The two provided values of types {} and {} could not be compared",
                         cfg.left.value_type().to_string(),
                         cfg.right.value_type().to_string(),
-                    ), &context.source)
+                    ))
                 }
             }
         }
@@ -112,7 +112,7 @@ struct Eq {
 }
 
 pub fn eq(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Eq::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Eq::parse(context.remove_arguments(), context.global_state.printer())?;
     context.output.send(Value::Bool(cfg.left.eq(&cfg.right)))
 }
 
@@ -133,7 +133,7 @@ struct Neq {
 }
 
 pub fn neq(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Neq::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Neq::parse(context.remove_arguments(), context.global_state.printer())?;
     context.output.send(Value::Bool(!cfg.left.eq(&cfg.right)))
 }
 
@@ -152,7 +152,7 @@ struct Not {
 }
 
 pub fn not(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Not::parse(context.remove_arguments(), &context.source, context.global_state.printer())?;
+    let cfg = Not::parse(context.remove_arguments(), context.global_state.printer())?;
     context.output.send(Value::Bool(!cfg.argument))
 }
 

@@ -1,9 +1,8 @@
-use crate::argument_error_legacy;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::list::List;
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, error, argument_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -47,8 +46,8 @@ struct Filter {
 }
 
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Filter = Filter::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let glob = context.this.glob(&context.source)?;
+    let cfg: Filter = Filter::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let glob = context.this.glob()?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let columns = find_string_columns(input.types(), cfg.columns);
@@ -73,10 +72,10 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
                                 break;
                             }
                         }
-                        v => return argument_error_legacy(format!(
+                        v => return argument_error(format!(
                             "`glob:filter`: Expected column `{}` to be `oneof $string $file`, but was `{}`",
                             input.types()[*idx].name(), v.value_type(),
-                        )),
+                        ), &context.source),
                     }
                 }
                 if found {
@@ -101,7 +100,7 @@ struct New {
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: New = New::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: New = New::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::Glob(Glob::new(&cfg.glob)))
 }
 
@@ -117,8 +116,8 @@ struct Match {
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
-    let g = context.this.glob(&context.source)?;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let g = context.this.glob()?;
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(g.matches(&cfg.needle.as_string())))
@@ -136,9 +135,9 @@ struct NotMatch {
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
-    let g = context.this.glob(&context.source)?;
+    let g = context.this.glob()?;
     let cfg: NotMatch =
-        NotMatch::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!g.matches(&cfg.needle.as_string())))
@@ -156,8 +155,8 @@ struct Files {
 }
 
 fn files(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Files = Files::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let g = context.this.glob(&context.source)?;
+    let cfg: Files = Files::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let g = context.this.glob()?;
     let mut files = Vec::new();
     g.glob_files(&cfg.directory.unwrap_or(cwd()?), &mut files)?;
     context.output.send(

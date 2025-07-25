@@ -51,7 +51,7 @@ fn evaluate(
 
 pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
     let source = context.arguments[0].source.clone();
-    let cfg = Where::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = Where::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     match context.input.recv()?.stream()? {
         Some(mut input) => {

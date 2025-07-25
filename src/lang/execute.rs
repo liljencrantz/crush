@@ -1,6 +1,6 @@
 /// Functions that execute the contents of a string or file as Crush code.
 use crate::lang::ast::lexer::LanguageMode;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::pipe::{ValueSender, empty_channel, pipe};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::state::contexts::{CommandContext, JobContext};
@@ -49,7 +49,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
             Ok(())
         }
 
-        v => argument_error_legacy(format!("Expected a command, but found value of type `{}`", v.value_type())),
+        v => command_error(format!("Expected a command, but found value of type `{}`", v.value_type())),
     }
 }
 
@@ -70,7 +70,6 @@ fn source(
     output: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
-
     let jobs = global_state
         .parser()
         .parse(command, &global_env, initial_mode)?;

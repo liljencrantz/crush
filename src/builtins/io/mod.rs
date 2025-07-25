@@ -40,7 +40,7 @@ struct Val {
 }
 
 pub fn val(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Val = Val::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Val = Val::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(cfg.value)
 }
 
@@ -56,7 +56,7 @@ struct Dir {
 }
 
 pub fn dir(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Dir = Dir::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Dir = Dir::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(
         List::new(
             ValueType::String,
@@ -88,7 +88,7 @@ struct Echo {
 }
 
 fn echo(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Echo = Echo::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Echo = Echo::parse(context.remove_arguments(), &context.global_state.printer())?;
     let pretty = PrettyPrinter::new(
         context.global_state.printer().clone(),
         context.global_state.format_data(),
@@ -116,7 +116,7 @@ struct Member {
 }
 
 fn member(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Member = Member::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Member = Member::parse(context.remove_arguments(), &context.global_state.printer())?;
     match context.input.recv()? {
         Value::Struct(s) => context.output.send(
             s.get(&cfg.field)
@@ -150,7 +150,7 @@ struct Readline {
 }
 
 fn readline(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Readline = Readline::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Readline = Readline::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let mut rl = Editor::<(), DefaultHistory>::new()?;
 

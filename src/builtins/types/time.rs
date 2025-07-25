@@ -143,7 +143,7 @@ struct Parse {
 }
 
 fn parse(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Parse = Parse::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Parse = Parse::parse(context.remove_arguments(), &context.global_state.printer())?;
     let tm = DateTime::parse_from_str(&cfg.time, &cfg.format)?;
     let dt = tm.with_timezone(&Local);
     context.output.send(Value::Time(dt))
@@ -211,8 +211,8 @@ struct Format {
 }
 
 fn format(mut context: CommandContext) -> CrushResult<()> {
-    let time = context.this.time(&context.source)?;
-    let cfg: Format = Format::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let time = context.this.time()?;
+    let cfg: Format = Format::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::from(time.format(&cfg.format).to_string()))

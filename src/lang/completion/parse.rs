@@ -2,7 +2,7 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::{CommandNode, JobListNode, JobNode, node::Node};
 use crate::lang::command::{Command, Parameter};
-use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::parser::Parser;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
@@ -390,7 +390,7 @@ pub fn parse(
                     }
 
                     _ => {
-                        argument_error_legacy(format!("Invalid argument name {}", arg.type_name()))
+                        command_error(format!("Invalid argument name {}", arg.type_name()))
                     }
                 }
             } else {

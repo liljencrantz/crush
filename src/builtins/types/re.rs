@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::errors::{CrushResult, error, argument_error, command_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -40,10 +40,10 @@ struct New {
 }
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: New = New::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: New = New::parse(context.remove_arguments(), &context.global_state.printer())?;
     let res = match Regex::new(&cfg.pattern) {
         Ok(r) => Value::Regex(cfg.pattern, r),
-        Err(e) => return argument_error_legacy(e.to_string().as_str()),
+        Err(e) => return command_error(e.to_string()),
     };
     context.output.send(res)
 }
@@ -60,8 +60,8 @@ struct Match {
 }
 
 fn r#match(mut context: CommandContext) -> CrushResult<()> {
-    let re = context.this.re(&context.source)?.1;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let re = context.this.re()?.1;
+    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(re.is_match(&cfg.needle.as_string())))
@@ -79,9 +79,9 @@ struct NotMatch {
 }
 
 fn not_match(mut context: CommandContext) -> CrushResult<()> {
-    let re = context.this.re(&context.source)?.1;
+    let re = context.this.re()?.1;
     let cfg: NotMatch =
-        NotMatch::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!re.is_match(&cfg.needle.as_string())))
@@ -101,9 +101,9 @@ struct ReplaceSignature {
 }
 
 fn replace(mut context: CommandContext) -> CrushResult<()> {
-    let re = context.this.re(&context.source)?.1;
+    let re = context.this.re()?.1;
     let args: ReplaceSignature =
-        ReplaceSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        ReplaceSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::from(
         re.replace(&args.text, args.replacement.as_str()).as_ref(),
     ))
@@ -123,9 +123,9 @@ struct ReplaceAllSignature {
 }
 
 fn replace_all(mut context: CommandContext) -> CrushResult<()> {
-    let re = context.this.re(&context.source)?.1;
+    let re = context.this.re()?.1;
     let args: ReplaceAllSignature =
-        ReplaceAllSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        ReplaceAllSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::from(
         re.replace_all(&args.text, args.replacement.as_str())
             .as_ref(),
@@ -148,8 +148,8 @@ struct Filter {
 }
 
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Filter = Filter::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let re = context.this.re(&context.source)?.1;
+    let cfg: Filter = Filter::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let re = context.this.re()?.1;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let columns = find_string_columns(input.types(), cfg.columns);
@@ -175,10 +175,10 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
                             }
                         }
                         v => {
-                            return argument_error_legacy(format!(
+                            return argument_error(format!(
                                 "`re:filter`: Expected column `{}` to be `oneof $string $file`, but was `{}`",
                                 input.types()[*idx].name(), v.value_type(),
-                            ));
+                            ), &context.source);
                         }
                     }
                 }

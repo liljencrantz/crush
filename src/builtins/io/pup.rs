@@ -21,7 +21,7 @@ struct To {
 }
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     serialize_writer(&value, &mut writer)
@@ -39,7 +39,7 @@ struct From {
 }
 
 fn from(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(deserialize_reader(
         &mut BufReader::new(&mut cfg.files.reader(context.input)?),
         &context.scope,

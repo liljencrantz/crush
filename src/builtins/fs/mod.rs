@@ -31,7 +31,7 @@ struct Cd {
 }
 
 fn cd(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Cd = Cd::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Cd = Cd::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let dir = match cfg.destination.had_entries() {
         true => PathBuf::try_from(cfg.destination),
@@ -97,7 +97,7 @@ struct Stat {
 }
 
 fn stat(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Stat = Stat::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Stat = Stat::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&STAT_OUTPUT_TYPE)?;
 
     let v: Vec<PathBuf> = cfg.destination.into();

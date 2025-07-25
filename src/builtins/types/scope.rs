@@ -41,8 +41,8 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let val = context.this.scope(&context.source)?;
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let val = context.this.scope()?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(val.get_local(&cfg.name)?.ok_or(format!(
         "`scope:__getitem__`: Unknown member `${}` in scope `{}`",
         &cfg.name,
@@ -62,8 +62,8 @@ struct Resolve {
 }
 
 fn __resolve__(mut context: CommandContext) -> CrushResult<()> {
-    let val = context.this.scope(&context.source)?;
-    let cfg: Resolve = Resolve::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let val = context.this.scope()?;
+    let cfg: Resolve = Resolve::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(val.get(&cfg.name)?.ok_or(format!(
         "Unknown member {} in scope {}",
         &cfg.name,
@@ -92,7 +92,7 @@ fn __current_scope__(context: CommandContext) -> CrushResult<()> {
 struct Parent {}
 
 fn __super__(mut context: CommandContext) -> CrushResult<()> {
-    let scope = context.this.scope(&context.source)?;
+    let scope = context.this.scope()?;
     context
         .output
         .send(Value::Scope(scope.get_calling_scope().unwrap_or(scope)))
@@ -107,7 +107,7 @@ fn __super__(mut context: CommandContext) -> CrushResult<()> {
 struct All {}
 
 fn __all__(mut context: CommandContext) -> CrushResult<()> {
-    let scope = context.this.scope(&context.source)?;
+    let scope = context.this.scope()?;
     context.output.send(
         List::new(
             ValueType::String,
@@ -130,7 +130,7 @@ fn __all__(mut context: CommandContext) -> CrushResult<()> {
 struct Local {}
 
 fn __local__(mut context: CommandContext) -> CrushResult<()> {
-    let scope = context.this.scope(&context.source)?;
+    let scope = context.this.scope()?;
     context.output.send(
         List::new(
             ValueType::String,
@@ -153,7 +153,7 @@ fn __local__(mut context: CommandContext) -> CrushResult<()> {
 struct ReadOnly {}
 
 fn __read_only__(mut context: CommandContext) -> CrushResult<()> {
-    let scope = context.this.scope(&context.source)?;
+    let scope = context.this.scope()?;
     context.output.send(Value::Bool(scope.is_read_only()))
 }
 
@@ -166,7 +166,7 @@ fn __read_only__(mut context: CommandContext) -> CrushResult<()> {
 struct Name {}
 
 fn __name__(mut context: CommandContext) -> CrushResult<()> {
-    let scope = context.this.scope(&context.source)?;
+    let scope = context.this.scope()?;
     context
         .output
         .send(scope.name().map(|n| Value::from(n)).unwrap_or(Value::Empty))
@@ -181,7 +181,7 @@ fn __name__(mut context: CommandContext) -> CrushResult<()> {
 struct Use {}
 
 fn __use__(mut context: CommandContext) -> CrushResult<()> {
-    let scope = context.this.scope(&context.source)?;
+    let scope = context.this.scope()?;
     context.output.send(
         List::new(
             ValueType::Scope,

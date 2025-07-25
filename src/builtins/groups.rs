@@ -48,7 +48,7 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(get_group_value(&cfg.name, &context.source)?)
 }
 

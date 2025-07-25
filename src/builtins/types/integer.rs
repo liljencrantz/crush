@@ -161,7 +161,7 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Integer(-context.this.integer(&context.source)?))
+        .send(Value::Integer(-context.this.integer()?))
 }
 
 #[signature(

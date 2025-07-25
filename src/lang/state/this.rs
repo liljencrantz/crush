@@ -11,98 +11,97 @@ use chrono::{DateTime, Duration, Local};
 use regex::Regex;
 use std::mem::swap;
 use std::path::PathBuf;
-use crate::lang::ast::source::Source;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::command_error;
 
 macro_rules! this_method {
     ($name:ident, $return_type:ty, $value_type:ident, $description:literal) => {
-        fn $name(&mut self, source: &Source) -> CrushResult<$return_type> {
+        fn $name(&mut self) -> CrushResult<$return_type> {
             let mut this = None;
             swap(self, &mut this);
             match this {
                 Some(Value::$value_type(l)) => Ok(l),
-                None => argument_error(concat!(
+                None => command_error(concat!(
                     "Expected `this` to be a `",
                     $description,
                     "`, but was not set."
-                ), source),
-                Some(v) => argument_error(
+                )),
+                Some(v) => command_error(
                     format!(
                         concat!("Expected `this` to be a `", $description, "`, but it was a `{}`."),
                         v.value_type().to_string()
-                    ), source),
+                    )),
             }
         }
     };
 }
 
 pub trait This {
-    fn list(&mut self, source: &Source) -> CrushResult<List>;
-    fn dict(&mut self, source: &Source) -> CrushResult<Dict>;
-    fn string(&mut self, source: &Source) -> CrushResult<String>;
-    fn r#struct(&mut self, source: &Source) -> CrushResult<Struct>;
-    fn file(&mut self, source: &Source) -> CrushResult<PathBuf>;
-    fn re(&mut self, source: &Source) -> CrushResult<(String, Regex)>;
-    fn glob(&mut self, source: &Source) -> CrushResult<Glob>;
-    fn integer(&mut self, source: &Source) -> CrushResult<i128>;
-    fn float(&mut self, source: &Source) -> CrushResult<f64>;
-    fn r#type(&mut self, source: &Source) -> CrushResult<ValueType>;
-    fn duration(&mut self, source: &Source) -> CrushResult<Duration>;
-    fn time(&mut self, source: &Source) -> CrushResult<DateTime<Local>>;
-    fn table(&mut self, source: &Source) -> CrushResult<Table>;
-    fn table_input_stream(&mut self, source: &Source) -> CrushResult<TableInputStream>;
-    fn table_output_stream(&mut self, source: &Source) -> CrushResult<TableOutputStream>;
-    fn binary(&mut self, source: &Source) -> CrushResult<Vec<u8>>;
-    fn scope(&mut self, source: &Source) -> CrushResult<Scope>;
+    fn list(&mut self) -> CrushResult<List>;
+    fn dict(&mut self) -> CrushResult<Dict>;
+    fn string(&mut self) -> CrushResult<String>;
+    fn r#struct(&mut self) -> CrushResult<Struct>;
+    fn file(&mut self) -> CrushResult<PathBuf>;
+    fn re(&mut self) -> CrushResult<(String, Regex)>;
+    fn glob(&mut self) -> CrushResult<Glob>;
+    fn integer(&mut self) -> CrushResult<i128>;
+    fn float(&mut self) -> CrushResult<f64>;
+    fn r#type(&mut self) -> CrushResult<ValueType>;
+    fn duration(&mut self) -> CrushResult<Duration>;
+    fn time(&mut self) -> CrushResult<DateTime<Local>>;
+    fn table(&mut self) -> CrushResult<Table>;
+    fn table_input_stream(&mut self) -> CrushResult<TableInputStream>;
+    fn table_output_stream(&mut self) -> CrushResult<TableOutputStream>;
+    fn binary(&mut self) -> CrushResult<Vec<u8>>;
+    fn scope(&mut self) -> CrushResult<Scope>;
 }
 
 impl This for Option<Value> {
     this_method!(list, List, List, "list");
     this_method!(dict, Dict, Dict, "dict");
 
-    fn string(&mut self, source: &Source) -> CrushResult<String> {
+    fn string(&mut self) -> CrushResult<String> {
         let mut this = None;
         swap(self, &mut this);
         match this {
             Some(Value::String(l)) => Ok(l.to_string()),
             None => {
-                argument_error(concat!("Expected `this` to be a `string`, but was not set."), source)
+                command_error(concat!("Expected `this` to be a `string`, but was not set."))
             }
-            Some(v) => argument_error(
+            Some(v) => command_error(
                 format!(
                     concat!("Expected `this` to be a `string`, but it was a `{}`."),
                     v.value_type().to_string()
-                ), source),
+                )),
         }
     }
 
-    fn file(&mut self, source: &Source) -> CrushResult<PathBuf> {
+    fn file(&mut self) -> CrushResult<PathBuf> {
         let mut this = None;
         swap(self, &mut this);
         match this {
             Some(Value::File(l)) => Ok(l.to_path_buf()),
             None => {
-                argument_error("Expected `this` to be a `file`, but was not set.", source)
+                command_error("Expected `this` to be a `file`, but was not set.")
             }
-            Some(v) => argument_error(
+            Some(v) => command_error(
                 format!(
                     concat!("Expected `this` to be a `file`, but it was a `{}`."),
                     v.value_type().to_string()
-                ), source
+                )
             ),
         }
     }
 
-    fn re(&mut self, source: &Source) -> CrushResult<(String, Regex)> {
+    fn re(&mut self) -> CrushResult<(String, Regex)> {
         let mut this = None;
         swap(self, &mut this);
 
         match this {
             Some(Value::Regex(s, b)) => Ok((s, b)),
             None => {
-                argument_error("Expected `this` to be a `re`, but was not set.", source)
+                command_error("Expected `this` to be a `re`, but was not set.")
             }
-            Some(v) => argument_error(format!("Expected `this` to be a `re`, but it was a `{}`.", v.value_type()), source),
+            Some(v) => command_error(format!("Expected `this` to be a `re`, but it was a `{}`.", v.value_type())),
         }
     }
 
@@ -128,19 +127,19 @@ impl This for Option<Value> {
         "table_output_stream"
     );
 
-    fn binary(&mut self, source: &Source) -> CrushResult<Vec<u8>> {
+    fn binary(&mut self) -> CrushResult<Vec<u8>> {
         let mut this = None;
         swap(self, &mut this);
         match this {
             Some(Value::Binary(l)) => Ok(l.to_vec()),
             None => {
-                argument_error(concat!("Expected `this` to be a `string`, but it was not set."), source)
+                command_error(concat!("Expected `this` to be a `string`, but it was not set."))
             }
-            Some(v) => argument_error(
+            Some(v) => command_error(
                 format!(
                     concat!("Expected `this` to be a `string`, but it was a `{}`."),
                     v.value_type().to_string()
-                ), source),
+                )),
         }
     }
 }

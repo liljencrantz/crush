@@ -2,7 +2,7 @@ use crate::builtins::types;
 use crate::lang::command::OutputType::Known;
 /// All the different types a value can have.
 use crate::lang::command::{Command, OutputType};
-use crate::lang::errors::{CrushResult, argument_error_legacy, error};
+use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::help::Help;
 use crate::lang::{data::table::ColumnType, value::Value};
 use crate::util::glob::Glob;
@@ -121,7 +121,7 @@ impl ValueType {
             ValueType::BinaryInputStream => ValueType::Binary,
             ValueType::TableInputStream(o) => ValueType::Table(ColumnType::materialize(o)?),
             ValueType::TableOutputStream(_) => {
-                return argument_error_legacy("Can't materialize `$table_output_stream`");
+                return command_error("Can't materialize `$table_output_stream`");
             }
             ValueType::Table(r) => ValueType::Table(ColumnType::materialize(r)?),
             ValueType::List(l) => ValueType::List(Box::from(l.materialize()?)),

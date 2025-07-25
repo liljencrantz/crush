@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -53,7 +53,7 @@ fn parse_files(cfg: &JournalSignature) -> CrushResult<JournalFiles> {
         (true, true) => Ok(JournalFiles::All),
         (true, false) => Ok(JournalFiles::System),
         (false, true) => Ok(JournalFiles::CurrentUser),
-        (false, false) => argument_error_legacy("No files specified"),
+        (false, false) => command_error("No files specified"),
     }
 }
 
@@ -67,7 +67,7 @@ fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
 
 fn journal(mut context: CommandContext) -> CrushResult<()> {
     let cfg: JournalSignature =
-        JournalSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        JournalSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut journal = Journal::open(parse_files(&cfg)?, cfg.runtime_only, cfg.local_only)?;
 
     match cfg.seek {
@@ -77,7 +77,7 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
             })?;
         }
         Some(v) => {
-            return argument_error_legacy(format!("Don't know how to seek to {}", v.value_type()));
+            return command_error(format!("Don't know how to seek to {}", v.value_type()));
         }
         None => {}
     }

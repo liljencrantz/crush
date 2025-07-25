@@ -1,7 +1,7 @@
 use crate::data::table::ColumnVec;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, data_error, argument_error};
+use crate::lang::errors::{CrushResult, data_error, argument_error, command_error};
 use crate::lang::pipe::{Stream, ValueSender};
 use crate::lang::state::argument_vector::ArgumentVector;
 use crate::lang::state::contexts::CommandContext;
@@ -55,7 +55,7 @@ struct Repeat {
 }
 
 fn repeat(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Repeat = Repeat::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Repeat = Repeat::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut l = Vec::with_capacity(cfg.times as usize);
     for _i in 0..cfg.times {
         l.push(cfg.item.clone());
@@ -77,10 +77,10 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    match context.this.r#type(&context.source)? {
+    match context.this.r#type()? {
         ValueType::List(c) => match *c {
             ValueType::Any => {
-                let cfg: Call = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+                let cfg: Call = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
                 context
                     .output
                     .send(Value::Type(ValueType::List(Box::new(cfg.value_type))))
@@ -98,7 +98,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                 }
             }
         },
-        _ => argument_error("Invalid `this`, expected type list.", &context.source),
+        _ => command_error("Invalid `this`, expected type list."),
     }
 }
 #[signature(
@@ -114,9 +114,9 @@ struct Of {
 }
 
 fn of(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Of = Of::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Of = Of::parse(context.remove_arguments(), &context.global_state.printer())?;
     match cfg.values.len() {
-        0 => argument_error("Expected at least one argument.", &context.source),
+        0 => command_error("Expected at least one argument."),
         _ => context
             .output
             .send(List::new_without_type(cfg.values).into()),
@@ -149,7 +149,7 @@ fn collect_internal(
 }
 
 fn collect(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Collect = Collect::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Collect = Collect::parse(context.remove_arguments(), &context.global_state.printer())?;
     let input = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
     let input_type = input.types().to_vec();
     match (input_type.len(), cfg.column) {
@@ -182,9 +182,9 @@ struct New {}
 
 fn new(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    match context.this.r#type(&context.source)? {
+    match context.this.r#type()? {
         ValueType::List(t) => context.output.send(List::new(*t, []).into()),
-        _ => argument_error("Expected `this` to be a list type.", &context.source),
+        _ => command_error("Expected `this` to be a list type."),
     }
 }
 
@@ -200,7 +200,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Integer(context.this.list(&context.source)?.len() as i128))
+        .send(Value::Integer(context.this.list()?.len() as i128))
 }
 
 #[signature(
@@ -215,7 +215,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Bool(context.this.list(&context.source)?.len() == 0))
+        .send(Value::Bool(context.this.list()?.len() == 0))
 }
 
 #[signature(
@@ -231,8 +231,8 @@ struct Push {
 }
 
 fn push(mut context: CommandContext) -> CrushResult<()> {
-    let l = context.this.list(&context.source)?;
-    let mut cfg: Push = Push::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let l = context.this.list()?;
+    let mut cfg: Push = Push::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     for el in &cfg.values {
         if el.value_type() != l.element_type() && l.element_type() != ValueType::Any {
@@ -260,7 +260,7 @@ struct Pop {}
 fn pop(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let o = context.output;
-    context.this.list(&context.source)?.pop().map(|c| o.send(c));
+    context.this.list()?.pop().map(|c| o.send(c));
     Ok(())
 }
 
@@ -275,7 +275,7 @@ struct Peek {}
 fn peek(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     let o = context.output;
-    context.this.list(&context.source)?.peek().map(|c| o.send(c));
+    context.this.list()?.peek().map(|c| o.send(c));
     Ok(())
 }
 
@@ -289,7 +289,7 @@ struct Clear {}
 
 fn clear(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    let l = context.this.list(&context.source)?;
+    let l = context.this.list()?;
     l.clear();
     context.output.send(l.into())
 }
@@ -308,8 +308,8 @@ struct SetItem {
 }
 
 fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
-    let list = context.this.list(&context.source)?;
-    let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let list = context.this.list()?;
+    let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     list.set(cfg.idx, cfg.value)?;
     context.output.empty()
 }
@@ -325,8 +325,8 @@ struct Remove {
 }
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
-    let list = context.this.list(&context.source)?;
-    let cfg: Remove = Remove::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let list = context.this.list()?;
+    let cfg: Remove = Remove::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(list.remove(cfg.idx)?)
 }
 
@@ -342,9 +342,10 @@ struct Insert {
 }
 
 fn insert(mut context: CommandContext) -> CrushResult<()> {
-    let list = context.this.list(&context.source)?;
-    let cfg: Insert = Insert::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    list.insert(cfg.idx, cfg.value)
+    let list = context.this.list()?;
+    let cfg: Insert = Insert::parse(context.remove_arguments(), &context.global_state.printer())?;
+    list.insert(cfg.idx, cfg.value)?;
+    Ok(())
 }
 
 #[signature(
@@ -358,9 +359,9 @@ struct Truncate {
 }
 
 fn truncate(mut context: CommandContext) -> CrushResult<()> {
-    let list = context.this.list(&context.source)?;
+    let list = context.this.list()?;
     let cfg: Truncate =
-        Truncate::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        Truncate::parse(context.remove_arguments(), &context.global_state.printer())?;
     list.truncate(cfg.idx.unwrap_or_default());
     Ok(())
 }
@@ -375,7 +376,7 @@ struct CloneCmd {}
 
 fn clone(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.output.send(context.this.list(&context.source)?.copy().into())
+    context.output.send(context.this.list()?.copy().into())
 }
 
 #[signature(
@@ -390,8 +391,8 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let list = context.this.list(&context.source)?;
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let list = context.this.list()?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(list.get(cfg.idx)?)
 }
 
@@ -410,15 +411,15 @@ struct Slice {
 }
 
 fn slice(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Slice = Slice::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let s = context.this.list(&context.source)?;
+    let cfg: Slice = Slice::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let s = context.this.list()?;
     let to = cfg.to.unwrap_or(s.len());
 
     if to < cfg.from {
-        return argument_error("From larger than to.", &context.source);
+        return command_error("From larger than to.");
     }
     if to > s.len() {
-        return argument_error("Tried to slice beyond end of `list`.", &context.source);
+        return command_error("Tried to slice beyond end of `list`.");
     }
     context.output.send(s.slice(cfg.from, to)?.into())
 }

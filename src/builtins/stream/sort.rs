@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::command_error;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ComparisonMode::{CaseInsensitive, Regular};
@@ -31,12 +31,12 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;
-            let cfg = Sort::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg = Sort::parse(context.remove_arguments(), &context.global_state.printer())?;
             let indices = if cfg.field.is_empty() {
                 if input.types().len() == 1 {
                     vec![0]
                 } else {
-                    return argument_error("Missing comparison key.", &context.source);
+                    return command_error("Missing comparison key.");
                 }
             } else {
                 cfg.field
@@ -47,7 +47,7 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
 
             for idx in &indices {
                 if !input.types()[*idx].cell_type.is_comparable() {
-                    return argument_error(format!("Bad comparison key. `{}` is not comparable.", input.types()[*idx].name()), &context.source);
+                    return command_error(format!("Bad comparison key. `{}` is not comparable.", input.types()[*idx].name()));
                 }
             }
 

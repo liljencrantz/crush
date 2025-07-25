@@ -22,7 +22,7 @@ struct FromSignature {
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let (pipe_reader, mut writer) = os_pipe::pipe()?;
     context
@@ -55,7 +55,7 @@ struct To {
 }
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = To::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut out = cfg.file.writer(context.output)?;
     match context.input.recv()? {
         Value::String(str) => {

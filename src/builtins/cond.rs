@@ -36,11 +36,11 @@ pub fn and(mut context: CommandContext) -> CrushResult<()> {
                         return argument_error(format!(
                             "Expected boolean values, got a value of type {}",
                             v.value_type().to_string()
-                        ), &context.source);
+                        ), &arg.source);
                     }
                 }
             }
-            _ => return argument_error("Expected boolean values", &context.source),
+            _ => return argument_error("Expected boolean values", &arg.source),
         }
     }
     context.output.send(Value::Bool(res))
@@ -74,10 +74,10 @@ pub fn or(mut context: CommandContext) -> CrushResult<()> {
                             break;
                         }
                     }
-                    _ => return argument_error("Expected boolean values", &context.source),
+                    _ => return argument_error("Expected boolean values", &arg.source),
                 }
             }
-            _ => return argument_error("Expected boolean values", &context.source),
+            _ => return argument_error("Expected boolean values", &arg.source),
         }
     }
     context.output.send(Value::Bool(res))

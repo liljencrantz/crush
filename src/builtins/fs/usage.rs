@@ -76,7 +76,7 @@ fn size(
 }
 
 fn usage(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Usage = Usage::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Usage = Usage::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&OUTPUT_TYPE)?;
     let dirs = if cfg.directory.had_entries() {
         Vec::from(cfg.directory)

@@ -4,7 +4,7 @@ use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::errors::CrushError;
 use crate::lang::errors::CrushResult;
-use crate::lang::errors::argument_error;
+use crate::lang::errors::command_error;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::Stream;
 use crate::lang::pipe::TableOutputStream;
@@ -119,6 +119,6 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
                 &context.global_state.printer(),
             )
         }
-        (_, _, _, _) => argument_error("Invalid inputs for joins.", &context.source),
+        (_, _, _, _) => command_error("Invalid inputs for joins."),
     }
 }

@@ -12,7 +12,7 @@ use signature::signature;
 pub struct Reverse {}
 
 fn reverse(mut context: CommandContext) -> CrushResult<()> {
-    Reverse::parse(context.remove_arguments(), &context.source.clone(), &context.global_state.printer())?;
+    Reverse::parse(context.remove_arguments().clone(), &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;

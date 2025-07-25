@@ -2,7 +2,7 @@ use crate::lang::argument::Argument;
 use crate::lang::errors::error;
 use crate::lang::value::Value;
 use crate::util::replace::Replace;
-use crate::{CrushResult, argument_error_legacy};
+use crate::{CrushResult, command_error};
 
 pub trait ArgumentVector {
     fn check_len(&self, len: usize) -> CrushResult<()>;
@@ -14,7 +14,7 @@ impl ArgumentVector for Vec<Argument> {
         if self.len() == len {
             Ok(())
         } else {
-            argument_error_legacy(
+            command_error(
                 format!("Expected {} arguments, got {}", len, self.len()).as_str(),
             )
         }

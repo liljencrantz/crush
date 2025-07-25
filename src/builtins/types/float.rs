@@ -133,7 +133,7 @@ struct Neg {}
 
 fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context.output.send(Value::Float(-context.this.float(&context.source)?))
+    context.output.send(Value::Float(-context.this.float()?))
 }
 
 #[signature(
@@ -148,7 +148,7 @@ fn is_nan(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Bool(context.this.float(&context.source)?.is_nan()))
+        .send(Value::Bool(context.this.float()?.is_nan()))
 }
 
 #[signature(
@@ -163,7 +163,7 @@ fn is_infinite(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Bool(context.this.float(&context.source)?.is_infinite()))
+        .send(Value::Bool(context.this.float()?.is_infinite()))
 }
 
 #[signature(

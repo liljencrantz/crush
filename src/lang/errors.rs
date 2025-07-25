@@ -4,11 +4,11 @@
 /// that implements its own Error handling, the `CrushErrorType` is insanely large.
 /// It doesn't do anything that is weird or unusual, it's just big.
 use crate::lang::ast::location::Location;
+use crate::lang::ast::source::Source;
 use crate::lang::ast::token;
+use crate::lang::state::scope::Scope;
 use CrushErrorType::*;
 use reqwest::header::ToStrError;
-use crate::lang::ast::source::Source;
-use crate::lang::state::scope::Scope;
 
 #[derive(Debug)]
 pub enum CrushErrorType {
@@ -24,7 +24,7 @@ pub enum CrushErrorType {
     ParseFloatError(std::num::ParseFloatError),
     ParseBoolError(std::str::ParseBoolError),
     LexicalError(crate::lang::ast::lexer::LexicalError),
-    ParseError(String),
+    ParseError(String, Option<Location>),
     NumFormatError(num_format::Error),
     PoisonError(String),
     TryFromIntError(std::num::TryFromIntError),
@@ -83,7 +83,7 @@ impl CrushError {
             ParseIntError(e) => e.to_string(),
             ParseFloatError(e) => e.to_string(),
             LexicalError(e) => e.to_string(),
-            ParseError(e) => e.to_string(),
+            ParseError(e, _) => e.to_string(),
             RecvError(e) => e.to_string(),
             NumFormatError(e) => e.to_string(),
             PoisonError(e) => e.to_string(),
@@ -137,13 +137,38 @@ impl CrushError {
     pub fn trace(&self) -> &Option<String> {
         &self.trace
     }
-    
+
+    /// Returns an identical error but with the specified source location
     pub fn with_source(self, source: &Source) -> CrushError {
         CrushError {
             error_type: self.error_type,
             source: Some(source.clone()),
             command: self.command,
             trace: self.trace,
+        }
+    }
+
+    /// Fills in the source with the specified value if no other value already exists.
+    /// If a value already exists, use that instead. 
+    /// 
+    /// Parse errors include the offest into the source code, but do not include
+    /// the full text. For parse errors, calling this method on the output of 
+    /// the AST build phase is necessary in order to get readable error messages.
+    pub fn with_source_fallback(self, source: &Source) -> CrushError {
+        match (&self.error_type, &self.source) {
+            (ParseError(_, Some(l)), None) => CrushError {
+                source: Some(source.clone().substring(*l)),
+                error_type: self.error_type,
+                command: self.command,
+                trace: self.trace,
+            },
+            (_, None) => CrushError {
+                error_type: self.error_type,
+                source: Some(source.clone()),
+                command: self.command,
+                trace: self.trace,
+            },
+            _ => self,
         }
     }
 
@@ -226,12 +251,12 @@ impl From<crate::lang::ast::lexer::LexicalError> for CrushError {
 }
 
 impl From<lalrpop_util::ParseError<usize, token::Token<'_>, crate::lang::ast::lexer::LexicalError>>
-for CrushError
+    for CrushError
 {
     fn from(
         e: lalrpop_util::ParseError<usize, token::Token, crate::lang::ast::lexer::LexicalError>,
     ) -> Self {
-        let _location = match e {
+        let location = match e {
             lalrpop_util::ParseError::InvalidToken { location } => {
                 Some(Location::new(location, location))
             }
@@ -245,7 +270,7 @@ for CrushError
             lalrpop_util::ParseError::User { .. } => None,
         };
         CrushError {
-            error_type: ParseError(e.to_string()),
+            error_type: ParseError(e.to_string(), location),
             command: None,
             // Fixme: Losing location information here
             source: None,
@@ -424,26 +449,34 @@ impl From<markdown::message::Message> for CrushError {
 
 pub type CrushResult<T> = Result<T, CrushError>;
 
+/// Emit this error when a stream is unexpectedly closed.
 pub fn eof_error<T>() -> CrushResult<T> {
     Err(EOFError.into())
 }
 
-pub fn argument_error_legacy<T>(message: impl Into<String>) -> CrushResult<T> {
+/// Emit this error when the combination of arguments to a command were invalid without one specific
+/// argument being the problem.
+pub fn command_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(InvalidArgument(message.into()).into())
 }
 
+/// Emit this error when serialization to/from pup format fails.
 pub fn serialization_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(SerializationError(message.into()).into())
 }
 
+/// Emit this error when one specific argument to a command is invalid.
 pub fn argument_error<T>(message: impl Into<String>, source: &Source) -> CrushResult<T> {
     Err(CrushError::from(InvalidArgument(message.into())).with_source(source))
 }
 
+/// Emit this error when a command reads unexpected/invalid data from input
 pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(InvalidData(message.into()).into())
 }
 
+/// Emit this error when attempting to jump in an invalid way, e.g. calling continue outside of a 
+/// loop.
 pub fn invalid_jump<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(InvalidJump(message.into()).into())
 }
@@ -460,8 +493,14 @@ pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(GenericError(message.into()).into())
 }
 
+/// Utility methods for dealing with Crush results
 pub trait CrushResultExtra {
+    /// If this result is an error, fill in the command name into the error data.
     fn with_command(self, cmd: impl Into<String>) -> Self;
+
+    fn with_source_fallback(self, source: &Source) -> Self;
+    
+    /// If this result is an error, populate its stack trace based ob the supplied scope.
     fn with_trace(self, scope: &Scope) -> Self;
 }
 
@@ -475,6 +514,13 @@ impl<V> CrushResultExtra for CrushResult<V> {
                 command: Some(cmd.into()),
                 trace: err.trace,
             }),
+        }
+    }
+
+    fn with_source_fallback(self, source: &Source) -> Self {
+        match self {
+            Ok(_) => self,
+            Err(err) => Err(err.with_source_fallback(source)),
         }
     }
 
@@ -513,7 +559,7 @@ mod tests {
                 line_number: 1,
                 line: "remote:exec --hsot=foo".to_string(),
                 location: Location::new(12, 22),
-            }, ]
+            },]
         );
     }
 
@@ -525,7 +571,7 @@ mod tests {
                 line_number: 2,
                 line: "remote:exec --hsot=foo".to_string(),
                 location: Location::new(12, 22),
-            }, ]
+            },]
         );
     }
 
@@ -537,7 +583,7 @@ mod tests {
                 line_number: 1,
                 line: "remote:exec --hsot=foo".to_string(),
                 location: Location::new(12, 22),
-            }, ]
+            },]
         );
     }
 
@@ -549,7 +595,7 @@ mod tests {
                 line_number: 2,
                 line: "echo 2".to_string(),
                 location: Location::new(0, 6),
-            }, ]
+            },]
         );
     }
 

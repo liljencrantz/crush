@@ -9,7 +9,6 @@
 * pbuf:from/to command that takes a protobuf definition and uses it to deserialize protobuf data
 * avro:from/to command that deserializes avro data
 * Support __str__ method for string rendering
-* Support __eq__ and __hash__ methods for e.g. dicts
 * fix dynamic loading deadlocks
 * tab completions for external commands
 * More shell-like syntax for background jobs
@@ -26,4 +25,5 @@
 * Allow setting type for varargs in closures
 * The Files type for signatures has different valid values when serving as input and output. This makes the documentation misleading. Split in two?
 * $binary_stream:pipe
-* Stack traces
+* Namespace completions are sometimes wonky
+* Namespace highlighting is sometimes wonky

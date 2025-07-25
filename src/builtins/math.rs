@@ -11,7 +11,7 @@ macro_rules! math_fun {
     ($name:ident, $Signature: ident, $op:expr) => {
         fn $name(mut context: CommandContext) -> CrushResult<()> {
             let cfg: $Signature =
-                $Signature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+                $Signature::parse(context.remove_arguments(), &context.global_state.printer())?;
             context
                 .output
                 .send(Value::Float($op(cfg.number.as_float())))
@@ -123,7 +123,7 @@ pub struct Log {
 }
 
 fn log(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Log = Log::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Log = Log::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Float(cfg.number.as_float().log(cfg.base.as_float())))
@@ -139,7 +139,7 @@ pub struct Pow {
 }
 
 fn pow(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Pow = Pow::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Pow = Pow::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Float(cfg.base.as_float().powf(cfg.n.as_float())))

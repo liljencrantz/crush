@@ -1,7 +1,7 @@
 use crate::lang::command::Command;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{argument_error, CrushResult};
+use crate::lang::errors::{command_error, CrushResult};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::{TableInputStream, pipe};
 use crate::lang::printer::Printer;
@@ -139,7 +139,7 @@ fn create_worker_thread(
 }
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Group::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut input = context
         .input
         .recv()?
@@ -153,7 +153,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         .collect::<CrushResult<Vec<_>>>()?;
 
     if indices.is_empty() {
-        return argument_error("No group-by column specified", &context.source);
+        return command_error("No group-by column specified");
     }
 
     let mut output_type = indices

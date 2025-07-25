@@ -1,7 +1,7 @@
 /**
 Code for managing arguments passed in to commands
  */
-use crate::lang::errors::{CrushError, CrushResult, argument_error, argument_error_legacy, error};
+use crate::lang::errors::{CrushError, CrushResult, argument_error, command_error, error};
 use crate::lang::serialization::model;
 use crate::lang::state::contexts::EvalContext;
 use crate::lang::value::Value;
@@ -216,10 +216,10 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                             }
                         }
                         v => {
-                            return argument_error_legacy(format!(
+                            return argument_error(format!(
                                 "Argument list must be of type list, was of type {}",
                                 v.value_type()
-                            ));
+                            ), &a.source);
                         }
                     },
 
@@ -230,17 +230,17 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
                                 if let Value::String(name) = key {
                                     res.push(Argument::named(&name, value, &a.source));
                                 } else {
-                                    return argument_error_legacy(
+                                    return command_error(
                                         "Argument dict must have string keys",
                                     );
                                 }
                             }
                         }
                         v => {
-                            return argument_error_legacy(format!(
+                            return argument_error(format!(
                                 "Argument dict must be of type dict, was of type {}",
                                 v.value_type()
-                            ));
+                            ), &a.source);
                         }
                     },
                 }

@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -25,7 +25,7 @@ pub fn count(context: CommandContext) -> CrushResult<()> {
                 }
                 context.output.send(Value::from(res))
             }
-            None => argument_error(format!("Expected a stream, got a value of type `{}`.", v.value_type()), &context.source),
+            None => command_error(format!("Expected a stream, got a value of type `{}`.", v.value_type())),
         },
     }
 }

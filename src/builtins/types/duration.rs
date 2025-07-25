@@ -123,7 +123,7 @@ struct Of {
 }
 
 fn of(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Of = Of::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: Of = Of::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let res = Duration::nanoseconds(cfg.nanoseconds)
         + Duration::microseconds(cfg.microseconds)
@@ -144,8 +144,8 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
 struct Seconds {}
 
 fn seconds(mut context: CommandContext) -> CrushResult<()> {
-    Seconds::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let this = context.this.duration(&context.source)?;
+    Seconds::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
     context
         .output
         .send(Value::Integer(this.num_seconds() as i128))
@@ -160,8 +160,8 @@ fn seconds(mut context: CommandContext) -> CrushResult<()> {
 struct Minutes {}
 
 fn minutes(mut context: CommandContext) -> CrushResult<()> {
-    Minutes::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let this = context.this.duration(&context.source)?;
+    Minutes::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
     context
         .output
         .send(Value::Integer((this.num_seconds() / 60) as i128))
@@ -176,8 +176,8 @@ fn minutes(mut context: CommandContext) -> CrushResult<()> {
 struct Hours {}
 
 fn hours(mut context: CommandContext) -> CrushResult<()> {
-    Hours::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let this = context.this.duration(&context.source)?;
+    Hours::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
     context
         .output
         .send(Value::Integer((this.num_seconds() / (60 * 60)) as i128))
@@ -192,8 +192,8 @@ fn hours(mut context: CommandContext) -> CrushResult<()> {
 struct Days {}
 
 fn days(mut context: CommandContext) -> CrushResult<()> {
-    Days::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let this = context.this.duration(&context.source)?;
+    Days::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
     context.output.send(Value::Integer(
         (this.num_seconds() / (60 * 60 * 24)) as i128,
     ))
@@ -208,8 +208,8 @@ fn days(mut context: CommandContext) -> CrushResult<()> {
 struct Milliseconds {}
 
 fn milliseconds(mut context: CommandContext) -> CrushResult<()> {
-    Days::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let this = context.this.duration(&context.source)?;
+    Days::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
     context
         .output
         .send(Value::Integer(this.num_milliseconds() as i128))
@@ -224,8 +224,8 @@ fn milliseconds(mut context: CommandContext) -> CrushResult<()> {
 struct NanosecondsPart {}
 
 fn nanoseconds_part(mut context: CommandContext) -> CrushResult<()> {
-    Days::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let this = context.this.duration(&context.source)?;
+    Days::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let this = context.this.duration()?;
     context
         .output
         .send(Value::Integer(this.subsec_nanos() as i128))
@@ -243,5 +243,5 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
     context
         .output
-        .send(Value::Duration(-context.this.duration(&context.source)?))
+        .send(Value::Duration(-context.this.duration()?))
 }

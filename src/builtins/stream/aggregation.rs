@@ -1,6 +1,6 @@
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{CrushResult, error, argument_error};
+use crate::lang::errors::{CrushResult, error, argument_error, command_error};
 use crate::lang::pipe::Stream;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{value::Value, value::ValueType};
@@ -54,14 +54,14 @@ pub struct Sum {
 fn sum(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg: Sum = Sum::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Sum = Sum::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("sum", input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(sum_int(input, column)?),
                 ValueType::Float => context.output.send(sum_float(input, column)?),
                 ValueType::Duration => context.output.send(sum_duration(input, column)?),
                 t => {
-                    argument_error(&format!("Can't calculate sum of elements of type {}", t), &context.source)
+                    command_error(&format!("Can't calculate sum of elements of type {}", t))
                 }
             }
         }
@@ -109,7 +109,7 @@ pub struct Avg {
 fn avg(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg: Avg = Avg::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Avg = Avg::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("avg", input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(avg_int(input, column)?),
@@ -177,7 +177,7 @@ pub struct Median {
 fn median(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg: Median = Median::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Median = Median::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("median", input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => {
@@ -269,7 +269,7 @@ pub struct Min {
 fn min(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg: Min = Min::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Min = Min::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("min", input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(min_int(input, column)?),
@@ -278,7 +278,7 @@ fn min(mut context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(min_time(input, column)?),
                 ValueType::String => context.output.send(min_string(input, column)?),
                 ValueType::File => context.output.send(min_file(input, column)?),
-                t => argument_error(&format!("Can't pick min of elements of type {}", t), &context.source),
+                t => command_error(&format!("Can't pick min of elements of type {}", t)),
             }
         }
         _ => error("Expected a stream"),
@@ -299,7 +299,7 @@ pub struct Max {
 fn max(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg: Max = Max::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Max = Max::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("max", input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(max_int(input, column)?),
@@ -308,7 +308,7 @@ fn max(mut context: CommandContext) -> CrushResult<()> {
                 ValueType::Time => context.output.send(max_time(input, column)?),
                 ValueType::String => context.output.send(max_string(input, column)?),
                 ValueType::File => context.output.send(max_file(input, column)?),
-                t => argument_error(&format!("Can't pick max of elements of type {}", t), &context.source),
+                t => command_error(&format!("Can't pick max of elements of type {}", t)),
             }
         }
         _ => error("Expected a stream"),
@@ -347,7 +347,7 @@ pub struct Prod {
 fn prod(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(input) => {
-            let cfg = Prod::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg = Prod::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("prod", input.types(), cfg.field)?;
             match &input.types()[column].cell_type {
                 ValueType::Integer => context.output.send(prod_int(input, column)?),
@@ -380,7 +380,7 @@ pub struct Concat {
 fn concat(mut context: CommandContext) -> CrushResult<()> {
     match context.input.recv()?.stream()? {
         Some(mut input) => {
-            let cfg: Concat = Concat::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Concat = Concat::parse(context.remove_arguments(), &context.global_state.printer())?;
             let column = parse("concat", input.types(), cfg.field)?;
             let mut res = String::new();
 

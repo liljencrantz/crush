@@ -1,7 +1,7 @@
 use crate::builtins::types::column_types;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -36,9 +36,9 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    match context.this.r#type(&context.source)? {
+    match context.this.r#type()? {
         ValueType::TableOutputStream(c) => {
-            let cfg: Call = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Call = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output
@@ -56,7 +56,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                 )
             }
         }
-        _ => argument_error("Invalid `this`, expected type `table_input_stream`.", &context.source),
+        _ => command_error("Invalid `this`, expected type `table_input_stream`."),
     }
 }
 
@@ -68,7 +68,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
-    let real_output = context.this.table_output_stream(&context.source)?;
+    let real_output = context.this.table_output_stream()?;
     let mut stream = context.input.recv()?.stream()?.ok_or("Expected a stream")?;
 
     while let Ok(row) = stream.read() {

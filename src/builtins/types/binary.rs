@@ -29,7 +29,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 struct Len {}
 
 fn len(mut context: CommandContext) -> CrushResult<()> {
-    let val = context.this.binary(&context.source)?;
+    let val = context.this.binary()?;
     context.output.send(Value::Integer(val.len() as i128))
 }
 
@@ -46,8 +46,8 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let val = context.this.binary(&context.source)?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let val = context.this.binary()?;
     context.output.send(Value::Integer(
         *val.get(cfg.index).ok_or("Index out of bounds")? as i128,
     ))

@@ -5,7 +5,7 @@ use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
-use crate::lang::errors::{CrushResult, argument_error_legacy, data_error, eof_error, error};
+use crate::lang::errors::{CrushResult, command_error, data_error, eof_error, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
@@ -255,7 +255,7 @@ impl DBusType {
         let mut iter = s.chars().peekable();
         match DBusType::parse_internal(&mut iter) {
             Ok(Some(o)) => Ok(o),
-            Ok(None) => argument_error_legacy("Missing type"),
+            Ok(None) => command_error("Missing type"),
             Err(e) => Err(e),
         }
     }
@@ -314,7 +314,7 @@ impl DBusArgument {
                 if let Value::String(value) = value {
                     a.append(value.to_string());
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a string value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -324,7 +324,7 @@ impl DBusArgument {
                 if let Value::Bool(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a boolean value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -334,7 +334,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(u8::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -344,7 +344,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(i16::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -354,7 +354,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(u16::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -364,7 +364,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(i32::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -374,7 +374,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(u32::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -384,7 +384,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(i64::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number, got a {}",
                         value.value_type().to_string()
                     ));
@@ -394,7 +394,7 @@ impl DBusArgument {
                 if let Value::Integer(value) = value {
                     a.append(u64::try_from(value)?);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a number value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -404,7 +404,7 @@ impl DBusArgument {
                 if let Value::Float(value) = value {
                     a.append(value);
                 } else {
-                    return argument_error_legacy(format!(
+                    return command_error(format!(
                         "Expected a floating point number value, got a {}",
                         value.value_type().to_string()
                     ));
@@ -693,7 +693,7 @@ fn filter_method(
 
 fn service_call(mut context: CommandContext) -> CrushResult<()> {
     let cfg: ServiceCall =
-        ServiceCall::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        ServiceCall::parse(context.remove_arguments(), &context.global_state.printer())?;
     if let Value::Struct(service_obj) = context.this.ok_or("Missing this parameter for method")? {
         if let Value::String(service) = service_obj
             .get("service")
@@ -738,13 +738,13 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
                         dbus.call(&service, &object, &interface, &method, cfg.arguments)?;
                     context.output.send(result)
                 }
-                (None, Some(_)) => argument_error_legacy("Missing object"),
+                (None, Some(_)) => command_error("Missing object"),
             }
         } else {
-            argument_error_legacy("Wrong type of service field")
+            command_error("Wrong type of service field")
         }
     } else {
-        argument_error_legacy("Wrong type of this object")
+        command_error("Wrong type of this object")
     }
 }
 

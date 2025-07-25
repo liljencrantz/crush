@@ -340,7 +340,10 @@ impl Help for Closure {
 impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let s = context.scope.clone();
-        self.eval_inner(context).with_command(self.name()).with_trace(&s)
+        let source = context.source.clone();
+        self.eval_inner(context)
+            .with_command(self.name()).with_trace(&s)
+            .with_source_fallback(&source)
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut EvalContext) -> bool {

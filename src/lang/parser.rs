@@ -67,7 +67,15 @@ impl Parser {
 
     /// Parse the given string into a `Vec<Job>`, that we can directly evaluate.
     pub fn parse(&self, source: &Source, env: &Scope, initial_mode: LanguageMode) -> CrushResult<Vec<Job>> {
-        self.ast(source.str(), initial_mode)?.compile(&NodeContext::new(env.clone(), source.clone()))
+
+        let ast = match self.ast(source.str(), initial_mode) {
+            Ok(jobs) => Ok(jobs),
+            Err(err) => {
+                Err(err.with_source_fallback(source))
+            },
+        };
+        
+        ast?.compile(&NodeContext::new(env.clone(), source.clone()))
     }
 
     /// Return the abstract syntax tree (AST) for the supplied command. This is used by the

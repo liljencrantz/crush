@@ -5,7 +5,7 @@ mod builtins;
 mod lang;
 mod util;
 
-use crate::lang::errors::{CrushErrorType, CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushErrorType, CrushResult, command_error};
 use crate::lang::interactive;
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
@@ -46,7 +46,7 @@ fn parse_args() -> CrushResult<Config> {
                 "--" => all_files = true,
                 file => {
                     if file.starts_with("-") {
-                        return argument_error_legacy(format!("Unknown argument {}", file));
+                        return command_error(format!("Unknown argument {}", file));
                     }
                     mode = Mode::File(PathBuf::from(file))
                 }
@@ -121,7 +121,7 @@ fn run() -> CrushResult<i32> {
             execute::pup(local_scope, &buff, &global_state)?;
         }
 
-        Mode::File(f) => execute::file(&local_scope, f.as_path(), &pretty_printer, &global_state)?,
+        Mode::File(f) => global_state.printer().handle_error(execute::file(&local_scope, f.as_path(), &pretty_printer, &global_state)),
 
         Mode::Help => print_help(&global_state.printer()),
     }

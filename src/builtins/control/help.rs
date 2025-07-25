@@ -32,7 +32,7 @@ pub struct HelpSignature {
 
 pub fn help(mut context: CommandContext) -> CrushResult<()> {
     let cfg: HelpSignature =
-        HelpSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let map = highlight_colors(&context.scope);
     

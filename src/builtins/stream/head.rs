@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Passthrough;
-use crate::lang::errors::{CrushResult, argument_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use signature::signature;
 
@@ -16,7 +16,7 @@ pub struct Head {
 }
 
 fn head(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Head::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = Head::parse(context.remove_arguments(), &context.global_state.printer())?;
     match context.input.recv()?.stream()? {
         Some(mut input) => {
             let output = context.output.initialize(input.types())?;
@@ -30,6 +30,6 @@ fn head(mut context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error("Expected a stream.", &context.source),
+        None => command_error("Expected a stream."),
     }
 }

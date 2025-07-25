@@ -12,8 +12,9 @@ use crate::lang::{data::list::List, data::table::Table};
 use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use crate::lang::ast::source::Source;
 
-fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
+fn from_yaml(yaml_value: &serde_yaml::Value, source: &Source) -> CrushResult<Value> {
     match yaml_value {
         serde_yaml::Value::Null => Ok(Value::Empty),
         serde_yaml::Value::Bool(b) => Ok(Value::Bool(*b)),
@@ -30,7 +31,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
         serde_yaml::Value::Sequence(arr) => {
             let mut lst = arr
                 .iter()
-                .map(|v| from_yaml(v))
+                .map(|v| from_yaml(v, source))
                 .collect::<CrushResult<Vec<Value>>>()?;
             let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
             let struct_types: HashSet<Vec<ColumnType>> = lst
@@ -68,12 +69,12 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
         serde_yaml::Value::Mapping(o) => {
             let d = Dict::new(ValueType::Any, ValueType::Any)?;
             for (k, v) in o.into_iter() {
-                d.insert(from_yaml(k)?, from_yaml(v)?)?;
+                d.insert(from_yaml(k, source)?, from_yaml(v, source)?)?;
             }
             Ok(d.into())
         }
 
-        serde_yaml::Value::Tagged(t) => from_yaml(&t.value),
+        serde_yaml::Value::Tagged(t) => from_yaml(&t.value, source),
     }
 }
 
@@ -141,10 +142,10 @@ struct FromSignature {
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
-        FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let reader = BufReader::new(cfg.files.reader(context.input)?);
     let serde_value = serde_yaml::from_reader(reader)?;
-    let crush_value = from_yaml(&serde_value)?;
+    let crush_value = from_yaml(&serde_value, &context.source)?;
     context.output.send(crush_value)
 }
 
@@ -163,7 +164,7 @@ struct To {
 }
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut writer = cfg.file.writer(context.output)?;
     let value = context.input.recv()?;
     let yaml_value = to_yaml(value)?;

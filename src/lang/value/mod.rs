@@ -19,7 +19,7 @@ use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, table::ColumnType,
     table::TableReader,
 };
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
 use crate::lang::state::scope::Scope;
 use crate::util::time::duration_format;
@@ -453,7 +453,7 @@ impl Value {
             Value::String(s) => Ok(*value == **s),
             Value::Glob(pattern) => Ok(pattern.matches(value)),
             Value::Regex(_, re) => Ok(re.is_match(value)),
-            _ => return argument_error_legacy("Invalid value for match"),
+            _ => return command_error("Invalid value for match"),
         }
     }
 

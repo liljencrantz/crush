@@ -3,7 +3,7 @@ use crate::lang::any_str::AnyStr;
 /**
 Code related to Table, TableInputStream and
  */
-use crate::lang::errors::{CrushError, CrushResult, argument_error_legacy, error};
+use crate::lang::errors::{CrushError, CrushResult, command_error, error};
 use crate::lang::pipe::CrushStream;
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState, model};
@@ -288,7 +288,7 @@ impl ColumnVec for &[ColumnType] {
                 return Ok(idx);
             }
         }
-        argument_error_legacy(
+        command_error(
             format!(
                 "Unknown column {}, available columns are {}",
                 needle,

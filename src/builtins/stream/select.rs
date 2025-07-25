@@ -1,6 +1,6 @@
 use crate::lang::command::{Command, OutputType};
 use crate::lang::data::table::ColumnVec;
-use crate::lang::errors::{CrushResult, argument_error, error};
+use crate::lang::errors::{CrushResult, argument_error, error, command_error};
 use crate::lang::pipe::{Stream, pipe};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
@@ -107,7 +107,7 @@ pub fn select(mut context: CommandContext) -> CrushResult<()> {
             let mut columns = Vec::new();
 
             if context.arguments.len() == 0 {
-                return argument_error("No columns selected.", &context.source);
+                return command_error("No columns selected.");
             }
 
             let source = context.arguments[0].source.clone();

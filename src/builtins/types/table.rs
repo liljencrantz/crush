@@ -1,7 +1,7 @@
 use crate::builtins::types::column_types;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, argument_error_legacy};
+use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -37,9 +37,9 @@ struct Call {
 }
 
 fn __call__(mut context: CommandContext) -> CrushResult<()> {
-    match context.this.r#type(&context.source)? {
+    match context.this.r#type()? {
         ValueType::Table(c) => {
-            let cfg: Call = Call::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+            let cfg: Call = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
             if c.is_empty() {
                 context
                     .output
@@ -49,12 +49,13 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
             } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::Table(c)))
             } else {
-                argument_error_legacy(
+                argument_error(
                     "Tried to set columns on a table type that already has columns",
+                    &context.source,
                 )
             }
         }
-        _ => argument_error_legacy("Invalid this, expected type table"),
+        _ => command_error("Invalid `this`, expected type table"),
     }
 }
 
@@ -67,7 +68,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 struct Len {}
 
 fn len(mut context: CommandContext) -> CrushResult<()> {
-    let table = context.this.table(&context.source)?;
+    let table = context.this.table()?;
     context.output.send(Value::Integer(table.len() as i128))
 }
 
@@ -83,8 +84,8 @@ struct GetItem {
 }
 
 fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
-    let o = context.this.table(&context.source)?;
+    let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let o = context.this.table()?;
     context
         .output
         .send(Value::Struct(o.row(cfg.index)?.into_struct(o.types())))

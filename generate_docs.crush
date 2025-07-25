@@ -19,7 +19,7 @@ $render := {
 $scope_key := {
     |$s|
 
-    if $($s == $global) {
+    if ($s == $global) {
         $s:__name__
     } {
         "{}:{}":format $(scope_key $($s:__super__)) $($s:__name__)
@@ -40,10 +40,10 @@ $crawl_scope := {
 
     for name=$(dir $s) {
         if $($name:starts_with "__") {
-        }   {
+        } else {
             $val := $($s[$name])
 
-            if $($(typeof $val) == $scope) {
+            if (typeof($val) == $scope) {
                 crawl_scope $val $seen $res
             }
         }

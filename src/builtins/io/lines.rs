@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::Known;
-use crate::lang::errors::{CrushResult, data_error, argument_error};
+use crate::lang::errors::{CrushResult, data_error, command_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -33,7 +33,7 @@ struct FromSignature {
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&OUTPUT_TYPE)?;
     let cfg: FromSignature =
-        FromSignature::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+        FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.reader(context.input)?);
     let mut line = String::new();
 
@@ -77,7 +77,7 @@ struct To {
 }
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: To = To::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     match context.input.recv()?.stream()? {
         Some(mut input) => {
@@ -101,7 +101,7 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
             Ok(())
         }
-        None => argument_error("Expected input to be a stream.", &context.source),
+        None => command_error("Expected input to be a stream."),
     }
 }
 

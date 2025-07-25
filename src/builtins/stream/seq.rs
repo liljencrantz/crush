@@ -26,7 +26,7 @@ pub struct Seq {
 }
 
 pub fn seq(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Seq::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let cfg = Seq::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context
         .output
         .initialize(&[ColumnType::new("value", ValueType::Integer)])?;

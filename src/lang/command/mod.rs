@@ -264,7 +264,10 @@ impl Into<String> for Foo<'_> {
 impl CrushCommand for SimpleCommand {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
-        c(context).with_command(Foo{path: &self.full_name})
+        let source = context.source.clone();
+        c(context)
+            .with_command(Foo{path: &self.full_name})
+            .with_source_fallback(&source)
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut EvalContext) -> bool {
@@ -352,7 +355,10 @@ impl Display for ConditionCommand {
 impl CrushCommand for ConditionCommand {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let c = self.call;
-        c(context).with_command(Foo{path: &self.full_name} )
+        let source = context.source.clone();
+        c(context)
+            .with_command(Foo{path: &self.full_name} )
+            .with_source_fallback(&source)
     }
 
     fn name(&self) -> &str {
@@ -535,7 +541,10 @@ impl Display for BoundCommand {
 impl CrushCommand for BoundCommand {
     fn eval(&self, mut context: CommandContext) -> CrushResult<()> {
         context.this = Some(self.this.clone());
-        self.command.eval(context).with_command(self.name())
+        let source = context.source.clone();
+        self.command.eval(context)
+            .with_command(self.name())
+            .with_source_fallback(&source)
     }
 
     fn might_block(&self, arguments: &[ArgumentDefinition], context: &mut EvalContext) -> bool {

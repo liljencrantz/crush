@@ -27,7 +27,7 @@ static OUTPUT_TYPE: [ColumnType; 7] = [
 pub struct Mounts {}
 
 fn mounts(mut context: CommandContext) -> CrushResult<()> {
-    let _cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.source, &context.global_state.printer())?;
+    let _cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&OUTPUT_TYPE)?;
 
     for m in mountinfos()? {
