@@ -188,12 +188,10 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             if let Some(file) = file {
                 cmd_internal(context, file, arguments)
             } else {
-                command_error(
-                    format!(
-                        "Unknown command {}",
-                        f.to_str().unwrap_or("<encoding error>")
-                    ),
-                )
+                command_error(format!(
+                    "Unknown command {}",
+                    f.to_str().unwrap_or("<encoding error>")
+                ))
             }
         }
         Value::String(s) => {

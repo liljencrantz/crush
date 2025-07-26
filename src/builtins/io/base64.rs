@@ -1,5 +1,8 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -23,7 +26,7 @@ use std::io::{BufReader, Read, Write};
 struct FromSignature {
     #[unnamed()]
     #[description("the files to read from. Read from input if no file is specified.")]
-    files: Files,
+    files: Vec<BinaryInput>,
     #[allowed("standard", "urlsafe")]
     #[default("standard")]
     #[description("base64 encoding style to use.")]
@@ -32,7 +35,7 @@ struct FromSignature {
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg = FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
     let (pipe_reader, mut writer) = os_pipe::pipe()?;
     context
         .output
@@ -78,9 +81,8 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     example = "\"hello, world!\" | base64:to",
 )]
 struct To {
-    #[unnamed()]
     #[description("the file to write to. Write to output if no file is specified.")]
-    file: Files,
+    file: Option<Files>,
     #[allowed("standard", "urlsafe")]
     #[default("standard")]
     #[description("base64 encoding style to use.")]
@@ -97,7 +99,7 @@ fn codec(name: &str) -> CrushResult<GeneralPurpose> {
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut out = cfg.file.writer(context.output)?;
+    let mut out = files::writer(cfg.file, context.output)?;
     let codec = codec(&cfg.alphabet)?;
 
     match context.input.recv()? {
@@ -137,12 +139,10 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return command_error(
-                format!(
-                    "Expected a binary stream or a string, encountered `{}`.",
-                    v.value_type().to_string()
-                )
-            );
+            return command_error(format!(
+                "Expected a binary stream or a string, encountered `{}`.",
+                v.value_type().to_string()
+            ));
         }
     }
     Ok(())

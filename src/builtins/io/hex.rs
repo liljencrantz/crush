@@ -1,5 +1,8 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -18,12 +21,12 @@ use std::io::{BufReader, Read, Write};
 struct FromSignature {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg = FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
     let (pipe_reader, mut writer) = os_pipe::pipe()?;
     context
         .output
@@ -51,12 +54,12 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
 }
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut out = cfg.file.writer(context.output)?;
+    let mut out = files::writer(cfg.file, context.output)?;
     match context.input.recv()? {
         Value::String(str) => {
             let input = str.as_bytes();
@@ -82,12 +85,10 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         v => {
-            return command_error(
-                format!(
-                    "Expected a binary stream or a string, encountered `{}`",
-                    v.value_type().to_string()
-                ),
-            );
+            return command_error(format!(
+                "Expected a binary stream or a string, encountered `{}`",
+                v.value_type().to_string()
+            ));
         }
     }
     Ok(())

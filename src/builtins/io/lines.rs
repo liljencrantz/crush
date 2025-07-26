@@ -1,5 +1,7 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, data_error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -19,7 +21,7 @@ static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("line", ValueType::String
 struct FromSignature {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
-    files: Files,
+    files: Vec<BinaryInput>,
 
     #[default(false)]
     #[description("do not emit empty lines.")]
@@ -34,7 +36,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&OUTPUT_TYPE)?;
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
     let mut line = String::new();
 
     loop {
@@ -66,18 +68,16 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
 }
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let mut input = context.input.recv()?.stream()?;
-    let mut out = cfg.file.writer(context.output)?;
+    let mut out = crate::lang::signature::files::writer(cfg.file, context.output)?;
     if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
-        return data_error(
-            "Expected an input iterator containing a single column of type string.",
-        );
+        return data_error("Expected an input iterator containing a single column of type string.");
     }
     while let Ok(row) = input.read() {
         match Vec::from(row).remove(0) {

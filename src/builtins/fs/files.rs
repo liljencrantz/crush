@@ -3,6 +3,8 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::printer::Printer;
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
@@ -15,6 +17,7 @@ use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::SystemTime;
 
 enum Column {
@@ -231,7 +234,7 @@ fn run_for_single_directory_or_file(
 pub struct FilesSignature {
     #[unnamed()]
     #[description("directories and files to list")]
-    directory: Files,
+    directory: Vec<Files>,
     #[description("recurse into subdirectories")]
     #[default(false)]
     recurse: bool,
@@ -334,8 +337,8 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
 
     let mut output = context.output.initialize(&types)?;
 
-    let mut dir = if config.directory.had_entries() {
-        Vec::from(config.directory)
+    let mut dir = if !config.directory.is_empty() {
+        files::into_paths(config.directory)?
     } else {
         vec![PathBuf::from(".")]
     };

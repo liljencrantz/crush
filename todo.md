@@ -23,7 +23,6 @@
 * Completion descriptions
 * Support arbitrary filenames with hex escape codes in globs and other places
 * Allow setting type for varargs in closures
-* The Files type for signatures has different valid values when serving as input and output. This makes the documentation misleading. Split in two?
 * $binary_stream:pipe
 * Namespace completions are sometimes wonky
 * Namespace highlighting is sometimes wonky

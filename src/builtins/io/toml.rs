@@ -1,3 +1,4 @@
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::state::contexts::CommandContext;
 use crate::{
     lang::errors::CrushError,
@@ -8,6 +9,8 @@ use std::io::{BufReader, Read, Write};
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::{CrushResult, error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
@@ -88,13 +91,13 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     example = "toml:from Cargo.toml")]
 struct FromSignature {
     #[unnamed()]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
     let mut v = Vec::new();
 
     reader.read_to_end(&mut v)?;
@@ -110,7 +113,8 @@ fn from(mut context: CommandContext) -> CrushResult<()> {
 fn to_toml(value: Value) -> CrushResult<toml::Value> {
     match value.materialize()? {
         Value::File(s) => Ok(toml::Value::from(
-            s.to_str().ok_or(format!("Invalid filename `{}`.", s.display()))?,
+            s.to_str()
+                .ok_or(format!("Invalid filename `{}`.", s.display()))?,
         )),
 
         Value::String(s) => Ok(toml::Value::from(s.as_ref())),
@@ -153,10 +157,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
 
         Value::TableInputStream(_) => panic!("Impossible"),
 
-        v => error(&format!(
-            "Unsupported data type `{}`.",
-            v.value_type()
-        )),
+        v => error(&format!("Unsupported data type `{}`.", v.value_type())),
     }
 }
 
@@ -173,12 +174,12 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     example = "ls | toml:to")]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
 }
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = cfg.file.writer(context.output)?;
+    let mut writer = files::writer(cfg.file, context.output)?;
     let serde_value = context.input.recv()?;
     let toml_value = to_toml(serde_value)?;
     writer.write(toml_value.to_string().as_bytes())?;

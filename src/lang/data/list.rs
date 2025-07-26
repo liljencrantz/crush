@@ -2,6 +2,8 @@ use crate::data::dict::Dict;
 /// The crush type used for storing lists of data
 use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::pipe::Stream;
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::files::Files;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::ComparisonMode;
 use crate::lang::vec_reader::VecReader;
@@ -12,6 +14,7 @@ use crate::util::replace::Replace;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -248,6 +251,37 @@ impl List {
         for el in cells.iter() {
             match el {
                 Value::Dict(s) => destination.push(s.clone()),
+                _ => return error("Wrong element type"),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn dump_binary_input(&self, destination: &mut Vec<BinaryInput>) -> CrushResult<()> {
+        let cells = self.cells.lock().unwrap();
+        for el in cells.iter() {
+            match el {
+                Value::File(s) => destination.push(BinaryInput::File(s.clone())),
+                Value::String(s) => destination.push(BinaryInput::String(s.clone())),
+                Value::Binary(s) => destination.push(BinaryInput::Binary(s.clone())),
+                Value::BinaryInputStream(s) => {
+                    destination.push(BinaryInput::BinaryInputStream(s.deref().clone()))
+                }
+                Value::Glob(s) => destination.push(BinaryInput::Glob(s.clone())),
+                Value::Regex(_, re) => destination.push(BinaryInput::Regex(re.clone())),
+                _ => return error("Wrong element type"),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn dump_files(&self, destination: &mut Vec<Files>) -> CrushResult<()> {
+        let cells = self.cells.lock().unwrap();
+        for el in cells.iter() {
+            match el {
+                Value::File(s) => destination.push(Files::File(s.clone())),
+                Value::Glob(s) => destination.push(Files::Glob(s.clone())),
+                Value::Regex(_, re) => destination.push(Files::Regex(re.clone())),
                 _ => return error("Wrong element type"),
             }
         }

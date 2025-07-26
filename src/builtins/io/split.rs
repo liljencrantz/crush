@@ -1,6 +1,7 @@
 use crate::lang::errors::CrushResult;
 use crate::lang::pipe::TableOutputStream;
-use crate::lang::signature::files::Files;
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
@@ -15,7 +16,7 @@ use std::io::{BufRead, BufReader};
 struct From {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
-    files: Files,
+    files: Vec<BinaryInput>,
     #[description("characters to split on")]
     separator: String,
     #[description("characters to trim from start and end of each token.")]
@@ -47,7 +48,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
         .initialize(&[ColumnType::new("token", ValueType::String)])?;
     let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
 
     let mut buf = Vec::<u8>::new();
     let mut token = String::new();

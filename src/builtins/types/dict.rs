@@ -77,9 +77,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::Dict(Box::from(t1), Box::from(t2))))
                 } else {
-                    command_error(
-                        "Tried to set subtype on a `dict` that already has a subtype.",
-                    )
+                    command_error("Tried to set subtype on a `dict` that already has a subtype.")
                 }
             }
         },

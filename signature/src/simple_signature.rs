@@ -23,6 +23,7 @@ pub enum SimpleSignature {
     PathBuf,
     Scope,
     BinaryInput,
+    Files,
 }
 
 impl TryFrom<&Ident> for SimpleSignature {
@@ -50,6 +51,7 @@ impl TryFrom<&Ident> for SimpleSignature {
             "PathBuf" => Ok(SimpleSignature::PathBuf),
             "Scope" => Ok(SimpleSignature::Scope),
             "BinaryInput" => Ok(SimpleSignature::BinaryInput),
+            "Files" => Ok(SimpleSignature::Files),
             _ => Err("Unknown type".to_string()),
         }
     }
@@ -86,6 +88,7 @@ impl SimpleSignature {
             SimpleSignature::PathBuf => "PathBuf",
             SimpleSignature::Scope => "Scope",
             SimpleSignature::BinaryInput => "BinaryInput",
+            SimpleSignature::Files => "Files",
         }
     }
 
@@ -111,6 +114,7 @@ impl SimpleSignature {
             SimpleSignature::PathBuf => quote! {crate::lang::value::Value::File(_value)},
             SimpleSignature::Scope => quote! {crate::lang::value::Value::Scope(_value)},
             SimpleSignature::BinaryInput => quote! {_value},
+            SimpleSignature::Files => quote! {_value},
         }
     }
 
@@ -137,9 +141,19 @@ impl SimpleSignature {
             SimpleSignature::Scope => quote! {crate::lang::value::ValueType::Scope},
             SimpleSignature::BinaryInput => quote! {crate::lang::value::ValueType::OneOf(
                 vec![
+                    crate::lang::value::ValueType::File,
+                    crate::lang::value::ValueType::Glob,
+                    crate::lang::value::ValueType::Regex,
                     crate::lang::value::ValueType::String,
                     crate::lang::value::ValueType::Binary,
                     crate::lang::value::ValueType::BinaryInputStream,
+                ]
+            )},
+            SimpleSignature::Files => quote! {crate::lang::value::ValueType::OneOf(
+                vec![
+                    crate::lang::value::ValueType::File,
+                    crate::lang::value::ValueType::Glob,
+                    crate::lang::value::ValueType::Regex,
                 ]
             )},
         }
@@ -165,7 +179,10 @@ impl SimpleSignature {
             SimpleSignature::Dict => "dict",
             SimpleSignature::PathBuf => "file",
             SimpleSignature::Scope => "scope",
-            SimpleSignature::BinaryInput => "one_of $string $binary $binary_input_stream"
+            SimpleSignature::BinaryInput => {
+                "one_of $file $string $binary $binary_input_stream $glob $re"
+            }
+            SimpleSignature::Files => "one_of $file $glob $re",
         }
     }
 
@@ -183,18 +200,33 @@ impl SimpleSignature {
                 }
                 SimpleSignature::String => quote! { _value.to_string()},
                 SimpleSignature::PathBuf => quote! { _value.to_path_buf()},
-                SimpleSignature::Usize => quote! { crate::lang::errors::with_source(usize::try_from(_value), &_source)? },
-                SimpleSignature::U64 => quote! { crate::lang::errors::with_source(u64::try_from(_value), &_source)?},
-                SimpleSignature::I64 => quote! { crate::lang::errors::with_source(i64::try_from(_value), &_source)?},
-                SimpleSignature::U32 => quote! { crate::lang::errors::with_source(u32::try_from(_value), &_source)?},
-                SimpleSignature::I32 => quote! { crate::lang::errors::with_source(i32::try_from(_value), &_source)?},
+                SimpleSignature::Usize => {
+                    quote! { crate::lang::errors::with_source(usize::try_from(_value), &_source)? }
+                }
+                SimpleSignature::U64 => {
+                    quote! { crate::lang::errors::with_source(u64::try_from(_value), &_source)?}
+                }
+                SimpleSignature::I64 => {
+                    quote! { crate::lang::errors::with_source(i64::try_from(_value), &_source)?}
+                }
+                SimpleSignature::U32 => {
+                    quote! { crate::lang::errors::with_source(u32::try_from(_value), &_source)?}
+                }
+                SimpleSignature::I32 => {
+                    quote! { crate::lang::errors::with_source(i32::try_from(_value), &_source)?}
+                }
                 SimpleSignature::Stream => {
                     quote! {
                         // Fixme: Losing location information here!
                         crate::lang::errors::with_source(_value.stream(), &_source)?,
                     }
                 }
-                SimpleSignature::BinaryInput => quote! { crate::lang::errors::with_source(crate::lang::signature::binary_input::BinaryInput::try_from(_value), &_source)? },
+                SimpleSignature::BinaryInput => {
+                    quote! { crate::lang::errors::with_source(crate::lang::signature::binary_input::BinaryInput::try_from(_value), &_source)? }
+                }
+                SimpleSignature::Files => {
+                    quote! { crate::lang::errors::with_source(crate::lang::signature::files::Files::try_from(_value), &_source)? }
+                }
                 _ => quote! {_value},
             },
             Some(allowed) => match self {
@@ -250,6 +282,8 @@ impl SimpleSignature {
             SimpleSignature::Value => "dump_value",
             SimpleSignature::Dict => "dump_dict",
             SimpleSignature::Scope => "dump_scope",
+            SimpleSignature::BinaryInput => "dump_binary_input",
+            SimpleSignature::Files => "dump_files",
             _ => panic!("Unknown type"),
         }
     }

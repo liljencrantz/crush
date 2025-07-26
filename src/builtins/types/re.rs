@@ -176,13 +176,11 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
                     }
                 }
                 v => {
-                    return command_error(
-                        format!(
-                            "Expected column `{}` to be `oneof $string $file`, but was `{}`.",
-                            input.types()[*idx].name(),
-                            v.value_type(),
-                        ),
-                    );
+                    return command_error(format!(
+                        "Expected column `{}` to be `oneof $string $file`, but was `{}`.",
+                        input.types()[*idx].name(),
+                        v.value_type(),
+                    ));
                 }
             }
         }

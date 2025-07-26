@@ -1,4 +1,5 @@
 use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::signature::binary_input;
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
@@ -10,7 +11,6 @@ use reqwest::header::HeaderMap;
 use reqwest::{Method, StatusCode};
 use signature::signature;
 use std::io::Read;
-use std::ops::Deref;
 
 fn parse_method(m: &str) -> CrushResult<Method> {
     Ok(match m {
@@ -81,19 +81,10 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
     }
 
     if let Some(body) = cfg.form {
-        match body {
-            BinaryInput::BinaryInputStream(mut v) => {
-                let mut buf = Vec::new();
-                v.read_to_end(&mut buf)?;
-                request = request.body(buf);
-            }
-            BinaryInput::Binary(v) => {
-                request = request.body(v.to_vec());
-            }
-            BinaryInput::String(v) => {
-                request = request.body(v.to_string());
-            }
-        }
+        let mut reader = binary_input::input_reader(body)?;
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf)?;
+        request = request.body(buf);
     }
 
     let mut b = request.send()?;

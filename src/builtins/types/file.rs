@@ -147,9 +147,10 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                     class_done = true;
                 }
                 c => {
-                    return command_error(
-                        format!("Illegal character in class-part of permission: {}", c),
-                    );
+                    return command_error(format!(
+                        "Illegal character in class-part of permission: {}",
+                        c
+                    ));
                 }
             },
             true => match c {
@@ -157,9 +158,10 @@ fn apply(perm: &str, mut current: u32) -> CrushResult<u32> {
                 'w' => modes |= WRITE,
                 'x' => modes |= EXECUTE,
                 c => {
-                    return command_error(
-                        format!("Illegal character in mode-part of permission: {}.", c),
-                    );
+                    return command_error(format!(
+                        "Illegal character in mode-part of permission: {}.",
+                        c
+                    ));
                 }
             },
         }
@@ -312,11 +314,7 @@ struct Parent {}
 
 fn parent(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::from(
-        context
-            .this
-            .file()?
-            .parent()
-            .ok_or("Invalid file path.")?,
+        context.this.file()?.parent().ok_or("Invalid file path.")?,
     ))
 }
 
@@ -458,12 +456,10 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         None => command_error("Expected `this` to be a `file`, but it was not set."),
-        Some(v) => command_error(
-            &format!(
-                "Expected `this` to be of type `file`, but is of type `{}`.",
-                v.value_type()
-            ),
-        ),
+        Some(v) => command_error(&format!(
+            "Expected `this` to be of type `file`, but is of type `{}`.",
+            v.value_type()
+        )),
     }
 }
 

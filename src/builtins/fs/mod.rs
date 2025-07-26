@@ -1,6 +1,6 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, argument_error, command_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -25,20 +25,18 @@ mod usage;
     short = "Change to the specified working directory.",
 )]
 struct Cd {
-    #[unnamed()]
     #[description("the new working directory.")]
     destination: Files,
 }
 
 fn cd(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Cd = Cd::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Cd::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    let dir = match cfg.destination.had_entries() {
-        true => PathBuf::try_from(cfg.destination),
-        false => home(),
-    }?;
-
-    std::env::set_current_dir(dir)?;
+    let dir: Vec<PathBuf> = cfg.destination.try_into()?;
+    match dir.len() {
+        1 => std::env::set_current_dir(&dir[0])?,
+        n => return command_error("Invalid directory."),
+    }
     context.output.send(Value::Empty)
 }
 
@@ -90,7 +88,7 @@ static STAT_OUTPUT_TYPE: [ColumnType; 18] = [
 struct Stat {
     #[unnamed()]
     #[description("the files to show the status for.")]
-    destination: Files,
+    destination: Vec<Files>,
     #[description("stat symlinks, not the files they point to.")]
     #[default(false)]
     symlink: bool,
@@ -100,7 +98,8 @@ fn stat(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Stat = Stat::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&STAT_OUTPUT_TYPE)?;
 
-    let v: Vec<PathBuf> = cfg.destination.into();
+    let v = crate::lang::signature::files::into_paths(cfg.destination)?;
+
     for file in v {
         let metadata = if cfg.symlink {
             nix::sys::stat::lstat(&file)

@@ -27,7 +27,6 @@ pub enum SignatureType {
     Option(SimpleSignature),
     Patterns,
     OrderedStringMap(SimpleSignature),
-    Files,
     Number,
     Text,
 }
@@ -67,7 +66,6 @@ impl Signature {
             SignatureType::Option(sub) => self.option_type_data(sub),
             SignatureType::Patterns => self.patterns_type_data(),
             SignatureType::OrderedStringMap(sub) => self.ordered_string_map_type_data(sub),
-            SignatureType::Files => self.files_type_data(),
             SignatureType::Number => self.number_type_data(),
             SignatureType::Text => self.text_type_data(),
         }
@@ -292,28 +290,6 @@ impl Signature {
         })
     }
 
-    fn files_type_data(&self) -> SignatureResult<TypeData> {
-        let name_literal = Literal::string(&self.name.to_string());
-        let name = &self.name;
-        Ok(TypeData {
-            allowed_values: None,
-            signature: format!("@ $(one_of $file $glob $re $list $table $table_input_stream)"),
-            initialize: quote! { let mut #name = crate::lang::signature::files::Files::new(); },
-            mappings: quote! { (Some(#name_literal), value) => #name.expand(value)?, },
-            unnamed_mutate: if self.is_unnamed_target {
-                Some(quote! {
-                    while !_unnamed.is_empty() {
-                        #name.expand(_unnamed.pop_front().unwrap().0)?;
-                    }
-                })
-            } else {
-                None
-            },
-            assign: quote! { #name, },
-            crush_internal_type: quote! {crate::lang::value::ValueType::Any},
-        })
-    }
-
     fn patterns_type_data(&self) -> SignatureResult<TypeData> {
         let name_literal = Literal::string(&self.name.to_string());
         let name = &self.name;
@@ -531,13 +507,6 @@ impl TryFrom<&Type> for SignatureType {
                                         fail!(ty.span(), "Unexopected generic argument")
                                     } else {
                                         Ok(SignatureType::Patterns)
-                                    }
-                                }
-                                "Files" => {
-                                    if arguments.len() != 0 {
-                                        fail!(ty.span(), "Unexopected generic argument")
-                                    } else {
-                                        Ok(SignatureType::Files)
                                     }
                                 }
                                 "Number" => {

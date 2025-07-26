@@ -50,9 +50,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
             } else if cfg.columns.is_empty() {
                 context.output.send(Value::Type(ValueType::Table(c)))
             } else {
-                command_error(
-                    "Tried to set columns on a table type that already has columns",
-                )
+                command_error("Tried to set columns on a table type that already has columns")
             }
         }
         _ => command_error("Invalid `this`, expected type table"),

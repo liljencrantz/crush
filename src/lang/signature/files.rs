@@ -1,102 +1,106 @@
-use crate::lang::data::binary::{BinaryReader, binary_channel};
-use crate::lang::errors::{CrushError, CrushResult, command_error, data_error};
-use crate::lang::pipe::{ValueReceiver, ValueSender};
+use crate::lang::data::binary::binary_channel;
+use crate::lang::errors::{CrushError, CrushResult, argument_error, command_error, data_error};
+use crate::lang::pipe::ValueSender;
 use crate::lang::value::{Value, ValueType};
 use crate::util::file::cwd;
+use crate::util::glob::Glob;
 use crate::util::regex::RegexFileMatcher;
+use regex::Regex;
 use std::convert::TryFrom;
 use std::fs::File;
 use std::io::Write;
-use std::ops::Deref;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /**
-A type representing a set of files. It is used in the signature of builtin commands that
-accept files, including globs, regexes, etc.
+A type representing one or more files.
  */
 #[derive(Debug, Clone)]
-pub struct Files {
-    had_entries: bool,
-    files: Vec<PathBuf>,
+pub enum Files {
+    File(Arc<Path>),
+    Glob(Glob),
+    Regex(Regex),
 }
 
-impl From<Files> for Vec<PathBuf> {
-    fn from(files: Files) -> Vec<PathBuf> {
-        files.files
-    }
-}
-
-impl TryFrom<Files> for PathBuf {
+impl TryFrom<Value> for Files {
     type Error = CrushError;
 
-    fn try_from(mut value: Files) -> CrushResult<PathBuf> {
-        if value.files.len() == 1 {
-            Ok(value.files.remove(0))
-        } else {
-            data_error("Invalid file")
+    fn try_from(value: Value) -> CrushResult<Self> {
+        match value {
+            Value::File(v) => Ok(Files::File(v)),
+            Value::Glob(v) => Ok(Files::Glob(v)),
+            Value::Regex(_, v) => Ok(Files::Regex(v)),
+            v => command_error(format!(
+                "Invalid type `{}`, expected `one_of $file $glob $binary`.",
+                v.value_type()
+            )),
         }
     }
 }
 
-impl Files {
-    pub fn new() -> Files {
-        Files {
-            had_entries: false,
-            files: Vec::new(),
-        }
-    }
+impl TryInto<Vec<PathBuf>> for Files {
+    type Error = CrushError;
 
-    pub fn had_entries(&self) -> bool {
-        self.had_entries
-    }
-
-    pub fn reader(self, input: ValueReceiver) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
-        if !self.had_entries {
-            match input.recv()? {
-                Value::BinaryInputStream(b) => Ok(b),
-                Value::Binary(b) => Ok(<dyn BinaryReader>::vec(&b)),
-                Value::String(s) => Ok(<dyn BinaryReader>::vec(s.as_bytes())),
-                _ => command_error("Expected either a file to read or binary pipe io"),
+    fn try_into(self) -> CrushResult<Vec<PathBuf>> {
+        match self {
+            Files::File(p) => Ok(vec![p.to_path_buf()]),
+            Files::Glob(pattern) => {
+                let mut tmp = Vec::new();
+                pattern.glob_files(&cwd()?, &mut tmp)?;
+                Ok(tmp.into_iter().collect())
             }
-        } else {
-            <dyn BinaryReader>::paths(self.files)
+            Files::Regex(pattern) => {
+                let mut tmp = Vec::new();
+                pattern.match_files(&cwd()?, &mut tmp)?;
+                Ok(tmp.into_iter().collect())
+            }
         }
     }
+}
 
-    pub fn writer(self, output: ValueSender) -> CrushResult<Box<dyn Write>> {
-        if !self.had_entries {
+pub fn into_paths(files: Vec<Files>) -> CrushResult<Vec<PathBuf>> {
+    let mut res = Vec::new();
+    for i in files {
+        res.append(&mut <Files as TryInto<Vec<PathBuf>>>::try_into(i)?);
+    }
+    Ok(res)
+}
+
+impl TryInto<Box<dyn Write>> for Files {
+    type Error = CrushError;
+
+    fn try_into(self) -> Result<Box<dyn Write>, Self::Error> {
+        let vec: Vec<_> = self.try_into()?;
+        match vec.len() {
+            1 => Ok(Box::from(File::create(&vec[0])?)),
+            n => command_error("Invalid output file"),
+        }
+    }
+}
+
+pub fn writer(files: Option<Files>, output: ValueSender) -> CrushResult<Box<dyn Write>> {
+    match files {
+        None => {
             let (w, r) = binary_channel();
             output.send(Value::BinaryInputStream(r))?;
             Ok(w)
-        } else if self.files.len() == 1 {
+        }
+        Some(file) => {
             output.send(Value::Empty)?;
-            Ok(Box::from(File::create(self.files[0].clone())?))
-        } else {
-            command_error("Expected at most one destination file")
+            Ok(file.try_into()?)
         }
     }
+}
 
-    pub fn expand(&mut self, value: Value) -> CrushResult<()> {
-        match value {
-            Value::File(p) => self.files.push(p.to_path_buf()),
-            Value::Glob(pattern) => pattern.glob_files(&PathBuf::from("."), &mut self.files)?,
-            Value::Regex(_, re) => re.match_files(&cwd()?, &mut self.files)?,
-            Value::String(f) => self.files.push(PathBuf::from(f.deref())),
-            value => {
-                let mut input = value.stream()?;
-                let types = input.types();
-                if types.len() == 1 && types[0].cell_type == ValueType::File {
-                    while let Ok(row) = input.read() {
-                        if let Value::File(f) = Vec::from(row).remove(0) {
-                            self.files.push(f.to_path_buf());
-                        }
-                    }
-                } else {
-                    return command_error("Table stream must contain one column of type file");
-                }
+pub fn path(files: Option<Files>, fallback: impl Into<PathBuf>) -> CrushResult<PathBuf> {
+    match files {
+        None => Ok(fallback.into()),
+        Some(file) => {
+            let mut dir: Vec<PathBuf> = file.try_into()?;
+            match dir.len() {
+                1 => Ok(dir.pop().unwrap()),
+                n => return command_error("Invalid directory."),
             }
         }
-        self.had_entries = true;
-        Ok(())
     }
 }

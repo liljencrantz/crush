@@ -1,4 +1,5 @@
 use crate::lang::errors::CrushError;
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
@@ -6,6 +7,8 @@ use std::io::{BufReader, Write};
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::{CrushResult, error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::{data::list::List, data::r#struct::Struct, data::table::Table};
@@ -23,9 +26,10 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(
-                    f.as_f64().ok_or(format!("Not a valid number: `{}`.", f.to_string()))?,
-                ))
+                Ok(Value::Float(f.as_f64().ok_or(format!(
+                    "Not a valid number: `{}`.",
+                    f.to_string()
+                ))?))
             }
         }
         serde_json::Value::String(s) => Ok(Value::from(s.as_str())),
@@ -84,7 +88,8 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     let v = value.materialize()?;
     match v {
         Value::File(s) => Ok(serde_json::Value::from(
-            s.to_str().ok_or(format!("Invalid filename `{}`.", s.display()))?,
+            s.to_str()
+                .ok_or(format!("Invalid filename `{}`.", s.display()))?,
         )),
 
         Value::String(s) => Ok(serde_json::Value::from(s.to_string())),
@@ -124,10 +129,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
 
         Value::BinaryInputStream(_) | Value::TableInputStream(_) => panic!("Impossible"),
 
-        v => error(&format!(
-            "Unsupported data type `{}`.",
-            v.value_type()
-        )),
+        v => error(&format!("Unsupported data type `{}`.", v.value_type())),
     }
 }
 
@@ -150,13 +152,13 @@ pub fn value_to_json(v: Value) -> CrushResult<String> {
     example = "http \"https://jsonplaceholder.typicode.com/todos/3\"| member body | json:from")]
 struct FromSignature {
     #[unnamed()]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let reader = BufReader::new(cfg.files.reader(context.input)?);
+    let reader = BufReader::new(cfg.files.to_reader(context.input)?);
     let serde_value = serde_json::from_reader(reader)?;
     let crush_value = from_json(&serde_value)?;
     context.output.send(crush_value)
@@ -173,7 +175,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     example = "files | json:to")]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
     #[description("Disable line breaking and indentation.")]
     #[default(false)]
     compact: bool,
@@ -181,7 +183,7 @@ struct To {
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = cfg.file.writer(context.output)?;
+    let mut writer = files::writer(cfg.file, context.output)?;
     let value = context.input.recv()?;
     let json_value = to_json(value)?;
     writer.write(

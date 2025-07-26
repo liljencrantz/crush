@@ -78,7 +78,7 @@ pub trait BinaryReader: Read + Debug + Send + Sync {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync>;
 }
 
-struct FileReader {
+pub struct FileReader {
     file: File,
 }
 
@@ -120,7 +120,7 @@ impl dyn BinaryReader {
                 readers.push(f);
             }
             Ok(Box::from(MultiReader {
-                inner: VecDeque::from(readers),
+                readers: VecDeque::from(readers),
             }))
         }
     }
@@ -144,31 +144,37 @@ pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>)
     )
 }
 
-struct MultiReader {
-    inner: VecDeque<Box<dyn BinaryReader + Send + Sync>>,
+pub(crate) struct MultiReader {
+    readers: VecDeque<Box<dyn BinaryReader + Send + Sync>>,
+}
+
+impl MultiReader {
+    pub fn new(readers: VecDeque<Box<dyn BinaryReader + Send + Sync>>) -> MultiReader {
+        MultiReader { readers }
+    }
 }
 
 impl BinaryReader for MultiReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
         let vec = self
-            .inner
+            .readers
             .iter()
             .map(|r| r.as_ref().clone())
             .collect::<Vec<Box<dyn BinaryReader + Send + Sync>>>();
         Box::from(MultiReader {
-            inner: VecDeque::from(vec),
+            readers: VecDeque::from(vec),
         })
     }
 }
 
 impl Read for MultiReader {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
-        if self.inner.len() == 0 {
+        if self.readers.len() == 0 {
             return Ok(0);
         }
-        match self.inner[0].read(buf) {
+        match self.readers[0].read(buf) {
             Ok(0) => {
-                self.inner.pop_front();
+                self.readers.pop_front();
                 self.read(buf)
             }
             Ok(s) => Ok(s),

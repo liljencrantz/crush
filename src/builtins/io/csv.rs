@@ -9,7 +9,8 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::errors::{CrushResult, error};
 
 use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::signature::files::Files;
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::value::ValueType;
 use signature::signature;
@@ -19,13 +20,12 @@ use signature::signature;
     example = "csv:from separator=\",\" head=1 name=$string age=$integer nick=$string",
     short = "Parse specified files as CSV files"
 )]
-#[derive(Debug)]
 struct From {
     #[unnamed()]
     #[description(
         "source. If unspecified, will read from input, which must be a binary or binary_stream."
     )]
-    files: Files,
+    files: Vec<BinaryInput>,
     #[named()]
     #[description("name and type of all columns.")]
     columns: OrderedStringMap<ValueType>,
@@ -48,7 +48,7 @@ fn from(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<_>>();
     let output = context.output.initialize(&columns)?;
 
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
 
     let separator = cfg.separator;
     let trim = cfg.trim;

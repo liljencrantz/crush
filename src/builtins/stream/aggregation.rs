@@ -10,10 +10,7 @@ use float_ord::FloatOrd;
 use signature::signature;
 use std::ops::Deref;
 
-fn parse(
-    input_type: &[ColumnType],
-    field: Option<String>,
-) -> CrushResult<usize> {
+fn parse(input_type: &[ColumnType], field: Option<String>) -> CrushResult<usize> {
     field.map(|f| input_type.find(&f)).unwrap_or_else(|| {
         if input_type.len() == 1 {
             Ok(0)
@@ -110,9 +107,10 @@ fn avg(mut context: CommandContext) -> CrushResult<()> {
         ValueType::Integer => context.output.send(avg_int(input, column)?),
         ValueType::Float => context.output.send(avg_float(input, column)?),
         ValueType::Duration => context.output.send(avg_duration(input, column)?),
-        t => command_error(
-            &format!("Can't calculate average of elements of type {}", t),
-        ),
+        t => command_error(&format!(
+            "Can't calculate average of elements of type {}",
+            t
+        )),
     }
 }
 
@@ -174,29 +172,27 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
             context
                 .output
                 .send(crate::builtins::stream::aggregation::median_int(
-                    input,
-                    column,
+                    input, column,
                 )?)
         }
         ValueType::Float => {
             context
                 .output
                 .send(crate::builtins::stream::aggregation::median_float(
-                    input,
-                    column,
+                    input, column,
                 )?)
         }
         ValueType::Duration => {
             context
                 .output
                 .send(crate::builtins::stream::aggregation::median_duration(
-                    input,
-                    column,
+                    input, column,
                 )?)
         }
-        t => command_error(
-            &format!("Can't calculate average of elements of type {}", t),
-        ),
+        t => command_error(&format!(
+            "Can't calculate average of elements of type {}",
+            t
+        )),
     }
 }
 
@@ -332,9 +328,10 @@ fn prod(mut context: CommandContext) -> CrushResult<()> {
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(prod_int(input, column)?),
         ValueType::Float => context.output.send(prod_float(input, column)?),
-        t => command_error(
-            &format!("Can't calculate product of elements of type {}", t),
-        ),
+        t => command_error(&format!(
+            "Can't calculate product of elements of type {}",
+            t
+        )),
     }
 }
 

@@ -1,5 +1,7 @@
 use crate::lang::errors::CrushResult;
 use crate::lang::pipe::TableOutputStream;
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -16,7 +18,7 @@ use std::io::{BufRead, BufReader};
 struct From {
     #[unnamed()]
     #[description("the files to read from (read from input pipe if no file is specified).")]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 fn send(output: &TableOutputStream, mut ptr: &str) -> CrushResult<()> {
@@ -34,7 +36,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
         .initialize(&[ColumnType::new("word", ValueType::String)])?;
     let cfg = From::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    let mut reader = BufReader::new(cfg.files.reader(context.input)?);
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
 
     let mut buf = Vec::<u8>::new();
     let mut token = String::new();

@@ -508,8 +508,10 @@ pub trait CrushResultExtra {
     fn with_trace(self, scope: &Scope) -> Self;
 }
 
-pub fn with_source<Value, Error>(res: Result<Value, Error>, source: &Source) -> CrushResult<Value> 
-    where CrushError: From<Error> {
+pub fn with_source<Value, Error>(res: Result<Value, Error>, source: &Source) -> CrushResult<Value>
+where
+    CrushError: From<Error>,
+{
     match res {
         Ok(v) => Ok(v),
         Err(e) => Err(CrushError::from(e).with_source(source)),

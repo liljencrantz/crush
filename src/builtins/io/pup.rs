@@ -1,11 +1,13 @@
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::CrushResult;
 use crate::lang::serialization::{deserialize_reader, serialize_writer};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
 use signature::signature;
-use std::io::BufReader;
 
 #[signature(
     io.pup.to,
@@ -17,12 +19,12 @@ use std::io::BufReader;
     example = "ls | pup:to")]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
 }
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = cfg.file.writer(context.output)?;
+    let mut writer = files::writer(cfg.file, context.output)?;
     let value = context.input.recv()?;
     serialize_writer(&value, &mut writer)
 }
@@ -35,13 +37,13 @@ fn to(mut context: CommandContext) -> CrushResult<()> {
     example = "pup:from serialized.pup")]
 struct From {
     #[unnamed()]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(deserialize_reader(
-        &mut BufReader::new(&mut cfg.files.reader(context.input)?),
+        &mut cfg.files.to_reader(context.input)?,
         &context.scope,
     )?)
 }

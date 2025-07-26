@@ -1,17 +1,22 @@
-use crate::lang::errors::CrushResult;
-use crate::lang::state::scope::Scope;
-use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
-use signature::signature;
-use std::env;
-
+use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
+use crate::lang::errors::CrushResult;
 use crate::lang::pipe::ValueReceiver;
+use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::scope::Scope;
+use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
+use crate::util::file::cwd;
+use crate::util::regex::RegexFileMatcher;
 use chrono::Duration;
 use os_pipe::PipeReader;
+use signature::signature;
+use std::env;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, OnceLock};
@@ -196,18 +201,76 @@ fn fg(mut context: CommandContext) -> CrushResult<()> {
 struct Source {
     #[unnamed()]
     #[description("the files to source")]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 fn source(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
-    for file in Vec::<PathBuf>::from(cfg.files) {
-        crate::execute::file(
-            &context.scope,
-            &file,
-            &context.output,
-            &context.global_state,
-        )?;
+    for el in cfg.files {
+        match el {
+            BinaryInput::File(path) => {
+                crate::execute::file(
+                    &context.scope,
+                    &path,
+                    &context.output,
+                    &context.global_state,
+                )?;
+            }
+            BinaryInput::Glob(glob) => {
+                let mut paths = Vec::new();
+                glob.glob_files(&cwd()?, &mut paths)?;
+                for path in paths {
+                    crate::execute::file(
+                        &context.scope,
+                        &path,
+                        &context.output,
+                        &context.global_state,
+                    )?;
+                }
+            }
+            BinaryInput::String(string) => {
+                crate::execute::string(
+                    &context.scope,
+                    &string,
+                    LanguageMode::Command,
+                    &context.output,
+                    &context.global_state,
+                )?;
+            }
+            BinaryInput::Regex(regex) => {
+                let mut paths = Vec::new();
+                regex.match_files(&cwd()?, &mut paths)?;
+                for path in paths {
+                    crate::execute::file(
+                        &context.scope,
+                        &path,
+                        &context.output,
+                        &context.global_state,
+                    )?;
+                }
+            }
+            BinaryInput::BinaryInputStream(mut stream) => {
+                let mut string = String::new();
+                stream.read_to_string(&mut string)?;
+                crate::execute::string(
+                    &context.scope,
+                    &string,
+                    LanguageMode::Command,
+                    &context.output,
+                    &context.global_state,
+                )?;
+            }
+            BinaryInput::Binary(vec) => {
+                let string = String::from_utf8_lossy(&vec);
+                crate::execute::string(
+                    &context.scope,
+                    &string,
+                    LanguageMode::Command,
+                    &context.output,
+                    &context.global_state,
+                )?;
+            }
+        }
     }
     Ok(())
 }

@@ -92,9 +92,10 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                         .output
                         .send(Value::Type(ValueType::List(Box::from(c))))
                 } else {
-                    command_error(
-                        format!("Tried to set subtype on a `list` that already has the subtype `{}`.", c),
-                    )
+                    command_error(format!(
+                        "Tried to set subtype on a `list` that already has the subtype `{}`.",
+                        c
+                    ))
                 }
             }
         },
@@ -236,13 +237,11 @@ fn push(mut context: CommandContext) -> CrushResult<()> {
 
     for el in &cfg.values {
         if el.value_type() != l.element_type() && l.element_type() != ValueType::Any {
-            return command_error(
-                format!(
-                    "Invalid element type, tried to push en element of type `{}` into a list of `{}`.",
-                    el.value_type().to_string(),
-                    l.element_type().to_string()
-                ),
-            );
+            return command_error(format!(
+                "Invalid element type, tried to push en element of type `{}` into a list of `{}`.",
+                el.value_type().to_string(),
+                l.element_type().to_string()
+            ));
         }
     }
     if !cfg.values.is_empty() {

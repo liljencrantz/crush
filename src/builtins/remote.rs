@@ -3,7 +3,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{LastArgument, PartialCommandResult};
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
@@ -176,7 +176,7 @@ struct Exec {
     )]
     password: Option<String>,
     #[description("(~/.ssh/known_hosts) known hosts file.")]
-    host_file: Files,
+    host_file: Option<Files>,
     #[description("skip checking the know hosts file.")]
     #[default(false)]
     ignore_host_file: bool,
@@ -189,11 +189,10 @@ struct Exec {
 
 fn exec(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Exec = Exec::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let host_file = if cfg.host_file.had_entries() {
-        PathBuf::try_from(cfg.host_file)?
-    } else {
-        home()?.join(".ssh/known_hosts")
-    };
+
+    let host_file =
+        crate::lang::signature::files::path(cfg.host_file, home()?.join(".ssh/known_hosts"))?;
+
     let mut in_buf = Vec::new();
     serialize(&Value::Command(cfg.command), &mut in_buf)?;
     context.output.send(run_remote(
@@ -233,7 +232,7 @@ struct Pexec {
     )]
     password: Option<String>,
     #[description("(~/.ssh/known_hosts) known hosts file.")]
-    host_file: Files,
+    host_file: Option<Files>,
     #[description("skip checking the know hosts file.")]
     #[default(false)]
     ignore_host_file: bool,
@@ -251,11 +250,8 @@ static PEXEC_OUTPUT_TYPE: [ColumnType; 2] = [
 
 fn pexec(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Pexec = Pexec::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let host_file = if cfg.host_file.had_entries() {
-        PathBuf::try_from(cfg.host_file)?
-    } else {
-        home()?.join(".ssh/known_hosts")
-    };
+    let host_file =
+        crate::lang::signature::files::path(cfg.host_file, home()?.join(".ssh/known_hosts"))?;
 
     let (host_send, host_recv) = unbounded::<String>();
     let (result_send, result_recv) = unbounded::<(String, Value)>();
@@ -348,7 +344,7 @@ mod host {
     )]
     pub struct List {
         #[description("(~/.ssh/known_hosts) known hosts file.")]
-        host_file: Files,
+        host_file: Option<Files>,
     }
 
     fn list(mut context: CommandContext) -> CrushResult<()> {
@@ -359,11 +355,8 @@ mod host {
         let mut known_hosts = session.known_hosts()?;
 
         // Initialize the known hosts with a global known hosts file
-        let host_file = if cfg.host_file.had_entries() {
-            PathBuf::try_from(cfg.host_file)?
-        } else {
-            home()?.join(".ssh/known_hosts")
-        };
+        let host_file =
+            crate::lang::signature::files::path(cfg.host_file, home()?.join(".ssh/known_hosts"))?;
         known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH)?;
         for host in known_hosts.iter()? {
             output.send(Row::new(vec![
@@ -383,7 +376,7 @@ mod host {
     )]
     pub struct Remove {
         #[description("(~/.ssh/known_hosts) known hosts file.")]
-        host_file: Files,
+        host_file: Option<Files>,
         #[description("host filter.")]
         host: Patterns,
         #[description("key filter.")]
@@ -393,11 +386,8 @@ mod host {
     fn remove(mut context: CommandContext) -> CrushResult<()> {
         let cfg: Remove =
             Remove::parse(context.remove_arguments(), &context.global_state.printer())?;
-        let host_file = if cfg.host_file.had_entries() {
-            cfg.host_file.clone().try_into()?
-        } else {
-            home()?.join(".ssh/known_hosts")
-        };
+        let host_file =
+            crate::lang::signature::files::path(cfg.host_file, home()?.join(".ssh/known_hosts"))?;
 
         let session = Session::new()?;
         let mut known_hosts = session.known_hosts()?;

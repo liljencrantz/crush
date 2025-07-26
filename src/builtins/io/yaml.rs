@@ -1,3 +1,4 @@
+use crate::lang::signature::binary_input::ToReader;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{data::table::Row, value::Value, value::ValueType};
 use std::io::{BufReader, Write};
@@ -6,6 +7,8 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::{CrushResult, error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::{data::list::List, data::table::Table};
@@ -23,9 +26,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             } else if f.is_i64() {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
-                Ok(Value::Float(
-                    f.as_f64().ok_or("Not a valid number")?,
-                ))
+                Ok(Value::Float(f.as_f64().ok_or("Not a valid number")?))
             }
         }
         serde_yaml::Value::String(s) => Ok(Value::from(s.as_str())),
@@ -138,13 +139,13 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
 struct FromSignature {
     #[unnamed()]
-    files: Files,
+    files: Vec<BinaryInput>,
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let reader = BufReader::new(cfg.files.reader(context.input)?);
+    let reader = BufReader::new(cfg.files.to_reader(context.input)?);
     let serde_value = serde_yaml::from_reader(reader)?;
     let crush_value = from_yaml(&serde_value)?;
     context.output.send(crush_value)
@@ -161,12 +162,12 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     example = "ls | yaml:to")]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
 }
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = cfg.file.writer(context.output)?;
+    let mut writer = files::writer(cfg.file, context.output)?;
     let value = context.input.recv()?;
     let yaml_value = to_yaml(value)?;
     writer.write(serde_yaml::to_string(&yaml_value)?.as_bytes())?;

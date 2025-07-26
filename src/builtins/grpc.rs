@@ -269,13 +269,11 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<&str>>();
 
     if services.is_empty() {
-        return command_error(
-            format!(
-                "No match for service pattern `{}`. Found services `{}`.",
-                cfg.service.to_string(),
-                list.lines().join(", ")
-            ),
-        );
+        return command_error(format!(
+            "No match for service pattern `{}`. Found services `{}`.",
+            cfg.service.to_string(),
+            list.lines().join(", ")
+        ));
     }
 
     let mut known_types = HashMap::new();
@@ -291,8 +289,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                     None,
                     vec!["describe".to_string(), format!("{}.{}", service, method)],
                 )?;
-                let input_type_name =
-                    parse_input_type_from_signature(method, signature.as_str())?;
+                let input_type_name = parse_input_type_from_signature(method, signature.as_str())?;
                 println!("{:?}", input_type_name);
                 let input_type =
                     parse_message_type(&context, &input_type_name, &g, &mut known_types)?;
@@ -351,9 +348,10 @@ fn parse_input_type_from_signature<'a>(
             };
         }
     }
-    command_error(
-        format!("Failed to parse signature of method `{}`.", method_name),
-    )
+    command_error(format!(
+        "Failed to parse signature of method `{}`.",
+        method_name
+    ))
 }
 
 fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
@@ -367,9 +365,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
                 if let Some(name) = a.argument_type {
                     fields.push((name, a.value));
                 } else {
-                    return command_error(
-                        "gRPC method invocations can only use named arguments.",
-                    );
+                    return command_error("gRPC method invocations can only use named arguments.");
                 }
             }
             let s = Struct::new(fields, None);

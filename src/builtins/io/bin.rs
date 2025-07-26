@@ -1,9 +1,13 @@
 use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::binary_input::ToReader;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::value::Value;
 use signature::signature;
+use std::io::Write;
 
 #[signature(
     io.bin.from,
@@ -13,14 +17,17 @@ use signature::signature;
 )]
 struct From {
     #[unnamed()]
-    files: Files,
+    #[description(
+        "source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`."
+    )]
+    files: Vec<BinaryInput>,
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context
-        .output
-        .send(Value::BinaryInputStream(cfg.files.reader(context.input)?))
+    let mut cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(Value::BinaryInputStream(
+        cfg.files.to_reader(context.input)?,
+    ))
 }
 
 #[signature(
@@ -30,7 +37,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct To {
     #[unnamed()]
-    file: Files,
+    file: Option<Files>,
 }
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
@@ -38,16 +45,14 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
 
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
-            let mut out = cfg.file.writer(context.output)?;
+            let mut out = files::writer(cfg.file, context.output)?;
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
-        v => command_error(
-            format!(
-                "Expected input to be a `binary_stream`, got a value of type `{}`.",
-                v.value_type()
-            ),
-        ),
+        v => command_error(format!(
+            "Expected input to be a `binary_stream`, got a value of type `{}`.",
+            v.value_type()
+        )),
     }
 }
 

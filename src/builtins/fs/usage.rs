@@ -4,6 +4,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::errors::CrushResult;
 use crate::lang::pipe::TableOutputStream;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
@@ -28,7 +29,7 @@ static OUTPUT_TYPE: [ColumnType; 3] = [
 pub struct Usage {
     #[unnamed()]
     #[description("the files to calculate the recursive size of.")]
-    directory: Files,
+    directory: Vec<Files>,
 
     #[description("do not show directory sizes for subdirectories.")]
     #[default(false)]
@@ -78,8 +79,8 @@ fn size(
 fn usage(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Usage = Usage::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.output.initialize(&OUTPUT_TYPE)?;
-    let dirs = if cfg.directory.had_entries() {
-        Vec::from(cfg.directory)
+    let dirs = if !cfg.directory.is_empty() {
+        files::into_paths(cfg.directory)?
     } else {
         vec![PathBuf::from(".")]
     };
