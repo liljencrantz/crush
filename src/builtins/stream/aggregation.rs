@@ -11,7 +11,6 @@ use signature::signature;
 use std::ops::Deref;
 
 fn parse(
-    command_name: &str,
     input_type: &[ColumnType],
     field: Option<String>,
 ) -> CrushResult<usize> {
@@ -19,7 +18,7 @@ fn parse(
         if input_type.len() == 1 {
             Ok(0)
         } else {
-            error(format!("`{}`: Input stream has multiple columns, you must specify which column to operate on.", command_name))
+            error("Input stream has multiple columns, you must specify which column to operate on.")
         }
     })
 }
@@ -29,9 +28,9 @@ macro_rules! sum_function {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: $var_type = $var_initializer;
             while let Ok(row) = s.read() {
-                match row.cells()[column] {
-                    Value::$value_type(i) => res = res + i,
-                    _ => return error("Invalid cell value"),
+                match &row.cells()[column] {
+                    Value::$value_type(i) => res = res + *i,
+                    v => return error(format!("Invalid cell value type `{}`.", v.value_type())),
                 }
             }
             Ok(Value::$value_type(res))
@@ -57,7 +56,7 @@ pub struct Sum {
 fn sum(mut context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?;
     let cfg: Sum = Sum::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("sum", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(sum_int(input, column)?),
         ValueType::Float => context.output.send(sum_float(input, column)?),
@@ -106,7 +105,7 @@ pub struct Avg {
 fn avg(mut context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?;
     let cfg: Avg = Avg::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("avg", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(avg_int(input, column)?),
         ValueType::Float => context.output.send(avg_float(input, column)?),
@@ -169,7 +168,7 @@ pub struct Median {
 fn median(mut context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?;
     let cfg: Median = Median::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("median", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
         ValueType::Integer => {
             context
@@ -259,7 +258,7 @@ pub struct Min {
 fn min(mut context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?;
     let cfg: Min = Min::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("min", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(min_int(input, column)?),
         ValueType::Float => context.output.send(min_float(input, column)?),
@@ -285,7 +284,7 @@ pub struct Max {
 fn max(mut context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?;
     let cfg: Max = Max::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("max", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(max_int(input, column)?),
         ValueType::Float => context.output.send(max_float(input, column)?),
@@ -329,7 +328,7 @@ pub struct Prod {
 fn prod(mut context: CommandContext) -> CrushResult<()> {
     let input = context.input.recv()?.stream()?;
     let cfg = Prod::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("prod", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
         ValueType::Integer => context.output.send(prod_int(input, column)?),
         ValueType::Float => context.output.send(prod_float(input, column)?),
@@ -357,7 +356,7 @@ pub struct Concat {
 fn concat(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input.recv()?.stream()?;
     let cfg: Concat = Concat::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let column = parse("concat", input.types(), cfg.field)?;
+    let column = parse(input.types(), cfg.field)?;
     let mut res = String::new();
 
     if let Ok(row) = input.read() {

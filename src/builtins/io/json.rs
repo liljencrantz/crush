@@ -24,7 +24,7 @@ fn from_json(json_value: &serde_json::Value) -> CrushResult<Value> {
                 Ok(Value::Integer(f.as_i64().expect("") as i128))
             } else {
                 Ok(Value::Float(
-                    f.as_f64().ok_or("`json:from`: Not a valid number")?,
+                    f.as_f64().ok_or(format!("Not a valid number: `{}`.", f.to_string()))?,
                 ))
             }
         }
@@ -84,7 +84,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     let v = value.materialize()?;
     match v {
         Value::File(s) => Ok(serde_json::Value::from(
-            s.to_str().ok_or("`json:to`: Invalid filename")?,
+            s.to_str().ok_or(format!("Invalid filename `{}`.", s.display()))?,
         )),
 
         Value::String(s) => Ok(serde_json::Value::from(s.to_string())),
@@ -125,7 +125,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
         Value::BinaryInputStream(_) | Value::TableInputStream(_) => panic!("Impossible"),
 
         v => error(&format!(
-            "`json:to`: Unsupported data type {}",
+            "Unsupported data type `{}`.",
             v.value_type()
         )),
     }

@@ -6,8 +6,7 @@ fn $name(mut context: CommandContext) -> CrushResult<()> {
     match (context.arguments.value(0)?) {
         $( Value::$input_type(v) => context.output.send(Value::$output_type($operation(this, v))), )*
         other => return crate::lang::errors::command_error(format!(
-            "`{}`: Incompatible argument type for arithmetic operation: {}",
-            stringify!($name),
+            "Incompatible argument type for arithmetic operation: {}",
             other.value_type().to_string(),
             )),
     }

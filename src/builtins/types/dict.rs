@@ -62,7 +62,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
                     Call::parse(context.remove_arguments(), &context.global_state.printer())?;
                 if !cfg.key_type.is_hashable() {
                     return command_error(format!(
-                        "`Tried to create a `dict` subtype with the key type `{}`, which is not hashable.",
+                        "Tried to create a `dict` subtype with the key type `{}`, which is not hashable.",
                         cfg.key_type
                     ));
                 }

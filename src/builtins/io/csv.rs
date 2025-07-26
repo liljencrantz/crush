@@ -78,7 +78,7 @@ fn from(mut context: CommandContext) -> CrushResult<()> {
             .collect();
 
         if split.len() != columns.len() {
-            return error("`csv:from`: Wrong number of columns in CSV file");
+            return error("Wrong number of columns in CSV file.");
         }
 
         if let Some(trim) = trim {

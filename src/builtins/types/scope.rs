@@ -44,7 +44,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(val.get_local(&cfg.name)?.ok_or(format!(
-        "`scope:__getitem__`: Unknown member `${}` in scope `{}`",
+        "Unknown member `${}` in scope `{}`.",
         &cfg.name,
         val.name().unwrap_or("<Anonymous>".to_string())
     ))?)
@@ -65,7 +65,7 @@ fn __resolve__(mut context: CommandContext) -> CrushResult<()> {
     let val = context.this.scope()?;
     let cfg: Resolve = Resolve::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(val.get(&cfg.name)?.ok_or(format!(
-        "Unknown member {} in scope {}",
+        "Unknown member `${}` in scope `{}`.",
         &cfg.name,
         val.name().unwrap_or("<Anonymous>".to_string())
     ))?)

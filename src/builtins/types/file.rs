@@ -296,9 +296,9 @@ fn name(mut context: CommandContext) -> CrushResult<()> {
             .this
             .file()?
             .file_name()
-            .ok_or("`file:name`: Invalid file path")?
+            .ok_or("Invalid file path.")?
             .to_str()
-            .ok_or("`file:name`: Invalid file name")?,
+            .ok_or("Invalid file name.")?,
     ))
 }
 
@@ -316,7 +316,7 @@ fn parent(mut context: CommandContext) -> CrushResult<()> {
             .this
             .file()?
             .parent()
-            .ok_or("`file:parent`: Invalid file path.")?,
+            .ok_or("Invalid file path.")?,
     ))
 }
 
@@ -457,7 +457,7 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
                 remove_file_of_unknown_type(file, &output, cfg.verbose)
             }
         }
-        None => command_error("`Expected `this` to be a `file`, but it was not set."),
+        None => command_error("Expected `this` to be a `file`, but it was not set."),
         Some(v) => command_error(
             &format!(
                 "Expected `this` to be of type `file`, but is of type `{}`.",
@@ -478,7 +478,7 @@ struct MkDir {}
 fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
     if path.exists() && path.is_dir() {
         if leaf {
-            data_error("Directory already exists")
+            data_error("Directory already exists.")
         } else {
             Ok(())
         }
@@ -503,7 +503,7 @@ fn mkdir(mut context: CommandContext) -> CrushResult<()> {
     long = "If the file doesn't exist, it is created.",
 )]
 struct Touch {
-    #[description("Do not create the file if it doesn't exist")]
+    #[description("Do not create the file if it doesn't exist.")]
     #[default(false)]
     no_create: bool,
 }

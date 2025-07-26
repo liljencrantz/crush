@@ -44,7 +44,7 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
         }
         v => command_error(
             format!(
-                "`bin:to`: Expected input to be a binary stream, got a value of type `{}`",
+                "Expected input to be a `binary_stream`, got a value of type `{}`.",
                 v.value_type()
             ),
         ),

@@ -116,8 +116,8 @@ impl dyn BinaryReader {
             let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
 
             for p in files.drain(..) {
-                let f = File::open(p).map(|f| Box::from(FileReader::new(f)))?;
-                readers.push(f)
+                let f = Box::from(FileReader::new(File::open(p)?));
+                readers.push(f);
             }
             Ok(Box::from(MultiReader {
                 inner: VecDeque::from(readers),

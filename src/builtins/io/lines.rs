@@ -49,13 +49,6 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
         };
         if cfg.strip_whitespace {
             s = s.trim()
-        } else {
-            while s.starts_with('\r') {
-                s = &s[1..];
-            }
-            while s.ends_with('\r') {
-                s = &s[0..line.len() - 1];
-            }
         }
 
         if line.len() > 0 || !cfg.skip_empty_lines {
@@ -83,7 +76,7 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let mut out = cfg.file.writer(context.output)?;
     if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
         return data_error(
-            "`lines:to`: Expected an input iterator containing a single column of type string",
+            "Expected an input iterator containing a single column of type string.",
         );
     }
     while let Ok(row) = input.read() {
