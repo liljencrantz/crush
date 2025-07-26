@@ -152,7 +152,7 @@ impl Signature {
                                             }),
             },
             assign: quote! {
-            #name: #name.ok_or(format!("No value provided for parameter `{}`", #name_literal).as_str())?,
+            #name: #name.ok_or(format!("No value provided for parameter `{}`", #name_literal))?,
             },
         })
     }

@@ -478,7 +478,7 @@ struct MkDir {}
 fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
     if path.exists() && path.is_dir() {
         if leaf {
-            data_error("Directory already exists.")
+            data_error(format!("Directory `{}` already exists.", path.display()))
         } else {
             Ok(())
         }

@@ -1,4 +1,5 @@
 use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::{
     data::binary::binary_channel, data::r#struct::Struct, data::table::ColumnType,
@@ -8,6 +9,8 @@ use chrono::Duration;
 use reqwest::header::HeaderMap;
 use reqwest::{Method, StatusCode};
 use signature::signature;
+use std::io::Read;
+use std::ops::Deref;
 
 fn parse_method(m: &str) -> CrushResult<Method> {
     Ok(match m {
@@ -48,7 +51,7 @@ pub struct Http {
     #[default("GET")]
     method: String,
     #[description("form content, if any.")]
-    form: Option<String>,
+    form: Option<BinaryInput>,
     #[description("HTTP headers, must be on the form \"key:value\".")]
     header: Vec<String>,
     #[description("connection timeout.")]
@@ -66,10 +69,7 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
         .map(|us| core::time::Duration::from_nanos(us as u64))
         .ok_or("Out of bounds timeout")?;
     let mut request = client
-        .request(
-            parse_method(&cfg.method)?,
-            cfg.uri.as_str(),
-        )
+        .request(parse_method(&cfg.method)?, cfg.uri.as_str())
         .timeout(t);
 
     for t in cfg.header.iter() {
@@ -81,7 +81,19 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
     }
 
     if let Some(body) = cfg.form {
-        request = request.body(body)
+        match body {
+            BinaryInput::BinaryInputStream(mut v) => {
+                let mut buf = Vec::new();
+                v.read_to_end(&mut buf)?;
+                request = request.body(buf);
+            }
+            BinaryInput::Binary(v) => {
+                request = request.body(v.to_vec());
+            }
+            BinaryInput::String(v) => {
+                request = request.body(v.to_string());
+            }
+        }
     }
 
     let mut b = request.send()?;
