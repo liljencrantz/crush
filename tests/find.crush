@@ -1,1 +1,1 @@
-files --recurse ./example_data/tree | select file | sort file
+echo $(files --recurse ./example_data/tree | select file | sort file)

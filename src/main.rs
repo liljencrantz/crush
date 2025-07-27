@@ -18,6 +18,7 @@ use lang::{data, state};
 use num_format::SystemLocale;
 use std::io::Read;
 use std::path::PathBuf;
+use crate::lang::pipe::black_hole;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -124,7 +125,7 @@ fn run() -> CrushResult<i32> {
         Mode::File(f) => global_state.printer().handle_error(execute::file(
             &local_scope,
             f.as_path(),
-            &pretty_printer,
+            &black_hole(),
             &global_state,
         )),
 

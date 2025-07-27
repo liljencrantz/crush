@@ -1,10 +1,10 @@
-"abc":lpad 2
-"abc":lpad 5 "A"
-"abc":rpad 2
-"abc":rpad 5 "A"
-"\n\n\n\t abc \n\t":trim
-"abcABC":upper
-"abcABC":lower
-"a b c d":split " "
-"Hello, {}!":format "world"
-"Hello, {name}!":format name="world"
+"abc":lpad 2 | echo
+"abc":lpad 5 "A" | echo
+"abc":rpad 2 | echo
+"abc":rpad 5 "A" | echo
+"\n\n\n\t abc \n\t":trim | echo
+"abcABC":upper | echo
+"abcABC":lower | echo
+"a b c d":split " " | echo
+"Hello, {}!":format "world" | echo
+"Hello, {name}!":format name="world" | echo

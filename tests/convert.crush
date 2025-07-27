@@ -1,4 +1,4 @@
-convert $integer 1.0
-convert $integer 0.5
-convert $string 5
-typeof $(convert $string 5)
+echo $(convert $integer 1.0)
+echo $(convert $integer 0.5)
+echo $(convert $string 5)
+echo $(typeof $(convert $string 5))

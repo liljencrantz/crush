@@ -13,6 +13,6 @@ $Point:__add__ = {
 
 $p1 := $(Point:new x=0.0 y=4.0)
 $p2 := (Point.new(x=3.0, y=0.0))
-$p3 := ($p1 + $p2)
+echo $($p3 := ($p1 + $p2))
 
-$p3:len
+echo $($p3:len)

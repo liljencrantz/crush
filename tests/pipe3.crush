@@ -22,4 +22,4 @@ $sum_job_id4 := $(pipe:read | sum &)
 $pipe:close
 
 # Wait for the sum commands to finish
-val ($(fg $sum_job_id1) + $(fg $sum_job_id2) + $(fg $sum_job_id3) + $(fg $sum_job_id4))
+echo ($(fg $sum_job_id1) + $(fg $sum_job_id2) + $(fg $sum_job_id3) + $(fg $sum_job_id4))

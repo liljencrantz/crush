@@ -19,4 +19,4 @@ $sum_job_id := $(pipe:read | sum &)
 pipe:close
 
 # Wait for the sum command to finish
-fg $sum_job_id
+echo $(fg $sum_job_id)

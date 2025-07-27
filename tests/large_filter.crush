@@ -1,2 +1,2 @@
 crush:locale:set "en_US.UTF-8"
-seq 0 10000| yaml:to | yaml:from|count
+seq 0 10000| yaml:to | yaml:from|count | echo

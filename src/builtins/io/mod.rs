@@ -75,7 +75,9 @@ pub fn dir(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Prints all arguments directly to the screen",
-    long = "This command may at first appear pointless, since values entered to the prompt are printed to the screen by default. But inside of code blocks, results are either completely ignored or returned as the return value of the block. In these situations, the `echo` command is useful for passing values to the user.",
+    long = "If no values are passed for printing, .",
+    long = "",
+    long = "This command may at first appear pointless, since values entered to the prompt are printed to the screen by default. But that is only true when running a command interactively. When executing a file or running a closure, results are either completely ignored or returned as the return value of the block. In these situations, the `echo` command is useful for passing values to the user.",
     example = "echo \"Hello, world!\""
 )]
 struct Echo {
@@ -93,11 +95,15 @@ fn echo(mut context: CommandContext) -> CrushResult<()> {
         context.global_state.printer().clone(),
         context.global_state.format_data(),
     );
-    for value in cfg.values {
-        match (cfg.raw, &value) {
-            (true, Value::String(s)) => context.global_state.printer().line(s),
+    if cfg.values.is_empty() {
+        pretty.print_value(context.input.recv()?, &ColumnFormat::None);
+    } else {
+        for value in cfg.values {
+            match (cfg.raw, &value) {
+                (true, Value::String(s)) => context.global_state.printer().line(s),
 
-            _ => pretty.print_value(value, &ColumnFormat::None),
+                _ => pretty.print_value(value, &ColumnFormat::None),
+            }
         }
     }
     context.output.empty()

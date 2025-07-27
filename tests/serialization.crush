@@ -2,7 +2,7 @@ rm ./.test_file
 # Pipe output of find into a file
 files ./example_data/tree|select file type | sort file | pup:to ./.test_file
 # And read it back out again
-$(pup:from ./.test_file)[0] | member file
+$(pup:from ./.test_file)[0] | member file | echo
 
 # Create a closure that close on outside variables
 $a := 4
