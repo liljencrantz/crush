@@ -1,3 +1,10 @@
+# Interrupt running jobs
+
+* Whenever starting a new job, create a channel for it.
+* Put the sender in the global job list.
+* Add a receiver into every single pipeline.
+* Make the read operation read from both pipelines, and return an interrupt error if a value has been received on the side channel.
+
 # Pluggable tab completion framework
 
 Individual commands should be able to provide tags (possibly mime tags?)

@@ -74,11 +74,13 @@ pub fn dir(mut context: CommandContext) -> CrushResult<()> {
     io.echo,
     can_block = false,
     output = Known(ValueType::Empty),
-    short = "Prints all arguments directly to the screen",
-    long = "If no values are passed for printing, .",
+    short = "Prints all arguments directly to standard output.",
+    long = "If no arguments are passed to the `values` parameter, print the input pipeline value instead.",
     long = "",
-    long = "This command may at first appear pointless, since values entered to the prompt are printed to the screen by default. But that is only true when running a command interactively. When executing a file or running a closure, results are either completely ignored or returned as the return value of the block. In these situations, the `echo` command is useful for passing values to the user.",
-    example = "echo \"Hello, world!\""
+    long = "This command may at first appear pointless, since values entered on the prompt are printed to standard output by default. But that is only true when running a command interactively. When executing a file or running a closure, results are either completely ignored or returned as the return value of the block. In these situations, the `echo` command is useful for making sure a given value is written to standard output.",
+    example = "# These command invocations are equivalent",
+    example = "echo \"Hello, world!\"",
+    example = "\"Hello, world!\" | echo",
 )]
 struct Echo {
     #[description("the values to print.")]
