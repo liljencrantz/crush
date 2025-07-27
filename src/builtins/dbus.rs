@@ -64,7 +64,7 @@ impl DBusThing {
             .filter(|a| a.direction == DBusArgumentDirection::Out)
             .collect::<Vec<_>>();
         if values.len() != output_arguments.len() {
-            return error("Wrong number of arguments returned from DBUS call");
+            return error("Wrong number of arguments returned from D-Bus call");
         }
 
         let values_as_arguments = values
@@ -300,7 +300,7 @@ impl DBusType {
                 }))
             }
 
-            Some(ch) => error(format!("Unknown dbus type '{}'", ch)),
+            Some(ch) => error(format!("Unknown D-Bus type `{}`", ch)),
         }
     }
 }
@@ -469,7 +469,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                         }
                         Err(e) => {
                             return if e.is_eof() {
-                                error("Unexpected EOF in dbus message")
+                                error("Unexpected EOF in D-Bus message")
                             } else {
                                 Err(e)
                             };
@@ -536,7 +536,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
                 }
                 Err(e) => {
                     return if e.is_eof() {
-                        error("Unexpected EOF in DBUS message")
+                        error("Unexpected EOF in D-Bus message")
                     } else {
                         Err(e)
                     };
@@ -832,7 +832,7 @@ dbus:session:org.gnome.Shell %%/ScreenSaver %.setActive true
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dbus",
-        "DBus RPC command",
+        "D-Bus RPC command",
         Box::new(move |dbus| {
             Session::declare(dbus)?;
             System::declare(dbus)?;

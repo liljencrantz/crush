@@ -16,13 +16,13 @@ pub struct Seq {
     #[description("the first number in the sequence.")]
     #[default(0)]
     from: i128,
-    #[description("the step size.")]
-    #[default(1)]
-    step: i128,
     #[description(
         "the end of the sequence (exclusive). If not specified, the sequence will continue forever."
     )]
     to: Option<i128>,
+    #[description("the step size.")]
+    #[default(1)]
+    step: i128,
 }
 
 pub fn seq(mut context: CommandContext) -> CrushResult<()> {

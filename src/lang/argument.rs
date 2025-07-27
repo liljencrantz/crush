@@ -315,11 +315,14 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lang::ast::location::Location;
+    use crate::lang::ast::source::SourceType;
     use crate::lang::data::list::List;
     use crate::lang::ordered_string_map::OrderedStringMap;
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::ValueType;
     use signature::signature;
+    use std::sync::Arc;
 
     fn x(_context: CommandContext) -> CrushResult<()> {
         Ok(())
@@ -350,7 +353,7 @@ mod tests {
             vec![Argument::named(
                 "str_val",
                 Value::from("aa"),
-                Location::new(0, 0),
+                &Source::new(SourceType::Input, Arc::from("")),
             )],
             &printer,
         )
@@ -361,7 +364,7 @@ mod tests {
                 vec![Argument::named(
                     "str_val",
                     Value::from("zz"),
-                    Location::new(0, 0)
+                    &Source::new(SourceType::Input, Arc::from("")),
                 )],
                 &printer,
             )
@@ -372,7 +375,7 @@ mod tests {
             vec![Argument::named(
                 "char_val",
                 Value::from("a"),
-                Location::new(0, 0),
+                &Source::new(SourceType::Input, Arc::from("")),
             )],
             &printer,
         )
@@ -383,7 +386,7 @@ mod tests {
                 vec![Argument::named(
                     "char_val",
                     Value::from("z"),
-                    Location::new(0, 0)
+                    &Source::new(SourceType::Input, Arc::from("")),
                 )],
                 &printer,
             )
@@ -394,7 +397,7 @@ mod tests {
             vec![Argument::named(
                 "int_val",
                 Value::Integer(1),
-                Location::new(0, 0),
+                &Source::new(SourceType::Input, Arc::from("")),
             )],
             &printer,
         )
@@ -406,7 +409,7 @@ mod tests {
                 vec![Argument::named(
                     "int_val",
                     Value::Integer(9),
-                    Location::new(0, 0)
+                    &Source::new(SourceType::Input, Arc::from("")),
                 )],
                 &printer,
             )
@@ -427,7 +430,7 @@ mod tests {
                 vec![Argument::named(
                     "int_val",
                     Value::Integer(9),
-                    Location::new(0, 0)
+                    &Source::new(SourceType::Input, Arc::from("")),
                 )],
                 &printer,
             )
@@ -456,7 +459,7 @@ mod tests {
                 vec![Argument::named(
                     "int_val",
                     Value::Integer(9),
-                    Location::new(0, 0)
+                    &Source::new(SourceType::Input, Arc::from("")),
                 )],
                 &printer,
             )
@@ -482,9 +485,21 @@ mod tests {
         assert_eq!(
             ListSignature::parse(
                 vec![
-                    Argument::named("list_val", Value::from("a"), Location::new(0, 0)),
-                    Argument::named("list_val", Value::from("b"), Location::new(0, 0)),
-                    Argument::named("list_val", Value::from("c"), Location::new(0, 0)),
+                    Argument::named(
+                        "list_val",
+                        Value::from("a"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
+                    Argument::named(
+                        "list_val",
+                        Value::from("b"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
+                    Argument::named(
+                        "list_val",
+                        Value::from("c"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
                 ],
                 &printer,
             )
@@ -501,13 +516,21 @@ mod tests {
         assert_eq!(
             ListSignature::parse(
                 vec![
-                    Argument::named("list_val", Value::from("a"), Location::new(0, 0)),
+                    Argument::named(
+                        "list_val",
+                        Value::from("a"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
                     Argument::named(
                         "list_val",
                         List::new(ValueType::String, [Value::from("b"), Value::from("c")],).into(),
-                        Location::new(0, 0),
+                        &Source::new(SourceType::Input, Arc::from("")),
                     ),
-                    Argument::named("list_val", Value::from("d"), Location::new(0, 0)),
+                    Argument::named(
+                        "list_val",
+                        Value::from("d"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
                 ],
                 &printer,
             )
@@ -534,9 +557,21 @@ mod tests {
         assert_eq!(
             NamedSignature::parse(
                 vec![
-                    Argument::named("a", Value::from("A"), Location::new(0, 0)),
-                    Argument::named("b", Value::from("B"), Location::new(0, 0)),
-                    Argument::named("c", Value::from("C"), Location::new(0, 0)),
+                    Argument::named(
+                        "a",
+                        Value::from("A"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
+                    Argument::named(
+                        "b",
+                        Value::from("B"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
+                    Argument::named(
+                        "c",
+                        Value::from("C"),
+                        &Source::new(SourceType::Input, Arc::from("")),
+                    ),
                 ],
                 &printer,
             )
@@ -566,7 +601,7 @@ mod tests {
             vec![Argument::named(
                 "foo",
                 Value::from("s"),
-                Location::new(0, 0),
+                &Source::new(SourceType::Input, Arc::from("")),
             )],
             &printer,
         )
@@ -586,7 +621,7 @@ mod tests {
                 vec![Argument::named(
                     "foo",
                     Value::Bool(true),
-                    Location::new(0, 0)
+                    &Source::new(SourceType::Input, Arc::from("")),
                 )],
                 &printer
             )

@@ -1,6 +1,7 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchStyle};
 use crate::lang::ast::source::Source;
 use crate::lang::ast::tracked_string::TrackedString;
+use crate::lang::command::OutputType::Known;
 use crate::lang::command::{
     BoundCommand, Command, CrushCommand, OutputType, Parameter, ParameterDefinition,
 };
@@ -365,10 +366,12 @@ impl CrushCommand for Closure {
     fn eval(&self, context: CommandContext) -> CrushResult<()> {
         let s = context.scope.clone();
         let source = context.source.clone();
-        self.eval_inner(context)
+        let res = self
+            .eval_inner(context)
             .with_command(self.name())
             .with_trace(&s)
-            .with_source_fallback(&source)
+            .with_source_fallback(&source);
+        res
     }
 
     fn might_block(&self, _arg: &[ArgumentDefinition], _context: &mut EvalContext) -> bool {
@@ -638,6 +641,7 @@ impl Closure {
                 env.clone(),
                 context.global_state.clone(),
             ))?;
+
             let local_printer = context.global_state.printer().clone();
             let local_threads = context.global_state.threads().clone();
             job.map(|id| local_threads.join_one(id, &local_printer));
@@ -650,7 +654,8 @@ impl Closure {
                 return context.output.send(return_value);
             } else {
                 if last {
-                    context.output.send(receiver.recv()?)?;
+                    let v = receiver.recv()?;
+                    context.output.send(v)?;
                 }
             }
         }

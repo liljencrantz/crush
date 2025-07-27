@@ -1,3 +1,4 @@
-$ggg := {|$a : $(dict $integer $integer)| echo $a}
+$ggg := {|$a : $(dict $integer $integer)| echo $a[3]}
 $hhh := $($(dict $integer $integer):new)
+$hhh[3] = 7
 ggg a=$hhh

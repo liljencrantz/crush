@@ -2,15 +2,15 @@ rm ./.test_file
 # Pipe output of find into a file
 files ./example_data/tree|select file type | sort file | pup:to ./.test_file
 # And read it back out again
-pup:from ./.test_file
+$(pup:from ./.test_file)[0] | member file
 
 # Create a closure that close on outside variables
 $a := 4
 $b := 7.5
-$fff := {|$c:$integer=1 $d| echo (a * b * c); for i=$(seq 3) $d }
+$fff := {|$c:$integer=1 $d| echo ($a * $b * $c); for i=$(seq 0 3) $d }
 # Serialize the closure
 val $fff | pup:to ./.test_file
 # Unset the variables used by the closure
-var:unset "a" "b" "fff"
+var:unset a b fff
 # Deserialize the closure and check that the variables still exists.
 $(pup:from ./.test_file) c=3 {echo 1}

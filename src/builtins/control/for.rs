@@ -4,7 +4,7 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::pipe::Stream;
+use crate::lang::pipe::{Stream, black_hole};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeType::Loop;
 use crate::lang::value::Value;

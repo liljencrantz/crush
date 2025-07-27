@@ -39,11 +39,47 @@ sum_function!(sum_int, i128, 0, Integer);
 sum_function!(sum_float, f64, 0.0, Float);
 sum_function!(sum_duration, Duration, Duration::seconds(0), Duration);
 
+fn sum_any(mut s: Stream, column: usize) -> CrushResult<Value> {
+    let mut had_integer = false;
+    let mut had_float = false;
+    let mut had_duration = false;
+    let mut sum_int = 0;
+    let mut sum_float = 0.0;
+    let mut sum_duration = Duration::seconds(0);
+    while let Ok(row) = s.read() {
+        match &row.cells()[column] {
+            Value::Integer(i) => {
+                had_integer = true;
+                sum_int = sum_int + *i
+            }
+            Value::Float(f) => {
+                had_float = true;
+                sum_float = sum_float + *f
+            }
+            Value::Duration(d) => {
+                had_duration = true;
+                sum_duration = sum_duration + *d
+            }
+            v => return error(format!("Invalid cell value type `{}`.", v.value_type())),
+        }
+    }
+    match (had_integer, had_float, had_duration) {
+        (true, false, false) => Ok(Value::Integer(sum_int)),
+        (false, true, false) => Ok(Value::Float(sum_float)),
+        (false, false, true) => Ok(Value::Duration(sum_duration)),
+        (false, false, false) => error("Sum of nothing"),
+        _ => error("Received multiple types in sum"),
+    }
+}
+
 #[signature(
     stream.sum,
     short = "Calculate the sum for the specific column across all rows.",
     long = "If the input only has one column, the column name is optional.",
-    long = "The column type must be numeric or a duration.",
+    long = "",
+    long = "The column contents must be exactly one of the types `$integer`, `$float`, or `$duration`.",
+    long = "",
+    long = "Normally, `sum` expects the type of the column to be the type to sum over, but `sum` can also sum over a column of type `any`, so long as there is at least one row in the table, and all the rows are actually of the same type.",
     example = "host:procs | sum cpu")]
 pub struct Sum {
     #[description("The name of the column to find the sum of")]
@@ -58,6 +94,7 @@ fn sum(mut context: CommandContext) -> CrushResult<()> {
         ValueType::Integer => context.output.send(sum_int(input, column)?),
         ValueType::Float => context.output.send(sum_float(input, column)?),
         ValueType::Duration => context.output.send(sum_duration(input, column)?),
+        ValueType::Any => context.output.send(sum_any(input, column)?),
         t => command_error(&format!("Can't calculate sum of elements of type {}", t)),
     }
 }
@@ -88,6 +125,41 @@ avg_function!(avg_int, i128, 0, Integer, i128);
 avg_function!(avg_float, f64, 0.0, Float, f64);
 avg_function!(avg_duration, Duration, Duration::seconds(0), Duration, i32);
 
+fn avg_any(mut s: Stream, column: usize) -> CrushResult<Value> {
+    let mut had_integer = false;
+    let mut had_float = false;
+    let mut had_duration = false;
+    let mut sum_int = 0;
+    let mut sum_float = 0.0;
+    let mut sum_duration = Duration::seconds(0);
+    let mut count: usize = 0;
+    while let Ok(row) = s.read() {
+        match &row.cells()[column] {
+            Value::Integer(i) => {
+                had_integer = true;
+                sum_int += *i
+            }
+            Value::Float(f) => {
+                had_float = true;
+                sum_float += *f
+            }
+            Value::Duration(d) => {
+                had_duration = true;
+                sum_duration += *d
+            }
+            v => return error(format!("Invalid cell value type `{}`.", v.value_type())),
+        }
+        count += 1;
+    }
+    match (had_integer, had_float, had_duration) {
+        (true, false, false) => Ok(Value::Integer(sum_int / count as i128)),
+        (false, true, false) => Ok(Value::Float(sum_float / count as f64)),
+        (false, false, true) => Ok(Value::Duration(sum_duration / count as i32)),
+        (false, false, false) => error("Can't calculate average of empty set"),
+        _ => error("Received multiple types in sum"),
+    }
+}
+
 #[signature(
     stream.avg,
     short = "Calculate the average for the specific column across all rows.",
@@ -107,6 +179,7 @@ fn avg(mut context: CommandContext) -> CrushResult<()> {
         ValueType::Integer => context.output.send(avg_int(input, column)?),
         ValueType::Float => context.output.send(avg_float(input, column)?),
         ValueType::Duration => context.output.send(avg_duration(input, column)?),
+        ValueType::Any => context.output.send(avg_any(input, column)?),
         t => command_error(&format!(
             "Can't calculate average of elements of type {}",
             t

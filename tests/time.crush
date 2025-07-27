@@ -5,4 +5,4 @@ $tm:format "%s"
 $t1 := $(time:now)
 sleep $(duration:of milliseconds=50)
 $t2 := $(time:now)
-(t2 - t1) >= $(duration:of milliseconds=50)
+(($t2 - $t1) >= $(duration:of milliseconds=50))

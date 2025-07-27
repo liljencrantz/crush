@@ -476,12 +476,14 @@ pub fn parse(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lang::ast::lexer::Lexer;
+    use crate::lang::ast::lexer::TokenizerMode::SkipComments;
     use crate::lang::ast::location::Location;
     use crate::lang::parser::lalrparser;
 
     fn ast(s: &str) -> CrushResult<JobListNode> {
-        panic!()
-        //        to_crush_error(lalrparser::JobListParser::new().parse(s))
+        let lexer = Lexer::new(s, LanguageMode::Command, SkipComments);
+        Ok(lalrparser::JobListParser::new().parse(s, lexer)?)
     }
 
     #[test]
@@ -500,15 +502,15 @@ mod tests {
 
     #[test]
     fn find_command_in_complicated_mess_test() {
-        let ast = ast("a | b {c:d (e f=g) h=(i j)}").unwrap();
-        let cmd = find_command_in_job_list(ast, 25).unwrap();
-        assert_eq!(cmd.location, Location::new(22, 25))
+        let ast = ast("a | b {c:d $(e $f=g) h=$(i j)}").unwrap();
+        let cmd = find_command_in_job_list(ast, 28).unwrap();
+        assert_eq!(cmd.location, Location::new(25, 28))
     }
 
     #[test]
     fn find_command_in_operator() {
-        let ast = ast("ps | where {cpu == (max_)}").unwrap();
-        let cmd = find_command_in_job_list(ast, 24).unwrap();
-        assert_eq!(cmd.location, Location::new(20, 24))
+        let ast = ast("ps | where {(cpu == $(max_))}").unwrap();
+        let cmd = find_command_in_job_list(ast, 26).unwrap();
+        assert_eq!(cmd.location, Location::new(22, 26))
     }
 }

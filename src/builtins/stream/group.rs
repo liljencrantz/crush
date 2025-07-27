@@ -75,12 +75,16 @@ fn aggregate(
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     let local_source = context.source.clone();
+                    let local_printer = context.global_state.printer().clone();
                     context.spawn("group:aggr", move || {
-                        local_command.eval(
-                            CommandContext::new(&local_scope, &local_state, &local_source)
-                                .with_input(input_receiver)
-                                .with_output(output_sender),
-                        )
+                        local_printer.handle_error(
+                            local_command.eval(
+                                CommandContext::new(&local_scope, &local_state, &local_source)
+                                    .with_input(input_receiver)
+                                    .with_output(output_sender),
+                            ),
+                        );
+                        Ok(())
                     })?;
                     receivers.push(output_receiver);
                 }
