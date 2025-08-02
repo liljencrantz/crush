@@ -241,14 +241,8 @@ impl CrushStream for DictReader {
         Ok(Row::new(vec![a, b]))
     }
 
-    fn read_timeout(
-        &mut self,
-        _timeout: Duration,
-    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
-        match self.read() {
-            Ok(r) => Ok(r),
-            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
-        }
+    fn read_timeout(&mut self, _timeout: Duration) -> CrushResult<Row> {
+        self.read()
     }
 
     fn types(&self) -> &[ColumnType] {

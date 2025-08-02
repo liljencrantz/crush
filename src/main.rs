@@ -7,6 +7,7 @@ mod util;
 
 use crate::lang::errors::{CrushErrorType, CrushResult, command_error};
 use crate::lang::interactive;
+use crate::lang::pipe::black_hole;
 use crate::lang::pretty::create_pretty_printer;
 use crate::lang::printer::Printer;
 use crate::lang::state::global_state::RunMode;
@@ -18,7 +19,6 @@ use lang::{data, state};
 use num_format::SystemLocale;
 use std::io::Read;
 use std::path::PathBuf;
-use crate::lang::pipe::black_hole;
 
 #[derive(PartialEq, Eq)]
 enum Mode {

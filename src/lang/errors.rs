@@ -17,7 +17,10 @@ pub enum CrushErrorType {
     GenericError(String),
     SendError(String),
     RecvError(crossbeam::channel::RecvError),
+    RecvTimeoutError(crossbeam::channel::RecvTimeoutError),
+    SelectTimeoutError(crossbeam::channel::SelectTimeoutError),
     EOFError,
+    Terminate,
     IOError(std::io::Error),
     RegexError(regex::Error),
     ParseIntError(std::num::ParseIntError),
@@ -69,6 +72,15 @@ pub struct CrushError {
 }
 
 impl CrushError {
+    pub fn is_disconnected(&self) -> bool {
+        match &self.error_type {
+            RecvTimeoutError(e) => e.is_disconnected(),
+            _ => false,
+        }
+    }
+}
+
+impl CrushError {
     pub fn error_type(&self) -> &CrushErrorType {
         &self.error_type
     }
@@ -78,6 +90,7 @@ impl CrushError {
             InvalidArgument(s) | InvalidData(s) | GenericError(s) => s.clone(),
             SendError(e) => e.to_string(),
             EOFError => "EOF error".to_string(),
+            Terminate => "Job termination requested".to_string(),
             IOError(e) => e.to_string(),
             RegexError(e) => e.to_string(),
             ParseIntError(e) => e.to_string(),
@@ -85,6 +98,8 @@ impl CrushError {
             LexicalError(e) => e.to_string(),
             ParseError(e, _) => e.to_string(),
             RecvError(e) => e.to_string(),
+            RecvTimeoutError(e) => e.to_string(),
+            SelectTimeoutError(e) => e.to_string(),
             NumFormatError(e) => e.to_string(),
             PoisonError(e) => e.to_string(),
             ParseBoolError(e) => e.to_string(),
@@ -291,6 +306,18 @@ impl From<crossbeam::channel::RecvError> for CrushError {
     }
 }
 
+impl From<crossbeam::channel::RecvTimeoutError> for CrushError {
+    fn from(e: crossbeam::channel::RecvTimeoutError) -> Self {
+        RecvTimeoutError(e).into()
+    }
+}
+
+impl From<crossbeam::channel::SelectTimeoutError> for CrushError {
+    fn from(e: crossbeam::channel::SelectTimeoutError) -> Self {
+        SelectTimeoutError(e).into()
+    }
+}
+
 impl From<num_format::Error> for CrushError {
     fn from(e: num_format::Error) -> Self {
         NumFormatError(e).into()
@@ -452,6 +479,11 @@ pub type CrushResult<T> = Result<T, CrushError>;
 /// Emit this error when a stream is unexpectedly closed.
 pub fn eof_error<T>() -> CrushResult<T> {
     Err(EOFError.into())
+}
+
+/// Emit this error when a command is notified to terminate
+pub fn terminate<T>() -> CrushResult<T> {
+    Err(Terminate.into())
 }
 
 /// Emit this error when the combination of arguments to a command were invalid without one specific

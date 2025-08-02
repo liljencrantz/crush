@@ -1,6 +1,6 @@
 use crate::lang::errors::CrushResult;
-use crate::lang::pipe::Stream;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::value::Value;
 use signature::signature;
 
 #[signature(
@@ -14,18 +14,20 @@ use signature::signature;
 )]
 pub struct Zip {
     #[description("the first stream.")]
-    first: Stream,
+    first: Value,
     #[description("the second stream.")]
-    second: Stream,
+    second: Value,
 }
 
 pub fn zip(mut context: CommandContext) -> CrushResult<()> {
-    let mut cfg = Zip::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Zip::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut output_type = Vec::new();
-    output_type.append(&mut cfg.first.types().to_vec());
-    output_type.append(&mut cfg.second.types().to_vec());
+    let mut first = cfg.first.stream(context.command_handle())?;
+    let mut second = cfg.second.stream(context.command_handle())?;
+    output_type.append(&mut first.types().to_vec());
+    output_type.append(&mut second.types().to_vec());
     let output = context.output.initialize(&output_type)?;
-    while let (Ok(mut row1), Ok(row2)) = (cfg.first.read(), cfg.second.read()) {
+    while let (Ok(mut row1), Ok(row2)) = (first.read(), second.read()) {
         row1.append(&mut Vec::from(row2));
         output.send(row1)?;
     }

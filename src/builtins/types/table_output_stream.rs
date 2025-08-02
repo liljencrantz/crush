@@ -69,7 +69,7 @@ struct Write {}
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
     let real_output = context.this.table_output_stream()?;
-    let mut stream = context.input.recv()?.stream()?;
+    let mut stream = context.input_stream()?;
 
     while let Ok(row) = stream.read() {
         real_output.send(row)?;

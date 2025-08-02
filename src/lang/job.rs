@@ -42,10 +42,10 @@ impl Job {
 
     /// Evaluate this job in the specified context
     pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
-        let context = context.running(self.to_string());
+        context.set_name(self.to_string());
         let mut input = context.input.clone();
-        let last_job_idx = self.commands.len() - 1;
-        for call_def in &self.commands[..last_job_idx] {
+        let last_command_idx = self.commands.len() - 1;
+        for call_def in self.commands[..last_command_idx].iter() {
             let (output, next_input) = pipe();
             call_def.eval(context.with_io(input, output))?;
             input = next_input;
@@ -59,8 +59,9 @@ impl Job {
             return Ok(None);
         }
 
-        let last_call_def = &self.commands[last_job_idx];
-        last_call_def.eval(context.with_io(input, context.output.clone()))
+        let last_call_def = &self.commands[last_command_idx];
+        let res = last_call_def.eval(context.with_io(input, context.output.clone()));
+        res
     }
 }
 

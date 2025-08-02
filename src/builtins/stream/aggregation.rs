@@ -87,7 +87,7 @@ pub struct Sum {
 }
 
 fn sum(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.recv()?.stream()?;
+    let input = context.input_stream()?;
     let cfg: Sum = Sum::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
@@ -172,7 +172,7 @@ pub struct Avg {
 }
 
 fn avg(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.recv()?.stream()?;
+    let input = context.input_stream()?;
     let cfg: Avg = Avg::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
@@ -237,7 +237,7 @@ pub struct Median {
 }
 
 fn median(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.recv()?.stream()?;
+    let input = context.input_stream()?;
     let cfg: Median = Median::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
@@ -325,7 +325,7 @@ pub struct Min {
 }
 
 fn min(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.recv()?.stream()?;
+    let input = context.input_stream()?;
     let cfg: Min = Min::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
@@ -351,7 +351,7 @@ pub struct Max {
 }
 
 fn max(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.recv()?.stream()?;
+    let input = context.input_stream()?;
     let cfg: Max = Max::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
@@ -395,7 +395,7 @@ pub struct Prod {
 }
 
 fn prod(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.recv()?.stream()?;
+    let input = context.input_stream()?;
     let cfg = Prod::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     match &input.types()[column].cell_type {
@@ -424,7 +424,7 @@ pub struct Concat {
 }
 
 fn concat(mut context: CommandContext) -> CrushResult<()> {
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let cfg: Concat = Concat::parse(context.remove_arguments(), &context.global_state.printer())?;
     let column = parse(input.types(), cfg.field)?;
     let mut res = String::new();

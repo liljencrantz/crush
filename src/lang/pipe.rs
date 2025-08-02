@@ -7,13 +7,16 @@ of the type TableInputStream.
  */
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{CrushError, CrushResult, error};
+use crate::lang::errors::{CrushError, CrushResult, error, terminate};
 use crate::lang::pipe::SenderType::{BlackHole, Pipeline, Printer};
 use crate::lang::value::Value;
 use chrono::Duration;
-use crossbeam::channel::{Receiver, Sender, bounded, unbounded};
+use crossbeam::channel::{Receiver, Select, Sender, bounded, unbounded};
+use crossbeam::select;
 
-pub type RecvTimeoutError = crossbeam::channel::RecvTimeoutError;
+enum StreamControlMessage {
+    Hangup,
+}
 
 #[derive(Clone)]
 enum SenderType {
@@ -88,16 +91,37 @@ pub fn empty_channel() -> ValueReceiver {
 #[derive(Clone)]
 pub struct TableOutputStream {
     sender: Sender<Row>,
+    control: Option<Receiver<StreamControlMessage>>,
     types: Vec<ColumnType>,
 }
 
 impl TableOutputStream {
     pub fn send(&self, row: Row) -> CrushResult<()> {
-        Ok(self.sender.send(row)?)
+        match &self.control {
+            None => Ok(self.sender.send(row)?),
+            Some(control) => {
+                select! {
+                    send(self.sender, row) -> res => Ok(res?),
+                    recv(control) -> _ => terminate(),
+                }
+            }
+        }
     }
 
     pub fn types(&self) -> &[ColumnType] {
         &self.types
+    }
+
+    pub fn interruptible(self) -> (TableOutputStream, StreamController) {
+        let (control_sender, control_receiver) = bounded(1);
+        (
+            TableOutputStream {
+                sender: self.sender,
+                control: Some(control_receiver),
+                types: self.types,
+            },
+            Box::from(TableInputStreamController(control_sender)),
+        )
     }
 }
 
@@ -123,45 +147,58 @@ impl TableInputStream {
         }
     }
 
-    pub fn recv(&self) -> CrushResult<Row> {
-        self.validate(self.receiver.recv().map_err(|e| e.into()))
+    pub fn interruptible(&self) -> (Stream, StreamController) {
+        let (control_sender, control_receiver) = bounded(1);
+
+        (
+            Box::from(InterruptibleTableInputStream {
+                input: self.clone(),
+                control: control_receiver,
+            }),
+            Box::from(TableInputStreamController(control_sender)),
+        )
     }
 
-    pub fn recv_timeout(&self, timeout: Duration) -> Result<Row, RecvTimeoutError> {
-        self.receiver.recv_timeout(timeout.to_std().unwrap())
+    pub fn recv(&self) -> CrushResult<Row> {
+        match self.receiver.recv() {
+            Ok(row) => self.validate(row),
+            Err(err) => Err(err.into()),
+        }
+    }
+
+    pub fn recv_timeout(&self, timeout: Duration) -> CrushResult<Row> {
+        match self.receiver.recv_timeout(timeout.to_std().unwrap()) {
+            Ok(row) => self.validate(row),
+            Err(err) => Err(err.into()),
+        }
     }
 
     pub fn types(&self) -> &[ColumnType] {
         &self.types
     }
 
-    fn validate(&self, res: CrushResult<Row>) -> CrushResult<Row> {
-        match &res {
-            Ok(row) => {
-                if row.cells().len() != self.types.len() {
-                    return error(format!(
-                        "Pipeline expected rows to have {} columns, but received row with {} columns.",
-                        self.types.len(),
-                        row.cells().len()
-                    ));
-                }
-                for (c, ct) in row.cells().iter().zip(self.types.iter()) {
-                    if !ct.cell_type.is(c) {
-                        return error(
-                            format!(
-                                "Pipeline expected column `{}` to be of type `{}`, but was of type `{}`.",
-                                ct.name(),
-                                c.value_type(),
-                                ct.cell_type
-                            )
-                            .as_str(),
-                        );
-                    }
-                }
-                res
-            }
-            Err(_) => res,
+    fn validate(&self, row: Row) -> CrushResult<Row> {
+        if row.cells().len() != self.types.len() {
+            return error(format!(
+                "Pipeline expected rows to have {} columns, but received row with {} columns.",
+                self.types.len(),
+                row.cells().len()
+            ));
         }
+        for (c, ct) in row.cells().iter().zip(self.types.iter()) {
+            if !ct.cell_type.is(c) {
+                return error(
+                    format!(
+                        "Pipeline expected column `{}` to be of type `{}`, but was of type `{}`.",
+                        ct.name(),
+                        c.value_type(),
+                        ct.cell_type
+                    )
+                    .as_str(),
+                );
+            }
+        }
+        Ok(row)
     }
 }
 
@@ -179,6 +216,55 @@ pub fn pipe() -> (ValueSender, ValueReceiver) {
             is_pipeline: true,
         },
     )
+}
+
+pub trait StreamControl {
+    fn terminate(&self) -> CrushResult<()>;
+}
+
+pub type StreamController = Box<dyn StreamControl + Send>;
+
+struct TableInputStreamController(Sender<StreamControlMessage>);
+
+impl StreamControl for TableInputStreamController {
+    fn terminate(&self) -> CrushResult<()> {
+        Ok(self.0.send(StreamControlMessage::Hangup)?)
+    }
+}
+
+struct InterruptibleTableInputStream {
+    input: TableInputStream,
+    control: Receiver<StreamControlMessage>,
+}
+
+impl CrushStream for InterruptibleTableInputStream {
+    fn read(&mut self) -> CrushResult<Row> {
+        select! {
+            recv(self.input.receiver) -> r => Ok(r?),
+            recv(self.control) -> _ => {
+                terminate()}
+        }
+    }
+
+    fn read_timeout(&mut self, timeout: Duration) -> CrushResult<Row> {
+        let mut sel = Select::new();
+        let oper1 = sel.recv(&self.input.receiver);
+        let oper2 = sel.recv(&self.control);
+
+        let oper = sel.select_timeout(timeout.to_std()?);
+        match oper {
+            Err(e) => Err(e.into()),
+            Ok(oper) => match oper.index() {
+                i if i == oper1 => Ok(oper.recv(&self.input.receiver)?),
+                i if i == oper2 => terminate(),
+                _ => unreachable!(),
+            },
+        }
+    }
+
+    fn types(&self) -> &[ColumnType] {
+        self.input.types()
+    }
 }
 
 /**
@@ -203,6 +289,7 @@ pub fn streams(signature: Vec<ColumnType>) -> (TableOutputStream, TableInputStre
         TableOutputStream {
             sender: output,
             types: signature.clone(),
+            control: None,
         },
         TableInputStream {
             receiver: input,
@@ -217,6 +304,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, Tabl
         TableOutputStream {
             sender: output,
             types: signature.clone(),
+            control: None,
         },
         TableInputStream {
             receiver: input,
@@ -227,7 +315,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, Tabl
 
 pub trait CrushStream {
     fn read(&mut self) -> CrushResult<Row>;
-    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, RecvTimeoutError>;
+    fn read_timeout(&mut self, timeout: Duration) -> CrushResult<Row>;
     fn types(&self) -> &[ColumnType];
 }
 
@@ -236,7 +324,7 @@ impl CrushStream for TableInputStream {
         self.recv()
     }
 
-    fn read_timeout(&mut self, timeout: Duration) -> Result<Row, RecvTimeoutError> {
+    fn read_timeout(&mut self, timeout: Duration) -> CrushResult<Row> {
         self.recv_timeout(timeout)
     }
 

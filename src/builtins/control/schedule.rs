@@ -54,7 +54,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     match cmd {
         None => {
             if context.input.is_pipeline() {
-                let mut input = context.input.recv()?.stream()?;
+                let mut input = context.input_stream()?;
                 let output = context.output.initialize(input.types())?;
                 run(cfg, || output.send(input.read()?))
             } else {

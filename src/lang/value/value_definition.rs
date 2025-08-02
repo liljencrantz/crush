@@ -125,7 +125,7 @@ impl ValueDefinition {
                     parent_cmd.eval(
                         context
                             .job_context(first_input, last_output)
-                            .command_context(parent_def.source(), vec![], grand_parent),
+                            .command_context(parent_def.source(), vec![], grand_parent)?,
                     )?;
                     last_input.recv()?
                 } else {

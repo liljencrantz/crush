@@ -28,9 +28,10 @@ pub struct TimeIt {
 pub fn time_run(it: &Command, context: &CommandContext) -> CrushResult<Duration> {
     let (sender, reciever) = pipe();
 
+    let handle = context.command_handle().clone();
     let c = context.spawn("output consumer", move || {
         let res = reciever.recv()?;
-        if let Ok(mut stream) = res.stream() {
+        if let Ok(mut stream) = res.stream(&handle) {
             while let Ok(_) = stream.read() {}
         }
         Ok(())

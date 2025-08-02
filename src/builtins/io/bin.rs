@@ -7,7 +7,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
 use crate::lang::value::Value;
 use signature::signature;
-use std::io::Write;
 
 #[signature(
     io.bin.from,
@@ -24,7 +23,7 @@ struct From {
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let mut cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::BinaryInputStream(
         cfg.files.to_reader(context.input)?,
     ))

@@ -1,13 +1,16 @@
 /// Functions that execute the contents of a string or file as Crush code.
 use crate::lang::ast::lexer::LanguageMode;
+use crate::lang::ast::source::SourceType::Input;
 use crate::lang::ast::source::{Source, SourceType};
+use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::job::Job;
 use crate::lang::pipe::{ValueSender, empty_channel, pipe};
 use crate::lang::serialization::{deserialize, serialize};
-use crate::lang::state::contexts::{CommandContext, JobContext};
+use crate::lang::state::contexts::JobContext;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueDefinition};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -43,14 +46,24 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                 Ok(())
             })?;
 
-            cmd.eval(
-                CommandContext::new(
-                    &env,
-                    global_state,
-                    &Source::new(SourceType::Input, Arc::from("")),
-                )
-                .with_output(snd),
-            )?;
+            let job = Job::new(
+                vec![CommandInvocation::new(
+                    ValueDefinition::Value(
+                        Value::Command(cmd.clone()),
+                        Source::new(Input, Arc::from("")),
+                    ),
+                    Source::new(Input, Arc::from("")),
+                    vec![],
+                )],
+                Source::new(Input, Arc::from("")),
+            );
+
+            job.eval(JobContext::new(
+                empty_channel(),
+                snd.clone(),
+                env.clone(),
+                global_state.clone(),
+            ))?;
             global_state.threads().join(global_state.printer());
 
             Ok(())

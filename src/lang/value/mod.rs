@@ -32,6 +32,7 @@ use crate::lang::command::{Command, CommandBinder};
 use crate::lang::help::Help;
 use crate::lang::pretty::format_buffer;
 use crate::lang::signature::number;
+use crate::lang::state::global_state::{CommandHandle, CommandId, JobId};
 use crate::lang::vec_reader::VecReader;
 use crate::state::global_state::FormatData;
 use crate::state::scope::ScopeReader;
@@ -176,6 +177,18 @@ fn add_keys<T>(map: &OrderedMap<String, T>, res: &mut Vec<String>) {
 impl From<&str> for Value {
     fn from(s: &str) -> Value {
         Value::String(Arc::from(s))
+    }
+}
+
+impl From<JobId> for Value {
+    fn from(s: JobId) -> Value {
+        Value::from(usize::from(s))
+    }
+}
+
+impl From<CommandId> for Value {
+    fn from(s: CommandId) -> Value {
+        Value::from(usize::from(s))
     }
 }
 
@@ -402,9 +415,13 @@ impl Value {
         }
     }
 
-    pub fn stream(&self) -> CrushResult<Stream> {
+    pub fn stream(&self, handle: &CommandHandle) -> CrushResult<Stream> {
         Ok(match self {
-            Value::TableInputStream(s) => Box::from(s.clone()),
+            Value::TableInputStream(s) => {
+                let (interruptible, controller) = s.interruptible();
+                handle.register(controller);
+                Box::from(interruptible)
+            }
             Value::Table(r) => Box::from(TableReader::new(r.clone())),
             Value::List(l) => l.stream(),
             Value::Dict(d) => Box::from(DictReader::new(d.clone())),

@@ -89,7 +89,7 @@ fn get_output_type(
 pub struct Join {
     #[named()]
     #[description("Fields to join")]
-    join: OrderedStringMap<Stream>,
+    join: OrderedStringMap<Value>,
 }
 
 pub fn join(mut context: CommandContext) -> CrushResult<()> {
@@ -98,9 +98,9 @@ pub fn join(mut context: CommandContext) -> CrushResult<()> {
     let r = context.arguments.remove(0);
     match (
         l.argument_type,
-        l.value.stream()?,
+        l.value.stream(context.command_handle())?,
         r.argument_type,
-        r.value.stream()?,
+        r.value.stream(context.command_handle())?,
     ) {
         (Some(left_name), left_stream, Some(right_name), right_stream) => {
             let left_idx = left_stream.types().find(&left_name)?;

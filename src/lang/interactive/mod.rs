@@ -9,6 +9,7 @@ use crate::lang::command::Command;
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, data_error, error};
 use crate::lang::execute;
+use crate::lang::job::Job;
 use crate::lang::pipe::{ValueSender, black_hole, empty_channel, pipe};
 use crate::lang::state::contexts::JobContext;
 use crate::lang::state::global_state::GlobalState;
@@ -52,7 +53,8 @@ fn execute_command(
                 vec![],
             );
             let (snd, recv) = pipe();
-            cmd.eval(JobContext::new(
+            let job = Job::new(vec![cmd], Source::new(SourceType::Input, Arc::from("")));
+            job.eval(JobContext::new(
                 empty_channel(),
                 snd,
                 env.clone(),

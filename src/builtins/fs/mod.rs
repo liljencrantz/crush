@@ -1,16 +1,14 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, argument_error, command_error};
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use crate::util::file::home;
 use chrono::{DateTime, Local};
 use nix::libc::{S_IFBLK, S_IFCHR, S_IFDIR, S_IFIFO, S_IFLNK, S_IFREG, S_IFSOCK};
 use signature::signature;
-use std::convert::TryFrom;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -34,8 +32,14 @@ fn cd(mut context: CommandContext) -> CrushResult<()> {
 
     let dir: Vec<PathBuf> = cfg.destination.try_into()?;
     match dir.len() {
+        0 => return command_error("No new working directory specified."),
         1 => std::env::set_current_dir(&dir[0])?,
-        n => return command_error("Invalid directory."),
+        n => {
+            return command_error(format!(
+                "Single new working directory expected, found {} different paths.",
+                n
+            ));
+        }
     }
     context.output.send(Value::Empty)
 }

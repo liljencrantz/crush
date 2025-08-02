@@ -3,7 +3,6 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::printer::Printer;
-use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
@@ -17,7 +16,6 @@ use std::fs::Metadata;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::SystemTime;
 
 enum Column {
@@ -335,7 +333,7 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
 
     let (types, cols) = column_data(&config);
 
-    let mut output = context.output.initialize(&types)?;
+    let mut output = context.initialize_output(&types)?;
 
     let mut dir = if !config.directory.is_empty() {
         files::into_paths(config.directory)?

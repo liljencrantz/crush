@@ -99,10 +99,6 @@ impl ToReader for Vec<BinaryInput> {
     }
 }
 
-pub trait ToPaths {
-    fn to_paths(self) -> CrushResult<Vec<Arc<Path>>>;
-}
-
 pub fn input_reader(input: BinaryInput) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
     let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
     match input {

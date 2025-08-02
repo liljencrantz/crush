@@ -111,14 +111,8 @@ impl CrushStream for TableReader {
         Ok(self.rows.rows[self.idx - 1].clone())
     }
 
-    fn read_timeout(
-        &mut self,
-        _timeout: Duration,
-    ) -> Result<Row, crate::lang::pipe::RecvTimeoutError> {
-        match self.read() {
-            Ok(r) => Ok(r),
-            Err(_) => Err(crate::lang::pipe::RecvTimeoutError::Disconnected),
-        }
+    fn read_timeout(&mut self, _timeout: Duration) -> CrushResult<Row> {
+        self.read()
     }
 
     fn types(&self) -> &[ColumnType] {

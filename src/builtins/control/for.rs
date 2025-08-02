@@ -4,7 +4,6 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
-use crate::lang::pipe::{Stream, black_hole};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeType::Loop;
 use crate::lang::value::Value;
@@ -26,7 +25,7 @@ use signature::signature;
 )]
 pub struct For {
     #[named()]
-    iterator: OrderedStringMap<Stream>,
+    iterator: OrderedStringMap<Value>,
     body: Command,
 }
 
@@ -44,11 +43,13 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
         ));
     }
 
-    let (name, mut input) = cfg
+    let (name, input) = cfg
         .iterator
         .drain()
         .next()
         .ok_or("Failed to obtain a stream")?;
+
+    let mut input = input.stream(context.command_handle())?;
 
     while let Ok(line) = input.read() {
         let env = context.scope.create_child(&context.scope, Loop);

@@ -101,7 +101,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
 }
 
 pub fn select(mut context: CommandContext) -> CrushResult<()> {
-    let input = context.input.clone().recv()?.stream()?;
+    let input = context.input_stream()?;
     let mut copy = false;
     let mut columns = Vec::new();
 

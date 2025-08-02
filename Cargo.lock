@@ -394,6 +394,7 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "libproc",
+ "log",
  "mach2",
  "maplit",
  "markdown",

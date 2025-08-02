@@ -388,7 +388,7 @@ struct Collect {
 
 fn collect(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Collect = Collect::parse(context.remove_arguments(), context.global_state.printer())?;
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let input_type = input.types().to_vec();
     let mut res = OrderedMap::new();
     match (

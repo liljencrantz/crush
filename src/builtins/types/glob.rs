@@ -50,7 +50,7 @@ struct Filter {
 pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Filter = Filter::parse(context.remove_arguments(), &context.global_state.printer())?;
     let glob = context.this.glob()?;
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let columns = find_string_columns(input.types(), cfg.columns);
     let output = context.output.initialize(input.types())?;
     while let Ok(row) = input.read() {

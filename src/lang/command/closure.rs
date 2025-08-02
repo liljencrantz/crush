@@ -1,7 +1,6 @@
 use crate::lang::argument::{Argument, ArgumentDefinition, ArgumentType, SwitchStyle};
 use crate::lang::ast::source::Source;
 use crate::lang::ast::tracked_string::TrackedString;
-use crate::lang::command::OutputType::Known;
 use crate::lang::command::{
     BoundCommand, Command, CrushCommand, OutputType, Parameter, ParameterDefinition,
 };

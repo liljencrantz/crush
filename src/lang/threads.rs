@@ -1,6 +1,6 @@
 use crate::lang::errors::CrushResult;
 use crate::lang::printer::Printer;
-use crate::lang::state::global_state::JobId;
+use crate::lang::state::global_state::JobHandle;
 use chrono::{DateTime, Local};
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
@@ -16,7 +16,7 @@ A thread management utility. Spawn, track and join on threads.
 struct ThreadData {
     handle: JoinHandle<CrushResult<()>>,
     creation_time: DateTime<Local>,
-    job_id: Option<JobId>,
+    job_id: Option<JobHandle>,
 }
 
 struct ThreadStoreInternal {
@@ -28,7 +28,7 @@ struct ThreadStoreInternal {
 pub struct ThreadDescription {
     pub name: String,
     pub creation_time: DateTime<Local>,
-    pub job_id: Option<JobId>,
+    pub job_id: Option<JobHandle>,
 }
 
 fn join_handle(handle: JoinHandle<CrushResult<()>>, printer: &Printer) {
@@ -64,7 +64,7 @@ impl ThreadStore {
     /**
     Spawn a new thread
     */
-    pub fn spawn<F>(&self, name: &str, job_id: Option<JobId>, f: F) -> CrushResult<ThreadId>
+    pub fn spawn<F>(&self, name: &str, job_id: Option<JobHandle>, f: F) -> CrushResult<ThreadId>
     where
         F: FnOnce() -> CrushResult<()>,
         F: Send + 'static,
@@ -145,7 +145,7 @@ impl ThreadStore {
             .map(|t| ThreadDescription {
                 name: t.handle.thread().name().unwrap_or("<unnamed>").to_string(),
                 creation_time: t.creation_time.clone(),
-                job_id: t.job_id,
+                job_id: t.job_id.clone(),
             })
             .collect())
     }

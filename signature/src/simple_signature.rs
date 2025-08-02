@@ -218,7 +218,7 @@ impl SimpleSignature {
                 SimpleSignature::Stream => {
                     quote! {
                         // Fixme: Losing location information here!
-                        crate::lang::errors::with_source(_value.stream(), &_source)?,
+                        crate::lang::errors::with_source(_value.stream(_context.command_id()), &_source)?,
                     }
                 }
                 SimpleSignature::BinaryInput => {

@@ -25,8 +25,7 @@ fn drop(mut context: CommandContext) -> CrushResult<()> {
         context.remove_arguments().clone(),
         &context.global_state.printer(),
     )?;
-    let input = context.input.recv()?;
-    let mut input = input.stream()?;
+    let mut input = context.input_stream()?;
     let t = input.types();
     let drop = cfg
         .drop

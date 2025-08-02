@@ -22,7 +22,7 @@ pub struct Enumerate {
 
 fn enumerate(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Enumerate::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let mut output_type = vec![ColumnType::new_from_string(cfg.name, ValueType::Integer)];
     output_type.extend(input.types().to_vec());
     let output = context.output.initialize(&output_type)?;

@@ -1,7 +1,7 @@
 use crate::lang::data::binary::binary_channel;
-use crate::lang::errors::{CrushError, CrushResult, argument_error, command_error, data_error};
+use crate::lang::errors::{CrushError, CrushResult, command_error};
 use crate::lang::pipe::ValueSender;
-use crate::lang::value::{Value, ValueType};
+use crate::lang::value::Value;
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use crate::util::regex::RegexFileMatcher;
@@ -72,8 +72,12 @@ impl TryInto<Box<dyn Write>> for Files {
     fn try_into(self) -> Result<Box<dyn Write>, Self::Error> {
         let vec: Vec<_> = self.try_into()?;
         match vec.len() {
+            0 => command_error("No write target specified."),
             1 => Ok(Box::from(File::create(&vec[0])?)),
-            n => command_error("Invalid output file"),
+            n => command_error(format!(
+                "Single write targets expected, found {} different write targets.",
+                n
+            )),
         }
     }
 }
@@ -98,8 +102,12 @@ pub fn path(files: Option<Files>, fallback: impl Into<PathBuf>) -> CrushResult<P
         Some(file) => {
             let mut dir: Vec<PathBuf> = file.try_into()?;
             match dir.len() {
+                0 => command_error("No path specified."),
                 1 => Ok(dir.pop().unwrap()),
-                n => return command_error("Invalid directory."),
+                n => command_error(format!(
+                    "Single path expected, found {} different paths.",
+                    n
+                )),
             }
         }
     }

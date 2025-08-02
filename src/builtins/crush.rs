@@ -48,7 +48,9 @@ fn threads(context: CommandContext) -> CrushResult<()> {
 
     for t in context.global_state.threads().current()? {
         output.send(Row::new(vec![
-            t.job_id.map(|i| Value::from(i)).unwrap_or(Value::Empty),
+            t.job_id
+                .map(|i| Value::from(i.id()))
+                .unwrap_or(Value::Empty),
             Value::Time(t.creation_time),
             Value::from(t.name),
         ]))?;
@@ -72,6 +74,33 @@ fn exit(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Exit = Exit::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.scope.do_exit()?;
     context.global_state.set_exit_status(cfg.status as i32);
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    crush.terminate,
+    output = Known(ValueType::Empty),
+    short = "Terminate the given job",
+    long = "A job may continue running for some time after receiving a termination notification. Output pipelines produced by the job will still be readable and will contain any buffered IO already sent to the job before it received the termination notification.",
+    example = "# Create a job that produces a lot of output",
+    example = "$all_files := $(files --recurse /)",
+    example = "# Read a few lines of output",
+    example = "$all_files | head",
+    example = "# Find the job id of the job we want to terminate",
+    example = "crush:jobs",
+    example = "# Ask the job to terminate.",
+    example = "crush:terminate 1",
+    example = "# This will output the number of buffered rows that were buffered",
+    example = "$all_files | count",
+)]
+struct Terminate {
+    #[description("The job id for the job to terminate")]
+    jid: usize,
+}
+
+fn terminate(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.terminate(cfg.jid)?;
     context.output.send(Value::Empty)
 }
 
@@ -205,10 +234,7 @@ struct Jobs {}
 fn jobs(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&JOB_OUTPUT_TYPE)?;
     for job in context.global_state.jobs() {
-        output.send(Row::new(vec![
-            Value::from(job.id),
-            Value::from(job.description),
-        ]))?;
+        output.send(Row::new(vec![Value::from(job.0), Value::from(job.1)]))?;
     }
     Ok(())
 }
@@ -413,6 +439,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             RunModeArg::declare(crush)?;
             LanguageModeArg::declare(crush)?;
+            Terminate::declare(crush)?;
 
             crush.create_namespace(
                 "title",

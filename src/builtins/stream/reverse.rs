@@ -16,7 +16,7 @@ fn reverse(mut context: CommandContext) -> CrushResult<()> {
         context.remove_arguments().clone(),
         &context.global_state.printer(),
     )?;
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let output = context.output.initialize(input.types())?;
     let mut q: Vec<Row> = Vec::new();
     while let Ok(row) = input.read() {

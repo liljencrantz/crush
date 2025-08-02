@@ -3,7 +3,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{LastArgument, PartialCommandResult};
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, command_error, error};
+use crate::lang::errors::{CrushResult, error};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
@@ -19,7 +19,6 @@ use signature::signature;
 use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, KnownHostKeyFormat, Session};
 use std::cmp::min;
-use std::convert::TryFrom;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::path::PathBuf;
@@ -333,7 +332,6 @@ fn identity(context: CommandContext) -> CrushResult<()> {
 
 mod host {
     use super::*;
-    use std::convert::TryInto;
 
     #[signature(
         remote.host.list,

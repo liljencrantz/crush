@@ -55,9 +55,14 @@ fn aggregate(
                 input_sender.send(Value::TableInputStream(rows))?;
                 drop(input_sender);
                 commands[0].eval(
-                    CommandContext::new(&scope, &global_state, &context.source)
-                        .with_input(input_receiver)
-                        .with_output(output_sender),
+                    CommandContext::new(
+                        &scope,
+                        &global_state,
+                        &context.source,
+                        context.next_command_handle(),
+                    )
+                    .with_input(input_receiver)
+                    .with_output(output_sender),
                 )?;
                 let mut result = key;
                 result.push(output_receiver.recv()?);
@@ -76,12 +81,18 @@ fn aggregate(
                     let local_state = global_state.clone();
                     let local_source = context.source.clone();
                     let local_printer = context.global_state.printer().clone();
+                    let next_id = context.next_command_handle();
                     context.spawn("group:aggr", move || {
                         local_printer.handle_error(
                             local_command.eval(
-                                CommandContext::new(&local_scope, &local_state, &local_source)
-                                    .with_input(input_receiver)
-                                    .with_output(output_sender),
+                                CommandContext::new(
+                                    &local_scope,
+                                    &local_state,
+                                    &local_source,
+                                    next_id,
+                                )
+                                .with_input(input_receiver)
+                                .with_output(output_sender),
                             ),
                         );
                         Ok(())
@@ -144,7 +155,7 @@ fn create_worker_thread(
 
 pub fn group(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Group::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let input_type = input.types().to_vec();
     let indices: Vec<usize> = cfg
         .group_by

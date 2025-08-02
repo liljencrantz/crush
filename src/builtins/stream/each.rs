@@ -45,7 +45,7 @@ pub fn each(mut context: CommandContext) -> CrushResult<()> {
     let source = &context.arguments[0].source;
     context.output.send(Value::Empty)?;
 
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let base_context = context.empty();
 
     while let Ok(row) = input.read() {

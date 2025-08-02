@@ -28,7 +28,7 @@ pub struct Sort {
 }
 
 fn sort(mut context: CommandContext) -> CrushResult<()> {
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let output = context.output.initialize(input.types())?;
     let cfg = Sort::parse(context.remove_arguments(), &context.global_state.printer())?;
     let indices = if cfg.field.is_empty() {

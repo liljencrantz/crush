@@ -56,7 +56,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
     let source = context.arguments[0].source.clone();
     let cfg = Where::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    let mut input = context.input.recv()?.stream()?;
+    let mut input = context.input_stream()?;
     let base_context = context.empty();
 
     let output = context.output.initialize(input.types())?;
