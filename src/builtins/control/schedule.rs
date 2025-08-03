@@ -1,11 +1,13 @@
 use crate::data::table::ColumnType;
 use crate::lang::command::Command;
 use crate::lang::data::table::Row;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, terminate};
+use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
 use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use chrono::{Duration, Local};
+use crossbeam::channel::{Receiver, bounded};
 use signature::signature;
 use std::mem::swap;
 
@@ -41,12 +43,23 @@ pub struct Schedule {
     command: Option<Command>,
 }
 
+fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> CrushResult<()> {
+    match control.recv_timeout(duration.to_std()?) {
+        Ok(msg) => terminate(),
+        Err(error) => Ok(()),
+    }
+}
+
 fn schedule(mut context: CommandContext) -> CrushResult<()> {
     let mut cfg: Schedule =
         Schedule::parse(context.remove_arguments(), &context.global_state.printer())?;
 
+    let (control_sender, control_receiver) = bounded(1);
+    let control = Box::from(ChannelBasedController::new(control_sender));
+    context.command_handle().register(control);
+
     if let Some(initial_delay) = &cfg.initial_delay {
-        std::thread::sleep(initial_delay.to_std()?);
+        sleep(&initial_delay, &control_receiver)?;
     }
 
     let mut cmd = None;
@@ -56,10 +69,10 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             if context.input.is_pipeline() {
                 let mut input = context.input_stream()?;
                 let output = context.output.initialize(input.types())?;
-                run(cfg, || output.send(input.read()?))
+                run(cfg, &control_receiver, || output.send(input.read()?))
             } else {
                 let output = context.output.initialize(&[])?;
-                run(cfg, || output.send(Row::new(vec![])))
+                run(cfg, &control_receiver, || output.send(Row::new(vec![])))
             }
         }
         Some(cmd) => {
@@ -69,7 +82,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             let base_context = context.empty();
             let env = context.scope.clone();
             let (sender, receiver) = pipe();
-            run(cfg, || {
+            run(cfg, &control_receiver, || {
                 cmd.eval(
                     base_context
                         .clone()
@@ -82,7 +95,11 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
-fn run(cfg: Schedule, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()> {
+fn run(
+    cfg: Schedule,
+    control_receiver: &Receiver<StreamControlMessage>,
+    mut f: impl FnMut() -> CrushResult<()>,
+) -> CrushResult<()> {
     if cfg.schedule_at_fixed_rate {
         let mut last_time = Local::now();
         loop {
@@ -90,13 +107,13 @@ fn run(cfg: Schedule, mut f: impl FnMut() -> CrushResult<()>) -> CrushResult<()>
             last_time = last_time + cfg.interval.clone();
             let next_duration = last_time - Local::now();
             if next_duration > Duration::seconds(0) {
-                std::thread::sleep(next_duration.to_std()?);
+                sleep(&next_duration, &control_receiver)?;
             }
         }
     } else {
         loop {
             f()?;
-            std::thread::sleep(cfg.interval.to_std()?);
+            sleep(&cfg.interval, &control_receiver)?;
         }
     }
 }

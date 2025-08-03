@@ -100,7 +100,7 @@ struct Terminate {
 
 fn terminate(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.global_state.terminate(cfg.jid)?;
+    context.global_state.terminate(cfg.jid.into())?;
     context.output.send(Value::Empty)
 }
 

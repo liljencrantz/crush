@@ -1,13 +1,16 @@
 use crate::lang::argument::Argument;
 use crate::lang::ast::source::Source;
+use crate::lang::data::table::ColumnType;
 use crate::lang::errors::CrushResult;
-use crate::lang::pipe::{Stream, ValueReceiver, ValueSender, black_hole, empty_channel, TableOutputStream};
-use crate::lang::state::global_state::{CommandHandle, GlobalState, JobHandle};
+use crate::lang::pipe::{
+    Stream, TableOutputStream, ValueReceiver, ValueSender, black_hole, empty_channel,
+};
+use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::handles::{CommandHandle, JobHandle};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
 use std::thread::ThreadId;
-use crate::lang::data::table::ColumnType;
 
 /**
 The data needed to be passed around while calling eval on a ValueDefinition.

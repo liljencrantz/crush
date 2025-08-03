@@ -1,7 +1,7 @@
 pub mod rustyline_helper;
 
 use rustyline;
-use std::fs;
+use std::{fs, thread};
 
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::ast::source::{Source, SourceType};
@@ -16,8 +16,10 @@ use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
 use crate::util::file::home;
+use nix::libc::SIGTSTP;
 use rustyline::error::ReadlineError;
 use rustyline::{CompletionType, Config, EditMode, Editor};
+use signal_hook::{consts::SIGINT, iterator::Signals};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -78,6 +80,29 @@ pub fn load_init(env: &Scope, global_state: &GlobalState) -> CrushResult<()> {
     }
 }
 
+pub fn handle_signals(global_state: &GlobalState) -> CrushResult<()> {
+    let mut signals = Signals::new([SIGINT /*, SIGTSTP*/])?;
+
+    let local_global_state = global_state.clone();
+    thread::spawn(move || {
+        for sig in signals.forever() {
+            match sig {
+                SIGINT => match local_global_state.current_job() {
+                    None => {}
+                    Some(job) => {
+                        local_global_state
+                            .printer()
+                            .handle_error(local_global_state.terminate(job.id()));
+                    }
+                },
+                SIGTSTP => {}
+                _ => unreachable!(),
+            }
+        }
+    });
+    Ok(())
+}
+
 pub fn run(
     global_env: Scope,
     pretty_printer: &ValueSender,
@@ -86,6 +111,8 @@ pub fn run(
     let printer = global_state.printer().clone();
     printer.handle_error(load_init(&global_env, global_state));
 
+    handle_signals(global_state)?;
+
     global_state.printer().line("Welcome to Crush");
     global_state.printer().line(r#"Type "help" for... help."#);
 
@@ -93,6 +120,7 @@ pub fn run(
         .history_ignore_space(true)
         .completion_type(CompletionType::List)
         .edit_mode(EditMode::Emacs)
+        .enable_signals(true)
         .build();
 
     let h = rustyline_helper::RustylineHelper::new(global_state.clone(), global_env.clone());

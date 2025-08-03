@@ -3,15 +3,15 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::parser::Parser;
-use crate::lang::job_control::JobController;
 use crate::lang::printer::Printer;
+use crate::lang::state::handles::{JobHandle, LiveJob};
+use crate::lang::state::id::JobId;
 use crate::lang::threads::ThreadStore;
 use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
 use num_format::{Grouping, SystemLocale};
 use rustyline::Editor;
 use rustyline::history::DefaultHistory;
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 
 /**
@@ -101,116 +101,6 @@ struct StateData {
     run_mode: RunMode,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
-pub struct JobId(usize);
-
-impl From<usize> for JobId {
-    fn from(value: usize) -> Self {
-        JobId(value)
-    }
-}
-
-impl From<JobId> for usize {
-    fn from(value: JobId) -> usize {
-        value.0
-    }
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
-pub struct CommandId(usize);
-
-impl CommandId {
-    fn first() -> CommandId {
-        CommandId(0)
-    }
-}
-
-impl CommandId {
-    fn next(&mut self) {
-        self.0 = self.0 + 1;
-    }
-}
-
-impl From<usize> for CommandId {
-    fn from(value: usize) -> Self {
-        CommandId(value)
-    }
-}
-
-impl From<CommandId> for usize {
-    fn from(value: CommandId) -> usize {
-        value.0
-    }
-}
-
-#[derive(Clone)]
-pub struct JobHandle {
-    id: JobId,
-    live_job: Arc<Mutex<LiveJob>>,
-}
-
-impl JobHandle {
-    pub fn set_name(&self, name: impl Into<String>) {
-        let mut live_job = self.live_job.lock().unwrap();
-        live_job.description = name.into();
-    }
-}
-
-impl JobHandle {
-    pub fn command_handle(&self, id: CommandId) -> CommandHandle {
-        CommandHandle {
-            job_id: self.clone(),
-            id,
-        }
-    }
-
-    pub fn next_command_handle(&self) -> CommandHandle {
-        let mut live_job = self.live_job.lock().unwrap();
-        let id = live_job.next_command_id;
-        live_job.next_command_id.next();
-        CommandHandle {
-            job_id: self.clone(),
-            id,
-        }
-    }
-
-    pub fn register_command(&self, command_handle: &CommandHandle, controller: JobController) {
-        let mut live_job = self.live_job.lock().unwrap();
-        live_job.senders.insert(command_handle.id, controller);
-    }
-
-    pub fn unregister_command(&self, id: &CommandHandle) {
-        let mut live_job = self.live_job.lock().unwrap();
-        live_job.senders.remove(&id.id);
-    }
-
-    pub fn id(&self) -> JobId {
-        self.id
-    }
-}
-
-#[derive(Clone)]
-pub struct CommandHandle {
-    pub job_id: JobHandle,
-    pub id: CommandId,
-}
-
-impl CommandHandle {
-    pub fn register(&self, controller: JobController) {
-        self.job_id.register_command(self, controller);
-    }
-
-    pub fn unregister(&self) {
-        self.job_id.unregister_command(self);
-    }
-}
-
-pub struct LiveJob {
-    pub description: String,
-    senders: HashMap<CommandId, JobController>,
-    next_command_id: CommandId,
-}
-
 impl GlobalState {
     pub fn new(printer: Printer, run_mode: RunMode) -> CrushResult<GlobalState> {
         let locale = SystemLocale::default().or_else(|_| SystemLocale::from_name("C"))?;
@@ -253,16 +143,22 @@ impl GlobalState {
             data.jobs.pop();
         }
         let id = data.jobs.len().into();
-        let job = JobHandle {
-            id,
-            live_job: Arc::from(Mutex::from(LiveJob {
-                description: String::new(),
-                senders: HashMap::new(),
-                next_command_id: CommandId::first(),
-            })),
-        };
-        data.jobs.push(Some(Arc::downgrade(&job.live_job)));
+        let job = JobHandle::new(id);
+        data.jobs.push(Some(job.weak_ref()));
         job
+    }
+
+    pub fn current_job(&self) -> Option<JobHandle> {
+        let data = self.data.lock().unwrap();
+        for (idx, i) in data.jobs.iter().enumerate().rev() {
+            if let Some(j) = i {
+                match j.upgrade() {
+                    Some(arc) => return Some(JobHandle::from(idx.into(), arc)),
+                    None => {}
+                }
+            }
+        }
+        None
     }
 
     pub fn parser(&self) -> &Parser {
@@ -348,17 +244,11 @@ impl GlobalState {
         res
     }
 
-    pub fn terminate(&self, jid: usize) -> CrushResult<()> {
+    pub fn terminate(&self, jid: JobId) -> CrushResult<()> {
         let data = self.data.lock().unwrap();
-        match data.jobs.get(jid) {
+        match data.jobs.get(usize::from(jid)) {
             Some(Some(weak)) => match weak.upgrade() {
-                Some(arc) => {
-                    let live_job = arc.lock().unwrap();
-                    for c in live_job.senders.values() {
-                        c.terminate()?;
-                    }
-                    Ok(())
-                }
+                Some(arc) => arc.lock().unwrap().terminate(),
                 None => command_error(format!("Unknown job `{}`", jid)),
             },
             _ => command_error(format!("Unknown job `{}`", jid)),

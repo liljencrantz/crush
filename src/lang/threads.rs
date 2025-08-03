@@ -1,6 +1,6 @@
 use crate::lang::errors::CrushResult;
 use crate::lang::printer::Printer;
-use crate::lang::state::global_state::JobHandle;
+use crate::lang::state::handles::JobHandle;
 use chrono::{DateTime, Local};
 use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
