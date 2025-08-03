@@ -29,3 +29,8 @@
 * syntax highlighting does not understand using types as commands
 * syntax highlighting does not understand closure signatures
 * syntax highlighting does not understand closure parameters
+* Signal handlers
+* Pause/Run control messages
+* Unify job id types
+* Implement control for schedule
+* Implement control for timeit

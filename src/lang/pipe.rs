@@ -7,12 +7,13 @@ of the type TableInputStream.
  */
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{CrushError, CrushResult, error, terminate};
+use crate::lang::errors::{error, terminate, CrushError, CrushResult};
 use crate::lang::pipe::SenderType::{BlackHole, Pipeline, Printer};
 use crate::lang::value::Value;
 use chrono::Duration;
-use crossbeam::channel::{Receiver, Select, Sender, bounded, unbounded};
+use crossbeam::channel::{bounded, unbounded, Receiver, Select, Sender};
 use crossbeam::select;
+use crate::lang::job_control::{JobControl, JobController};
 
 enum StreamControlMessage {
     Hangup,
@@ -112,7 +113,7 @@ impl TableOutputStream {
         &self.types
     }
 
-    pub fn interruptible(self) -> (TableOutputStream, StreamController) {
+    pub fn interruptible(self) -> (TableOutputStream, JobController) {
         let (control_sender, control_receiver) = bounded(1);
         (
             TableOutputStream {
@@ -147,7 +148,7 @@ impl TableInputStream {
         }
     }
 
-    pub fn interruptible(&self) -> (Stream, StreamController) {
+    pub fn interruptible(&self) -> (Stream, JobController) {
         let (control_sender, control_receiver) = bounded(1);
 
         (
@@ -218,15 +219,9 @@ pub fn pipe() -> (ValueSender, ValueReceiver) {
     )
 }
 
-pub trait StreamControl {
-    fn terminate(&self) -> CrushResult<()>;
-}
-
-pub type StreamController = Box<dyn StreamControl + Send>;
-
 struct TableInputStreamController(Sender<StreamControlMessage>);
 
-impl StreamControl for TableInputStreamController {
+impl JobControl for TableInputStreamController {
     fn terminate(&self) -> CrushResult<()> {
         Ok(self.0.send(StreamControlMessage::Hangup)?)
     }

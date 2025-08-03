@@ -8,7 +8,6 @@ mod aggregation;
 mod count;
 mod drop;
 mod each;
-mod enumerate;
 mod group;
 mod head;
 mod join;
@@ -30,7 +29,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             count::Count::declare(env)?;
             drop::Drop::declare(env)?;
             each::Each::declare(env)?;
-            enumerate::Enumerate::declare(env)?;
             head::Head::declare(env)?;
             tail::Tail::declare(env)?;
             r#where::Where::declare(env)?;

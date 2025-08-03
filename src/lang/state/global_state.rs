@@ -3,7 +3,7 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::parser::Parser;
-use crate::lang::pipe::StreamController;
+use crate::lang::job_control::JobController;
 use crate::lang::printer::Printer;
 use crate::lang::threads::ThreadStore;
 use crate::util::byte_unit::ByteUnit;
@@ -174,7 +174,7 @@ impl JobHandle {
         }
     }
 
-    pub fn register_command(&self, command_handle: &CommandHandle, controller: StreamController) {
+    pub fn register_command(&self, command_handle: &CommandHandle, controller: JobController) {
         let mut live_job = self.live_job.lock().unwrap();
         live_job.senders.insert(command_handle.id, controller);
     }
@@ -196,7 +196,7 @@ pub struct CommandHandle {
 }
 
 impl CommandHandle {
-    pub fn register(&self, controller: StreamController) {
+    pub fn register(&self, controller: JobController) {
         self.job_id.register_command(self, controller);
     }
 
@@ -207,7 +207,7 @@ impl CommandHandle {
 
 pub struct LiveJob {
     pub description: String,
-    senders: HashMap<CommandId, StreamController>,
+    senders: HashMap<CommandId, JobController>,
     next_command_id: CommandId,
 }
 

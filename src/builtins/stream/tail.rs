@@ -28,7 +28,7 @@ fn tail(mut context: CommandContext) -> CrushResult<()> {
         }
         q.push_back(row);
     }
-    for row in q.drain(..) {
+    for row in q {
         output.send(row)?;
     }
     Ok(())
