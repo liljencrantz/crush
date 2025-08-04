@@ -45,7 +45,15 @@ pub struct Schedule {
 
 fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> CrushResult<()> {
     match control.recv_timeout(duration.to_std()?) {
-        Ok(msg) => terminate(),
+        Ok(msg) => match msg {
+            StreamControlMessage::Terminate => terminate(),
+            StreamControlMessage::Pause => {
+                control.recv();
+                Ok(())
+            },
+            StreamControlMessage::Resume => panic!(),
+        }
+        ,
         Err(error) => Ok(()),
     }
 }

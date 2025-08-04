@@ -81,7 +81,7 @@ pub fn load_init(env: &Scope, global_state: &GlobalState) -> CrushResult<()> {
 }
 
 pub fn handle_signals(global_state: &GlobalState) -> CrushResult<()> {
-    let mut signals = Signals::new([SIGINT /*, SIGTSTP*/])?;
+    let mut signals = Signals::new([SIGINT, SIGTSTP])?;
 
     let local_global_state = global_state.clone();
     thread::spawn(move || {
@@ -95,7 +95,14 @@ pub fn handle_signals(global_state: &GlobalState) -> CrushResult<()> {
                             .handle_error(local_global_state.terminate(job.id()));
                     }
                 },
-                SIGTSTP => {}
+                SIGTSTP => match local_global_state.current_job() {
+                    None => {}
+                    Some(job) => {
+                        local_global_state
+                            .printer()
+                            .handle_error(local_global_state.pause(job.id()));
+                    }
+                },
                 _ => unreachable!(),
             }
         }

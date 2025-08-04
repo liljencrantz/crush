@@ -80,7 +80,7 @@ fn exit(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     crush.terminate,
     output = Known(ValueType::Empty),
-    short = "Terminate the given job",
+    short = "Terminate the given job.",
     long = "A job may continue running for some time after receiving a termination notification. Output pipelines produced by the job will still be readable and will contain any buffered IO already sent to the job before it received the termination notification.",
     example = "# Create a job that produces a lot of output",
     example = "$all_files := $(files --recurse /)",
@@ -101,6 +101,38 @@ struct Terminate {
 fn terminate(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.global_state.terminate(cfg.jid.into())?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    crush.pause,
+    output = Known(ValueType::Empty),
+    short = "Pause the given job.",
+)]
+struct Pause {
+    #[description("The job id for the job to pause")]
+    jid: usize,
+}
+
+fn pause(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.pause(cfg.jid.into())?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    crush.resume,
+    output = Known(ValueType::Empty),
+    short = "Pause the given job.",
+)]
+struct Resume {
+    #[description("The job id for the job to pause")]
+    jid: usize,
+}
+
+fn resume(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.resume(cfg.jid.into())?;
     context.output.send(Value::Empty)
 }
 
@@ -440,6 +472,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             RunModeArg::declare(crush)?;
             LanguageModeArg::declare(crush)?;
             Terminate::declare(crush)?;
+            Pause::declare(crush)?;
+            Resume::declare(crush)?;
 
             crush.create_namespace(
                 "title",

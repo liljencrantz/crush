@@ -3,6 +3,8 @@ use crossbeam::channel::Sender;
 
 pub trait JobControl {
     fn terminate(&self) -> CrushResult<()>;
+    fn pause(&self) -> CrushResult<()>;
+    fn resume(&self) -> CrushResult<()>;
 }
 
 pub type JobController = Box<dyn JobControl + Send>;
@@ -17,10 +19,20 @@ impl ChannelBasedController {
 
 impl JobControl for ChannelBasedController {
     fn terminate(&self) -> CrushResult<()> {
-        Ok(self.0.send(StreamControlMessage::Hangup)?)
+        Ok(self.0.send(StreamControlMessage::Terminate)?)
+    }
+
+    fn pause(&self) -> CrushResult<()> {
+        Ok(self.0.send(StreamControlMessage::Pause)?)
+    }
+
+    fn resume(&self) -> CrushResult<()> {
+        Ok(self.0.send(StreamControlMessage::Resume)?)
     }
 }
 
 pub enum StreamControlMessage {
-    Hangup,
+    Terminate,
+    Pause,
+    Resume,
 }

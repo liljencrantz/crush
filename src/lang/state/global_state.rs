@@ -255,6 +255,28 @@ impl GlobalState {
         }
     }
 
+    pub fn pause(&self, jid: JobId) -> CrushResult<()> {
+        let data = self.data.lock().unwrap();
+        match data.jobs.get(usize::from(jid)) {
+            Some(Some(weak)) => match weak.upgrade() {
+                Some(arc) => arc.lock().unwrap().pause(),
+                None => command_error(format!("Unknown job `{}`", jid)),
+            },
+            _ => command_error(format!("Unknown job `{}`", jid)),
+        }
+    }
+
+    pub fn resume(&self, jid: JobId) -> CrushResult<()> {
+        let data = self.data.lock().unwrap();
+        match data.jobs.get(usize::from(jid)) {
+            Some(Some(weak)) => match weak.upgrade() {
+                Some(arc) => arc.lock().unwrap().resume(),
+                None => command_error(format!("Unknown job `{}`", jid)),
+            },
+            _ => command_error(format!("Unknown job `{}`", jid)),
+        }
+    }
+
     pub fn set_editor(&self, editor: Option<Editor<RustylineHelper, DefaultHistory>>) {
         let mut data = self.editor.lock().unwrap();
         *data = editor;

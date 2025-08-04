@@ -224,8 +224,20 @@ impl CrushStream for InterruptibleTableInputStream {
     fn read(&mut self) -> CrushResult<Row> {
         select! {
             recv(self.input.receiver) -> r => Ok(r?),
-            recv(self.control) -> _ => {
-                terminate()}
+            recv(self.control) -> msg => {
+                match msg {
+                    Ok(StreamControlMessage::Terminate) => {terminate()}
+                    Ok(StreamControlMessage::Pause) => {
+                        println!("PAUSE!!!");
+                        self.control.recv()?;
+                        self.read()
+                    }
+                    Ok(StreamControlMessage::Resume) => {panic!()}
+                    Err(e) => {
+                        Err(e.into())
+                    }
+                }
+            }
         }
     }
 

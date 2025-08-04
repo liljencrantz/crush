@@ -110,4 +110,22 @@ impl LiveJob {
         }
         Ok(())
     }
+
+    pub fn pause(&self) -> CrushResult<()> {
+        for vc in self.senders.values() {
+            for c in vc {
+                let _ = c.pause();
+            }
+        }
+        Ok(())
+    }
+
+    pub fn resume(&self) -> CrushResult<()> {
+        for vc in self.senders.values() {
+            for c in vc {
+                let _ = c.resume();
+            }
+        }
+        Ok(())
+    }
 }
