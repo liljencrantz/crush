@@ -50,10 +50,9 @@ fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> Crush
             StreamControlMessage::Pause => {
                 control.recv();
                 Ok(())
-            },
+            }
             StreamControlMessage::Resume => panic!(),
-        }
-        ,
+        },
         Err(error) => Ok(()),
     }
 }

@@ -123,14 +123,14 @@ impl ThreadStore {
     */
     pub fn join_one(&self, id: ThreadId, printer: &Printer) {
         let mut data = self.data.lock().unwrap();
-        let mut kill_idx = None;
+        let mut thread_idx = None;
         for idx in 0..data.threads.len() {
             if data.threads[idx].handle.thread().id() == id {
-                kill_idx = Some(idx);
+                thread_idx = Some(idx);
                 break;
             }
         }
-        if let Some(idx) = kill_idx {
+        if let Some(idx) = thread_idx {
             let h = data.threads.remove(idx);
             drop(data);
             join_handle(h.handle, printer);

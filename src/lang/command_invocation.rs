@@ -109,7 +109,7 @@ impl CommandInvocation {
 
     pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
         if !self.command.can_block(&mut EvalContext::from(&context)) {
-            eval_non_blocking(&self.command, &self.source, &self.arguments, context)
+            eval_value_definition(&self.command, &self.arguments, context, &self.source)
         } else {
             let local_command = self.command.clone();
             let local_arguments = self.arguments.clone();
@@ -118,11 +118,11 @@ impl CommandInvocation {
             Ok(Some(context.spawn(
                 &local_command.to_string(),
                 move || {
-                    match eval_non_blocking(
+                    match eval_value_definition(
                         &local_command,
-                        &local_source,
                         &local_arguments,
                         local_context.clone(),
+                        &local_source,
                     ) {
                         Ok(Some(id)) => local_context
                             .global_state
@@ -138,11 +138,11 @@ impl CommandInvocation {
     }
 }
 
-pub fn eval_non_blocking(
+pub fn eval_value_definition(
     command: &ValueDefinition,
-    source: &Source,
     arguments: &Vec<ArgumentDefinition>,
     context: JobContext,
+    source: &Source,
 ) -> CrushResult<Option<ThreadId>> {
     match command.eval(&mut EvalContext::from(&context)) {
         // Try to find the command in this thread. This may fail if the command is found via a subshell, in which case we need to spawn a thread
@@ -150,7 +150,7 @@ pub fn eval_non_blocking(
             let local_arguments = arguments.clone();
             match value {
                 Value::Command(command) => {
-                    eval_command_in_thread(source, command, this, local_arguments, context)
+                    eval_command(command, this, local_arguments, context, source)
                 }
                 Value::Type(t) => eval_type(t, local_arguments, context, source),
                 Value::Struct(s) => eval_struct(s, local_arguments, context, source),
@@ -188,12 +188,12 @@ fn eval_type(
 ) -> CrushResult<Option<ThreadId>> {
     match value_type.fields().get("__call__") {
         None => eval_literal_value(Value::Type(value_type), local_arguments, context),
-        Some(call) => eval_command_in_thread(
-            source,
+        Some(call) => eval_command(
             call.clone(),
             Some(Value::Type(value_type)),
             local_arguments,
             context,
+            source,
         ),
     }
 }
@@ -205,12 +205,12 @@ fn eval_struct(
     source: &Source,
 ) -> CrushResult<Option<ThreadId>> {
     match struct_value.get("__call__") {
-        Some(Value::Command(call)) => eval_command_in_thread(
-            source,
+        Some(Value::Command(call)) => eval_command(
             call,
             Some(Value::Struct(struct_value)),
             local_arguments,
             context,
+            source,
         ),
 
         Some(v) => error(
@@ -237,16 +237,12 @@ fn eval_struct(
     }
 }
 
-fn eval_command(command: Command, ctx: CommandContext) -> CrushResult<()> {
-    command.eval(ctx)
-}
-
-fn eval_command_in_thread(
-    source: &Source,
+fn eval_command(
     command: Command,
     this: Option<Value>,
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
+    source: &Source,
 ) -> CrushResult<Option<ThreadId>> {
     if !command.might_block(&local_arguments, &mut EvalContext::from(&context))
         && !arg_can_block(&local_arguments, &mut EvalContext::from(&context))
@@ -256,7 +252,7 @@ fn eval_command_in_thread(
         context
             .global_state
             .printer()
-            .handle_error(eval_command(command, new_context));
+            .handle_error(command.eval(new_context));
         Ok(None)
     } else {
         let name = command.name().to_string();
@@ -269,7 +265,7 @@ fn eval_command_in_thread(
                 this,
                 local_context,
             )?;
-            eval_command(command, res)
+            command.eval(res)
         })?))
     }
 }

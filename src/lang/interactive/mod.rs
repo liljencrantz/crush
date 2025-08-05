@@ -19,6 +19,7 @@ use crate::util::file::home;
 use nix::libc::SIGTSTP;
 use rustyline::error::ReadlineError;
 use rustyline::{CompletionType, Config, EditMode, Editor};
+use signal_hook::iterator::Handle;
 use signal_hook::{consts::SIGINT, iterator::Signals};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -80,9 +81,9 @@ pub fn load_init(env: &Scope, global_state: &GlobalState) -> CrushResult<()> {
     }
 }
 
-pub fn handle_signals(global_state: &GlobalState) -> CrushResult<()> {
+pub fn handle_signals(global_state: &GlobalState) -> CrushResult<Handle> {
     let mut signals = Signals::new([SIGINT, SIGTSTP])?;
-
+    let handle = signals.handle();
     let local_global_state = global_state.clone();
     thread::spawn(move || {
         for sig in signals.forever() {
@@ -107,7 +108,7 @@ pub fn handle_signals(global_state: &GlobalState) -> CrushResult<()> {
             }
         }
     });
-    Ok(())
+    Ok(handle)
 }
 
 pub fn run(
@@ -118,7 +119,7 @@ pub fn run(
     let printer = global_state.printer().clone();
     printer.handle_error(load_init(&global_env, global_state));
 
-    handle_signals(global_state)?;
+    let signal_handle = handle_signals(global_state)?;
 
     global_state.printer().line("Welcome to Crush");
     global_state.printer().line(r#"Type "help" for... help."#);
@@ -254,6 +255,7 @@ pub fn run(
         }
     }
     global_state.set_editor(None);
+    signal_handle.close();
     Ok(())
 }
 
