@@ -30,8 +30,9 @@ fn make_arguments() -> Value {
     .into()
 }
 
-static THREADS_OUTPUT_TYPE: [ColumnType; 3] = [
-    ColumnType::new("jid", ValueType::Any),
+static THREADS_OUTPUT_TYPE: [ColumnType; 4] = [
+    ColumnType::new("job_id", ValueType::Integer),
+    ColumnType::new("command_id", ValueType::Integer),
     ColumnType::new("created", ValueType::Time),
     ColumnType::new("name", ValueType::String),
 ];
@@ -46,11 +47,10 @@ struct Threads {}
 fn threads(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
 
-    for t in context.global_state.threads().current()? {
+    for t in context.global_state.threads().current_threads()? {
         output.send(Row::new(vec![
-            t.job_id
-                .map(|i| Value::from(i.id()))
-                .unwrap_or(Value::Empty),
+            Value::from(t.job_id),
+            Value::from(t.command_id),
             Value::Time(t.creation_time),
             Value::from(t.name),
         ]))?;
@@ -115,7 +115,7 @@ struct Pause {
 }
 
 fn pause(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Pause::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.global_state.pause(cfg.jid.into())?;
     context.output.send(Value::Empty)
 }
@@ -126,12 +126,12 @@ fn pause(mut context: CommandContext) -> CrushResult<()> {
     short = "Pause the given job.",
 )]
 struct Resume {
-    #[description("The job id for the job to pause")]
+    #[description("The job id for the job to resume")]
     jid: usize,
 }
 
 fn resume(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg = Resume::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.global_state.resume(cfg.jid.into())?;
     context.output.send(Value::Empty)
 }
@@ -250,9 +250,11 @@ mod title {
     }
 }
 
-static JOB_OUTPUT_TYPE: [ColumnType; 2] = [
+static JOB_OUTPUT_TYPE: [ColumnType; 4] = [
     ColumnType::new("id", ValueType::Integer),
     ColumnType::new("description", ValueType::String),
+    ColumnType::new("foreground", ValueType::Bool),
+    ColumnType::new("status", ValueType::String),
 ];
 
 #[signature(
@@ -266,7 +268,12 @@ struct Jobs {}
 fn jobs(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&JOB_OUTPUT_TYPE)?;
     for job in context.global_state.jobs() {
-        output.send(Row::new(vec![Value::from(job.0), Value::from(job.1)]))?;
+        output.send(Row::new(vec![
+            Value::from(job.id),
+            Value::from(job.description),
+            Value::from(job.fg),
+            Value::from(job.status.to_string()),
+        ]))?;
     }
     Ok(())
 }

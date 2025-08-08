@@ -62,6 +62,7 @@ fn execute_command(
                 snd,
                 env.clone(),
                 global_state.clone(),
+                false,
             ))?;
             let v = recv.recv()?;
             match v {
@@ -196,6 +197,7 @@ pub fn run(
                         global_state.language_mode(),
                         pretty_printer,
                         global_state,
+                        true,
                     ));
                     global_state.threads().reap(global_state.printer());
                     if global_state.exit_status().is_some() {

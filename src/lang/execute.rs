@@ -11,10 +11,11 @@ use crate::lang::state::contexts::JobContext;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
-use std::fs;
+use std::{fs, thread};
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
+use std::thread::JoinHandle;
 
 pub fn file(
     global_env: &Scope,
@@ -29,6 +30,7 @@ pub fn file(
         LanguageMode::Command,
         output,
         global_state,
+        false,
     )
 }
 
@@ -38,14 +40,16 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
         Value::Command(cmd) => {
             let (snd, recv) = pipe();
 
-            global_state.threads().spawn("serializer", None, move || {
-                let val = recv.recv()?;
-                let mut buf = Vec::new();
-                serialize(&val.materialize()?, &mut buf)?;
-                std::io::stdout().write(&buf)?;
-                Ok(())
-            })?;
-
+            let serializer_handle: JoinHandle<CrushResult<()>> = thread::Builder::new()
+                .name("serializer".to_string())
+                .spawn(move || {
+                    let val = recv.recv()?;
+                    let mut buf = Vec::new();
+                    serialize(&val.materialize()?, &mut buf)?;
+                    std::io::stdout().write(&buf)?;
+                    Ok(())
+                })?;
+            
             let job = Job::new(
                 vec![CommandInvocation::new(
                     ValueDefinition::Value(
@@ -63,9 +67,10 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                 snd.clone(),
                 env.clone(),
                 global_state.clone(),
+                false,
             ))?;
             global_state.threads().join(global_state.printer());
-
+            serializer_handle.join();
             Ok(())
         }
 
@@ -82,6 +87,7 @@ pub fn string(
     initial_mode: LanguageMode,
     output: &ValueSender,
     global_state: &GlobalState,
+    fg: bool,
 ) -> CrushResult<()> {
     source(
         global_env,
@@ -89,6 +95,7 @@ pub fn string(
         initial_mode,
         output,
         global_state,
+        fg,
     )
 }
 
@@ -98,6 +105,7 @@ fn source(
     initial_mode: LanguageMode,
     output: &ValueSender,
     global_state: &GlobalState,
+    fg: bool,
 ) -> CrushResult<()> {
     let jobs = global_state
         .parser()
@@ -108,8 +116,8 @@ fn source(
             output.clone(),
             global_env.clone(),
             global_state.clone(),
+            fg,
         ))?;
-
         handle.map(|id| global_state.threads().join_one(id, &global_state.printer()));
     }
     Ok(())

@@ -639,6 +639,7 @@ impl Closure {
                 sender,
                 env.clone(),
                 context.global_state.clone(),
+                context.fg,
             ))?;
 
             let local_printer = context.global_state.printer().clone();

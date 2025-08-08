@@ -60,6 +60,7 @@ fn aggregate(
                         &global_state,
                         &context.source,
                         context.next_command_handle(),
+                        false,
                     )
                     .with_input(input_receiver)
                     .with_output(output_sender),
@@ -82,18 +83,19 @@ fn aggregate(
                     let local_source = context.source.clone();
                     let local_printer = context.global_state.printer().clone();
                     let next_id = context.next_command_handle();
-                    context.spawn("group:aggr", move || {
+                    let new_context = CommandContext::new(
+                        &local_scope,
+                        &local_state,
+                        &local_source,
+                        next_id,
+                        false,
+                    )
+                    .with_input(input_receiver)
+                        .with_output(output_sender);
+
+                    context.global_state.threads().spawn("group:aggr", &context.next_command_handle(), move || {
                         local_printer.handle_error(
-                            local_command.eval(
-                                CommandContext::new(
-                                    &local_scope,
-                                    &local_state,
-                                    &local_source,
-                                    next_id,
-                                )
-                                .with_input(input_receiver)
-                                .with_output(output_sender),
-                            ),
+                            local_command.eval(new_context),
                         );
                         Ok(())
                     })?;
@@ -138,7 +140,7 @@ fn create_worker_thread(
     let my_destination = destination.clone();
     let my_context = context.clone();
     let my_state = global_state.clone();
-    context.spawn("group:collect", move || {
+    context.global_state.threads().spawn("group:collect", &context.next_command_handle(), move || {
         let local_printer = my_printer.clone();
         local_printer.handle_error(aggregate(
             my_commands,

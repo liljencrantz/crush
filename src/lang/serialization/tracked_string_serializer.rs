@@ -29,7 +29,6 @@ impl Serializable<TrackedString> for TrackedString {
     ) -> CrushResult<usize> {
         let string_id = self.string.serialize(elements, state)?;
         let idx = elements.len();
-        println!("TrackedString {}", idx);
         elements.push(Element {
             element: Some(element::Element::TrackedString(model::TrackedString {
                 start: self.location.start as u64,

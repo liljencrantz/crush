@@ -1,5 +1,8 @@
+use std::thread::{ThreadId};
 use crate::lang::errors::CrushResult;
-use crossbeam::channel::Sender;
+use crossbeam::channel::{Receiver, Sender};
+use crossbeam::select;
+use itertools::Either;
 
 pub trait JobControl {
     fn terminate(&self) -> CrushResult<()>;
@@ -35,4 +38,44 @@ pub enum StreamControlMessage {
     Terminate,
     Pause,
     Resume,
+}
+
+pub struct InterruptibleJoinHandle<T> {
+    result_receiver: Receiver<T>,
+    control_receiver: Receiver<StreamControlMessage>,
+    id: ThreadId,
+    name: Option<String>,
+}
+
+impl<T> InterruptibleJoinHandle<T> {
+    pub fn new(id: ThreadId, name: Option<&str>, result_receiver: Receiver<T>, control_receiver: Receiver<StreamControlMessage>,
+    ) -> Self {
+        InterruptibleJoinHandle {
+            id,
+            name: name.map(|x| x.to_string()),
+            result_receiver,
+            control_receiver,
+        }
+    }
+
+    pub fn id(&self) -> ThreadId {
+        self.id
+    }
+
+    pub fn name(&self) -> &Option<String> {
+        &self.name
+    }
+
+    pub fn join(&self) -> CrushResult<Either<T, StreamControlMessage>> {
+        select! {
+            recv(self.result_receiver) -> result => match result {
+                Ok(res) => Ok(Either::Left(res)),
+                Err(err) => Err(err.into()),
+            },
+            recv(self.control_receiver) -> control => match control {
+                Ok(msg) => Ok(Either::Right(msg)),
+                Err(err) => Err(err.into()),
+            },
+        }
+    }
 }

@@ -41,7 +41,8 @@ struct Val {
 
 pub fn val(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Val = Val::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.output.send(cfg.value)
+    let res = context.output.send(cfg.value);
+    res
 }
 
 #[signature(

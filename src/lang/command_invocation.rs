@@ -115,8 +115,9 @@ impl CommandInvocation {
             let local_arguments = self.arguments.clone();
             let local_context = context.clone();
             let local_source = self.source.clone();
-            Ok(Some(context.spawn(
+            Ok(Some(context.global_state.threads().spawn(
                 &local_command.to_string(),
+                &context.handle.current_command_handle(),
                 move || {
                     match eval_value_definition(
                         &local_command,
@@ -258,14 +259,14 @@ fn eval_command(
         let name = command.name().to_string();
         let local_source = source.clone();
         let local_context = context.clone();
-        Ok(Some(context.spawn(&name, move || {
-            let res = CommandInvocation::command_context(
-                &local_source,
-                local_arguments,
-                this,
-                local_context,
-            )?;
-            command.eval(res)
+        let command_context = CommandInvocation::command_context(
+            &local_source,
+            local_arguments,
+            this,
+            local_context,
+        )?;
+        Ok(Some(context.global_state.threads().spawn(&name, &command_context.command_handle().clone(), move || {
+            command.eval(command_context)
         })?))
     }
 }

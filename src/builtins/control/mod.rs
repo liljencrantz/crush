@@ -233,6 +233,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     LanguageMode::Command,
                     &context.output,
                     &context.global_state,
+                    false,
                 )?;
             }
             BinaryInput::Regex(regex) => {
@@ -256,6 +257,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     LanguageMode::Command,
                     &context.output,
                     &context.global_state,
+                    false,
                 )?;
             }
             BinaryInput::Binary(vec) => {
@@ -266,6 +268,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     LanguageMode::Command,
                     &context.output,
                     &context.global_state,
+                    false,
                 )?;
             }
         }

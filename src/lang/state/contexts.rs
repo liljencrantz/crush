@@ -10,7 +10,6 @@ use crate::lang::state::handles::{CommandHandle, JobHandle};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
-use std::thread::ThreadId;
 
 /**
 The data needed to be passed around while calling eval on a ValueDefinition.
@@ -26,7 +25,7 @@ impl EvalContext {
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(input, output, self.env.clone(), self.global_state.clone())
+        JobContext::new(input, output, self.env.clone(), self.global_state.clone(), false)
     }
 
     pub fn with_scope(&self, env: &Scope) -> EvalContext {
@@ -59,6 +58,7 @@ pub struct JobContext {
     pub scope: Scope,
     pub global_state: GlobalState,
     pub handle: JobHandle,
+    pub fg: bool,
 }
 
 impl JobContext {
@@ -67,13 +67,15 @@ impl JobContext {
         output: ValueSender,
         env: Scope,
         global_state: GlobalState,
+        fg: bool,
     ) -> JobContext {
         JobContext {
             input,
             output,
             scope: env,
-            handle: global_state.create_job_handle(),
+            handle: global_state.create_job_handle(fg),
             global_state,
+            fg,
         }
     }
 
@@ -88,6 +90,7 @@ impl JobContext {
             scope: self.scope.clone(),
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
+            fg: self.fg,
         }
     }
 
@@ -106,22 +109,10 @@ impl JobContext {
             handle: self.handle.next_command_handle(),
             global_state: self.global_state.clone(),
             source: source.clone(),
+            fg: self.fg,
         })
     }
 
-    pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
-    where
-        F: FnOnce() -> CrushResult<()>,
-        F: Send + 'static,
-    {
-        self.global_state
-            .threads()
-            .spawn(name, Some(self.handle.clone()), f)
-    }
-
-    pub fn next_command_handle(&self) -> CommandHandle {
-        self.handle.next_command_handle()
-    }
 }
 
 /**
@@ -137,6 +128,7 @@ pub struct CommandContext {
     pub global_state: GlobalState,
     pub source: Source,
     handle: CommandHandle,
+    pub fg: bool,
 }
 
 impl CommandContext {
@@ -148,6 +140,7 @@ impl CommandContext {
         state: &GlobalState,
         source: &Source,
         id: CommandHandle,
+        fg: bool,
     ) -> CommandContext {
         CommandContext {
             input: empty_channel(),
@@ -158,6 +151,7 @@ impl CommandContext {
             global_state: state.clone(),
             source: source.clone(),
             handle: id,
+            fg,
         }
     }
 
@@ -185,6 +179,7 @@ impl CommandContext {
             source: self.source.clone(),
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
+            fg: self.fg,
         }
     }
 
@@ -201,6 +196,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
+            fg: self.fg,
         }
     }
 
@@ -217,6 +213,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
+            fg: self.fg,
         }
     }
 
@@ -233,6 +230,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
+            fg: self.fg,
         }
     }
 
@@ -249,25 +247,16 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
+            fg: self.fg,
         }
     }
-
-    pub fn spawn<F>(&self, name: &str, f: F) -> CrushResult<ThreadId>
-    where
-        F: FnOnce() -> CrushResult<()>,
-        F: Send + 'static,
-    {
-        self.global_state
-            .threads()
-            .spawn(name, Some(self.handle.job_id.clone()), f)
-    }
-
+    
     pub fn command_handle(&self) -> &CommandHandle {
         &self.handle
     }
 
     pub fn next_command_handle(&self) -> CommandHandle {
-        self.handle.job_id.next_command_handle()
+        self.handle.job_handle.next_command_handle()
     }
 
     pub fn input_stream(&self) -> CrushResult<Stream> {

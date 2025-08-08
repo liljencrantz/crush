@@ -1,22 +1,27 @@
 use crate::lang::errors::CrushResult;
+use crate::lang::job_control::{ChannelBasedController, InterruptibleJoinHandle, StreamControlMessage};
 use crate::lang::printer::Printer;
-use crate::lang::state::handles::JobHandle;
+use crate::lang::state::handles::{CommandHandle};
 use chrono::{DateTime, Local};
-use crossbeam::channel::Receiver;
 use crossbeam::channel::Sender;
 use crossbeam::channel::unbounded;
+use crossbeam::channel::{Receiver, bounded};
+use itertools::Either;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::thread::{JoinHandle, ThreadId};
+use std::thread::{ThreadId};
 use std::time::Duration;
+use crate::lang::state::id::{CommandId, JobId};
 
 /**
 A thread management utility. Spawn, track and join on threads.
 */
 struct ThreadData {
-    handle: JoinHandle<CrushResult<()>>,
+    handle: InterruptibleJoinHandle<CrushResult<()>>,
     creation_time: DateTime<Local>,
-    job_id: Option<JobHandle>,
+    command: CommandHandle,
+    job_id: JobId,
+    command_id: CommandId,
 }
 
 struct ThreadStoreInternal {
@@ -28,14 +33,8 @@ struct ThreadStoreInternal {
 pub struct ThreadDescription {
     pub name: String,
     pub creation_time: DateTime<Local>,
-    pub job_id: Option<JobHandle>,
-}
-
-fn join_handle(handle: JoinHandle<CrushResult<()>>, printer: &Printer) {
-    match handle.join() {
-        Ok(res) => printer.handle_error(res),
-        Err(_) => printer.error("Unknown error while waiting for command to exit"),
-    }
+    pub job_id: JobId,
+    pub command_id: CommandId,
 }
 
 #[derive(Clone)]
@@ -64,25 +63,44 @@ impl ThreadStore {
     /**
     Spawn a new thread
     */
-    pub fn spawn<F>(&self, name: &str, job_id: Option<JobHandle>, f: F) -> CrushResult<ThreadId>
+    pub fn spawn<F>(
+        &self,
+        name: &str,
+        command: &CommandHandle,
+        f: F,
+    ) -> CrushResult<ThreadId>
     where
         F: FnOnce() -> CrushResult<()>,
         F: Send + 'static,
     {
         let slef = self.clone();
+
+        let (control_sender, control_receiver) = unbounded();
+        let (result_sender, result_receiver) = bounded(1);
+
+        command.register(Box::from(ChannelBasedController::new(control_sender)));
+
         let handle = thread::Builder::new()
             .name(name.to_string())
             .spawn(move || {
                 let res = f();
                 slef.exit();
-                res
+                result_sender.send(res)
             })?;
         let id = handle.thread().id();
+        let handle2 = InterruptibleJoinHandle::new(
+            id,
+            handle.thread().name(),
+            result_receiver,
+            control_receiver,
+        );
         let mut data = self.data.lock().unwrap();
         data.threads.push(ThreadData {
-            handle,
+            handle: handle2,
             creation_time: Local::now(),
-            job_id,
+            command: command.clone(),
+            job_id: command.job_handle.id(),
+            command_id: command.id,
         });
         Ok(id)
     }
@@ -97,7 +115,7 @@ impl ThreadStore {
                 None => break,
                 Some(h) => {
                     drop(data);
-                    join_handle(h.handle, printer);
+                    printer.handle_error(h.handle.join());
                 }
             }
         }
@@ -125,7 +143,7 @@ impl ThreadStore {
         let mut data = self.data.lock().unwrap();
         let mut thread_idx = None;
         for idx in 0..data.threads.len() {
-            if data.threads[idx].handle.thread().id() == id {
+            if data.threads[idx].handle.id() == id {
                 thread_idx = Some(idx);
                 break;
             }
@@ -133,20 +151,36 @@ impl ThreadStore {
         if let Some(idx) = thread_idx {
             let h = data.threads.remove(idx);
             drop(data);
-            join_handle(h.handle, printer);
+
+            match h.handle.join() {
+                Ok(Either::Left(_)) => {}
+                Ok(Either::Right(m)) => {
+                    match m {
+                        StreamControlMessage::Terminate => {}
+                        StreamControlMessage::Pause => {
+                            let mut data = self.data.lock().unwrap();
+                            data.threads.push(h);
+                        }
+                        StreamControlMessage::Resume => {}
+                    }
+                }
+                Err(err) => printer.crush_error(err), 
+            }
         }
     }
 
-    pub fn current(&self) -> CrushResult<Vec<ThreadDescription>> {
+    pub fn current_threads(&self) -> CrushResult<Vec<ThreadDescription>> {
         let data = self.data.lock().unwrap();
-        Ok(data
+        let res = Ok(data
             .threads
             .iter()
             .map(|t| ThreadDescription {
-                name: t.handle.thread().name().unwrap_or("<unnamed>").to_string(),
+                name: t.handle.name().clone().unwrap_or("<unnamed>".to_string()),
                 creation_time: t.creation_time.clone(),
-                job_id: t.job_id.clone(),
+                job_id: t.job_id,
+                command_id: t.command_id,
             })
-            .collect())
+            .collect());
+        res
     }
 }

@@ -114,7 +114,7 @@ impl Grpc {
         let output = String::from_utf8(buff)?;
         let (send_err, recv_err) = bounded(1);
         let mut stderr = child.stderr.take().ok_or("Expected error stream")?;
-        context.spawn("grpcurl:stderr", move || {
+        context.global_state.threads().spawn("grpcurl:stderr", &context.next_command_handle(), move || {
             let mut buff = Vec::new();
             stderr.read_to_end(&mut buff)?;
             let errors = String::from_utf8(buff)?;

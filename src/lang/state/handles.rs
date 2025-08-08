@@ -4,27 +4,29 @@ use crate::lang::state::id::CommandId;
 use crate::lang::state::id::JobId;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::fmt::Display;
 use std::sync::{Arc, Mutex, Weak};
 
 #[derive(Clone)]
 pub struct JobHandle {
     id: JobId,
-    live_job: Arc<Mutex<LiveJob>>,
+    live_job: Arc<Mutex<JobControlData>>,
 }
 
 impl JobHandle {
     pub fn new(id: JobId) -> JobHandle {
         JobHandle {
             id,
-            live_job: Arc::from(Mutex::from(LiveJob {
+            live_job: Arc::from(Mutex::from(JobControlData {
                 description: String::new(),
                 senders: HashMap::new(),
                 next_command_id: CommandId::first(),
+                status: JobStatus::Running,
             })),
         }
     }
 
-    pub fn from(id: JobId, live_job: Arc<Mutex<LiveJob>>) -> JobHandle {
+    pub fn from(id: JobId, live_job: Arc<Mutex<JobControlData>>) -> JobHandle {
         JobHandle { id, live_job }
     }
 
@@ -35,7 +37,7 @@ impl JobHandle {
 
     pub fn command_handle(&self, id: CommandId) -> CommandHandle {
         CommandHandle {
-            job_id: self.clone(),
+            job_handle: self.clone(),
             id,
         }
     }
@@ -45,7 +47,16 @@ impl JobHandle {
         let id = live_job.next_command_id;
         live_job.next_command_id.next();
         CommandHandle {
-            job_id: self.clone(),
+            job_handle: self.clone(),
+            id,
+        }
+    }
+
+    pub fn current_command_handle(&self) -> CommandHandle {
+        let live_job = self.live_job.lock().unwrap();
+        let id = live_job.next_command_id;
+        CommandHandle {
+            job_handle: self.clone(),
             id,
         }
     }
@@ -69,7 +80,7 @@ impl JobHandle {
         self.id
     }
 
-    pub fn weak_ref(&self) -> Weak<Mutex<LiveJob>> {
+    pub fn weak_ref(&self) -> Weak<Mutex<JobControlData>> {
         Arc::downgrade(&self.live_job)
     }
 
@@ -81,51 +92,88 @@ impl JobHandle {
 
 #[derive(Clone)]
 pub struct CommandHandle {
-    pub job_id: JobHandle,
+    pub job_handle: JobHandle,
     pub id: CommandId,
 }
 
 impl CommandHandle {
     pub fn register(&self, controller: JobController) {
-        self.job_id.register_command(self, controller);
+        self.job_handle.register_command(self, controller);
     }
 
     pub fn unregister(&self) {
-        self.job_id.unregister_command(self);
+        self.job_handle.unregister_command(self);
     }
 }
 
-pub struct LiveJob {
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum JobStatus {
+    Running, Paused, Terminated,
+}
+
+impl Display for JobStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            JobStatus::Running => "Running",
+            JobStatus::Paused => "Paused",
+            JobStatus::Terminated => "Terminated",
+        })
+    }
+}
+
+pub struct JobInfo {
+    pub id: JobId,
+    pub fg: bool,
     pub description: String,
+    pub status: JobStatus,
+}
+
+pub struct JobControlData {
+    pub description: String,
+    status: JobStatus,
     senders: HashMap<CommandId, Vec<JobController>>,
     next_command_id: CommandId,
 }
 
-impl LiveJob {
-    pub fn terminate(&self) -> CrushResult<()> {
+pub struct JobData {
+    pub id: JobId,
+    pub fg: bool,
+    pub job_control_data: Weak<Mutex<JobControlData>>,
+}
+
+impl JobControlData {
+    
+    pub fn status(&self) -> JobStatus {
+        self.status
+    }
+    
+    pub fn terminate(&mut self) -> CrushResult<()> {
         for vc in self.senders.values() {
             for c in vc {
                 let _ = c.terminate();
             }
         }
+        self.status = JobStatus::Terminated;
         Ok(())
     }
 
-    pub fn pause(&self) -> CrushResult<()> {
-        for vc in self.senders.values() {
+    pub fn pause(&mut self) -> CrushResult<()> {
+        for (_, vc) in &self.senders {
             for c in vc {
                 let _ = c.pause();
             }
         }
+        self.status = JobStatus::Paused;
         Ok(())
     }
 
-    pub fn resume(&self) -> CrushResult<()> {
+    pub fn resume(&mut self) -> CrushResult<()> {
         for vc in self.senders.values() {
             for c in vc {
                 let _ = c.resume();
             }
         }
+        self.status = JobStatus::Running;
         Ok(())
     }
 }

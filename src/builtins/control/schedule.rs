@@ -48,12 +48,20 @@ fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> Crush
         Ok(msg) => match msg {
             StreamControlMessage::Terminate => terminate(),
             StreamControlMessage::Pause => {
-                control.recv();
-                Ok(())
+                loop {
+                    match control.recv() {
+                        Ok(StreamControlMessage::Terminate) => {
+                            return terminate();
+                        }
+                        Ok(StreamControlMessage::Resume) => return Ok(()),
+                        Ok(StreamControlMessage::Pause) => {}
+                        Err(_) => return terminate(),
+                    }
+                }
             }
             StreamControlMessage::Resume => panic!(),
         },
-        Err(error) => Ok(()),
+        Err(_) => Ok(()),
     }
 }
 

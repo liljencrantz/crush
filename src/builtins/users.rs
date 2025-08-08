@@ -131,7 +131,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         let mut serialized = Vec::new();
         serialize(&Value::Command(cfg.command), &mut serialized)?;
 
-        context.spawn("sudo:stdin", move || {
+        context.global_state.threads().spawn("sudo:stdin", &context.next_command_handle(), move || {
             stdin.write(&serialized)?;
             Ok(())
         })?;
@@ -139,7 +139,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         let mut stdout = child.stdout.take().ok_or("Expected output stream")?;
         let env = context.scope.clone();
         let my_context = context.clone();
-        context.spawn("sudo:stdout", move || {
+        context.global_state.threads().spawn("sudo:stdout", &context.next_command_handle(), move || {
             let mut buff = Vec::new();
             stdout.read_to_end(&mut buff)?;
             if buff.len() == 0 {
@@ -150,7 +150,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         })?;
 
         let mut stderr = child.stderr.take().ok_or("Expected error stream")?;
-        context.spawn("sudo:stderr", move || {
+        context.global_state.threads().spawn("sudo:stderr", &context.next_command_handle(), move || {
             let mut buff = Vec::new();
             stderr.read_to_end(&mut buff)?;
             let errors = String::from_utf8(buff)?;

@@ -134,13 +134,13 @@ fn cmd_internal(
                 drop(stdin);
             }
             Binary(v) => {
-                context.spawn("cmd:stdin", move || {
+                context.global_state.threads().spawn("cmd:stdin", &context.next_command_handle(), move || {
                     stdin.write(&v)?;
                     Ok(())
                 })?;
             }
             BinaryInputStream(mut r) => {
-                context.spawn("cmd:stdin", move || {
+                context.global_state.threads().spawn("cmd:stdin", &context.next_command_handle(), move || {
                     std::io::copy(r.as_mut(), stdin.borrow_mut())?;
                     Ok(())
                 })?;
@@ -152,7 +152,7 @@ fn cmd_internal(
             .output
             .send(BinaryInputStream(Box::from(stdout_reader)))?;
         let my_context = context.clone();
-        context.spawn("cmd:stderr", move || {
+        context.global_state.threads().spawn("cmd:stderr", &context.next_command_handle(), move || {
             let _ = &my_context;
             let mut buff = Vec::new();
             stderr_reader.read_to_end(&mut buff)?;

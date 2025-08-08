@@ -4,7 +4,7 @@ use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
-use crate::lang::state::handles::{JobHandle, LiveJob};
+use crate::lang::state::handles::{JobHandle, JobControlData, JobData, JobInfo};
 use crate::lang::state::id::JobId;
 use crate::lang::threads::ThreadStore;
 use crate::util::byte_unit::ByteUnit;
@@ -12,7 +12,8 @@ use crate::util::temperature::Temperature;
 use num_format::{Grouping, SystemLocale};
 use rustyline::Editor;
 use rustyline::history::DefaultHistory;
-use std::sync::{Arc, Mutex, MutexGuard, Weak};
+use std::mem;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -95,7 +96,7 @@ struct StateData {
     format_data: FormatData,
     prompt: Option<Command>,
     title: Option<Command>,
-    jobs: Vec<Option<Weak<Mutex<LiveJob>>>>,
+    jobs: Vec<JobData>,
     exit_status: Option<i32>,
     language_mode: LanguageMode,
     run_mode: RunMode,
@@ -128,34 +129,25 @@ impl GlobalState {
         })
     }
 
-    pub fn create_job_handle(&self) -> JobHandle {
+    pub fn create_job_handle(&self, fg: bool) -> JobHandle {
         let mut data = self.data.lock().unwrap();
-        while !data.jobs.is_empty() {
-            match data.jobs.last() {
-                Some(Some(job)) => match job.strong_count() {
-                    0 => {}
-                    _ => {
-                        break;
-                    }
-                },
-                _ => {}
-            }
-            data.jobs.pop();
-        }
-        let id = data.jobs.len().into();
+        remove_finished_jobs(&mut data);
+        let id = next_id(&data);
         let job = JobHandle::new(id);
-        data.jobs.push(Some(job.weak_ref()));
+        let jd = JobData{id, fg, job_control_data: job.weak_ref()};
+        data.jobs.push(jd);
         job
     }
 
     pub fn current_job(&self) -> Option<JobHandle> {
         let data = self.data.lock().unwrap();
-        for (idx, i) in data.jobs.iter().enumerate().rev() {
-            if let Some(j) = i {
-                match j.upgrade() {
-                    Some(arc) => return Some(JobHandle::from(idx.into(), arc)),
-                    None => {}
-                }
+        for jd in data.jobs.iter().rev() {
+            if !jd.fg {
+                continue
+            } 
+            match jd.job_control_data.upgrade() {
+                Some(arc) => return Some(JobHandle::from(jd.id, arc)),
+                None => {}
             }
         }
         None
@@ -227,54 +219,39 @@ impl GlobalState {
         data.title = prompt;
     }
 
-    pub fn jobs(&self) -> Vec<(JobId, String)> {
+    pub fn jobs(&self) -> Vec<JobInfo> {
         let data = self.data.lock().unwrap();
         let mut res = Vec::new();
-        for (idx, i) in data.jobs.iter().enumerate() {
-            if let Some(j) = i {
-                match j.upgrade() {
-                    Some(arc) => {
-                        let live_job = arc.lock().unwrap();
-                        res.push((idx.into(), live_job.description.clone()));
-                    }
-                    None => {}
+        for jd in data.jobs.iter() {
+            match jd.job_control_data.upgrade() {
+                Some(arc) => {
+                    let live_job = arc.lock().unwrap();
+                    res.push(JobInfo {
+                        id: jd.id,
+                        fg: jd.fg,
+                        description: live_job.description.clone(),
+                        status: live_job.status(),
+                    });
                 }
+                None => {}
             }
         }
         res
     }
 
     pub fn terminate(&self, jid: JobId) -> CrushResult<()> {
-        let data = self.data.lock().unwrap();
-        match data.jobs.get(usize::from(jid)) {
-            Some(Some(weak)) => match weak.upgrade() {
-                Some(arc) => arc.lock().unwrap().terminate(),
-                None => command_error(format!("Unknown job `{}`", jid)),
-            },
-            _ => command_error(format!("Unknown job `{}`", jid)),
-        }
+        let mut data = self.data.lock().unwrap();
+        get_job(&mut data, jid, false)?.lock()?.terminate()
     }
 
     pub fn pause(&self, jid: JobId) -> CrushResult<()> {
-        let data = self.data.lock().unwrap();
-        match data.jobs.get(usize::from(jid)) {
-            Some(Some(weak)) => match weak.upgrade() {
-                Some(arc) => arc.lock().unwrap().pause(),
-                None => command_error(format!("Unknown job `{}`", jid)),
-            },
-            _ => command_error(format!("Unknown job `{}`", jid)),
-        }
+        let mut data = self.data.lock().unwrap();
+        get_job(&mut data, jid, true)?.lock()?.pause()
     }
 
     pub fn resume(&self, jid: JobId) -> CrushResult<()> {
-        let data = self.data.lock().unwrap();
-        match data.jobs.get(usize::from(jid)) {
-            Some(Some(weak)) => match weak.upgrade() {
-                Some(arc) => arc.lock().unwrap().resume(),
-                None => command_error(format!("Unknown job `{}`", jid)),
-            },
-            _ => command_error(format!("Unknown job `{}`", jid)),
-        }
+        let mut data = self.data.lock().unwrap();
+        get_job(&mut data, jid, true)?.lock()?.resume()
     }
 
     pub fn set_editor(&self, editor: Option<Editor<RustylineHelper, DefaultHistory>>) {
@@ -301,4 +278,51 @@ impl GlobalState {
     pub fn set_temperature_precision(&self, p: u8) {
         self.data.lock().unwrap().format_data.temperature_precision = p;
     }
+}
+
+fn next_id(data: &MutexGuard<StateData>) -> JobId {
+    for new_id in 0usize.. {
+        let mut ok = true;
+        for jd in &data.jobs {
+            if new_id == usize::from(jd.id) {
+                ok = false;
+                break;
+            }
+        }
+        if ok {
+            return JobId::from(new_id);
+        }
+    }
+    unreachable!()
+}
+
+fn get_job(data: &mut MutexGuard<StateData>, target_id: JobId, fg: bool) -> CrushResult<Arc<Mutex<JobControlData>>> {
+    for (idx, jd) in data.jobs.iter().enumerate() {
+        if jd.id == target_id {
+            match jd.job_control_data.upgrade() {
+                None => return command_error(format!("Unknown job `{}`", target_id)),
+                Some(arc) => {
+                    if fg {
+                        let tmp = data.jobs.remove(idx);
+                        data.jobs.push(tmp);
+                    }
+                    return Ok(arc)
+                },
+            }
+        }
+    }
+    command_error(format!("Unknown job `{}`", target_id))
+}
+
+fn remove_finished_jobs(data: &mut MutexGuard<StateData>) {
+    let mut res = Vec::new();
+    for jd in data.jobs.drain(..) {
+        match jd.job_control_data.strong_count() {
+            0 => {}
+            _ => {
+                res.push(jd);
+            }
+        }
+    }
+    mem::swap(&mut data.jobs, &mut res);
 }

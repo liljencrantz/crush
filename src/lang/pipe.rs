@@ -99,7 +99,28 @@ impl TableOutputStream {
             Some(control) => {
                 select! {
                     send(self.sender, row) -> res => Ok(res?),
-                    recv(control) -> _ => terminate(),
+                    recv(control) -> message => match message {
+                        Ok(StreamControlMessage::Terminate) => {
+                            terminate()
+                        }
+                        Ok(StreamControlMessage::Resume) => {
+                            self.send(row)
+                        }
+
+                        Ok(StreamControlMessage::Pause) => {
+                           loop {
+                                match control.recv()? {
+                                    StreamControlMessage::Terminate => {
+                                        return terminate();
+                                    }
+                                    StreamControlMessage::Pause => {}
+                                    StreamControlMessage::Resume => break,
+                                }
+                            }
+                            self.send(row)
+                        }
+                        Err(err) => {Err(err.into())}
+                    },
                 }
             }
         }
@@ -110,7 +131,7 @@ impl TableOutputStream {
     }
 
     pub fn interruptible(self) -> (TableOutputStream, JobController) {
-        let (control_sender, control_receiver) = bounded(1);
+        let (control_sender, control_receiver) = unbounded();
         (
             TableOutputStream {
                 sender: self.sender,
@@ -145,7 +166,7 @@ impl TableInputStream {
     }
 
     pub fn interruptible(&self) -> (Stream, JobController) {
-        let (control_sender, control_receiver) = bounded(1);
+        let (control_sender, control_receiver) = unbounded();
 
         (
             Box::from(InterruptibleTableInputStream {
@@ -228,8 +249,16 @@ impl CrushStream for InterruptibleTableInputStream {
                 match msg {
                     Ok(StreamControlMessage::Terminate) => {terminate()}
                     Ok(StreamControlMessage::Pause) => {
-                        println!("PAUSE!!!");
-                        self.control.recv()?;
+                        loop {
+                            match self.control.recv() {
+                            Ok(StreamControlMessage::Terminate) => {
+                                    return terminate();
+                                    }
+                            Ok(StreamControlMessage::Resume) => break,
+                            Ok(StreamControlMessage::Pause) => {}
+                            Err(_) => return terminate(),
+                            }
+                        }
                         self.read()
                     }
                     Ok(StreamControlMessage::Resume) => {panic!()}
