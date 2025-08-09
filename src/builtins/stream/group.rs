@@ -15,6 +15,7 @@ use crate::{
 use crossbeam::channel::{Receiver, unbounded};
 use signature::signature;
 use std::collections::HashMap;
+use crate::lang::state::handles::JobType::Background;
 
 #[signature(
     stream.group,
@@ -60,7 +61,7 @@ fn aggregate(
                         &global_state,
                         &context.source,
                         context.next_command_handle(),
-                        false,
+                        Background,
                     )
                     .with_input(input_receiver)
                     .with_output(output_sender),
@@ -88,7 +89,7 @@ fn aggregate(
                         &local_state,
                         &local_source,
                         next_id,
-                        false,
+                        Background,
                     )
                     .with_input(input_receiver)
                         .with_output(output_sender);

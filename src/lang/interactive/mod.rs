@@ -23,6 +23,7 @@ use signal_hook::iterator::Handle;
 use signal_hook::{consts::SIGINT, iterator::Signals};
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::lang::state::handles::JobType::{Background, Interactive};
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
@@ -62,7 +63,7 @@ fn execute_command(
                 snd,
                 env.clone(),
                 global_state.clone(),
-                false,
+                Background,
             ))?;
             let v = recv.recv()?;
             match v {
@@ -197,7 +198,7 @@ pub fn run(
                         global_state.language_mode(),
                         pretty_printer,
                         global_state,
-                        true,
+                        Interactive,
                     ));
                     global_state.threads().reap(global_state.printer());
                     if global_state.exit_status().is_some() {

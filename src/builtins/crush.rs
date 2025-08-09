@@ -253,7 +253,7 @@ mod title {
 static JOB_OUTPUT_TYPE: [ColumnType; 4] = [
     ColumnType::new("id", ValueType::Integer),
     ColumnType::new("description", ValueType::String),
-    ColumnType::new("foreground", ValueType::Bool),
+    ColumnType::new("type", ValueType::Bool),
     ColumnType::new("status", ValueType::String),
 ];
 
@@ -271,7 +271,7 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             Value::from(job.id),
             Value::from(job.description),
-            Value::from(job.fg),
+            Value::from(job.job_type.to_string()),
             Value::from(job.status.to_string()),
         ]))?;
     }

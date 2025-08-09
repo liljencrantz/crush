@@ -17,6 +17,7 @@ use std::env;
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::id::JobId;
 
 mod cmd;
@@ -44,9 +45,19 @@ fn r#break(context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.r#return,
     can_block = false,
-    short = "break execution of a closure and optionally return a value.",
+    short = "break execution of a closure command and optionally return a value.",
+    long = "The `return` command can only be used when inside of a closure command. Closure blocks can not break early using the `return` command. Do note that you can use the `return` command inside of a closure block which is nested arbitrarily deeply inside of a closure command, which will stop execution of all inner blocks and return the closure command.",
     output = Unknown,
-    example = "$factorial := {|$number: $integer| if ($number == 1) {return 1} else {return ($number * factorial($number - 1))}}",
+    example = "# Define a factorial command",
+    example = "$factorial := {",
+    example = "  |$number: $integer|",
+    example = "  if ($number == 1) {",
+    example = "    return 1",
+    example = "  } else {",
+    example = "    return ($number * factorial($number - 1))",
+    example = "  }",
+    example = "}",
+    example = "# Call the command",
     example = "factorial 5"
 )]
 struct Return {
@@ -231,7 +242,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     LanguageMode::Command,
                     &context.output,
                     &context.global_state,
-                    false,
+                    Background,
                 )?;
             }
             BinaryInput::Regex(regex) => {
@@ -255,7 +266,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     LanguageMode::Command,
                     &context.output,
                     &context.global_state,
-                    false,
+                    Background,
                 )?;
             }
             BinaryInput::Binary(vec) => {
@@ -266,7 +277,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     LanguageMode::Command,
                     &context.output,
                     &context.global_state,
-                    false,
+                    Background,
                 )?;
             }
         }

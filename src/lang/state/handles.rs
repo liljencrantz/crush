@@ -108,7 +108,9 @@ impl CommandHandle {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum JobStatus {
-    Running, Paused, Terminated,
+    Running, 
+    Paused, 
+    Terminated,
 }
 
 impl Display for JobStatus {
@@ -121,9 +123,24 @@ impl Display for JobStatus {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum JobType {
+    Interactive,
+    Background,
+}
+
+impl Display for JobType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            JobType::Interactive => "Interactive",
+            JobType::Background => "Background",
+        })
+    }
+}
+
 pub struct JobInfo {
     pub id: JobId,
-    pub fg: bool,
+    pub job_type: JobType,
     pub description: String,
     pub status: JobStatus,
 }
@@ -137,7 +154,7 @@ pub struct JobControlData {
 
 pub struct JobData {
     pub id: JobId,
-    pub fg: bool,
+    pub job_type: JobType,
     pub job_control_data: Weak<Mutex<JobControlData>>,
 }
 

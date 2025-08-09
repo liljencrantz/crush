@@ -6,10 +6,11 @@ use crate::lang::pipe::{
     Stream, TableOutputStream, ValueReceiver, ValueSender, black_hole, empty_channel,
 };
 use crate::lang::state::global_state::GlobalState;
-use crate::lang::state::handles::{CommandHandle, JobHandle};
+use crate::lang::state::handles::{CommandHandle, JobHandle, JobType};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
+use crate::lang::state::handles::JobType::Background;
 
 /**
 The data needed to be passed around while calling eval on a ValueDefinition.
@@ -25,7 +26,7 @@ impl EvalContext {
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(input, output, self.env.clone(), self.global_state.clone(), false)
+        JobContext::new(input, output, self.env.clone(), self.global_state.clone(), Background)
     }
 
     pub fn with_scope(&self, env: &Scope) -> EvalContext {
@@ -58,7 +59,7 @@ pub struct JobContext {
     pub scope: Scope,
     pub global_state: GlobalState,
     pub handle: JobHandle,
-    pub fg: bool,
+    pub job_type: JobType,
 }
 
 impl JobContext {
@@ -67,15 +68,15 @@ impl JobContext {
         output: ValueSender,
         env: Scope,
         global_state: GlobalState,
-        fg: bool,
+        job_type: JobType,
     ) -> JobContext {
         JobContext {
             input,
             output,
             scope: env,
-            handle: global_state.create_job_handle(fg),
+            handle: global_state.create_job_handle(job_type),
             global_state,
-            fg,
+            job_type: job_type,
         }
     }
 
@@ -90,7 +91,7 @@ impl JobContext {
             scope: self.scope.clone(),
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
-            fg: self.fg,
+            job_type: self.job_type,
         }
     }
 
@@ -109,7 +110,7 @@ impl JobContext {
             handle: self.handle.next_command_handle(),
             global_state: self.global_state.clone(),
             source: source.clone(),
-            fg: self.fg,
+            job_type: self.job_type,
         })
     }
 
@@ -128,7 +129,7 @@ pub struct CommandContext {
     pub global_state: GlobalState,
     pub source: Source,
     handle: CommandHandle,
-    pub fg: bool,
+    pub job_type: JobType,
 }
 
 impl CommandContext {
@@ -140,7 +141,7 @@ impl CommandContext {
         state: &GlobalState,
         source: &Source,
         id: CommandHandle,
-        fg: bool,
+        job_type: JobType,
     ) -> CommandContext {
         CommandContext {
             input: empty_channel(),
@@ -151,7 +152,7 @@ impl CommandContext {
             global_state: state.clone(),
             source: source.clone(),
             handle: id,
-            fg,
+            job_type,
         }
     }
 
@@ -179,7 +180,7 @@ impl CommandContext {
             source: self.source.clone(),
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
-            fg: self.fg,
+            job_type: self.job_type,
         }
     }
 
@@ -196,7 +197,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
-            fg: self.fg,
+            job_type: self.job_type,
         }
     }
 
@@ -213,7 +214,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
-            fg: self.fg,
+            job_type: self.job_type,
         }
     }
 
@@ -230,7 +231,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
-            fg: self.fg,
+            job_type: self.job_type,
         }
     }
 
@@ -247,7 +248,7 @@ impl CommandContext {
             global_state: self.global_state,
             handle: self.handle,
             source: self.source,
-            fg: self.fg,
+            job_type: self.job_type,
         }
     }
     

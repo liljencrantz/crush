@@ -4,7 +4,7 @@ use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
-use crate::lang::state::handles::{JobHandle, JobControlData, JobData, JobInfo};
+use crate::lang::state::handles::{JobHandle, JobControlData, JobData, JobInfo, JobType};
 use crate::lang::state::id::JobId;
 use crate::lang::threads::ThreadStore;
 use crate::util::byte_unit::ByteUnit;
@@ -14,6 +14,7 @@ use rustyline::Editor;
 use rustyline::history::DefaultHistory;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
+use crate::lang::state::handles::JobType::Background;
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -129,12 +130,12 @@ impl GlobalState {
         })
     }
 
-    pub fn create_job_handle(&self, fg: bool) -> JobHandle {
+    pub fn create_job_handle(&self, job_type: JobType) -> JobHandle {
         let mut data = self.data.lock().unwrap();
         remove_finished_jobs(&mut data);
         let id = next_id(&data);
         let job = JobHandle::new(id);
-        let jd = JobData{id, fg, job_control_data: job.weak_ref()};
+        let jd = JobData{id, job_type, job_control_data: job.weak_ref()};
         data.jobs.push(jd);
         job
     }
@@ -142,7 +143,7 @@ impl GlobalState {
     pub fn current_job(&self) -> Option<JobHandle> {
         let data = self.data.lock().unwrap();
         for jd in data.jobs.iter().rev() {
-            if !jd.fg {
+            if jd.job_type == Background {
                 continue
             } 
             match jd.job_control_data.upgrade() {
@@ -228,7 +229,7 @@ impl GlobalState {
                     let live_job = arc.lock().unwrap();
                     res.push(JobInfo {
                         id: jd.id,
-                        fg: jd.fg,
+                        job_type: jd.job_type,
                         description: live_job.description.clone(),
                         status: live_job.status(),
                     });

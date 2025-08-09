@@ -16,6 +16,8 @@ use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use crate::lang::state::handles::JobType;
+use crate::lang::state::handles::JobType::Background;
 
 pub fn file(
     global_env: &Scope,
@@ -30,7 +32,7 @@ pub fn file(
         LanguageMode::Command,
         output,
         global_state,
-        false,
+        Background,
     )
 }
 
@@ -67,7 +69,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                 snd.clone(),
                 env.clone(),
                 global_state.clone(),
-                false,
+                Background,
             ))?;
             global_state.threads().join(global_state.printer());
             serializer_handle.join();
@@ -87,7 +89,7 @@ pub fn string(
     initial_mode: LanguageMode,
     output: &ValueSender,
     global_state: &GlobalState,
-    fg: bool,
+    job_type: JobType,
 ) -> CrushResult<()> {
     source(
         global_env,
@@ -95,7 +97,7 @@ pub fn string(
         initial_mode,
         output,
         global_state,
-        fg,
+        job_type,
     )
 }
 
@@ -105,7 +107,7 @@ fn source(
     initial_mode: LanguageMode,
     output: &ValueSender,
     global_state: &GlobalState,
-    fg: bool,
+    job_type: JobType,
 ) -> CrushResult<()> {
     let jobs = global_state
         .parser()
@@ -116,7 +118,7 @@ fn source(
             output.clone(),
             global_env.clone(),
             global_state.clone(),
-            fg,
+            job_type,
         ))?;
         handle.map(|id| global_state.threads().join_one(id, &global_state.printer()));
     }
