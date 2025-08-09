@@ -29,9 +29,5 @@
 * syntax highlighting does not understand using types as commands
 * syntax highlighting does not understand closure signatures
 * syntax highlighting does not understand closure parameters
-* Unify job id types
-* Keep a stack of "latest" jobs for fg and bg
-* Pause/Run control messages
-* Implement control for schedule
 * Implement control for timeit
 * Make sure that passing through streams from closures doesn't block

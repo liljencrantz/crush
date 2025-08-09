@@ -16,8 +16,8 @@ use signature::signature;
 use std::env;
 use std::io::Read;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU64;
 use std::sync::{Mutex, OnceLock};
+use crate::lang::state::id::JobId;
 
 mod cmd;
 mod r#for;
@@ -101,9 +101,9 @@ fn sleep(mut context: CommandContext) -> CrushResult<()> {
     short = "Run a pipeline in the background",
     long = "Use the `bg` command as the last command in a pipeline to run it in the background.",
     long = "",
-    long = "The bg command is usually used by appending the `&` operator to the end of a pipeline, for example `$handle := $(files --recursive . &)` is exactly equivalent to `$handle := $(files --recursive . | bg)`.",
+    long = "The `bg` command is usually used by appending the `&` operator to the end of a pipeline, for example `$handle := $(files --recursive . &)` is exactly equivalent to `$handle := $(files --recursive . | bg)`.",
     long = "",
-    long = "The `bg` command returns a handle (an integer) that can be used to get the output of the pipeline at a later point via the `fg` command.", 
+    long = "The `bg` command returns the job id of the background job. This can be used to get the output of the pipeline at a later point via the `fg` command.", 
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
@@ -119,20 +119,18 @@ struct Bg {}
 
 #[derive(Clone)]
 struct BackgroundJob {
-    id: u64,
+    job_id: JobId,
     value: ValueReceiver,
 }
-
-static BG_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn background_jobs() -> &'static Mutex<Vec<BackgroundJob>> {
     static CELL: OnceLock<Mutex<Vec<BackgroundJob>>> = OnceLock::new();
     CELL.get_or_init(|| Mutex::new(Vec::new()))
 }
 
-fn remove_job(id: u64) -> Option<ValueReceiver> {
+fn remove_job(id: JobId) -> Option<ValueReceiver> {
     let mut jobs = background_jobs().lock().unwrap();
-    let mut matching = jobs.extract_if(.., |job| job.id == id).collect::<Vec<_>>();
+    let mut matching = jobs.extract_if(.., |job| job.job_id == id).collect::<Vec<_>>();
     matching.pop().map(|job| job.value)
 }
 
@@ -141,26 +139,25 @@ fn remove_last_job() -> Option<ValueReceiver> {
     jobs.pop().map(|job| job.value)
 }
 
-fn add_job(value: ValueReceiver) -> u64 {
+fn add_job(job_id: JobId, value: ValueReceiver) {
     let mut jobs = background_jobs().lock().unwrap();
-    let id = BG_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Acquire);
-    jobs.push(BackgroundJob { id, value });
-    id
+    jobs.push(BackgroundJob { job_id, value });
 }
 
 fn bg(context: CommandContext) -> CrushResult<()> {
-    let id = add_job(context.input.clone());
-    context.output.send(Value::from(id))
+    let job_id = context.command_handle().job_handle.id();
+    add_job(job_id, context.input.clone());
+    context.output.send(Value::from(job_id))
 }
 
 #[signature(
     control.fg,
     short = "Return the output of a background pipeline",
-    long = "The bg builtin will read the result from a pipeline and insert it into a table output stream.",
+    long = "The `bg` builtin will read the result from a pipeline and insert it into a table output stream.",
     long = "Because this stream is immediately returned, execution will continue and the pipeline will run",
     long = "in the background.",
     long = "",
-    long = "To get the result of the pipeline, use the fg builtin.",
+    long = "To get the result of the pipeline, use the `fg` builtin.",
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
@@ -173,7 +170,8 @@ fn bg(context: CommandContext) -> CrushResult<()> {
     example = "fg $sum_job_handle",
 )]
 struct Fg {
-    job: Option<u64>,
+    #[description("the job id of the background job to put into the foreground.")]
+    job: Option<usize>,
 }
 
 fn fg(mut context: CommandContext) -> CrushResult<()> {
@@ -184,7 +182,7 @@ fn fg(mut context: CommandContext) -> CrushResult<()> {
             Some(v) => context.output.send(v.recv()?),
         },
 
-        Some(id) => match remove_job(id) {
+        Some(id) => match remove_job(id.into()) {
             None => context.output.send(Value::Empty),
             Some(v) => context.output.send(v.recv()?),
         },
@@ -285,7 +283,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
     example = "which ps",
 )]
 struct Which {
-    #[description("the name of the command to find")]
+    #[description("the name of the command to find.")]
     command: String,
 }
 

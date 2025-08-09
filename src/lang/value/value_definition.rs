@@ -212,7 +212,7 @@ impl Repr for ValueDefinition {
             ValueDefinition::GetAttr(v, l) => {
                 v.repr(f)?;
                 f.write_str(":")?;
-                l.fmt(f)
+                l.string().fmt(f)
             }
             ValueDefinition::JobListDefinition(jl) => {
                 f.write_str("$(")?;

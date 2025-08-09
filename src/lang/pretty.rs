@@ -145,8 +145,13 @@ impl PrettyPrinter {
                     .name("output-formater-stream".to_string())
                     .spawn(move || local_pp.print_stream(&mut output, 0));
             }
+            Value::BinaryInputStream(mut b) => {
+                let local_pp = self.clone();
+                thread::Builder::new()
+                    .name("output-formater-stream".to_string())
+                    .spawn(move || local_pp.print_binary(b.as_mut(), 0));
+            },
             Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
-            Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Empty => {}
             Value::Struct(data) => self.print_struct(data, 0),
             Value::List(list) => {
