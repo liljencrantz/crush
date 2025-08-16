@@ -16,6 +16,7 @@ use crate::lang::state::id::{CommandId, JobId};
 /**
 A thread management utility. Spawn, track and join on threads.
 */
+#[allow(dead_code)] // Command is never read but is needed for resource tracking
 struct ThreadData {
     handle: InterruptibleJoinHandle<CrushResult<()>>,
     creation_time: DateTime<Local>,

@@ -72,7 +72,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                 Background,
             ))?;
             global_state.threads().join(global_state.printer());
-            serializer_handle.join();
+            let _ = serializer_handle.join();
             Ok(())
         }
 

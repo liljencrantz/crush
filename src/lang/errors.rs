@@ -75,6 +75,7 @@ impl CrushError {
     pub fn is_disconnected(&self) -> bool {
         match &self.error_type {
             RecvTimeoutError(e) => e.is_disconnected(),
+            RecvError(_) => true,
             _ => false,
         }
     }

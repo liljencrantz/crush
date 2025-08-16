@@ -266,7 +266,9 @@ fn eval_command(
             local_context,
         )?;
         Ok(Some(context.global_state.threads().spawn(&name, &command_context.command_handle().clone(), move || {
-            command.eval(command_context)
+            let printer = command_context.global_state.printer().clone();
+            printer.handle_error(command.eval(command_context));
+            Ok(())
         })?))
     }
 }

@@ -141,8 +141,8 @@ impl Signature {
                     match _unnamed.pop_front() {
                         Some((#value_type, _source)) => #name = Some(#mutator),
                         None => #name = Some(#native_type::from(#def)),
-                        Some((_, _source)) => return crate::lang::errors::argument_error(
-                                format!("Expected argument `{}` to be of type `{}`", #name_literal, #type_name),
+                        Some((_actual_value, _source)) => return crate::lang::errors::argument_error(
+                                format!("Expected argument `{}` to be of type `{}`, was of type `{}`", #name_literal, #type_name, _actual_value.value_type()),
                                 &_source,
                             ),
                         }
@@ -363,11 +363,11 @@ impl Signature {
                 match _unnamed.pop_front() {
                     None => {}
                     Some((#value_type, _source)) => #name = Some(#mutator),
-                    Some((_, _source)) =>
+                    Some((_actual_value, _source)) =>
                         return crate::lang::errors::argument_error(
                             format!(
-                                    "Expected argument `{}` to be of type `{}`",
-                                    #name_literal, #sub_type),
+                                    "Expected argument `{}` to be of type `{}`, was of type `{}`",
+                                    #name_literal, #sub_type, _actual_value.value_type()),
                             &_source,
                         ),
                     _ =>
@@ -439,9 +439,9 @@ impl Signature {
                     while !_unnamed.is_empty() {
                         match  _unnamed.pop_front() {
                             Some((#value_type, _source)) => #name.push(#mutator),
-                        Some((_, _source)) =>
+                        Some((_actual_value, _source)) =>
                             return crate::lang::errors::argument_error(
-                                format!("Expected argument `{}` to be of type `{}`", #name_literal, #type_name),
+                                format!("Expected argument `{}` to be of type `{}`, was of type `{}`", #name_literal, #type_name, _actual_value.value_type()),
                                 &_source,
                             ),
                         _ =>

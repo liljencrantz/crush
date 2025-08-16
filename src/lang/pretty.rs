@@ -142,15 +142,17 @@ impl PrettyPrinter {
         match cell {
             Value::TableInputStream(mut output) => {
                 let local_pp = self.clone();
-                thread::Builder::new()
+                let t = thread::Builder::new()
                     .name("output-formater-stream".to_string())
                     .spawn(move || local_pp.print_table_stream(&mut output, 0));
+                self.printer.handle_error(t.map_err(|e| e.into()));
             }
             Value::BinaryInputStream(mut b) => {
                 let local_pp = self.clone();
-                thread::Builder::new()
+                let t = thread::Builder::new()
                     .name("output-formater-stream".to_string())
                     .spawn(move || local_pp.print_binary(b.as_mut(), 0));
+                self.printer.handle_error(t.map_err(|e| e.into()));
             }
             Value::Table(rows) => self.print_table_stream(&mut TableReader::new(rows), 0),
             Value::Empty => {}
@@ -203,7 +205,10 @@ impl PrettyPrinter {
                     }
                 }
                 Err(e) => match e.error_type() {
-                    CrushErrorType::RecvTimeoutError(_) => {
+                    CrushErrorType::RecvTimeoutError(e) => {
+                        if e.is_disconnected() {
+                            break;
+                        }
                         if !data.is_empty() {
                             self.print_partial_table_stream(
                                 data,

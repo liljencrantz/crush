@@ -19,19 +19,22 @@ use std::mem::swap;
     long = "* Otherwise, timer will simply write an empty row at the specified cadence.",
     long = "",
     long = "If a command fails, the timer will stop.",
-    example = "# Print hello once every second",
-    example = "schedule $(duration:of seconds=1) { echo hello }",
     example = "# Show one row of the pipeline output every second",
     example = "files / --recurse | schedule $(duration:of seconds=1)", 
+    example = "# Wait for a second and then print hello once",
+    example = "schedule $(duration:of seconds=1) command={ echo hello } --once",
 )]
 pub struct Schedule {
     #[description("the interval between heartbeats. ")]
     interval: Duration,
 
     #[description(
-        "the delay for the first heartbeat. If no initial delay is specified, the first heartbeat will be sent immediately."
+        "the delay for the first heartbeat. If no initial delay is specified, use the interval parameter."
     )]
     initial_delay: Option<Duration>,
+    
+    #[description("a command to run at each heartbeat.")]
+    command: Option<Command>,
 
     #[description(
         "if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards."
@@ -39,8 +42,11 @@ pub struct Schedule {
     #[default(false)]
     schedule_at_fixed_rate: bool,
 
-    #[description("a command to run.")]
-    command: Option<Command>,
+    #[description(
+        "only schedule a single heartbeat. After that, exit."
+    )]
+    #[default(false)]
+    once: bool
 }
 
 fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> CrushResult<()> {
@@ -73,9 +79,8 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     let control = Box::from(ChannelBasedController::new(control_sender));
     context.command_handle().register(control);
 
-    if let Some(initial_delay) = &cfg.initial_delay {
-        sleep(&initial_delay, &control_receiver)?;
-    }
+    let initial_delay = if let Some(id) = &cfg.initial_delay { id } else {&cfg.interval};
+    sleep(initial_delay, &control_receiver)?;
 
     let mut cmd = None;
     swap(&mut cmd, &mut cfg.command);
@@ -119,6 +124,9 @@ fn run(
         let mut last_time = Local::now();
         loop {
             f()?;
+            if cfg.once {
+                break;
+            }
             last_time = last_time + cfg.interval.clone();
             let next_duration = last_time - Local::now();
             if next_duration > Duration::seconds(0) {
@@ -128,7 +136,11 @@ fn run(
     } else {
         loop {
             f()?;
+            if cfg.once {
+                break;
+            }
             sleep(&cfg.interval, &control_receiver)?;
         }
     }
+    Ok(())
 }
