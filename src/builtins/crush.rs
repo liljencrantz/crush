@@ -253,7 +253,7 @@ mod title {
 static JOB_OUTPUT_TYPE: [ColumnType; 4] = [
     ColumnType::new("id", ValueType::Integer),
     ColumnType::new("description", ValueType::String),
-    ColumnType::new("type", ValueType::Bool),
+    ColumnType::new("type", ValueType::String),
     ColumnType::new("status", ValueType::String),
 ];
 
@@ -267,7 +267,8 @@ struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
     let output = context.output.initialize(&JOB_OUTPUT_TYPE)?;
-    for job in context.global_state.jobs() {
+    let jobs = context.global_state.jobs();
+    for job in jobs {
         output.send(Row::new(vec![
             Value::from(job.id),
             Value::from(job.description),

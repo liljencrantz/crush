@@ -2,7 +2,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::errors::{CrushError, CrushResult, error};
 use crate::lang::help::Help;
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::TableStreamReader;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::display_non_recursive::DisplayNonRecursive;
@@ -353,7 +353,7 @@ impl StructReader {
     }
 }
 
-impl CrushStream for StructReader {
+impl TableStreamReader for StructReader {
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.len() {
             return error("EOF");

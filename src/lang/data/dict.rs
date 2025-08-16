@@ -1,5 +1,5 @@
 use crate::lang::errors::{CrushResult, command_error, error};
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::TableStreamReader;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::display_non_recursive::DisplayNonRecursive;
 use crate::util::identity_arc::Identity;
@@ -229,7 +229,7 @@ impl DictReader {
     }
 }
 
-impl CrushStream for DictReader {
+impl TableStreamReader for DictReader {
     fn read(&mut self) -> CrushResult<Row> {
         if self.idx >= self.list.len() {
             return error("End of stream");

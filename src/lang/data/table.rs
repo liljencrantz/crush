@@ -3,7 +3,7 @@ use crate::lang::any_str::AnyStr;
 Code related to Table, TableInputStream and
  */
 use crate::lang::errors::{CrushError, CrushResult, command_error, error};
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::TableStreamReader;
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState, model};
 use crate::lang::value::ValueType;
@@ -102,7 +102,7 @@ impl TableReader {
     }
 }
 
-impl CrushStream for TableReader {
+impl TableStreamReader for TableReader {
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.len() {
             return error("EOF");

@@ -4,7 +4,7 @@ use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushError, CrushResult, command_error, error, invalid_jump};
 use crate::lang::help::Help;
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::TableStreamReader;
 use crate::lang::{value::Value, value::ValueType};
 use crate::util::identity_arc::Identity;
 use crate::util::replace::Replace;
@@ -927,7 +927,7 @@ impl ScopeReader {
     }
 }
 
-impl CrushStream for ScopeReader {
+impl TableStreamReader for ScopeReader {
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.len() {
             return error("EOF");

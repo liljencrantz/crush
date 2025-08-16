@@ -1,7 +1,7 @@
 use crate::CrushResult;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::errors::eof_error;
-use crate::lang::pipe::CrushStream;
+use crate::lang::pipe::TableStreamReader;
 use crate::lang::value::{Value, ValueType};
 use crate::util::replace::Replace;
 /// A class that allows you to use a `Vec<Value>` as input into a `CrushStream`.
@@ -23,7 +23,7 @@ impl VecReader {
     }
 }
 
-impl CrushStream for VecReader {
+impl TableStreamReader for VecReader {
     fn read(&mut self) -> CrushResult<Row> {
         self.idx += 1;
         if self.idx > self.vec.len() {

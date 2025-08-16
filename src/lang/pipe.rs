@@ -241,7 +241,7 @@ struct InterruptibleTableInputStream {
     control: Receiver<StreamControlMessage>,
 }
 
-impl CrushStream for InterruptibleTableInputStream {
+impl TableStreamReader for InterruptibleTableInputStream {
     fn read(&mut self) -> CrushResult<Row> {
         select! {
             recv(self.input.receiver) -> r => Ok(r?),
@@ -337,13 +337,14 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, Tabl
     )
 }
 
-pub trait CrushStream {
+/// A trait to allow reading from a TableInputStrem, a Table, a Dict, etc as a sequence of Row values.
+pub trait TableStreamReader {
     fn read(&mut self) -> CrushResult<Row>;
     fn read_timeout(&mut self, timeout: Duration) -> CrushResult<Row>;
     fn types(&self) -> &[ColumnType];
 }
 
-impl CrushStream for TableInputStream {
+impl TableStreamReader for TableInputStream {
     fn read(&mut self) -> Result<Row, CrushError> {
         self.recv()
     }
@@ -357,4 +358,4 @@ impl CrushStream for TableInputStream {
     }
 }
 
-pub type Stream = Box<dyn CrushStream>;
+pub type Stream = Box<dyn TableStreamReader>;

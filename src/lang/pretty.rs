@@ -1,6 +1,6 @@
 use crate::data::table::ColumnFormat;
 /**
-   A receiver of values that prints any values sent to it in a human readable format.
+A receiver of values that prints any values sent to it in a human readable format.
 */
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::data::dict::DictReader;
@@ -9,7 +9,8 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::data::table::Table;
 use crate::lang::data::table::TableReader;
-use crate::lang::pipe::{CrushStream, TableInputStream, ValueSender, printer_pipe};
+use crate::lang::errors::CrushErrorType;
+use crate::lang::pipe::{TableInputStream, TableStreamReader, ValueSender, printer_pipe};
 use crate::lang::printer::Printer;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::value::Alignment;
@@ -23,10 +24,10 @@ use std::io::{BufReader, Read};
 use std::thread;
 
 /**
-    The main entrypoint for this module. Given a `Printer` and a `GlobalState` instance,
-    return a `ValueSender`. All values passed to the `ValueSender` will be formatted according
-    to the rules in `GlobalState::fromat_data()` and passed on to the `Printer`. Stream data will
-    be turned into pretty human readable tables.
+The main entrypoint for this module. Given a `Printer` and a `GlobalState` instance,
+return a `ValueSender`. All values passed to the `ValueSender` will be formatted according
+to the rules in `GlobalState::fromat_data()` and passed on to the `Printer`. Stream data will
+be turned into pretty human readable tables.
 */
 pub fn create_pretty_printer(printer: Printer, global_state: &GlobalState) -> ValueSender {
     let global_state = global_state.clone();
@@ -143,25 +144,25 @@ impl PrettyPrinter {
                 let local_pp = self.clone();
                 thread::Builder::new()
                     .name("output-formater-stream".to_string())
-                    .spawn(move || local_pp.print_stream(&mut output, 0));
+                    .spawn(move || local_pp.print_table_stream(&mut output, 0));
             }
             Value::BinaryInputStream(mut b) => {
                 let local_pp = self.clone();
                 thread::Builder::new()
                     .name("output-formater-stream".to_string())
                     .spawn(move || local_pp.print_binary(b.as_mut(), 0));
-            },
-            Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), 0),
+            }
+            Value::Table(rows) => self.print_table_stream(&mut TableReader::new(rows), 0),
             Value::Empty => {}
             Value::Struct(data) => self.print_struct(data, 0),
             Value::List(list) => {
                 if list.len() < 8 {
                     self.printer.line(list.to_string().as_str())
                 } else {
-                    self.print_stream(list.stream().as_mut(), 0)
+                    self.print_table_stream(list.stream().as_mut(), 0)
                 }
             }
-            Value::Dict(dict) => self.print_stream(&mut DictReader::new(dict), 0),
+            Value::Dict(dict) => self.print_table_stream(&mut DictReader::new(dict), 0),
             _ => self.printer.line(
                 cell.to_pretty_string(&self.format_data, format, false)
                     .as_str(),
@@ -169,41 +170,62 @@ impl PrettyPrinter {
         };
     }
 
-    fn print_stream(&self, stream: &mut dyn CrushStream, indent: usize) {
+    fn print_table_stream(&self, stream: &mut dyn TableStreamReader, indent: usize) {
         let mut data: Vec<Row> = Vec::new();
-        let mut has_table = false;
+        let mut has_inner_table = false;
 
         for val in stream.types().iter() {
             match val.cell_type {
-                ValueType::TableInputStream(_) => has_table = true,
-                ValueType::Table(_) => has_table = true,
+                ValueType::TableInputStream(_) => has_inner_table = true,
+                ValueType::Table(_) => has_inner_table = true,
                 _ => {}
             }
         }
-
+        
         loop {
-            match stream.read_timeout(Duration::milliseconds(100)) {
+            let read_result = if !data.is_empty() {
+                stream.read_timeout(Duration::milliseconds(100))
+            } else {
+                stream.read()
+            };
+            
+            match read_result {
                 Ok(r) => {
                     data.push(r);
-                    if data.len() == self.printer.height() - 1 || has_table {
-                        self.print_partial(data, stream.types(), indent, has_table);
+                    if data.len() == self.printer.height() - 1 || has_inner_table {
+                        self.print_partial_table_stream(
+                            data,
+                            stream.types(),
+                            indent,
+                            has_inner_table,
+                        );
                         data = Vec::new();
-                        data.drain(..);
                     }
                 }
-                Err(e) => {
-                    if e.is_disconnected() {
-                        break;
-                    } else {
-                        self.print_partial(data, stream.types(), indent, has_table);
-                        data = Vec::new();
-                        data.drain(..);
+                Err(e) => match e.error_type() {
+                    CrushErrorType::RecvTimeoutError(_) => {
+                        if !data.is_empty() {
+                            self.print_partial_table_stream(
+                                data,
+                                stream.types(),
+                                indent,
+                                has_inner_table,
+                            );
+                            data = Vec::new();
+                        }
                     }
-                }
+                    _ => {
+                        if e.is_disconnected() {
+                            break;
+                        } else {
+                            self.printer.crush_error(e);
+                        }
+                    }
+                },
             }
         }
         if !data.is_empty() {
-            self.print_partial(data, stream.types(), indent, has_table);
+            self.print_partial_table_stream(data, stream.types(), indent, has_inner_table);
         }
     }
 
@@ -350,10 +372,10 @@ impl PrettyPrinter {
             }
 
             for r in rows {
-                self.print_stream(&mut TableReader::new(r), indent + 1);
+                self.print_table_stream(&mut TableReader::new(r), indent + 1);
             }
             for mut r in outputs {
-                self.print_stream(&mut r, indent + 1);
+                self.print_table_stream(&mut r, indent + 1);
             }
             for mut r in binaries {
                 self.print_binary(r.as_mut(), indent + 1);
@@ -391,7 +413,13 @@ impl PrettyPrinter {
             .line(format_buffer(&buff[0..used], complete).as_str());
     }
 
-    fn print_partial(&self, data: Vec<Row>, types: &[ColumnType], indent: usize, has_table: bool) {
+    fn print_partial_table_stream(
+        &self,
+        data: Vec<Row>,
+        types: &[ColumnType],
+        indent: usize,
+        has_table: bool,
+    ) {
         if data.len() == 0 {
             return;
         }
@@ -452,10 +480,10 @@ impl PrettyPrinter {
         } else {
             match value {
                 Value::Struct(s) => self.print_struct(s, indent),
-                Value::TableInputStream(mut output) => self.print_stream(&mut output, indent),
-                Value::Table(rows) => self.print_stream(&mut TableReader::new(rows), indent),
+                Value::TableInputStream(mut output) => self.print_table_stream(&mut output, indent),
+                Value::Table(rows) => self.print_table_stream(&mut TableReader::new(rows), indent),
                 Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), indent),
-                Value::List(list) => self.print_stream(list.stream().as_mut(), indent),
+                Value::List(list) => self.print_table_stream(list.stream().as_mut(), indent),
                 _ => {
                     let mut line = " ".repeat(4 * indent);
                     line.push_str(&ss);
