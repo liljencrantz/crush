@@ -36,7 +36,7 @@ pub struct Mounts {}
 
 fn mounts(mut context: CommandContext) -> CrushResult<()> {
     let _cfg: Mounts = Mounts::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let output = context.initialize_output(&OUTPUT_TYPE)?;
 
     for m in mountinfos()? {
         let size = m.size.unwrap_or(0);

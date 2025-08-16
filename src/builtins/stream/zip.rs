@@ -25,7 +25,7 @@ pub fn zip(mut context: CommandContext) -> CrushResult<()> {
     let mut second = cfg.second.stream(context.command_handle())?;
     output_type.append(&mut first.types().to_vec());
     output_type.append(&mut second.types().to_vec());
-    let output = context.output.initialize(&output_type)?;
+    let output = context.initialize_output(&output_type)?;
     while let (Ok(mut row1), Ok(row2)) = (first.read(), second.read()) {
         row1.append(&mut Vec::from(row2));
         output.send(row1)?;

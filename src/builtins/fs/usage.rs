@@ -78,7 +78,7 @@ fn size(
 
 fn usage(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Usage = Usage::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let output = context.initialize_output(&OUTPUT_TYPE)?;
     let dirs = if !cfg.directory.is_empty() {
         files::into_paths(cfg.directory)?
     } else {

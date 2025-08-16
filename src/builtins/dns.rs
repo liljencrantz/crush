@@ -116,7 +116,7 @@ fn perform_query(
     if let Some(answer) = response.answers().first() {
         if let Some(RData::CNAME(cname)) = answer.data() {
             if cfg.no_follow_cname || query_record_type == RecordType::CNAME {
-                let output = context.output.initialize(&A_STREAM_OUTPUT_TYPE)?;
+                let output = context.initialize_output(&A_STREAM_OUTPUT_TYPE)?;
                 return output.send(Row::new(vec![
                     Value::from(cname.to_string()),
                     Value::from(Duration::seconds(answer.ttl() as i64)),
@@ -126,7 +126,7 @@ fn perform_query(
         }
     }
 
-    let output = context.output.initialize(output_signature)?;
+    let output = context.initialize_output(output_signature)?;
 
     for answer in response.answers() {
         output.send(process_record_callback(answer)?)?;

@@ -20,7 +20,7 @@ pub struct Tail {
 fn tail(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Tail::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut input = context.input_stream()?;
-    let output = context.output.initialize(input.types())?;
+    let output = context.initialize_output(input.types())?;
     let mut q: VecDeque<Row> = VecDeque::new();
     while let Ok(row) = input.read() {
         if q.len() >= cfg.rows as usize {

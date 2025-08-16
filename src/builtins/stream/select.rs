@@ -56,7 +56,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
         }
     }
 
-    let output = context.output.initialize(&output_type)?;
+    let output = context.initialize_output(&output_type)?;
 
     while let Ok(row) = input.read() {
         let mut next_result = Vec::new();

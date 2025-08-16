@@ -33,7 +33,7 @@ struct FromSignature {
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&OUTPUT_TYPE)?;
+    let output = context.initialize_output(&OUTPUT_TYPE)?;
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);

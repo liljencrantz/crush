@@ -86,7 +86,7 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
         journal.match_add(key, value.as_bytes())?;
     }
 
-    let output = context.output.initialize(&JOURNAL_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&JOURNAL_OUTPUT_TYPE)?;
 
     loop {
         match if cfg.follow {

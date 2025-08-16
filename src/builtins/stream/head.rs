@@ -18,7 +18,7 @@ pub struct Head {
 fn head(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Head::parse(context.remove_arguments(), &context.global_state.printer())?;
     let mut input = context.input_stream()?;
-    let output = context.output.initialize(input.types())?;
+    let output = context.initialize_output(input.types())?;
     let mut count = 0;
     while let Ok(row) = input.read() {
         if count >= cfg.rows {

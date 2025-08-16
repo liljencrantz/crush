@@ -22,7 +22,7 @@ static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
 struct List {}
 
 fn list(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
     let groups = sysinfo::Groups::new_with_refreshed_list();
 
     for g in groups.list() {

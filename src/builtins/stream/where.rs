@@ -59,7 +59,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let base_context = context.empty();
 
-    let output = context.output.initialize(input.types())?;
+    let output = context.initialize_output(input.types())?;
     while let Ok(row) = input.read() {
         match evaluate(
             cfg.condition.clone(),

@@ -23,7 +23,7 @@ pub struct Uniq {
 pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let cfg = Uniq::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(input.types())?;
+    let output = context.initialize_output(input.types())?;
     match cfg.field.map(|f| input.types().find(&f)).transpose()? {
         None => {
             let mut seen: HashSet<Row> = HashSet::new();

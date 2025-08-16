@@ -100,7 +100,7 @@ struct Stat {
 
 fn stat(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Stat = Stat::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&STAT_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&STAT_OUTPUT_TYPE)?;
 
     let v = crate::lang::signature::files::into_paths(cfg.destination)?;
 

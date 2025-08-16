@@ -52,7 +52,7 @@ static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
 struct Current {}
 
 fn current(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&CURRENT_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&CURRENT_OUTPUT_TYPE)?;
 
     for l in logins::list()? {
         output.send(Row::new(vec![
@@ -179,7 +179,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
 struct List {}
 
 fn list(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
     for u in get_all_users()? {
         output.send(Row::new(vec![
             Value::from(u.name),

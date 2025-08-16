@@ -183,7 +183,7 @@ static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
 struct List {}
 
 pub fn list(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
     let values = context.scope.dump()?;
     let mut keys = values.keys().collect::<Vec<&String>>();
     keys.sort();

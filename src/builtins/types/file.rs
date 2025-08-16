@@ -407,7 +407,7 @@ fn remove_known_file(path: Arc<Path>, out: &TableOutputStream, verbose: bool) ->
 }
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&REMOVE_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&REMOVE_OUTPUT_TYPE)?;
     let cfg = Remove::parse(context.remove_arguments(), context.global_state.printer())?;
     match context.this {
         Some(Value::File(file)) => {

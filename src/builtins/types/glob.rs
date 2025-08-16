@@ -52,7 +52,7 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     let glob = context.this.glob()?;
     let mut input = context.input_stream()?;
     let columns = find_string_columns(input.types(), cfg.columns);
-    let output = context.output.initialize(input.types())?;
+    let output = context.initialize_output(input.types())?;
     while let Ok(row) = input.read() {
         let mut found = false;
         for idx in &columns {

@@ -82,7 +82,7 @@ fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
 
 fn battery(context: CommandContext) -> CrushResult<()> {
     let manager = battery::Manager::new()?;
-    let output = context.output.initialize(&BATTERY_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&BATTERY_OUTPUT_TYPE)?;
     for battery in manager.batteries()? {
         let battery = battery?;
         output.send(Row::new(vec![
@@ -228,7 +228,7 @@ pub struct Procs {}
 fn procs(context: CommandContext) -> CrushResult<()> {
     let mut sys = System::new_all();
     sys.refresh_all();
-    let output = context.output.initialize(&PROCS_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&PROCS_OUTPUT_TYPE)?;
     let users = create_user_map()?;
 
     for (pid, proc) in sys.processes() {
@@ -284,7 +284,7 @@ mod macos {
     fn threads(context: CommandContext) -> CrushResult<()> {
         let mut base_procs = Vec::new();
 
-        let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+        let output = context.initialize_output(&THREADS_OUTPUT_TYPE)?;
 
         let mut info: mach_timebase_info = mach_timebase_info { numer: 0, denom: 0 };
         unsafe {
@@ -364,7 +364,7 @@ mod linux {
     fn threads(mut context: CommandContext) -> CrushResult<()> {
         let mut sys = System::new_all();
         sys.refresh_all();
-        let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+        let output = context.initialize_output(&THREADS_OUTPUT_TYPE)?;
         let users = create_user_map()?;
 
         for (pid, proc) in sys.processes() {

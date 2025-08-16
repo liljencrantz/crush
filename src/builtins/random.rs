@@ -49,7 +49,7 @@ struct FloatStream {
 fn float_stream(mut context: CommandContext) -> CrushResult<()> {
     let cfg = FloatStream::parse(context.remove_arguments(), &context.global_state.printer())?;
     let to = cfg.to.as_float();
-    let output = context.output.initialize(&FLOAT_STREAM_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&FLOAT_STREAM_OUTPUT_TYPE)?;
     loop {
         output.send(Row::new(vec![Value::Float(rand::random::<f64>() * to)]))?;
     }
@@ -90,7 +90,7 @@ struct IntegerStream {
 
 fn integer_stream(mut context: CommandContext) -> CrushResult<()> {
     let cfg = IntegerStream::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let output = context.output.initialize(&INTEGER_STREAM_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&INTEGER_STREAM_OUTPUT_TYPE)?;
     loop {
         output.send(Row::new(vec![Value::Integer(
             (rand::random::<f64>() * (cfg.to as f64)) as i128,

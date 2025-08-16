@@ -45,7 +45,7 @@ static THREADS_OUTPUT_TYPE: [ColumnType; 4] = [
 struct Threads {}
 
 fn threads(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&THREADS_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&THREADS_OUTPUT_TYPE)?;
 
     for t in context.global_state.threads().current_threads()? {
         output.send(Row::new(vec![
@@ -266,7 +266,7 @@ static JOB_OUTPUT_TYPE: [ColumnType; 4] = [
 struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&JOB_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&JOB_OUTPUT_TYPE)?;
     let jobs = context.global_state.jobs();
     for job in jobs {
         output.send(Row::new(vec![
@@ -293,7 +293,7 @@ static HISTORY_OUTPUT_TYPE: [ColumnType; 2] = [
 struct HistoryCommand {}
 
 fn history(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&HISTORY_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&HISTORY_OUTPUT_TYPE)?;
     let mut res = Vec::new();
     context.global_state.editor().as_mut().map(|editor| {
         let history = editor.history();
@@ -327,7 +327,7 @@ mod locale {
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+        let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
         let available = SystemLocale::available_names()?;
 
         for name in available {
@@ -407,7 +407,7 @@ mod byte_unit {
     pub struct List {}
 
     fn list(context: CommandContext) -> CrushResult<()> {
-        let output = context.output.initialize(&LIST_OUTPUT_TYPE)?;
+        let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
 
         for name in ByteUnit::units() {
             output.send(Row::new(vec![Value::from(name.to_string())]))?;

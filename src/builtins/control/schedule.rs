@@ -32,7 +32,7 @@ pub struct Schedule {
         "the delay for the first heartbeat. If no initial delay is specified, use the interval parameter."
     )]
     initial_delay: Option<Duration>,
-    
+
     #[description("a command to run at each heartbeat.")]
     command: Option<Command>,
 
@@ -88,17 +88,16 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
         None => {
             if context.input.is_pipeline() {
                 let mut input = context.input_stream()?;
-                let output = context.output.initialize(input.types())?;
+                let output = context.initialize_output(input.types())?;
                 run(cfg, &control_receiver, || output.send(input.read()?))
             } else {
-                let output = context.output.initialize(&[])?;
+                let output = context.initialize_output(&[])?;
                 run(cfg, &control_receiver, || output.send(Row::new(vec![])))
             }
         }
         Some(cmd) => {
             let output = context
-                .output
-                .initialize(&[ColumnType::new("value", ValueType::Any)])?;
+                .initialize_output(&[ColumnType::new("value", ValueType::Any)])?;
             let base_context = context.empty();
             let env = context.scope.clone();
             let (sender, receiver) = pipe();

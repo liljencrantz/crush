@@ -37,7 +37,7 @@ fn drop(mut context: CommandContext) -> CrushResult<()> {
         .map(|idx| drop.contains(&idx))
         .collect();
     let mut it = inc.iter();
-    let output = context.output.initialize(
+    let output = context.initialize_output(
         &t.to_vec()
             .drain(..)
             .filter(|_| !*(it.next().unwrap()))

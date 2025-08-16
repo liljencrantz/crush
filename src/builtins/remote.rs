@@ -296,7 +296,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
     }
 
     drop(result_send);
-    let output = context.output.initialize(&PEXEC_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&PEXEC_OUTPUT_TYPE)?;
 
     while let Ok((host, val)) = result_recv.recv() {
         output.send(Row::new(vec![Value::from(host), val]))?;
@@ -314,7 +314,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
 struct Identity {}
 
 fn identity(context: CommandContext) -> CrushResult<()> {
-    let output = context.output.initialize(&IDENTITY_OUTPUT_TYPE)?;
+    let output = context.initialize_output(&IDENTITY_OUTPUT_TYPE)?;
     let sess = Session::new()?;
     let mut agent = sess.agent()?;
 
@@ -347,7 +347,7 @@ mod host {
 
     fn list(mut context: CommandContext) -> CrushResult<()> {
         let cfg: List = List::parse(context.remove_arguments(), &context.global_state.printer())?;
-        let output = context.output.initialize(&HOST_OUTPUT_TYPE)?;
+        let output = context.initialize_output(&HOST_OUTPUT_TYPE)?;
         let session = Session::new()?;
 
         let mut known_hosts = session.known_hosts()?;

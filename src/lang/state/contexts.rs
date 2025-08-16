@@ -265,7 +265,7 @@ impl CommandContext {
     }
 
     pub fn initialize_output(&self, types: &[ColumnType]) -> CrushResult<TableOutputStream> {
-        let (interruptible, controller) = self.output.initialize(types)?.interruptible();
+        let (interruptible, controller) = self.initialize_output(types)?.interruptible();
         self.handle.register(controller);
         Ok(interruptible)
     }

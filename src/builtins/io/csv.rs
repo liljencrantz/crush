@@ -46,7 +46,7 @@ fn from(mut context: CommandContext) -> CrushResult<()> {
         .iter()
         .map(|(k, v)| ColumnType::new_from_string(k.clone(), v.clone()))
         .collect::<Vec<_>>();
-    let output = context.output.initialize(&columns)?;
+    let output = context.initialize_output(&columns)?;
 
     let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
 

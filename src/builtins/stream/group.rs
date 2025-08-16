@@ -179,7 +179,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         output_type.push(ColumnType::new_from_string(name.clone(), ValueType::Any));
     }
 
-    let output = context.output.initialize(&output_type)?;
+    let output = context.initialize_output(&output_type)?;
     let mut groups: HashMap<Vec<Value>, TableOutputStream> = HashMap::new();
 
     let (task_output, task_input) = unbounded::<(Vec<Value>, TableInputStream)>();
