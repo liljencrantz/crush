@@ -2,7 +2,7 @@ use crate::data::r#struct::Struct;
 use crate::data::table::{ColumnType, Row};
 use crate::lang::ast::source::Source;
 use crate::lang::command::Command;
-use crate::lang::errors::{CrushError, CrushResult, command_error, error, invalid_jump};
+use crate::lang::errors::{CrushError, CrushResult, command_error, error, invalid_jump, eof_error};
 use crate::lang::help::Help;
 use crate::lang::pipe::TableStreamReader;
 use crate::lang::{value::Value, value::ValueType};
@@ -930,7 +930,7 @@ impl ScopeReader {
 impl TableStreamReader for ScopeReader {
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.len() {
-            return error("EOF");
+            return eof_error();
         }
         self.idx += 1;
         let (k, v) = self
