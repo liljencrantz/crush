@@ -7,6 +7,7 @@ use crate::lang::pipe::{TableInputStream, pipe};
 use crate::lang::printer::Printer;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::scope::Scope;
 use crate::{
     lang::pipe::{TableOutputStream, unlimited_streams},
@@ -15,7 +16,6 @@ use crate::{
 use crossbeam::channel::{Receiver, unbounded};
 use signature::signature;
 use std::collections::HashMap;
-use crate::lang::state::handles::JobType::Background;
 
 #[signature(
     stream.group,
@@ -92,14 +92,16 @@ fn aggregate(
                         Background,
                     )
                     .with_input(input_receiver)
-                        .with_output(output_sender);
+                    .with_output(output_sender);
 
-                    context.global_state.threads().spawn("group:aggr", &context.next_command_handle(), move || {
-                        local_printer.handle_error(
-                            local_command.eval(new_context),
-                        );
-                        Ok(())
-                    })?;
+                    context.global_state.threads().spawn(
+                        "group:aggr",
+                        &context.next_command_handle(),
+                        move || {
+                            local_printer.handle_error(local_command.eval(new_context));
+                            Ok(())
+                        },
+                    )?;
                     receivers.push(output_receiver);
                 }
 
@@ -141,18 +143,22 @@ fn create_worker_thread(
     let my_destination = destination.clone();
     let my_context = context.clone();
     let my_state = global_state.clone();
-    context.global_state.threads().spawn("group:collect", &context.next_command_handle(), move || {
-        let local_printer = my_printer.clone();
-        local_printer.handle_error(aggregate(
-            my_commands,
-            &my_context,
-            my_state,
-            my_scope,
-            my_destination,
-            my_input,
-        ));
-        Ok(())
-    })?;
+    context.global_state.threads().spawn(
+        "group:collect",
+        &context.next_command_handle(),
+        move || {
+            let local_printer = my_printer.clone();
+            local_printer.handle_error(aggregate(
+                my_commands,
+                &my_context,
+                my_state,
+                my_scope,
+                my_destination,
+                my_input,
+            ));
+            Ok(())
+        },
+    )?;
     Ok(())
 }
 

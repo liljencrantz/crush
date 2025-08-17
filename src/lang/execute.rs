@@ -9,15 +9,15 @@ use crate::lang::pipe::{ValueSender, empty_channel, pipe};
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::state::contexts::JobContext;
 use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::handles::JobType;
+use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
-use std::{fs, thread};
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 use std::thread::JoinHandle;
-use crate::lang::state::handles::JobType;
-use crate::lang::state::handles::JobType::Background;
+use std::{fs, thread};
 
 pub fn file(
     global_env: &Scope,
@@ -51,7 +51,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                     std::io::stdout().write(&buf)?;
                     Ok(())
                 })?;
-            
+
             let job = Job::new(
                 vec![CommandInvocation::new(
                     ValueDefinition::Value(

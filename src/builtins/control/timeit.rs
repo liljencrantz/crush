@@ -29,13 +29,17 @@ pub fn time_run(it: &Command, context: &CommandContext) -> CrushResult<Duration>
     let (sender, reciever) = pipe();
 
     let handle = context.command_handle().clone();
-    let c = context.global_state.threads().spawn("output consumer", &context.next_command_handle(), move || {
-        let res = reciever.recv()?;
-        if let Ok(mut stream) = res.stream(&handle) {
-            while let Ok(_) = stream.read() {}
-        }
-        Ok(())
-    })?;
+    let c = context.global_state.threads().spawn(
+        "output consumer",
+        &context.next_command_handle(),
+        move || {
+            let res = reciever.recv()?;
+            if let Ok(mut stream) = res.stream(&handle) {
+                while let Ok(_) = stream.read() {}
+            }
+            Ok(())
+        },
+    )?;
 
     let start_time = Local::now();
     it.eval(context.clone().with_args(vec![], None).with_output(sender))?;

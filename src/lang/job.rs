@@ -60,7 +60,11 @@ impl Job {
         }
 
         let last_call_def = &self.commands[last_command_idx];
-        let (last_output, last_input) = last_element();
+        let (last_output, last_input) = if context.output.is_pipeline() {
+            pipe()
+        } else {
+            last_element()
+        };
         let res = last_call_def.eval(context.with_io(input, last_output));
         context.output.send(last_input.recv()?)?;
         res

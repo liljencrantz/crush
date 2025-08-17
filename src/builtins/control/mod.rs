@@ -6,6 +6,8 @@ use crate::lang::errors::CrushResult;
 use crate::lang::pipe::ValueReceiver;
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::handles::JobType::Background;
+use crate::lang::state::id::JobId;
 use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
 use crate::util::file::cwd;
@@ -17,8 +19,6 @@ use std::env;
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use crate::lang::state::handles::JobType::Background;
-use crate::lang::state::id::JobId;
 
 mod cmd;
 mod r#for;
@@ -141,7 +141,9 @@ fn background_jobs() -> &'static Mutex<Vec<BackgroundJob>> {
 
 fn remove_job(id: JobId) -> Option<ValueReceiver> {
     let mut jobs = background_jobs().lock().unwrap();
-    let mut matching = jobs.extract_if(.., |job| job.job_id == id).collect::<Vec<_>>();
+    let mut matching = jobs
+        .extract_if(.., |job| job.job_id == id)
+        .collect::<Vec<_>>();
     matching.pop().map(|job| job.value)
 }
 

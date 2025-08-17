@@ -13,6 +13,7 @@ use crate::lang::job::Job;
 use crate::lang::pipe::{ValueSender, black_hole, empty_channel, pipe};
 use crate::lang::state::contexts::JobContext;
 use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::handles::JobType::{Background, Interactive};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueDefinition};
 use crate::util::file::home;
@@ -23,7 +24,6 @@ use signal_hook::iterator::Handle;
 use signal_hook::{consts::SIGINT, iterator::Signals};
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::lang::state::handles::JobType::{Background, Interactive};
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 

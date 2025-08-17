@@ -43,8 +43,7 @@ fn send(
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let output = context
-        .initialize_output(&[ColumnType::new("token", ValueType::String)])?;
+    let output = context.initialize_output(&[ColumnType::new("token", ValueType::String)])?;
     let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);

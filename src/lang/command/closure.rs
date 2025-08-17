@@ -625,37 +625,41 @@ impl Closure {
             return Ok(());
         }
 
-        for (idx, job_definition) in job_definitions.iter().enumerate() {
-            let first = idx == 0;
-            let last = idx == job_definitions.len() - 1;
-            let input = if first {
-                context.input.clone()
-            } else {
-                empty_channel()
-            };
-            let (sender, receiver) = pipe();
-            let job = job_definition.eval(JobContext::new(
-                input,
-                sender,
-                env.clone(),
-                context.global_state.clone(),
-                context.job_type,
-            ))?;
-
-            let local_printer = context.global_state.printer().clone();
-            let local_threads = context.global_state.threads().clone();
-            job.map(|id| local_threads.join_one(id, &local_printer));
-
-            if env.is_stopped() {
-                let return_value = match env.take_return_value() {
-                    None => receiver.recv()?,
-                    Some(v) => v,
+        if job_definitions.len() == 0 {
+            context.output.empty()?;
+        } else {
+            for (idx, job_definition) in job_definitions.iter().enumerate() {
+                let first = idx == 0;
+                let last = idx == job_definitions.len() - 1;
+                let input = if first {
+                    context.input.clone()
+                } else {
+                    empty_channel()
                 };
-                return context.output.send(return_value);
-            } else {
-                if last {
-                    let v = receiver.recv()?;
-                    context.output.send(v)?;
+                let (sender, receiver) = pipe();
+                let job = job_definition.eval(JobContext::new(
+                    input,
+                    sender,
+                    env.clone(),
+                    context.global_state.clone(),
+                    context.job_type,
+                ))?;
+
+                let local_printer = context.global_state.printer().clone();
+                let local_threads = context.global_state.threads().clone();
+                job.map(|id| local_threads.join_one(id, &local_printer));
+
+                if env.is_stopped() {
+                    let return_value = match env.take_return_value() {
+                        None => receiver.recv()?,
+                        Some(v) => v,
+                    };
+                    return context.output.send(return_value);
+                } else {
+                    if last {
+                        let v = receiver.recv()?;
+                        context.output.send(v)?;
+                    }
                 }
             }
         }

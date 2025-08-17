@@ -277,22 +277,26 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
 
-        context.global_state.threads().spawn("remote:pexec", &context.next_command_handle(), move || {
-            while let Ok(host) = my_recv.recv() {
-                let res = run_remote(
-                    &my_buf,
-                    &my_env,
-                    host.clone(),
-                    &my_username,
-                    &my_password,
-                    &my_host_file,
-                    my_ignore_host_file,
-                    my_allow_not_found,
-                )?;
-                my_send.send((host, res))?;
-            }
-            Ok(())
-        })?;
+        context.global_state.threads().spawn(
+            "remote:pexec",
+            &context.next_command_handle(),
+            move || {
+                while let Ok(host) = my_recv.recv() {
+                    let res = run_remote(
+                        &my_buf,
+                        &my_env,
+                        host.clone(),
+                        &my_username,
+                        &my_password,
+                        &my_host_file,
+                        my_ignore_host_file,
+                        my_allow_not_found,
+                    )?;
+                    my_send.send((host, res))?;
+                }
+                Ok(())
+            },
+        )?;
     }
 
     drop(result_send);

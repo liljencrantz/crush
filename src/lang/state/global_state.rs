@@ -4,7 +4,8 @@ use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
-use crate::lang::state::handles::{JobHandle, JobControlData, JobData, JobInfo, JobType};
+use crate::lang::state::handles::JobType::Background;
+use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, JobType};
 use crate::lang::state::id::JobId;
 use crate::lang::threads::ThreadStore;
 use crate::util::byte_unit::ByteUnit;
@@ -14,7 +15,6 @@ use rustyline::Editor;
 use rustyline::history::DefaultHistory;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
-use crate::lang::state::handles::JobType::Background;
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -135,7 +135,11 @@ impl GlobalState {
         remove_finished_jobs(&mut data);
         let id = next_id(&data);
         let job = JobHandle::new(id);
-        let jd = JobData{id, job_type, job_control_data: job.weak_ref()};
+        let jd = JobData {
+            id,
+            job_type,
+            job_control_data: job.weak_ref(),
+        };
         data.jobs.push(jd);
         job
     }
@@ -144,8 +148,8 @@ impl GlobalState {
         let data = self.data.lock().unwrap();
         for jd in data.jobs.iter().rev() {
             if jd.job_type == Background {
-                continue
-            } 
+                continue;
+            }
             match jd.job_control_data.upgrade() {
                 Some(arc) => return Some(JobHandle::from(jd.id, arc)),
                 None => {}
@@ -297,7 +301,11 @@ fn next_id(data: &MutexGuard<StateData>) -> JobId {
     unreachable!()
 }
 
-fn get_job(data: &mut MutexGuard<StateData>, target_id: JobId, fg: bool) -> CrushResult<Arc<Mutex<JobControlData>>> {
+fn get_job(
+    data: &mut MutexGuard<StateData>,
+    target_id: JobId,
+    fg: bool,
+) -> CrushResult<Arc<Mutex<JobControlData>>> {
     for (idx, jd) in data.jobs.iter().enumerate() {
         if jd.id == target_id {
             match jd.job_control_data.upgrade() {
@@ -307,8 +315,8 @@ fn get_job(data: &mut MutexGuard<StateData>, target_id: JobId, fg: bool) -> Crus
                         let tmp = data.jobs.remove(idx);
                         data.jobs.push(tmp);
                     }
-                    return Ok(arc)
-                },
+                    return Ok(arc);
+                }
             }
         }
     }

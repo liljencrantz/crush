@@ -42,29 +42,25 @@ pub struct Schedule {
     #[default(false)]
     schedule_at_fixed_rate: bool,
 
-    #[description(
-        "only schedule a single heartbeat. After that, exit."
-    )]
+    #[description("only schedule a single heartbeat. After that, exit.")]
     #[default(false)]
-    once: bool
+    once: bool,
 }
 
 fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> CrushResult<()> {
     match control.recv_timeout(duration.to_std()?) {
         Ok(msg) => match msg {
             StreamControlMessage::Terminate => terminate(),
-            StreamControlMessage::Pause => {
-                loop {
-                    match control.recv() {
-                        Ok(StreamControlMessage::Terminate) => {
-                            return terminate();
-                        }
-                        Ok(StreamControlMessage::Resume) => return Ok(()),
-                        Ok(StreamControlMessage::Pause) => {}
-                        Err(_) => return terminate(),
+            StreamControlMessage::Pause => loop {
+                match control.recv() {
+                    Ok(StreamControlMessage::Terminate) => {
+                        return terminate();
                     }
+                    Ok(StreamControlMessage::Resume) => return Ok(()),
+                    Ok(StreamControlMessage::Pause) => {}
+                    Err(_) => return terminate(),
                 }
-            }
+            },
             StreamControlMessage::Resume => panic!(),
         },
         Err(_) => Ok(()),
@@ -79,7 +75,11 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     let control = Box::from(ChannelBasedController::new(control_sender));
     context.command_handle().register(control);
 
-    let initial_delay = if let Some(id) = &cfg.initial_delay { id } else {&cfg.interval};
+    let initial_delay = if let Some(id) = &cfg.initial_delay {
+        id
+    } else {
+        &cfg.interval
+    };
     sleep(initial_delay, &control_receiver)?;
 
     let mut cmd = None;
@@ -96,8 +96,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         Some(cmd) => {
-            let output = context
-                .initialize_output(&[ColumnType::new("value", ValueType::Any)])?;
+            let output = context.initialize_output(&[ColumnType::new("value", ValueType::Any)])?;
             let base_context = context.empty();
             let env = context.scope.clone();
             let (sender, receiver) = pipe();

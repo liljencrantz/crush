@@ -1,7 +1,10 @@
 use crate::lang::errors::CrushResult;
-use crate::lang::job_control::{ChannelBasedController, InterruptibleJoinHandle, StreamControlMessage};
+use crate::lang::job_control::{
+    ChannelBasedController, InterruptibleJoinHandle, StreamControlMessage,
+};
 use crate::lang::printer::Printer;
-use crate::lang::state::handles::{CommandHandle};
+use crate::lang::state::handles::CommandHandle;
+use crate::lang::state::id::{CommandId, JobId};
 use chrono::{DateTime, Local};
 use crossbeam::channel::Sender;
 use crossbeam::channel::unbounded;
@@ -9,9 +12,8 @@ use crossbeam::channel::{Receiver, bounded};
 use itertools::Either;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::thread::{ThreadId};
+use std::thread::ThreadId;
 use std::time::Duration;
-use crate::lang::state::id::{CommandId, JobId};
 
 /**
 A thread management utility. Spawn, track and join on threads.
@@ -64,12 +66,7 @@ impl ThreadStore {
     /**
     Spawn a new thread
     */
-    pub fn spawn<F>(
-        &self,
-        name: &str,
-        command: &CommandHandle,
-        f: F,
-    ) -> CrushResult<ThreadId>
+    pub fn spawn<F>(&self, name: &str, command: &CommandHandle, f: F) -> CrushResult<ThreadId>
     where
         F: FnOnce() -> CrushResult<()>,
         F: Send + 'static,
@@ -155,17 +152,15 @@ impl ThreadStore {
 
             match h.handle.join() {
                 Ok(Either::Left(_)) => {}
-                Ok(Either::Right(m)) => {
-                    match m {
-                        StreamControlMessage::Terminate => {}
-                        StreamControlMessage::Pause => {
-                            let mut data = self.data.lock().unwrap();
-                            data.threads.push(h);
-                        }
-                        StreamControlMessage::Resume => {}
+                Ok(Either::Right(m)) => match m {
+                    StreamControlMessage::Terminate => {}
+                    StreamControlMessage::Pause => {
+                        let mut data = self.data.lock().unwrap();
+                        data.threads.push(h);
                     }
-                }
-                Err(err) => printer.crush_error(err), 
+                    StreamControlMessage::Resume => {}
+                },
+                Err(err) => printer.crush_error(err),
             }
         }
     }

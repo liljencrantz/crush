@@ -6,11 +6,11 @@ use crate::lang::pipe::{
     Stream, TableOutputStream, ValueReceiver, ValueSender, black_hole, empty_channel,
 };
 use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::handles::{CommandHandle, JobHandle, JobType};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
-use crate::lang::state::handles::JobType::Background;
 
 /**
 The data needed to be passed around while calling eval on a ValueDefinition.
@@ -26,7 +26,13 @@ impl EvalContext {
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(input, output, self.env.clone(), self.global_state.clone(), Background)
+        JobContext::new(
+            input,
+            output,
+            self.env.clone(),
+            self.global_state.clone(),
+            Background,
+        )
     }
 
     pub fn with_scope(&self, env: &Scope) -> EvalContext {
@@ -113,7 +119,6 @@ impl JobContext {
             job_type: self.job_type,
         })
     }
-
 }
 
 /**
@@ -251,7 +256,7 @@ impl CommandContext {
             job_type: self.job_type,
         }
     }
-    
+
     pub fn command_handle(&self) -> &CommandHandle {
         &self.handle
     }

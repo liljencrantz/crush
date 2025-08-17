@@ -2,7 +2,7 @@ use crate::lang::any_str::AnyStr;
 /**
 Code related to Table, TableInputStream and
  */
-use crate::lang::errors::{CrushError, CrushResult, command_error, error, eof_error};
+use crate::lang::errors::{CrushError, CrushResult, command_error, eof_error, error};
 use crate::lang::pipe::TableStreamReader;
 use crate::lang::serialization::model::{Element, element};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState, model};

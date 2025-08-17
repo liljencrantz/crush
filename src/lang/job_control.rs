@@ -1,8 +1,8 @@
-use std::thread::{ThreadId};
 use crate::lang::errors::CrushResult;
 use crossbeam::channel::{Receiver, Sender};
 use crossbeam::select;
 use itertools::Either;
+use std::thread::ThreadId;
 
 pub trait JobControl {
     fn terminate(&self) -> CrushResult<()>;
@@ -48,7 +48,11 @@ pub struct InterruptibleJoinHandle<T> {
 }
 
 impl<T> InterruptibleJoinHandle<T> {
-    pub fn new(id: ThreadId, name: Option<&str>, result_receiver: Receiver<T>, control_receiver: Receiver<StreamControlMessage>,
+    pub fn new(
+        id: ThreadId,
+        name: Option<&str>,
+        result_receiver: Receiver<T>,
+        control_receiver: Receiver<StreamControlMessage>,
     ) -> Self {
         InterruptibleJoinHandle {
             id,

@@ -183,14 +183,14 @@ impl PrettyPrinter {
                 _ => {}
             }
         }
-        
+
         loop {
             let read_result = if !data.is_empty() {
                 stream.read_timeout(Duration::milliseconds(100))
             } else {
                 stream.read()
             };
-            
+
             match read_result {
                 Ok(r) => {
                     data.push(r);

@@ -108,8 +108,8 @@ impl CommandHandle {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum JobStatus {
-    Running, 
-    Paused, 
+    Running,
+    Paused,
     Terminated,
 }
 
@@ -159,11 +159,10 @@ pub struct JobData {
 }
 
 impl JobControlData {
-    
     pub fn status(&self) -> JobStatus {
         self.status
     }
-    
+
     pub fn terminate(&mut self) -> CrushResult<()> {
         for vc in self.senders.values() {
             for c in vc {

@@ -115,7 +115,7 @@ fn cmd_internal(
             .stderr(Stdio::inherit());
 
         cmd.spawn()?.wait()?;
-        Ok(())
+        context.output.send(Value::Empty)
     } else {
         let input = context.input.recv()?;
 
@@ -134,16 +134,24 @@ fn cmd_internal(
                 drop(stdin);
             }
             Binary(v) => {
-                context.global_state.threads().spawn("cmd:stdin", &context.next_command_handle(), move || {
-                    stdin.write(&v)?;
-                    Ok(())
-                })?;
+                context.global_state.threads().spawn(
+                    "cmd:stdin",
+                    &context.next_command_handle(),
+                    move || {
+                        stdin.write(&v)?;
+                        Ok(())
+                    },
+                )?;
             }
             BinaryInputStream(mut r) => {
-                context.global_state.threads().spawn("cmd:stdin", &context.next_command_handle(), move || {
-                    std::io::copy(r.as_mut(), stdin.borrow_mut())?;
-                    Ok(())
-                })?;
+                context.global_state.threads().spawn(
+                    "cmd:stdin",
+                    &context.next_command_handle(),
+                    move || {
+                        std::io::copy(r.as_mut(), stdin.borrow_mut())?;
+                        Ok(())
+                    },
+                )?;
             }
             _ => return command_error("Invalid input: Expected binary data"),
         }
@@ -152,19 +160,23 @@ fn cmd_internal(
             .output
             .send(BinaryInputStream(Box::from(stdout_reader)))?;
         let my_context = context.clone();
-        context.global_state.threads().spawn("cmd:stderr", &context.next_command_handle(), move || {
-            let _ = &my_context;
-            let mut buff = Vec::new();
-            stderr_reader.read_to_end(&mut buff)?;
-            let errors = String::from_utf8(buff)?;
-            for e in errors.split('\n') {
-                let err = e.trim();
-                if !err.is_empty() {
-                    my_context.global_state.printer().error(err);
+        context.global_state.threads().spawn(
+            "cmd:stderr",
+            &context.next_command_handle(),
+            move || {
+                let _ = &my_context;
+                let mut buff = Vec::new();
+                stderr_reader.read_to_end(&mut buff)?;
+                let errors = String::from_utf8(buff)?;
+                for e in errors.split('\n') {
+                    let err = e.trim();
+                    if !err.is_empty() {
+                        my_context.global_state.printer().error(err);
+                    }
                 }
-            }
-            Ok(())
-        })?;
+                Ok(())
+            },
+        )?;
 
         child.wait()?;
 

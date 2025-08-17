@@ -131,37 +131,49 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         let mut serialized = Vec::new();
         serialize(&Value::Command(cfg.command), &mut serialized)?;
 
-        context.global_state.threads().spawn("sudo:stdin", &context.next_command_handle(), move || {
-            stdin.write(&serialized)?;
-            Ok(())
-        })?;
+        context.global_state.threads().spawn(
+            "sudo:stdin",
+            &context.next_command_handle(),
+            move || {
+                stdin.write(&serialized)?;
+                Ok(())
+            },
+        )?;
 
         let mut stdout = child.stdout.take().ok_or("Expected output stream")?;
         let env = context.scope.clone();
         let my_context = context.clone();
-        context.global_state.threads().spawn("sudo:stdout", &context.next_command_handle(), move || {
-            let mut buff = Vec::new();
-            stdout.read_to_end(&mut buff)?;
-            if buff.len() == 0 {
-                error("No value returned")
-            } else {
-                my_context.output.send(deserialize(&buff, &env)?)
-            }
-        })?;
+        context.global_state.threads().spawn(
+            "sudo:stdout",
+            &context.next_command_handle(),
+            move || {
+                let mut buff = Vec::new();
+                stdout.read_to_end(&mut buff)?;
+                if buff.len() == 0 {
+                    error("No value returned")
+                } else {
+                    my_context.output.send(deserialize(&buff, &env)?)
+                }
+            },
+        )?;
 
         let mut stderr = child.stderr.take().ok_or("Expected error stream")?;
-        context.global_state.threads().spawn("sudo:stderr", &context.next_command_handle(), move || {
-            let mut buff = Vec::new();
-            stderr.read_to_end(&mut buff)?;
-            let errors = String::from_utf8(buff)?;
-            for e in errors.split('\n') {
-                let err = e.trim();
-                if !err.is_empty() {
-                    printer.error(err);
+        context.global_state.threads().spawn(
+            "sudo:stderr",
+            &context.next_command_handle(),
+            move || {
+                let mut buff = Vec::new();
+                stderr.read_to_end(&mut buff)?;
+                let errors = String::from_utf8(buff)?;
+                for e in errors.split('\n') {
+                    let err = e.trim();
+                    if !err.is_empty() {
+                        printer.error(err);
+                    }
                 }
-            }
-            Ok(())
-        })?;
+                Ok(())
+            },
+        )?;
 
         child.wait()?;
         Ok(())
