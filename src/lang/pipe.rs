@@ -9,7 +9,7 @@ use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::errors::{CrushError, CrushResult, error, terminate};
 use crate::lang::job_control::{ChannelBasedController, JobController, StreamControlMessage};
-use crate::lang::pipe::SenderType::{BlackHole, Pipeline, Printer};
+use crate::lang::pipe::SenderType::{BlackHole, LastElement, Pipeline, Printer};
 use crate::lang::value::Value;
 use chrono::Duration;
 use crossbeam::channel::{Receiver, Select, Sender, bounded, unbounded};
@@ -17,6 +17,7 @@ use crossbeam::select;
 
 #[derive(Clone)]
 enum SenderType {
+    LastElement(Sender<Value>),
     Printer(Sender<Value>),
     Pipeline(Sender<Value>),
     BlackHole,
@@ -30,7 +31,7 @@ pub struct ValueSender {
 impl ValueSender {
     pub fn send(&self, cell: Value) -> CrushResult<()> {
         match &self.sender_type {
-            Printer(s) | Pipeline(s) => Ok(s.send(cell)?),
+            LastElement(s) | Printer(s) | Pipeline(s) => Ok(s.send(cell)?),
             BlackHole => Ok(()),
         }
     }
@@ -46,7 +47,12 @@ impl ValueSender {
     }
 
     pub fn is_pipeline(&self) -> bool {
-        matches!(self.sender_type, SenderType::Pipeline(_))
+        match self.sender_type {
+            LastElement(_) => false,
+            Printer(_) => false,
+            Pipeline(_) => true,
+            BlackHole => false,
+        }
     }
 }
 
@@ -232,6 +238,19 @@ pub fn pipe() -> (ValueSender, ValueReceiver) {
         ValueReceiver {
             receiver: recv,
             is_pipeline: true,
+        },
+    )
+}
+
+pub fn last_element() -> (ValueSender, ValueReceiver) {
+    let (send, recv) = bounded(1);
+    (
+        ValueSender {
+            sender_type: LastElement(send),
+        },
+        ValueReceiver {
+            receiver: recv,
+            is_pipeline: false,
         },
     )
 }

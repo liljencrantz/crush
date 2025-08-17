@@ -3,7 +3,7 @@ use crate::lang::ast::source::Source;
 /// An executable pipeline of one or more commands.
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
-use crate::lang::pipe::pipe;
+use crate::lang::pipe::{last_element, pipe};
 use crate::lang::state::contexts::{EvalContext, JobContext};
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
@@ -60,7 +60,7 @@ impl Job {
         }
 
         let last_call_def = &self.commands[last_command_idx];
-        let (last_output, last_input) = pipe();
+        let (last_output, last_input) = last_element();
         let res = last_call_def.eval(context.with_io(input, last_output));
         context.output.send(last_input.recv()?)?;
         res
