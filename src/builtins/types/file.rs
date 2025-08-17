@@ -514,12 +514,12 @@ fn touch(mut context: CommandContext) -> CrushResult<()> {
         &TimeSpec::UTIME_NOW,
         UtimensatFlags::FollowSymlink,
     ) {
-        Ok(_) => Ok(()),
+        Ok(_) => context.output.send(Value::Empty),
         Err(Errno::ENOENT) => {
             if !cfg.no_create {
                 File::create_new(file)?;
             }
-            Ok(())
+            context.output.send(Value::Empty)
         }
         Err(err) => error(err.to_string()),
     }

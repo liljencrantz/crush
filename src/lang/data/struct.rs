@@ -1,6 +1,6 @@
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{CrushError, CrushResult, error};
+use crate::lang::errors::{CrushError, CrushResult, eof_error};
 use crate::lang::help::Help;
 use crate::lang::pipe::TableStreamReader;
 use crate::lang::value::Value;
@@ -356,7 +356,7 @@ impl StructReader {
 impl TableStreamReader for StructReader {
     fn read(&mut self) -> Result<Row, CrushError> {
         if self.idx >= self.rows.len() {
-            return error("EOF");
+            return eof_error();
         }
         self.idx += 1;
         let (k, v) = self

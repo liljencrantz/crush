@@ -76,6 +76,7 @@ impl CrushError {
         match &self.error_type {
             RecvTimeoutError(e) => e.is_disconnected(),
             RecvError(_) => true,
+            EOFError => true,
             _ => false,
         }
     }
