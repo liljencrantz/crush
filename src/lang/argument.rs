@@ -315,7 +315,6 @@ pub fn column_names(arguments: &Vec<Argument>) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lang::ast::location::Location;
     use crate::lang::ast::source::SourceType;
     use crate::lang::data::list::List;
     use crate::lang::ordered_string_map::OrderedStringMap;

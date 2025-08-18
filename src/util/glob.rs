@@ -121,7 +121,6 @@ fn compile(s: &str) -> Vec<Tile> {
                         state = WasAny
                     }
                     '/' => {
-                        res.push(Tile::Char('.'));
                         state = WasSeparator;
                     }
                     '?' => {
@@ -702,25 +701,25 @@ mod tests {
 
     fn check_file_glob_count(glob: &str, count: usize) {
         let mut out = Vec::new();
-        let ggg = glob_files(
+        glob_files(
             &compile(glob),
             &PathBuf::from(""),
             &mut out,
             &lister(),
             GlobMode::Glob,
-        );
+        ).unwrap();
         assert_eq!(out.len(), count);
     }
 
     fn check_file_glob(glob: &str, matches: &[&str]) {
         let mut out = Vec::new();
-        let ggg = glob_files(
+        glob_files(
             &compile(glob),
             &PathBuf::from(""),
             &mut out,
             &lister(),
             GlobMode::Glob,
-        );
+        ).unwrap();
         let set: HashSet<String> = out
             .drain(..)
             .map(|e| e.to_str().unwrap().to_string())
@@ -731,7 +730,7 @@ mod tests {
                 set.contains(*el),
                 "The element '{}' wasn't present in glob result. The following items were found: {}",
                 el,
-                set.iter().map({ |e| format!("'{}'", e) }).join(", ")
+                set.iter().map(|e| format!("'{}'", e)).join(", ")
             );
         }
     }

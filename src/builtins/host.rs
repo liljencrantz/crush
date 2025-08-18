@@ -63,18 +63,6 @@ static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
     short = "List all batteries in the system and their status")]
 struct Battery {}
 
-fn state_name(state: battery::State) -> String {
-    match state {
-        battery::State::Unknown => "Unknown",
-        battery::State::Charging => "Charging",
-        battery::State::Discharging => "Discharging",
-        battery::State::Empty => "Empty",
-        battery::State::Full => "Full",
-        _ => "Unknown",
-    }
-    .to_string()
-}
-
 fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
     tm.map(|t| Duration::seconds(t.value as i64))
         .unwrap_or(Duration::seconds(0))
@@ -86,14 +74,14 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     for battery in manager.batteries()? {
         let battery = battery?;
         output.send(Row::new(vec![
-            Value::from(battery.vendor().unwrap_or("").to_string()),
-            Value::from(battery.model().unwrap_or("").to_string()),
+            Value::from(battery.vendor().unwrap_or("")),
+            Value::from(battery.model().unwrap_or("")),
             Value::from(battery.technology().to_string()),
             Value::from(battery.cycle_count().unwrap_or(0)),
             Value::from(battery.temperature().map(|t| t.value as f64).unwrap_or(0.0)),
             Value::from(battery.voltage().value as f64),
             Value::from(battery.state_of_health().value as f64),
-            Value::from(state_name(battery.state())),
+            Value::from(battery.state().to_string()),
             Value::from(battery.state_of_charge().value as f64),
             Value::from(time_to_duration(battery.time_to_full())),
             Value::from(time_to_duration(battery.time_to_empty())),

@@ -1,4 +1,5 @@
 ./foo:touch
 ./foo:chmod "a=" "o+xr" "u+w" "g-r"
-echo $(files ./foo | select permissions | materialize)
+echo $(files ./foo | select permissions | materialize) 
+# Cleanup
 rm ./foo

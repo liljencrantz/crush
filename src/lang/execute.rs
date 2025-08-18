@@ -93,7 +93,7 @@ pub fn string(
 ) -> CrushResult<()> {
     source(
         global_env,
-        &Source::new(SourceType::Input, Arc::from(command)),
+        &Source::new(Input, Arc::from(command)),
         initial_mode,
         output,
         global_state,

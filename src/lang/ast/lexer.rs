@@ -102,9 +102,10 @@ impl<'input> Lexer<'input> {
                 Some((i, '#')) => {
                     let mut end_idx = i;
                     loop {
-                        let cc2 = self.chars.next();
+                        let cc2 = self.chars.peek();
                         match cc2 {
                             None => {
+                                self.chars.next();
                                 break;
                             }
                             Some((_, '\n')) => {
@@ -112,6 +113,7 @@ impl<'input> Lexer<'input> {
                                 break;
                             }
                             Some((_, _)) => {
+                                self.chars.next();
                                 end_idx += 1;
                             }
                         }
@@ -238,7 +240,7 @@ impl<'input> Lexer<'input> {
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {
-                            Some((_, ch2)) if identifier_char(*ch2) => {
+                            Some((_, ch2)) if identifier_char(*ch2) || *ch2 == '-' => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => break,

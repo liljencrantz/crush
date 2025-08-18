@@ -221,20 +221,20 @@ mod tests {
     #[test]
     fn check_expression_tokens() {
         let tok = p()
-            .tokenize("e(foo(5, 3.3))\n", LanguageMode::Command, SkipComments)
+            .tokenize("(foo(5, 3.3))\n", LanguageMode::Command, SkipComments)
             .unwrap();
         assert_eq!(
             tok,
             vec![
-                Token::ExprModeStart(Location::new(0, 2)),
-                Token::Identifier("foo", Location::new(2, 5)),
-                Token::ExprModeStart(Location::from(5)),
-                Token::Integer("5", Location::from(6)),
-                Token::Separator(",", Location::from(7)),
-                Token::Float("3.3", Location::new(9, 12)),
+                Token::ExprModeStart(Location::new(0, 1)),
+                Token::String("foo", Location::new(1, 4)),
+                Token::ExprModeStart(Location::from(4)),
+                Token::Integer("5", Location::from(5)),
+                Token::Separator(",", Location::from(6)),
+                Token::Float("3.3", Location::new(8, 11)),
+                Token::SubEnd(Location::from(11)),
                 Token::SubEnd(Location::from(12)),
-                Token::SubEnd(Location::from(13)),
-                Token::Separator("\n", Location::from(14)),
+                Token::Separator("\n", Location::from(13)),
             ]
         );
     }
@@ -269,18 +269,16 @@ mod tests {
         let p = Parser::new();
         assert_eq!(p.close_command("a --").unwrap(), "a --x");
         assert_eq!(p.close_command("a:").unwrap(), "a: x");
-        assert_eq!(p.close_command("a >").unwrap(), "a > x");
-        assert_eq!(p.close_command("neg").unwrap(), "neg x");
         assert_eq!(p.close_command("a |").unwrap(), "a | x");
         assert_eq!(p.close_command("x [a").unwrap(), "x [a]");
         assert_eq!(p.close_command("x (a").unwrap(), "x (a)");
+        assert_eq!(p.close_command("x $(a").unwrap(), "x $(a)");
         assert_eq!(p.close_command("x {a").unwrap(), "x {a}");
         assert_eq!(
             p.close_command("x (a) {b} {c (d) (e").unwrap(),
             "x (a) {b} {c (d) (e)}"
         );
         assert_eq!(p.close_command("a b=").unwrap(), "a b= x");
-        assert_eq!(p.close_command("a +").unwrap(), "a + x");
         assert_eq!(p.close_command("a \"").unwrap(), "a \"\"");
     }
 

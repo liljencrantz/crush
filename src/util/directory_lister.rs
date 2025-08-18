@@ -150,7 +150,7 @@ pub mod tests {
                 g.clone()
             };
 
-            Ok(FakeIter {
+            let res = Ok(FakeIter {
                 vec: VecDeque::from(
                     self.map
                         .get(&path)
@@ -166,7 +166,9 @@ pub mod tests {
                         .ok_or(format!("Unknown directory {:?}", path))?
                         .clone(),
                 ),
-            })
+            });
+            
+            res
         }
     }
 

@@ -31,3 +31,9 @@
 * syntax highlighting does not understand closure parameters
 * Implement control for timeit
 * Make sure that passing through streams from closures doesn't block
+* Job control for cmd command
+* Write tests that use schedule and job control
+* Document what causes the next job to execute
+* Document job control
+* Fix job control in expression mode (Jobs currently sometime seem to get marked as background jobs, possibly if there is a pipe in them?)
+* `group` test is flaky, last to commands sometimes output in opposite order. This happens because of the relaxed execution order. Either sequentialize the pretty printer or make the ordering more strict.

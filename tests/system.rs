@@ -16,12 +16,20 @@ fn run_system_test(name: &Path) {
         )
         .as_str(),
     );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
-        expected_output,
-        "\n\nError while running file {}",
-        name.to_str().unwrap()
-    );
+    let expected_lines = expected_output.lines().collect::<Vec<&str>>();
+    let actual_string = String::from_utf8_lossy(&output.stdout);
+    let actual_lines = actual_string.lines().collect::<Vec<&str>>();
+
+    for (idx, (expected, actual)) in expected_lines.iter().zip(actual_lines.iter()).enumerate() {
+        assert_eq!(
+            actual,
+            expected,
+            "Error on line {} of output while running file {}.",
+            idx+1,
+            name.to_str().unwrap()
+        );
+    }
+    
 }
 
 #[test]

@@ -628,7 +628,19 @@ mod tests {
     }
 
     #[test]
-    fn check_subcommand() {
+    fn check_completion_of_subcommand_works() {
+        let line = "x $(a";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        s.declare("abcd", Value::Empty).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "x $(abcd ");
+    }
+
+    #[test]
+    fn check_completion_of_expression_subcommand_works() {
         let line = "x (a";
         let cursor = line.len();
 
