@@ -342,6 +342,9 @@ mod macos {
 #[cfg(target_os = "linux")]
 mod linux {
     use super::*;
+    use std::os::unix::raw::uid_t;
+    use nix::unistd::Uid;
+    use std::ops::Deref;
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 7] = [
         ColumnType::new("tid", ValueType::Integer),
@@ -373,12 +376,7 @@ mod linux {
                     Value::from(pid.as_u32()),
                     Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
                     proc.user_id()
-                        .and_then(|i| {
-                            let ii = i.deref();
-                            let iii = *ii as uid_t;
-                            let iiii = unistd::Uid::from_raw(iii);
-                            return users.get(&iiii);
-                        })
+                        .and_then(|i| users.get(&i))
                         .map(|s| Value::from(s))
                         .unwrap_or_else(|| Value::from("?")),
                     Value::from(proc.memory()),
@@ -440,7 +438,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             #[cfg(target_os = "macos")]
             macos::Threads::declare(host)?;
             #[cfg(target_os = "linux")]
-            Threads::declare(host)?;
+            linux::Threads::declare(host)?;
             Signal::declare(host)?;
             host.create_namespace(
                 "os",

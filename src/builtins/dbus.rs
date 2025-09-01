@@ -70,8 +70,13 @@ impl DBusThing {
         let values_as_arguments = values
             .drain(..)
             .zip(output_arguments.drain(..))
-            // Fake location, only needed to call the column_names function
-            .map(|(value, arg)| Argument::new(arg.name.clone(), value, Location::new(0, 0)))
+            // Fake source, only needed to call the column_names function
+            .map(|(value, arg)| {
+                use crate::lang::ast::source::{Source, SourceType};
+                use std::sync::Arc;
+                let dummy_source = Source::new(SourceType::Input, Arc::from(""));
+                Argument::new(arg.name.clone(), value, &dummy_source)
+            })
             .collect::<Vec<_>>();
 
         let mut names = column_names(&values_as_arguments);
@@ -96,7 +101,10 @@ impl DBusThing {
         queue.push("/".to_string());
         let mut res = Vec::new();
         while !queue.is_empty() {
-            let path = queue.pop()?;
+            let path = match queue.pop() {
+    Some(p) => p,
+    None => return error("No more paths to pop from queue"),
+};
             let sub_proxy = self.proxy(service, &path);
             let (intro_xml,): (String,) = sub_proxy.method_call(
                 "org.freedesktop.DBus.Introspectable", //&name,
@@ -438,7 +446,10 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::UInt64 => Value::Integer(iter.get::<u64>().ok_or("Unexpected type")? as i128),
         ArgType::Double => Value::Float(iter.get::<f64>().ok_or("Unexpected type")?),
         ArgType::Array => {
-            let mut sub = iter.recurse(ArgType::Array)?;
+            let mut sub = match iter.recurse(ArgType::Array) {
+    Some(s) => s,
+    None => return error("recurse on ArgType::Array failed"),
+};
 
             if sub.arg_type() == ArgType::DictEntry {
                 let mut res = Vec::new();
@@ -528,7 +539,10 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
             }
         }
         ArgType::Variant => {
-            let mut sub = iter.recurse(ArgType::Variant)?;
+            let mut sub = match iter.recurse(ArgType::Variant) {
+    Some(s) => s,
+    None => return error("recurse on ArgType::Variant failed"),
+};
             match deserialize(&mut sub) {
                 Ok(value) => {
                     sub.next();
@@ -547,7 +561,10 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::DictEntry => panic!("Invalid location for DictEntry"),
         ArgType::UnixFd => panic!("unimplemented"),
         ArgType::Struct => {
-            let mut sub = iter.recurse(ArgType::Struct)?;
+            let mut sub = match iter.recurse(ArgType::Struct) {
+    Some(s) => s,
+    None => return error("recurse on ArgType::Struct failed"),
+};
             let mut res = Vec::new();
             loop {
                 match deserialize(&mut sub) {
@@ -630,7 +647,13 @@ struct ServiceCall {
 fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusObject> {
     let mut res: Vec<_>;
     match &filter {
-        Value::File(p) => res = input.drain(..).filter(|o| &o.path == p.to_str()?).collect(),
+        Value::File(p) => res = input.drain(..).filter(|o| {
+    if let Some(s) = p.as_ref().to_str() {
+        o.path.as_str() == s
+    } else {
+        false
+    }
+}).collect(),
         Value::Glob(p) => res = input.drain(..).filter(|o| p.matches(&o.path)).collect(),
         Value::Regex(_, re) => res = input.drain(..).filter(|o| re.is_match(&o.path)).collect(),
         _ => return error("Invalid filter type"),
