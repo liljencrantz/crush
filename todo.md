@@ -1,7 +1,5 @@
 # Todo
 
-* Rewrite all tests for new syntax
-* Add command field to printer
 * Allow commands to specify the type of input they expect for better/earlier validation
 * Write a command that extracts all help into html
 * Add system tests for binary stream handling
@@ -29,11 +27,10 @@
 * syntax highlighting does not understand using types as commands
 * syntax highlighting does not understand closure signatures
 * syntax highlighting does not understand closure parameters
-* Implement control for timeit
+* Implement job control for timeit
 * Make sure that passing through streams from closures doesn't block
 * Job control for cmd command
-* Write tests that use schedule and job control
+* Write tests that use `schedule` and job control
 * Document what causes the next job to execute
 * Document job control
-* Fix job control in expression mode (Jobs currently sometime seem to get marked as background jobs, possibly if there is a pipe in them?)
-* `group` test is flaky, last to commands sometimes output in opposite order. This happens because of the relaxed execution order. Either sequentialize the pretty printer or make the ordering more strict.
+* A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?

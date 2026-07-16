@@ -231,7 +231,18 @@ impl Node {
                 ctx.source.subtrackedstring(identifier),
             ),
 
-            Node::Substitution(s) => ValueDefinition::JobListDefinition(s.compile(ctx)?),
+            Node::Substitution(s) => {
+                if s.jobs.len() == 0 {
+                    return compile_error(
+                        "Empty command substitution.",
+                        &ctx.source.substring(s.location),
+                    );
+                }
+                ValueDefinition::JobListDefinition(
+                    s.compile(ctx)?,
+                    ctx.source.substring(s.location),
+                )
+            }
             Node::Closure(signature, jobs, location) => {
                 let param = signature.as_ref().map(|v| {
                     v.iter()
@@ -619,7 +630,10 @@ impl From<JobNode> for Box<Node> {
 
 impl From<Box<Node>> for JobNode {
     fn from(node: Box<Node>) -> JobNode {
-        JobNode::from(CommandNode::from(*node))
+        match node.as_ref() {
+            Node::Substitution(n) if n.jobs.len() == 1 => JobNode::from(n.jobs[0].clone()),
+            _ => JobNode::from(CommandNode::from(*node)),
+        }
     }
 }
 
@@ -643,10 +657,12 @@ impl From<Node> for CommandNode {
                 expressions: vec![value],
                 location: l,
             },
-            _ => CommandNode {
-                expressions: vec![Node::val(value.location()), value],
-                location: l,
-            },
+            _ => {
+                CommandNode {
+                    expressions: vec![Node::val(value.location()), value],
+                    location: l,
+                }
+            }
         }
     }
 }

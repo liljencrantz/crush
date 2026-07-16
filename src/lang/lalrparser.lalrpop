@@ -63,7 +63,8 @@ ExprJobListWithoutSeparator: JobListNode = {
 
 ExprNonEmptyJobList: JobListNode = {
     <l: @L> <mut lst:ExprNonEmptyJobList> Separators <j:Expr> <r: @R> =>  {
-        lst.jobs.push(JobNode::from(j));
+        let mut lst2 = JobListNode::from(j);
+        lst.jobs.append(&mut lst2.jobs);
         lst.location = Location::new(l, r);
         lst
     },

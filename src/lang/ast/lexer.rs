@@ -109,7 +109,6 @@ impl<'input> Lexer<'input> {
                                 break;
                             }
                             Some((_, '\n')) => {
-                                end_idx += 1;
                                 break;
                             }
                             Some((_, _)) => {

@@ -208,6 +208,7 @@ message Job {
 
 message JobList {
   repeated Job jobs = 1;
+  uint64 source = 2;
 }
 
 message CommandInvocation {

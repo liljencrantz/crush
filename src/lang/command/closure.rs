@@ -979,12 +979,13 @@ impl<'a> ClosureSerializer<'a> {
                         element: element.serialize(self.elements, self.state)? as u64,
                     }))
                 }
-                ValueDefinition::JobListDefinition(jobs) => {
+                ValueDefinition::JobListDefinition(jobs, source) => {
                     model::value_definition::ValueDefinition::JobList(model::JobList {
                         jobs: jobs
                             .iter()
                             .map(|j| self.job(j))
                             .collect::<CrushResult<Vec<_>>>()?,
+                        source: source.serialize(self.elements, self.state)? as u64,
                     })
                 }
             }),
@@ -1294,7 +1295,11 @@ impl<'a> ClosureDeserializer<'a> {
                             Source::deserialize(j.source as usize, self.elements, self.state)?,
                         ));
                     }
-                    ValueDefinition::JobListDefinition(res)
+                    ValueDefinition::JobListDefinition(res, Source::deserialize(
+                        jobs.source as usize,
+                        self.elements,
+                        self.state,
+                    )?)
                 }
 
                 model::value_definition::ValueDefinition::Identifier(s) => {

@@ -22,7 +22,7 @@ pub enum ValueDefinition {
         source: Source,
     },
     JobDefinition(Job),
-    JobListDefinition(Vec<Job>),
+    JobListDefinition(Vec<Job>, Source),
     Identifier(Source),
     GetAttr(Box<ValueDefinition>, Source),
 }
@@ -30,15 +30,12 @@ pub enum ValueDefinition {
 impl ValueDefinition {
     pub fn location(&self) -> Location {
         match self {
-            ValueDefinition::Value(_, l) => l.location(),
+            ValueDefinition::Value(_, source) => source.location(),
             ValueDefinition::ClosureDefinition { source, .. } => source.location(),
             ValueDefinition::JobDefinition(j) => j.location(),
             ValueDefinition::Identifier(l) => l.location(),
             ValueDefinition::GetAttr(p, a) => p.location().union(a.location()),
-            ValueDefinition::JobListDefinition(j) => j
-                .last()
-                .map(|j| j.location())
-                .unwrap_or(Location::new(0, 0)),
+            ValueDefinition::JobListDefinition(_, source) => source.location(),
         }
     }
 
@@ -49,7 +46,7 @@ impl ValueDefinition {
             | ValueDefinition::Value(_, source)
             | ValueDefinition::ClosureDefinition { source, .. } => source,
             ValueDefinition::JobDefinition(j) => j.source(),
-            ValueDefinition::JobListDefinition(j) => j.last().map(|j| j.source()).unwrap(),
+            ValueDefinition::JobListDefinition(_, source) => source,
         }
     }
 
@@ -75,14 +72,18 @@ impl ValueDefinition {
                 def.eval(context.job_context(first_input, last_output))?;
                 (None, last_input.recv()?)
             }
-            ValueDefinition::JobListDefinition(defs) => {
-                for def in defs[..defs.len() - 1].iter() {
-                    def.eval(context.job_context(empty_channel(), black_hole()))?;
-                }
-                let (last_output, last_input) = pipe();
-                let last_def = &defs[defs.len() - 1];
-                last_def.eval(context.job_context(empty_channel(), last_output))?;
-                (None, last_input.recv()?)
+            ValueDefinition::JobListDefinition(defs, _) => {
+    //            if defs.len() == 0 {
+  //                  
+//                } else {
+                    for def in defs[..defs.len() - 1].iter() {
+                        def.eval(context.job_context(empty_channel(), black_hole()))?;
+                    }
+                    let (last_output, last_input) = pipe();
+                    let last_def = &defs[defs.len() - 1];
+                    last_def.eval(context.job_context(empty_channel(), last_output))?;
+                    (None, last_input.recv()?)
+      //          }
             }
 
             ValueDefinition::ClosureDefinition {
@@ -172,7 +173,7 @@ impl Display for ValueDefinition {
                 f.write_str(":")?;
                 l.fmt(f)
             }
-            ValueDefinition::JobListDefinition(jl) => jl.fmt(f),
+            ValueDefinition::JobListDefinition(jl, _) => jl.fmt(f),
         }
     }
 }
@@ -214,7 +215,7 @@ impl Repr for ValueDefinition {
                 f.write_str(":")?;
                 l.string().fmt(f)
             }
-            ValueDefinition::JobListDefinition(jl) => {
+            ValueDefinition::JobListDefinition(jl, _) => {
                 f.write_str("$(")?;
                 let mut first = true;
                 for j in jl {

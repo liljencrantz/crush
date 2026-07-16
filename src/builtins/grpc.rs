@@ -85,6 +85,7 @@ impl Grpc {
         data: Option<String>,
         mut args: Vec<S>,
     ) -> CrushResult<String> {
+        
         let mut cmd = process::Command::new("grpcurl");
 
         if self.plaintext {
