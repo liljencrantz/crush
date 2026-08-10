@@ -6,7 +6,8 @@ use signature::signature;
     stream.skip,
     can_block = true,
     output = Passthrough,
-    short = "Skip the specified number of rows in the stream and return the remainder.",
+    short = "Skip the specified number of rows from the beginning of the stream and return the remainder.",
+    long = "If the stream has fewer than the specified number of rows, an empty stream will be returned.",
 )]
 pub struct Skip {
     #[description("the number of rows to skip.")]

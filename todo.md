@@ -29,3 +29,4 @@
 * syntax highlighting does not understand using types as commands
 * syntax highlighting does not understand closure signatures
 * syntax highlighting does not understand closure parameters
+* `rename` builtin, renames a column in a stream

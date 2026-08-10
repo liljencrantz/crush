@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 /**
 This file implements the crush equivalent of a pipe from a regular shell.
 
@@ -32,7 +33,7 @@ impl ValueSender {
     }
 
     pub fn initialize(&self, signature: &[ColumnType]) -> CrushResult<TableOutputStream> {
-        let (output, input) = streams(signature.to_vec());
+        let (output, input) = streams(signature.to_vec())?;
         self.send(Value::TableInputStream(input))?;
         Ok(output)
     }
@@ -195,9 +196,22 @@ pub fn printer_pipe() -> (ValueSender, ValueReceiver) {
     )
 }
 
-pub fn streams(signature: Vec<ColumnType>) -> (TableOutputStream, TableInputStream) {
+pub fn streams(signature: Vec<ColumnType>) -> CrushResult<(TableOutputStream, TableInputStream)> {
     let (output, input) = bounded(128);
-    (
+    let mut seen = HashMap::new();
+
+    for (idx, sig) in signature.iter().enumerate() {
+        match seen.get(sig.name()) {
+            Some(first_idx) => {
+                return error(format!(
+                    "Duplicate column name, column {} and column {} are both named `{}`", first_idx, idx, sig.name()));
+            }
+            None => {
+                seen.insert(sig.name(), idx);
+            },
+        }
+    }
+    Ok((
         TableOutputStream {
             sender: output,
             types: signature.clone(),
@@ -206,7 +220,7 @@ pub fn streams(signature: Vec<ColumnType>) -> (TableOutputStream, TableInputStre
             receiver: input,
             types: signature,
         },
-    )
+    ))
 }
 
 pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, TableInputStream) {

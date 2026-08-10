@@ -23,13 +23,20 @@ use std::sync::Arc;
 
 pub type Command = Arc<dyn CrushCommand + Send + Sync>;
 
+/// What type of output a given command will pass on to the next command in the pipeline
 #[derive(Clone, Debug)]
 pub enum OutputType {
+    /// The type of output is not specified, perhaps because it is not known until the command is run
     Unknown,
+    /// The command always returns an output of the same type as it passed in
     Known(ValueType),
+    /// The output of this command is some type of stream with an identical structure to the input
+    /// stream. The exact signature may change, i.e. a table of integers might be passed through as
+    /// a table_input_stream of integers.
     Passthrough,
 }
 
+/// A small utility to help bind a command to a value.
 pub trait CommandBinder {
     fn bind(&self, value: Value) -> Command;
 }
