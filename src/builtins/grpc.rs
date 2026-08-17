@@ -7,23 +7,29 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::data::list::List;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::{command_error, error};
+use crate::lang::errors::{CrushErrorType::GenericError, command_error, error};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
+use bytes::{Buf, BufMut, Bytes};
 use chrono::Duration;
-use crossbeam::channel::bounded;
 use itertools::Itertools;
+use prost::Message as ProstMessage;
+use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
 use regex::Regex;
 use signature::signature;
 use std::collections::{HashMap, HashSet};
-use std::io::Read;
-use std::process;
-use std::process::Stdio;
 use std::sync::OnceLock;
+use tonic::codec::{Codec, DecodeBuf, EncodeBuf};
+use tonic::codegen::Service;
+use tonic::transport::{Channel, Endpoint};
+use tonic_reflection::pb::v1::{
+    ServerReflectionRequest, server_reflection_client::ServerReflectionClient,
+    server_reflection_request, server_reflection_response,
+};
 
 #[signature(
     grpc.connect,
@@ -79,59 +85,332 @@ impl Grpc {
         command_error("Invalid struct specification.")
     }
 
-    fn call<S: Into<String>>(
+    fn list_services(&self) -> CrushResult<String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| GenericError(e.to_string()))?;
+        rt.block_on(self.list_services_async())
+    }
+
+    fn list_methods(&self, service: &str) -> CrushResult<String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| GenericError(e.to_string()))?;
+        rt.block_on(self.list_methods_async(service))
+    }
+
+    fn describe(&self, path: &str) -> CrushResult<String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| GenericError(e.to_string()))?;
+        rt.block_on(self.describe_async(path))
+    }
+
+    fn invoke_method(&self, method: &str, data: Option<String>) -> CrushResult<String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| GenericError(e.to_string()))?;
+        rt.block_on(self.invoke_method_async(method, data))
+    }
+
+    async fn connect_channel(&self) -> CrushResult<Channel> {
+        let uri = if self.plaintext {
+            format!("http://{}:{}", self.host, self.port)
+        } else {
+            format!("https://{}:{}", self.host, self.port)
+        };
+
+        let mut endpoint = Endpoint::from_shared(uri)
+            .map_err(|e| GenericError(e.to_string()))?
+            .timeout(
+                self.timeout
+                    .to_std()
+                    .unwrap_or(std::time::Duration::from_secs(5)),
+            );
+
+        if !self.plaintext {
+            endpoint = endpoint
+                .tls_config(tonic::transport::ClientTlsConfig::new())
+                .map_err(|e| GenericError(e.to_string()))?;
+        }
+
+        Ok(endpoint
+            .connect()
+            .await
+            .map_err(|e| GenericError(e.to_string()))?)
+    }
+
+    async fn reflection_request(
         &self,
-        context: &CommandContext,
-        data: Option<String>,
-        mut args: Vec<S>,
-    ) -> CrushResult<String> {
-        
-        let mut cmd = process::Command::new("grpcurl");
+        channel: Channel,
+        message_request: server_reflection_request::MessageRequest,
+    ) -> CrushResult<server_reflection_response::MessageResponse> {
+        let mut client = ServerReflectionClient::new(channel);
+        let req = ServerReflectionRequest {
+            host: "".to_string(), //self.host.clone(),
+            message_request: Some(message_request),
+        };
 
-        if self.plaintext {
-            cmd.arg("--plaintext");
-        }
+        let response = client
+            .server_reflection_info(tokio_stream::once(req))
+            .await
+            .map_err(|e| GenericError(format!("Reflection request failed: {}", e)))?;
 
-        cmd.arg("--max-time")
-            .arg(self.timeout.num_seconds().to_string());
+        let mut stream = response.into_inner();
+        let msg = stream
+            .message()
+            .await
+            .map_err(|e| GenericError(format!("Failed to read reflection response: {}", e)))?
+            .ok_or_else(|| GenericError("Empty reflection response".to_string()))?;
 
-        if let Some(data) = data {
-            cmd.arg("-d").arg(data);
-        }
+        Ok(msg.message_response.ok_or_else(|| {
+            GenericError("Missing message_response in reflection response".to_string())
+        })?)
+    }
 
-        cmd.arg(format!("{}:{}", self.host, self.port));
-        for a in args.drain(..) {
-            cmd.arg::<String>(a.into());
-        }
+    async fn list_services_async(&self) -> CrushResult<String> {
+        let channel = self.connect_channel().await?;
+        let resp = self
+            .reflection_request(
+                channel,
+                server_reflection_request::MessageRequest::ListServices(String::new()),
+            )
+            .await?;
 
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-
-        let mut child = cmd.spawn()?;
-
-        let mut stdout = child.stdout.take().ok_or("Expected output stream")?;
-        let mut buff = Vec::new();
-        stdout.read_to_end(&mut buff)?;
-        let output = String::from_utf8(buff)?;
-        let (send_err, recv_err) = bounded(1);
-        let mut stderr = child.stderr.take().ok_or("Expected error stream")?;
-        context.global_state.threads().spawn(
-            "grpcurl:stderr",
-            &context.next_command_handle(),
-            move || {
-                let mut buff = Vec::new();
-                stderr.read_to_end(&mut buff)?;
-                let errors = String::from_utf8(buff)?;
-                let _ = send_err.send(errors);
-                Ok(())
-            },
-        )?;
-
-        match child.wait()?.success() {
-            true => Ok(output),
-            false => command_error(recv_err.recv()?),
+        match resp {
+            server_reflection_response::MessageResponse::ListServicesResponse(list) => {
+                let names: Vec<String> = list.service.into_iter().map(|s| s.name).collect();
+                Ok(names.join("\n"))
+            }
+            _ => command_error("Unexpected reflection response type"),
         }
     }
+
+    async fn get_descriptor_pool(
+        &self,
+        channel: Channel,
+        symbol: &str,
+    ) -> CrushResult<DescriptorPool> {
+        let resp = self
+            .reflection_request(
+                channel,
+                server_reflection_request::MessageRequest::FileContainingSymbol(symbol.to_string()),
+            )
+            .await?;
+
+        match resp {
+            server_reflection_response::MessageResponse::FileDescriptorResponse(fdr) => {
+                let mut fds = prost_types::FileDescriptorSet { file: Vec::new() };
+                for fd_bytes in &fdr.file_descriptor_proto {
+                    let fd =
+                        prost_types::FileDescriptorProto::decode(&fd_bytes[..]).map_err(|e| {
+                            GenericError(format!("Failed to decode file descriptor: {}", e))
+                        })?;
+                    fds.file.push(fd);
+                }
+                Ok(DescriptorPool::from_file_descriptor_set(fds)
+                    .map_err(|e| GenericError(format!("Failed to build descriptor pool: {}", e)))?)
+            }
+            _ => command_error("Unexpected reflection response type"),
+        }
+    }
+
+    async fn list_methods_async(&self, service: &str) -> CrushResult<String> {
+        let channel = self.connect_channel().await?;
+        let pool = self.get_descriptor_pool(channel, service).await?;
+
+        let svc_desc = pool
+            .get_service_by_name(service)
+            .ok_or_else(|| GenericError(format!("Service {} not found in descriptors", service)))?;
+
+        let methods: Vec<String> = svc_desc
+            .methods()
+            .map(|m| format!("{}.{}", service, m.name()))
+            .collect();
+
+        Ok(methods.join("\n"))
+    }
+
+    async fn describe_async(&self, full_path: &str) -> CrushResult<String> {
+        let dot_pos = full_path
+            .rfind('.')
+            .ok_or_else(|| GenericError(format!("Invalid message/method path: {}", full_path)))?;
+        let service = &full_path[..dot_pos];
+        let method = &full_path[dot_pos + 1..];
+
+        let channel = self.connect_channel().await?;
+        let pool = self
+            .get_descriptor_pool(channel.clone(), &full_path)
+            .await?;
+
+        if let Some(msg_desc) = pool.get_message_by_name(&full_path) {
+            return Ok(format_message_descriptor(&msg_desc));
+        }
+
+        if let Some(svc_desc) = pool.get_service_by_name(&full_path) {
+            let mut result = String::new();
+            for method in svc_desc.methods() {
+                result += &format!(
+                    "rpc {} ( {} ) returns ( {} );\n",
+                    method.name(),
+                    method.input().full_name(),
+                    method.output().full_name(),
+                );
+            }
+            return Ok(result);
+        }
+
+        let pool = self.get_descriptor_pool(channel, service).await?;
+        if let Some(sd) = pool.get_service_by_name(service) {
+            for md in sd.methods() {
+                if md.name() == method {
+                    return Ok(format!(
+                        "rpc {} ( {} ) returns ( {} );\n",
+                        md.name(),
+                        md.input().full_name(),
+                        md.output().full_name(),
+                    ));
+                }
+            }
+        }
+
+        command_error(format!("Symbol {} not found", full_path))
+    }
+
+    async fn invoke_method_async(&self, method: &str, data: Option<String>) -> CrushResult<String> {
+        let channel = self.connect_channel().await?;
+
+        let pool = self.get_descriptor_pool(channel.clone(), method).await?;
+
+        let dot_pos = method
+            .rfind('.')
+            .ok_or_else(|| GenericError(format!("Invalid method name: {}", method)))?;
+        let service_name = &method[..dot_pos];
+        let method_name = &method[dot_pos + 1..];
+
+        let svc_desc = pool
+            .get_service_by_name(service_name)
+            .ok_or_else(|| GenericError(format!("Service {} not found", service_name)))?;
+
+        let method_desc = svc_desc
+            .methods()
+            .find(|m| m.name() == method_name)
+            .ok_or_else(|| {
+                GenericError(format!(
+                    "Method {} not found in service {}",
+                    method_name, service_name
+                ))
+            })?;
+
+        let input_desc = method_desc.input();
+        let output_desc = method_desc.output();
+
+        let request_bytes = if let Some(json_str) = data {
+            let mut deserializer = serde_json::Deserializer::from_str(&json_str);
+            let msg = DynamicMessage::deserialize(input_desc.clone(), &mut deserializer)
+                .map_err(|e| GenericError(format!("Failed to parse JSON input: {}", e)))?;
+            Bytes::from(msg.encode_to_vec())
+        } else {
+            let msg = DynamicMessage::new(input_desc.clone());
+            Bytes::from(msg.encode_to_vec())
+        };
+
+        let grpc_path = format!("/{}/{}", service_name, method_name);
+        let path = http::uri::PathAndQuery::try_from(grpc_path)
+            .map_err(|e| GenericError(format!("Invalid method path: {}", e)))?;
+
+        let mut grpc_client = tonic::client::Grpc::new(channel);
+        grpc_client
+            .ready()
+            .await
+            .map_err(|e| GenericError(format!("Channel not ready: {}", e)))?;
+
+        let request = tonic::Request::new(request_bytes);
+        let response = grpc_client
+            .unary(request, path, RawBytesCodec)
+            .await
+            .map_err(|e| GenericError(format!("gRPC call failed: {}", e)))?;
+
+        let response_bytes = response.into_inner();
+        let response_msg = DynamicMessage::decode(output_desc, &response_bytes[..])
+            .map_err(|e| GenericError(format!("Failed to decode response: {}", e)))?;
+
+        Ok(serde_json::to_string_pretty(&response_msg)
+            .map_err(|e| GenericError(format!("Failed to serialize response to JSON: {}", e)))?)
+    }
+}
+
+#[derive(Default, Clone)]
+struct RawBytesCodec;
+
+impl Codec for RawBytesCodec {
+    type Encode = Bytes;
+    type Decode = Bytes;
+    type Encoder = RawBytesEncoder;
+    type Decoder = RawBytesDecoder;
+
+    fn encoder(&mut self) -> Self::Encoder {
+        RawBytesEncoder
+    }
+
+    fn decoder(&mut self) -> Self::Decoder {
+        RawBytesDecoder
+    }
+}
+
+#[derive(Default, Clone)]
+struct RawBytesEncoder;
+
+impl tonic::codec::Encoder for RawBytesEncoder {
+    type Item = Bytes;
+    type Error = tonic::Status;
+
+    fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
+        dst.put(item);
+        Ok(())
+    }
+}
+
+#[derive(Default, Clone)]
+struct RawBytesDecoder;
+
+impl tonic::codec::Decoder for RawBytesDecoder {
+    type Item = Bytes;
+    type Error = tonic::Status;
+
+    fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
+        if src.remaining() == 0 {
+            return Ok(None);
+        }
+        Ok(Some(src.copy_to_bytes(src.remaining())))
+    }
+}
+
+fn format_message_descriptor(msg_desc: &MessageDescriptor) -> String {
+    let mut result = format!("message {} {{\n", msg_desc.name());
+    for field in msg_desc.fields() {
+        let type_str = match field.kind() {
+            prost_reflect::Kind::Double => "double".to_string(),
+            prost_reflect::Kind::Float => "float".to_string(),
+            prost_reflect::Kind::Int64 => "int64".to_string(),
+            prost_reflect::Kind::Uint64 => "uint64".to_string(),
+            prost_reflect::Kind::Int32 => "int32".to_string(),
+            prost_reflect::Kind::Uint32 => "uint32".to_string(),
+            prost_reflect::Kind::Bool => "bool".to_string(),
+            prost_reflect::Kind::String => "string".to_string(),
+            prost_reflect::Kind::Bytes => "bytes".to_string(),
+            prost_reflect::Kind::Message(m) => m.full_name().to_string(),
+            prost_reflect::Kind::Enum(e) => e.full_name().to_string(),
+            _ => "unknown".to_string(),
+        };
+        result += &format!("  {} {} = {};\n", type_str, field.name(), field.number());
+    }
+    result += "}\n";
+    result
 }
 
 #[derive(Clone, Debug)]
@@ -211,7 +490,7 @@ fn parse_message_type<'a>(
         return Ok(t.clone());
     }
 
-    let signature = grpc.call(context, None, vec!["describe", name])?;
+    let signature = grpc.describe(name)?;
 
     static REGEX: OnceLock<Regex> = OnceLock::new();
     let re = REGEX.get_or_init(|| {
@@ -266,7 +545,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
 
     let g = Grpc::new(tmp)?;
     let s = Struct::from_vec(vec![], vec![]);
-    let list = g.call(&context, None, vec!["list"])?;
+    let list = g.list_services()?;
     let mut available_services = list.lines().collect::<Vec<&str>>();
     let services = available_services
         .drain(..)
@@ -285,20 +564,14 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
     insert_known_types(&mut known_types);
 
     for service in services {
-        let out = g.call(&context, None, vec!["list", service])?;
+        let out = g.list_methods(service)?;
         for line in out.lines() {
             let stripped = line.strip_prefix(&format!("{}.", service));
             if let Some(method) = stripped {
-                let signature = g.call(
-                    &context,
-                    None,
-                    vec!["describe".to_string(), format!("{}.{}", service, method)],
-                )?;
+                let signature = g.describe(format!("{}.{}", service, method).as_str())?;
                 let input_type_name = parse_input_type_from_signature(method, signature.as_str())?;
-                println!("{:?}", input_type_name);
                 let input_type =
                     parse_message_type(&context, &input_type_name, &g, &mut known_types)?;
-                println!("{:?}", input_type);
 
                 s.set(
                     method,
@@ -382,7 +655,7 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     if let Some(Value::String(method)) = this.get("method") {
         let grpc = Grpc::new(this)?;
-        let out = grpc.call(&context, data, vec![method.to_string()])?;
+        let out = grpc.invoke_method(method.as_ref(), data)?;
 
         let split = out.split("\n}\n{\n");
 
