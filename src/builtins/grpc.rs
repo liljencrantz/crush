@@ -96,19 +96,24 @@ async fn connect_channel(
 
 impl GrpcClient {
     async fn new(s: Struct) -> CrushResult<GrpcClient> {
-        if let Some(Value::String(host)) = s.get("host") {
-            if let Some(Value::Bool(plaintext)) = s.get("plaintext") {
-                if let Some(Value::Duration(timeout)) = s.get("timeout") {
-                    if let Some(Value::Integer(port)) = s.get("port") {
-                        return Ok(GrpcClient {
-                            channel: connect_channel(host.as_ref(), port, timeout, plaintext)
-                                .await?,
-                        });
-                    }
-                }
-            }
+        match (
+            s.get("host"),
+            s.get("plaintext"),
+            s.get("timeout"),
+            s.get("port"),
+        ) {
+            (
+                Some(Value::String(host)),
+                Some(Value::Bool(plaintext)),
+                Some(Value::Duration(timeout)),
+                Some(Value::Integer(port)),
+            ) =>
+                Ok(GrpcClient {
+                    channel: connect_channel(host.as_ref(), port, timeout, plaintext)
+                        .await?,
+                }),
+            _ => command_error("Invalid struct specification."),
         }
-        command_error("Invalid struct specification.")
     }
 
     async fn reflection_request(
@@ -242,6 +247,7 @@ impl GrpcClient {
         let output_desc = method_desc.output();
 
         let request_bytes = if let Some(json_str) = data {
+            println!("woot {}", json_str);
             let mut deserializer = serde_json::Deserializer::from_str(&json_str);
             let msg = DynamicMessage::deserialize(input_desc.clone(), &mut deserializer)
                 .map_err(|e| GenericError(format!("Failed to parse JSON input: {}", e)))?;
@@ -359,6 +365,7 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
             "You must specify at least one service to connect to. You can use globs, such as `*`.",
         );
     }
+
     let tmp = Struct::new(
         vec![
             ("host", Value::from(cfg.host.clone())),
@@ -448,6 +455,10 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
 }
 
 async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let grpc = GrpcClient::new(this).await?;
+    
+
     let data = if context.input.is_pipeline() {
         let data = context.input.recv()?;
         Some(value_to_json(data)?)
@@ -467,9 +478,7 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
             None
         }
     };
-    let this = context.this.r#struct()?;
     if let Some(Value::String(method)) = this.get("method") {
-        let grpc = GrpcClient::new(this).await?;
         let out = grpc.invoke_method(method.as_ref(), data).await?;
 
         let split = out.split("\n}\n{\n");
