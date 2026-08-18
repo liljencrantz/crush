@@ -18,11 +18,9 @@ use bytes::{Buf, BufMut, Bytes};
 use chrono::Duration;
 use itertools::Itertools;
 use prost::Message as ProstMessage;
-use prost_reflect::{DescriptorPool, DynamicMessage, MessageDescriptor};
-use regex::Regex;
+use prost_reflect::{DescriptorPool, DynamicMessage, Kind, MessageDescriptor, MethodDescriptor};
 use signature::signature;
 use std::collections::{HashMap, HashSet};
-use std::sync::OnceLock;
 use tonic::codec::{Codec, DecodeBuf, EncodeBuf};
 use tonic::codegen::Service;
 use tonic::transport::{Channel, Endpoint};
@@ -59,24 +57,52 @@ struct Connect {
     port: i128,
 }
 
-struct Grpc {
-    host: String,
-    plaintext: bool,
-    timeout: Duration,
-    port: i128,
+struct GrpcClient {
+    channel: Channel,
 }
 
-impl Grpc {
-    fn new(s: Struct) -> CrushResult<Grpc> {
+async fn connect_channel(
+    host: &str,
+    port: i128,
+    timeout: Duration,
+    plaintext: bool,
+) -> CrushResult<Channel> {
+    let uri = format!(
+        "{}://{}:{}",
+        if plaintext { "http" } else { "https" },
+        host,
+        port
+    );
+
+    let mut endpoint = Endpoint::from_shared(uri)
+        .map_err(|e| GenericError(e.to_string()))?
+        .timeout(
+            timeout
+                .to_std()
+                .unwrap_or(std::time::Duration::from_secs(5)),
+        );
+
+    if !plaintext {
+        endpoint = endpoint
+            .tls_config(tonic::transport::ClientTlsConfig::new())
+            .map_err(|e| GenericError(e.to_string()))?;
+    }
+
+    Ok(endpoint
+        .connect()
+        .await
+        .map_err(|e| GenericError(e.to_string()))?)
+}
+
+impl GrpcClient {
+    async fn new(s: Struct) -> CrushResult<GrpcClient> {
         if let Some(Value::String(host)) = s.get("host") {
             if let Some(Value::Bool(plaintext)) = s.get("plaintext") {
                 if let Some(Value::Duration(timeout)) = s.get("timeout") {
                     if let Some(Value::Integer(port)) = s.get("port") {
-                        return Ok(Grpc {
-                            host: host.to_string(),
-                            plaintext,
-                            timeout,
-                            port,
+                        return Ok(GrpcClient {
+                            channel: connect_channel(host.as_ref(), port, timeout, plaintext)
+                                .await?,
                         });
                     }
                 }
@@ -85,71 +111,11 @@ impl Grpc {
         command_error("Invalid struct specification.")
     }
 
-    fn list_services(&self) -> CrushResult<String> {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| GenericError(e.to_string()))?;
-        rt.block_on(self.list_services_async())
-    }
-
-    fn list_methods(&self, service: &str) -> CrushResult<String> {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| GenericError(e.to_string()))?;
-        rt.block_on(self.list_methods_async(service))
-    }
-
-    fn describe(&self, path: &str) -> CrushResult<String> {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| GenericError(e.to_string()))?;
-        rt.block_on(self.describe_async(path))
-    }
-
-    fn invoke_method(&self, method: &str, data: Option<String>) -> CrushResult<String> {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| GenericError(e.to_string()))?;
-        rt.block_on(self.invoke_method_async(method, data))
-    }
-
-    async fn connect_channel(&self) -> CrushResult<Channel> {
-        let uri = if self.plaintext {
-            format!("http://{}:{}", self.host, self.port)
-        } else {
-            format!("https://{}:{}", self.host, self.port)
-        };
-
-        let mut endpoint = Endpoint::from_shared(uri)
-            .map_err(|e| GenericError(e.to_string()))?
-            .timeout(
-                self.timeout
-                    .to_std()
-                    .unwrap_or(std::time::Duration::from_secs(5)),
-            );
-
-        if !self.plaintext {
-            endpoint = endpoint
-                .tls_config(tonic::transport::ClientTlsConfig::new())
-                .map_err(|e| GenericError(e.to_string()))?;
-        }
-
-        Ok(endpoint
-            .connect()
-            .await
-            .map_err(|e| GenericError(e.to_string()))?)
-    }
-
     async fn reflection_request(
         &self,
-        channel: Channel,
         message_request: server_reflection_request::MessageRequest,
     ) -> CrushResult<server_reflection_response::MessageResponse> {
-        let mut client = ServerReflectionClient::new(channel);
+        let mut client = ServerReflectionClient::new(self.channel.clone());
         let req = ServerReflectionRequest {
             host: "".to_string(), //self.host.clone(),
             message_request: Some(message_request),
@@ -172,13 +138,11 @@ impl Grpc {
         })?)
     }
 
-    async fn list_services_async(&self) -> CrushResult<String> {
-        let channel = self.connect_channel().await?;
+    async fn list_services(&self) -> CrushResult<String> {
         let resp = self
-            .reflection_request(
-                channel,
-                server_reflection_request::MessageRequest::ListServices(String::new()),
-            )
+            .reflection_request(server_reflection_request::MessageRequest::ListServices(
+                String::new(),
+            ))
             .await?;
 
         match resp {
@@ -190,14 +154,9 @@ impl Grpc {
         }
     }
 
-    async fn get_descriptor_pool(
-        &self,
-        channel: Channel,
-        symbol: &str,
-    ) -> CrushResult<DescriptorPool> {
+    async fn get_descriptor_pool(&self, symbol: &str) -> CrushResult<DescriptorPool> {
         let resp = self
             .reflection_request(
-                channel,
                 server_reflection_request::MessageRequest::FileContainingSymbol(symbol.to_string()),
             )
             .await?;
@@ -219,9 +178,8 @@ impl Grpc {
         }
     }
 
-    async fn list_methods_async(&self, service: &str) -> CrushResult<String> {
-        let channel = self.connect_channel().await?;
-        let pool = self.get_descriptor_pool(channel, service).await?;
+    async fn list_methods(&self, service: &str) -> CrushResult<String> {
+        let pool = self.get_descriptor_pool(service).await?;
 
         let svc_desc = pool
             .get_service_by_name(service)
@@ -235,56 +193,30 @@ impl Grpc {
         Ok(methods.join("\n"))
     }
 
-    async fn describe_async(&self, full_path: &str) -> CrushResult<String> {
-        let dot_pos = full_path
-            .rfind('.')
-            .ok_or_else(|| GenericError(format!("Invalid message/method path: {}", full_path)))?;
-        let service = &full_path[..dot_pos];
-        let method = &full_path[dot_pos + 1..];
+    async fn describe_message(&self, message: &str) -> CrushResult<MessageDescriptor> {
+        let pool = self.get_descriptor_pool(&message).await?;
 
-        let channel = self.connect_channel().await?;
-        let pool = self
-            .get_descriptor_pool(channel.clone(), &full_path)
-            .await?;
-
-        if let Some(msg_desc) = pool.get_message_by_name(&full_path) {
-            return Ok(format_message_descriptor(&msg_desc));
+        if let Some(msg_desc) = pool.get_message_by_name(&message) {
+            Ok(msg_desc)
+        } else {
+            command_error(format!("Message {} not found", message))
         }
+    }
 
-        if let Some(svc_desc) = pool.get_service_by_name(&full_path) {
-            let mut result = String::new();
-            for method in svc_desc.methods() {
-                result += &format!(
-                    "rpc {} ( {} ) returns ( {} );\n",
-                    method.name(),
-                    method.input().full_name(),
-                    method.output().full_name(),
-                );
-            }
-            return Ok(result);
-        }
-
-        let pool = self.get_descriptor_pool(channel, service).await?;
+    async fn describe_method(&self, service: &str, method: &str) -> CrushResult<MethodDescriptor> {
+        let pool = self.get_descriptor_pool(service).await?;
         if let Some(sd) = pool.get_service_by_name(service) {
             for md in sd.methods() {
                 if md.name() == method {
-                    return Ok(format!(
-                        "rpc {} ( {} ) returns ( {} );\n",
-                        md.name(),
-                        md.input().full_name(),
-                        md.output().full_name(),
-                    ));
+                    return Ok(md);
                 }
             }
         }
-
-        command_error(format!("Symbol {} not found", full_path))
+        command_error(format!("Method {}.{} not found", service, method))
     }
 
-    async fn invoke_method_async(&self, method: &str, data: Option<String>) -> CrushResult<String> {
-        let channel = self.connect_channel().await?;
-
-        let pool = self.get_descriptor_pool(channel.clone(), method).await?;
+    async fn invoke_method(&self, method: &str, data: Option<String>) -> CrushResult<String> {
+        let pool = self.get_descriptor_pool(method).await?;
 
         let dot_pos = method
             .rfind('.')
@@ -323,7 +255,7 @@ impl Grpc {
         let path = http::uri::PathAndQuery::try_from(grpc_path)
             .map_err(|e| GenericError(format!("Invalid method path: {}", e)))?;
 
-        let mut grpc_client = tonic::client::Grpc::new(channel);
+        let mut grpc_client = tonic::client::Grpc::new(self.channel.clone());
         grpc_client
             .ready()
             .await
@@ -390,143 +322,37 @@ impl tonic::codec::Decoder for RawBytesDecoder {
     }
 }
 
-fn format_message_descriptor(msg_desc: &MessageDescriptor) -> String {
-    let mut result = format!("message {} {{\n", msg_desc.name());
-    for field in msg_desc.fields() {
-        let type_str = match field.kind() {
-            prost_reflect::Kind::Double => "double".to_string(),
-            prost_reflect::Kind::Float => "float".to_string(),
-            prost_reflect::Kind::Int64 => "int64".to_string(),
-            prost_reflect::Kind::Uint64 => "uint64".to_string(),
-            prost_reflect::Kind::Int32 => "int32".to_string(),
-            prost_reflect::Kind::Uint32 => "uint32".to_string(),
-            prost_reflect::Kind::Bool => "bool".to_string(),
-            prost_reflect::Kind::String => "string".to_string(),
-            prost_reflect::Kind::Bytes => "bytes".to_string(),
-            prost_reflect::Kind::Message(m) => m.full_name().to_string(),
-            prost_reflect::Kind::Enum(e) => e.full_name().to_string(),
-            _ => "unknown".to_string(),
-        };
-        result += &format!("  {} {} = {};\n", type_str, field.name(), field.number());
+fn crush_type(kind: Kind) -> ValueType {
+    match kind {
+        Kind::Int64 => ValueType::Integer,
+        Kind::Uint64 => ValueType::Integer,
+        Kind::Int32 => ValueType::Integer,
+        Kind::Uint32 => ValueType::Integer,
+        Kind::Double => ValueType::Float,
+        Kind::Float => ValueType::Float,
+        Kind::Bool => ValueType::Bool,
+        Kind::String => ValueType::String,
+        Kind::Bytes => ValueType::Binary,
+        Kind::Message(_) => ValueType::Struct,
+        Kind::Sint32 => ValueType::Integer,
+        Kind::Sint64 => ValueType::Integer,
+        Kind::Fixed32 => ValueType::Integer,
+        Kind::Fixed64 => ValueType::Integer,
+        Kind::Sfixed32 => ValueType::Integer,
+        Kind::Sfixed64 => ValueType::Integer,
+        Kind::Enum(_) => ValueType::Integer,
     }
-    result += "}\n";
-    result
-}
-
-#[derive(Clone, Debug)]
-struct ProtoMessage {
-    name: String,
-    fields: Vec<ProtoField>,
-}
-
-#[derive(Clone, Debug)]
-struct ProtoField {
-    name: String,
-    proto_type: ProtoType,
-}
-
-#[derive(Clone, Debug)]
-enum ProtoType {
-    Int64,
-    UInt64,
-    Int32,
-    UInt32,
-    Double,
-    Float,
-    Bool,
-    String,
-    Bytes,
-    Message(ProtoMessage),
-}
-
-impl ProtoType {
-    fn crush_type(&self) -> ValueType {
-        match self {
-            ProtoType::Int64 => ValueType::Integer,
-            ProtoType::UInt64 => ValueType::Integer,
-            ProtoType::Int32 => ValueType::Integer,
-            ProtoType::UInt32 => ValueType::Integer,
-            ProtoType::Double => ValueType::Float,
-            ProtoType::Float => ValueType::Float,
-            ProtoType::Bool => ValueType::Bool,
-            ProtoType::String => ValueType::String,
-            ProtoType::Bytes => ValueType::Binary,
-            ProtoType::Message(_) => ValueType::Struct,
-        }
-    }
-
-    fn arguments(&self) -> String {
-        if let ProtoType::Message(fields) = self {
-            fields
-                .fields
-                .iter()
-                .map(|f| format!("{}={}", f.name, f.proto_type.crush_type().to_string()))
-                .join(" ")
-        } else {
-            self.crush_type().to_string()
-        }
-    }
-}
-
-fn insert_known_types(known_types: &mut HashMap<String, ProtoType>) {
-    known_types.insert("int32".to_string(), ProtoType::Int32);
-    known_types.insert("int64".to_string(), ProtoType::Int64);
-    known_types.insert("uint32".to_string(), ProtoType::UInt32);
-    known_types.insert("uint64".to_string(), ProtoType::UInt64);
-    known_types.insert("bool".to_string(), ProtoType::Bool);
-    known_types.insert("string".to_string(), ProtoType::String);
-    known_types.insert("bytes".to_string(), ProtoType::Bytes);
-    known_types.insert("double".to_string(), ProtoType::Double);
-    known_types.insert("float".to_string(), ProtoType::Float);
-}
-
-fn parse_message_type<'a>(
-    context: &CommandContext,
-    name: &str,
-    grpc: &Grpc,
-    known_types: &'a mut HashMap<String, ProtoType>,
-) -> CrushResult<ProtoType> {
-    if let Some(t) = known_types.get(name) {
-        return Ok(t.clone());
-    }
-
-    let signature = grpc.describe(name)?;
-
-    static REGEX: OnceLock<Regex> = OnceLock::new();
-    let re = REGEX.get_or_init(|| {
-        Regex::new(r"[[:blank:]]*([a-zA-Z_.][a-zA-Z0-9_.]*)[[:blank:]]+([a-zA-Z_][a-zA-Z0-9_]*)[[:blank:]]*=[[:blank:]]*([0-9]+);[[:blank:]]*").unwrap()
-    });
-
-    let mut fields = Vec::new();
-
-    for line in signature.lines() {
-        match re.captures(line) {
-            None => {}
-            Some(c) => match (c.get(1), c.get(2)) {
-                (Some(type_name), Some(field_name)) => {
-                    let field_type =
-                        parse_message_type(context, type_name.as_str(), grpc, known_types)?;
-                    fields.push(ProtoField {
-                        name: field_name.as_str().to_string(),
-                        proto_type: field_type,
-                    });
-                }
-                _ => {}
-            },
-        };
-    }
-
-    let res = ProtoType::Message(ProtoMessage {
-        name: name.to_string(),
-        fields,
-    });
-
-    known_types.insert(name.to_string(), res.clone());
-
-    Ok(res)
 }
 
 fn connect(mut context: CommandContext) -> CrushResult<()> {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| GenericError(e.to_string()))?;
+    rt.block_on(connect_async(context))
+}
+
+async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Connect = Connect::parse(context.remove_arguments(), &context.global_state.printer())?;
     if cfg.service.is_empty() {
         return command_error(
@@ -543,9 +369,9 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
         None,
     );
 
-    let g = Grpc::new(tmp)?;
-    let s = Struct::from_vec(vec![], vec![]);
-    let list = g.list_services()?;
+    let grpc_client = GrpcClient::new(tmp).await?;
+    let grpc_struct = Struct::from_vec(vec![], vec![]);
+    let list = grpc_client.list_services().await?;
     let mut available_services = list.lines().collect::<Vec<&str>>();
     let services = available_services
         .drain(..)
@@ -554,26 +380,30 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
 
     if services.is_empty() {
         return command_error(format!(
-            "No match for service pattern `{}`. Found services `{}`.",
+            "No match for service pattern `{}`. Found the following services: {}.",
             cfg.service.to_string(),
-            list.lines().join(", ")
+            list.lines().map(|s| format!("`{}`", s)).join(", ")
         ));
     }
 
-    let mut known_types = HashMap::new();
-    insert_known_types(&mut known_types);
-
     for service in services {
-        let out = g.list_methods(service)?;
+        let out = grpc_client.list_methods(service).await?;
         for line in out.lines() {
             let stripped = line.strip_prefix(&format!("{}.", service));
             if let Some(method) = stripped {
-                let signature = g.describe(format!("{}.{}", service, method).as_str())?;
-                let input_type_name = parse_input_type_from_signature(method, signature.as_str())?;
-                let input_type =
-                    parse_message_type(&context, &input_type_name, &g, &mut known_types)?;
+                let signature = grpc_client.describe_method(service, method).await?;
+                let input = signature.input();
+                let input_type_name = input.full_name();
 
-                s.set(
+                println!("YA YA YA {}", input_type_name);
+                let signature = input
+                    .fields()
+                    .map(|field| {
+                        format!("{}={}", field.name(), crush_type(field.kind()).to_string())
+                    })
+                    .join(" ");
+
+                grpc_struct.set(
                     method,
                     Value::Struct(Struct::new(
                         vec![
@@ -589,7 +419,7 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
                                     grpc_method_call,
                                     true,
                                     &["global", "grpc", "connect", method, "__call__"],
-                                    format!("{} {}", method, input_type.arguments()),
+                                    format!("{} {}", method, signature),
                                     format!(
                                         "Call the {} method of the {} service",
                                         method, service
@@ -606,33 +436,18 @@ fn connect(mut context: CommandContext) -> CrushResult<()> {
             }
         }
     }
-    context.output.send(Value::Struct(s))
-}
-
-fn parse_input_type_from_signature<'a>(
-    method_name: &str,
-    signature: &'a str,
-) -> CrushResult<&'a str> {
-    static REGEX: OnceLock<Regex> = OnceLock::new();
-    let re = REGEX.get_or_init(|| Regex::new(r"\((.*)\).*\(.*\)").unwrap());
-    for line in signature.lines() {
-        if line.starts_with("rpc") {
-            return match re.captures(line) {
-                None => command_error("Failed to parse signature."),
-                Some(c) => match c.get(1) {
-                    None => command_error("Failed to parse signature."),
-                    Some(m) => Ok(m.as_str().trim()),
-                },
-            };
-        }
-    }
-    command_error(format!(
-        "Failed to parse signature of method `{}`.",
-        method_name
-    ))
+    context.output.send(Value::Struct(grpc_struct))
 }
 
 fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| GenericError(e.to_string()))?;
+    rt.block_on(grpc_method_call_async(context))
+}
+
+async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> {
     let data = if context.input.is_pipeline() {
         let data = context.input.recv()?;
         Some(value_to_json(data)?)
@@ -654,8 +469,8 @@ fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
     };
     let this = context.this.r#struct()?;
     if let Some(Value::String(method)) = this.get("method") {
-        let grpc = Grpc::new(this)?;
-        let out = grpc.invoke_method(method.as_ref(), data)?;
+        let grpc = GrpcClient::new(this).await?;
+        let out = grpc.invoke_method(method.as_ref(), data).await?;
 
         let split = out.split("\n}\n{\n");
 
