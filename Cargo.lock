@@ -469,6 +469,7 @@ dependencies = [
  "num-format",
  "ordered_map",
  "os_pipe",
+ "parking_lot",
  "prost",
  "prost-build",
  "prost-reflect",

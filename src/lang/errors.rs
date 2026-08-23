@@ -61,6 +61,7 @@ pub enum CrushErrorType {
     ToStrError(ToStrError),
     Message(markdown::message::Message),
     FromHexError(hex::FromHexError),
+
 }
 
 #[derive(Debug)]

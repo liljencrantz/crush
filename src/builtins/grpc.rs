@@ -17,10 +17,14 @@ use crate::lang::value::ValueType;
 use bytes::{Buf, BufMut, Bytes};
 use chrono::Duration;
 use itertools::Itertools;
+use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use prost::Message as ProstMessage;
 use prost_reflect::{DescriptorPool, DynamicMessage, Kind, MessageDescriptor, MethodDescriptor};
 use signature::signature;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::{LazyLock, OnceLock};
+use tokio::runtime::Runtime;
 use tonic::codec::{Codec, DecodeBuf, EncodeBuf};
 use tonic::codegen::Service;
 use tonic::transport::{Channel, Endpoint};
@@ -28,6 +32,16 @@ use tonic_reflection::pb::v1::{
     ServerReflectionRequest, server_reflection_client::ServerReflectionClient,
     server_reflection_request, server_reflection_response,
 };
+
+static CONNECTIONS: LazyLock<RwLock<HashMap<i32, Option<GrpcClient>>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
+static NEXT_ID: AtomicI32 = AtomicI32::new(1);
+
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("Failed to initialize static Tokio runtime")
+});
 
 #[signature(
     grpc.connect,
@@ -59,6 +73,7 @@ struct Connect {
 
 struct GrpcClient {
     channel: Channel,
+    host: String,
 }
 
 async fn connect_channel(
@@ -95,25 +110,59 @@ async fn connect_channel(
 }
 
 impl GrpcClient {
-    async fn new(s: Struct) -> CrushResult<GrpcClient> {
-        match (
-            s.get("host"),
-            s.get("plaintext"),
-            s.get("timeout"),
-            s.get("port"),
-        ) {
-            (
-                Some(Value::String(host)),
-                Some(Value::Bool(plaintext)),
-                Some(Value::Duration(timeout)),
-                Some(Value::Integer(port)),
-            ) =>
-                Ok(GrpcClient {
-                    channel: connect_channel(host.as_ref(), port, timeout, plaintext)
-                        .await?,
-                }),
-            _ => command_error("Invalid struct specification."),
+    fn connections() -> &'static RwLock<HashMap<i32, Option<GrpcClient>>> {
+        &CONNECTIONS
+    }
+
+    pub fn register(client: GrpcClient) -> i32 {
+        let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
+        let mut map = Self::connections().write();
+        map.insert(id, Some(client));
+        id
+    }
+
+    pub fn close(id: i32) {
+        let mut map = Self::connections().write();
+        if let Some(opt) = map.get_mut(&id) {
+            *opt = None;
         }
+    }
+
+    fn get(s: &Struct) -> CrushResult<MappedRwLockReadGuard<'static, GrpcClient>> {
+        match s.get("id") {
+            Some(Value::Integer(id)) => {
+                let id = id as i32;
+                Self::get_from_id(id)
+            }
+
+            _ => command_error("Missing or invalid id field in grpc method object"),
+        }
+    }
+
+    fn get_from_id(id: i32) -> CrushResult<MappedRwLockReadGuard<'static, GrpcClient>> {
+        let res = RwLockReadGuard::try_map(Self::connections().read(), |map| match map.get(&id) {
+            Some(Some(opt)) => Some(opt),
+            _ => None,
+        });
+        match res {
+            Ok(client) => {
+                Ok(client)
+            }
+            _ => command_error(format!("Invalid id {}", id)),
+        }
+    }
+
+    async fn create(
+        host: &str,
+        plaintext: bool,
+        timeout: Duration,
+        port: i128,
+    ) -> CrushResult<i32> {
+        let client = GrpcClient {
+            channel: connect_channel(host.as_ref(), port, timeout, plaintext).await?,
+            host: host.to_string(),
+        };
+        Ok(Self::register(client))
     }
 
     async fn reflection_request(
@@ -122,7 +171,7 @@ impl GrpcClient {
     ) -> CrushResult<server_reflection_response::MessageResponse> {
         let mut client = ServerReflectionClient::new(self.channel.clone());
         let req = ServerReflectionRequest {
-            host: "".to_string(), //self.host.clone(),
+            host: self.host.clone(),
             message_request: Some(message_request),
         };
 
@@ -220,14 +269,13 @@ impl GrpcClient {
         command_error(format!("Method {}.{} not found", service, method))
     }
 
-    async fn invoke_method(&self, method: &str, data: Option<String>) -> CrushResult<String> {
-        let pool = self.get_descriptor_pool(method).await?;
-
-        let dot_pos = method
-            .rfind('.')
-            .ok_or_else(|| GenericError(format!("Invalid method name: {}", method)))?;
-        let service_name = &method[..dot_pos];
-        let method_name = &method[dot_pos + 1..];
+    async fn invoke_method(
+        &self,
+        service_name: &str,
+        method_name: &str,
+        data: Option<String>,
+    ) -> CrushResult<String> {
+        let pool = self.get_descriptor_pool(&format!("{}.{}", service_name, method_name)).await?;
 
         let svc_desc = pool
             .get_service_by_name(service_name)
@@ -247,7 +295,6 @@ impl GrpcClient {
         let output_desc = method_desc.output();
 
         let request_bytes = if let Some(json_str) = data {
-            println!("woot {}", json_str);
             let mut deserializer = serde_json::Deserializer::from_str(&json_str);
             let msg = DynamicMessage::deserialize(input_desc.clone(), &mut deserializer)
                 .map_err(|e| GenericError(format!("Failed to parse JSON input: {}", e)))?;
@@ -350,12 +397,12 @@ fn crush_type(kind: Kind) -> ValueType {
     }
 }
 
-fn connect(mut context: CommandContext) -> CrushResult<()> {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| GenericError(e.to_string()))?;
-    rt.block_on(connect_async(context))
+fn runtime() -> &'static Runtime {
+    &RUNTIME
+}
+
+fn connect(context: CommandContext) -> CrushResult<()> {
+    runtime().block_on(connect_async(context))
 }
 
 async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
@@ -366,17 +413,8 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
         );
     }
 
-    let tmp = Struct::new(
-        vec![
-            ("host", Value::from(cfg.host.clone())),
-            ("plaintext", Value::Bool(cfg.plaintext)),
-            ("timeout", Value::Duration(cfg.timeout)),
-            ("port", Value::Integer(cfg.port)),
-        ],
-        None,
-    );
-
-    let grpc_client = GrpcClient::new(tmp).await?;
+    let id = GrpcClient::create(&cfg.host, cfg.plaintext, cfg.timeout, cfg.port).await?;
+    let grpc_client = GrpcClient::get_from_id(id)?;
     let grpc_struct = Struct::from_vec(vec![], vec![]);
     let list = grpc_client.list_services().await?;
     let mut available_services = list.lines().collect::<Vec<&str>>();
@@ -395,14 +433,12 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
 
     for service in services {
         let out = grpc_client.list_methods(service).await?;
-        for line in out.lines() {
-            let stripped = line.strip_prefix(&format!("{}.", service));
+        for method in out.lines() {
+            let stripped = method.strip_prefix(&format!("{}.", service));
             if let Some(method) = stripped {
                 let signature = grpc_client.describe_method(service, method).await?;
                 let input = signature.input();
-                let input_type_name = input.full_name();
 
-                println!("YA YA YA {}", input_type_name);
                 let signature = input
                     .fields()
                     .map(|field| {
@@ -414,12 +450,9 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
                     method,
                     Value::Struct(Struct::new(
                         vec![
-                            ("host", Value::from(cfg.host.clone())),
-                            ("service", Value::from(service.to_string())),
-                            ("plaintext", Value::Bool(cfg.plaintext)),
-                            ("timeout", Value::Duration(cfg.timeout)),
-                            ("port", Value::Integer(cfg.port)),
-                            ("method", Value::from(line)),
+                            ("id", Value::from(id)),
+                            ("method", Value::from(method)),
+                            ("service", Value::from(service)),
                             (
                                 "__call__",
                                 Value::Command(<dyn CrushCommand>::command(
@@ -447,18 +480,12 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
 }
 
 fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| GenericError(e.to_string()))?;
-    rt.block_on(grpc_method_call_async(context))
+    runtime().block_on(grpc_method_call_async(context))
 }
 
 async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
-    let grpc = GrpcClient::new(this).await?;
-    
-
+    let grpc = GrpcClient::get(&this)?;
     let data = if context.input.is_pipeline() {
         let data = context.input.recv()?;
         Some(value_to_json(data)?)
@@ -478,62 +505,64 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
             None
         }
     };
-    if let Some(Value::String(method)) = this.get("method") {
-        let out = grpc.invoke_method(method.as_ref(), data).await?;
+    match (this.get("service"), this.get("method")) {
+        (Some(Value::String(service)), Some(Value::String(method))) => {
+            let out = grpc.invoke_method(&service, &method, data).await?;
 
-        let split = out.split("\n}\n{\n");
+            let split = out.split("\n}\n{\n");
 
-        let mut lst = split
-            .into_iter()
-            .map(|i| {
-                let stripped = i.trim();
-                match (stripped.starts_with("{"), stripped.ends_with("}")) {
-                    (true, true) => json_to_value(i),
-                    (true, false) => json_to_value(&format!("{}}}", i)),
-                    (false, false) => json_to_value(&format!("{{{}}}", i)),
-                    (false, true) => json_to_value(&format!("{{{}", i)),
-                }
-            })
-            .collect::<CrushResult<Vec<_>>>()?;
-
-        let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
-        let struct_types: HashSet<Vec<ColumnType>> = lst
-            .iter()
-            .flat_map(|v| match v {
-                Value::Struct(r) => vec![r.local_signature()],
-                _ => vec![],
-            })
-            .collect();
-
-        let res = match types.len() {
-            0 => Value::Empty,
-            1 => {
-                let list_type = types.iter().next().unwrap();
-                match (list_type, struct_types.len()) {
-                    (ValueType::Struct, 1) => {
-                        let row_list = lst
-                            .drain(..)
-                            .map(|v| match v {
-                                Value::Struct(r) => Ok(r.to_row()),
-                                _ => error("Impossible!"),
-                            })
-                            .collect::<CrushResult<Vec<Row>>>()?;
-                        Value::Table(Table::from((
-                            struct_types.iter().next().unwrap().clone(),
-                            row_list,
-                        )))
+            let mut lst = split
+                .into_iter()
+                .map(|i| {
+                    let stripped = i.trim();
+                    match (stripped.starts_with("{"), stripped.ends_with("}")) {
+                        (true, true) => json_to_value(i),
+                        (true, false) => json_to_value(&format!("{}}}", i)),
+                        (false, false) => json_to_value(&format!("{{{}}}", i)),
+                        (false, true) => json_to_value(&format!("{{{}", i)),
                     }
-                    _ => List::new(list_type.clone(), lst).into(),
+                })
+                .collect::<CrushResult<Vec<_>>>()?;
+
+            let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
+            let struct_types: HashSet<Vec<ColumnType>> = lst
+                .iter()
+                .flat_map(|v| match v {
+                    Value::Struct(r) => vec![r.local_signature()],
+                    _ => vec![],
+                })
+                .collect();
+
+            let res = match types.len() {
+                0 => Value::Empty,
+                1 => {
+                    let list_type = types.iter().next().unwrap();
+                    match (list_type, struct_types.len()) {
+                        (ValueType::Struct, 1) => {
+                            let row_list = lst
+                                .drain(..)
+                                .map(|v| match v {
+                                    Value::Struct(r) => Ok(r.to_row()),
+                                    _ => error("Impossible!"),
+                                })
+                                .collect::<CrushResult<Vec<Row>>>()?;
+                            Value::Table(Table::from((
+                                struct_types.iter().next().unwrap().clone(),
+                                row_list,
+                            )))
+                        }
+                        _ => List::new(list_type.clone(), lst).into(),
+                    }
                 }
-            }
-            _ => List::new(ValueType::Any, lst).into(),
-        };
+                _ => List::new(ValueType::Any, lst).into(),
+            };
 
-        context.output.send(res)?;
+            context.output.send(res)?;
 
-        return Ok(());
+            Ok(())
+        }
+        _ => command_error("Invalid method field."),
     }
-    command_error("Invalid method field.")
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
