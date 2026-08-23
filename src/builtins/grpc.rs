@@ -3,7 +3,7 @@ use crate::builtins::io::json::{json_to_value, value_to_json};
 use crate::data::r#struct::Struct;
 use crate::lang::any_str::AnyStr;
 use crate::lang::command::CrushCommand;
-use crate::lang::command::OutputType::Unknown;
+use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::data::list::List;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::{Row, Table};
@@ -33,7 +33,8 @@ use tonic_reflection::pb::v1::{
     server_reflection_request, server_reflection_response,
 };
 
-static CONNECTIONS: LazyLock<RwLock<HashMap<i32, Option<GrpcClient>>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
+static CONNECTIONS: LazyLock<RwLock<HashMap<i32, Option<GrpcClient>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
 static NEXT_ID: AtomicI32 = AtomicI32::new(1);
 
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| {
@@ -145,10 +146,8 @@ impl GrpcClient {
             _ => None,
         });
         match res {
-            Ok(client) => {
-                Ok(client)
-            }
-            _ => command_error(format!("Invalid id {}", id)),
+            Ok(client) => Ok(client),
+            _ => command_error(format!("Unknown gRPC connection id {}. Did you close this connection?", id)),
         }
     }
 
@@ -275,7 +274,9 @@ impl GrpcClient {
         method_name: &str,
         data: Option<String>,
     ) -> CrushResult<String> {
-        let pool = self.get_descriptor_pool(&format!("{}.{}", service_name, method_name)).await?;
+        let pool = self
+            .get_descriptor_pool(&format!("{}.{}", service_name, method_name))
+            .await?;
 
         let svc_desc = pool
             .get_service_by_name(service_name)
@@ -431,6 +432,29 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
         ));
     }
 
+    grpc_struct.set(
+        "close",
+        Value::Struct(Struct::new(
+            vec![
+                ("id", Value::from(id)),
+                (
+                    "__call__",
+                    Value::Command(<dyn CrushCommand>::command(
+                        grpc_close_call,
+                        true,
+                        &["global", "grpc", "connect", "close", "__call__"],
+                        format!("close"),
+                        "Close this gRPC connection and release all related resources",
+                        None::<AnyStr>,
+                        Known(ValueType::Empty),
+                        [],
+                    )),
+                ),
+            ],
+            None,
+        )),
+    );
+
     for service in services {
         let out = grpc_client.list_methods(service).await?;
         for method in out.lines() {
@@ -479,7 +503,7 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Struct(grpc_struct))
 }
 
-fn grpc_method_call(mut context: CommandContext) -> CrushResult<()> {
+fn grpc_method_call(context: CommandContext) -> CrushResult<()> {
     runtime().block_on(grpc_method_call_async(context))
 }
 
@@ -562,6 +586,17 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
             Ok(())
         }
         _ => command_error("Invalid method field."),
+    }
+}
+
+fn grpc_close_call(mut context: CommandContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    match this.get("id") {
+        Some(Value::Integer(id)) => {
+            GrpcClient::close(id as i32);
+            context.output.send(Value::Empty)
+        }
+        _ => command_error("Invalid method id"),
     }
 }
 
