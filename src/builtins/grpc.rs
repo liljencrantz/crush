@@ -5,9 +5,10 @@ use crate::lang::any_str::AnyStr;
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::data::list::List;
-use crate::lang::data::table::ColumnType;
+use crate::lang::data::table::{ColumnType, TableReader};
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::{CrushErrorType::GenericError, command_error, error};
+use crate::lang::errors::{CrushError, CrushErrorType::GenericError, command_error, error};
+use crate::lang::pipe::{Stream, ValueReceiver, ValueSender};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -19,12 +20,20 @@ use chrono::Duration;
 use itertools::Itertools;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use prost::Message as ProstMessage;
-use prost_reflect::{DescriptorPool, DynamicMessage, Kind, MessageDescriptor, MethodDescriptor};
+use prost_reflect::{
+    DescriptorPool, DynamicMessage, EnumDescriptor, FieldDescriptor, Kind, MessageDescriptor,
+    MethodDescriptor,
+};
 use signature::signature;
 use std::collections::{HashMap, HashSet};
+use std::iter::zip;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{LazyLock, OnceLock};
 use tokio::runtime::Runtime;
+use tokio::sync::mpsc;
+use tokio_stream::StreamExt;
+use tokio_stream::wrappers::ReceiverStream;
+use tonic::Request;
 use tonic::codec::{Codec, DecodeBuf, EncodeBuf};
 use tonic::codegen::Service;
 use tonic::transport::{Channel, Endpoint};
@@ -32,6 +41,7 @@ use tonic_reflection::pb::v1::{
     ServerReflectionRequest, server_reflection_client::ServerReflectionClient,
     server_reflection_request, server_reflection_response,
 };
+use crate::lang::printer::Printer;
 
 static CONNECTIONS: LazyLock<RwLock<HashMap<i32, Option<GrpcClient>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
@@ -75,6 +85,7 @@ struct Connect {
 struct GrpcClient {
     channel: Channel,
     host: String,
+    timeout: Duration,
 }
 
 async fn connect_channel(
@@ -147,7 +158,10 @@ impl GrpcClient {
         });
         match res {
             Ok(client) => Ok(client),
-            _ => command_error(format!("Unknown gRPC connection id {}. Did you close this connection?", id)),
+            _ => command_error(format!(
+                "Unknown gRPC connection id {}. Did you close this connection?",
+                id
+            )),
         }
     }
 
@@ -160,6 +174,7 @@ impl GrpcClient {
         let client = GrpcClient {
             channel: connect_channel(host.as_ref(), port, timeout, plaintext).await?,
             host: host.to_string(),
+            timeout,
         };
         Ok(Self::register(client))
     }
@@ -246,16 +261,6 @@ impl GrpcClient {
         Ok(methods.join("\n"))
     }
 
-    async fn describe_message(&self, message: &str) -> CrushResult<MessageDescriptor> {
-        let pool = self.get_descriptor_pool(&message).await?;
-
-        if let Some(msg_desc) = pool.get_message_by_name(&message) {
-            Ok(msg_desc)
-        } else {
-            command_error(format!("Message {} not found", message))
-        }
-    }
-
     async fn describe_method(&self, service: &str, method: &str) -> CrushResult<MethodDescriptor> {
         let pool = self.get_descriptor_pool(service).await?;
         if let Some(sd) = pool.get_service_by_name(service) {
@@ -268,12 +273,229 @@ impl GrpcClient {
         command_error(format!("Method {}.{} not found", service, method))
     }
 
+    fn convert_crush_value_to_protobuf_value(
+        message: &mut DynamicMessage,
+        descriptor: &FieldDescriptor,
+        value: &Value,
+    ) -> CrushResult<()> {
+        match (descriptor.kind(), value) {
+            (_, Value::Empty) => Ok(()),
+            (Kind::String, Value::String(s)) => {
+                message.set_field(descriptor, prost_reflect::Value::String(s.to_string()));
+                Ok(())
+            }
+            (Kind::String, Value::File(s)) => {
+                message.set_field(
+                    descriptor,
+                    prost_reflect::Value::String(
+                        s.to_str().unwrap_or("<invalid filename>").to_string(),
+                    ),
+                );
+                Ok(())
+            }
+            (Kind::Double, Value::Float(f)) => {
+                message.set_field(descriptor, prost_reflect::Value::F64(*f));
+                Ok(())
+            }
+            (Kind::Float, Value::Float(f)) => {
+                message.set_field(descriptor, prost_reflect::Value::F32(*f as f32));
+                Ok(())
+            }
+            (Kind::Bool, Value::Bool(b)) => {
+                message.set_field(descriptor, prost_reflect::Value::Bool(*b));
+                Ok(())
+            }
+            /*
+                       Value::Integer(_) => {}
+                       Value::Time(_) => {}
+                       Value::Duration(_) => {}
+                       Value::Glob(_) => {}
+                       Value::Regex(_, _) => {}
+                       Value::Command(_) => {}
+                       Value::TableInputStream(_) => {}
+                       Value::TableOutputStream(_) => {}
+                       Value::File(_) => {}
+                       Value::Table(_) => {}
+                       Value::Struct(_) => {}
+                       Value::List(_) => {}
+                       Value::Dict(_) => {}
+                       Value::Scope(_) => {}
+                       Value::Bool(_) => {}
+
+                       /// The protobuf `int32` type.
+                       Int32,
+                       /// The protobuf `int64` type.
+                       Int64,
+                       /// The protobuf `uint32` type.
+                       Uint32,
+                       /// The protobuf `uint64` type.
+                       Uint64,
+                       /// The protobuf `sint32` type.
+                       Sint32,
+                       /// The protobuf `sint64` type.
+                       Sint64,
+                       /// The protobuf `fixed32` type.
+                       Fixed32,
+                       /// The protobuf `fixed64` type.
+                       Fixed64,
+                       /// The protobuf `sfixed32` type.
+                       Sfixed32,
+                       /// The protobuf `sfixed64` type.
+                       Sfixed64,
+                       /// The protobuf `bool` type.
+                       Bool,
+                       /// The protobuf `string` type.
+                       String,
+                       /// The protobuf `bytes` type.
+                       Bytes,
+                       /// A protobuf message type.
+                       Message(MessageDescriptor),
+                       /// A protobuf enum type.
+                       Enum(EnumDescriptor),
+
+                       Value::BinaryInputStream(_) => {}
+                       Value::Binary(_) => {}
+                       Value::Type(_) => {}
+
+            */
+            (_, _) => command_error("Unexpected type of column"),
+        }
+    }
+
+    fn convert_protobuf_value_to_crush_value(value: &prost_reflect::Value) -> CrushResult<Value> {
+        match value {
+            prost_reflect::Value::String(s) => Ok(Value::from(s)),
+            prost_reflect::Value::F64(s) => Ok(Value::from(*s)),
+            prost_reflect::Value::F32(s) => Ok(Value::from(*s)),
+            prost_reflect::Value::Bool(b) => Ok(Value::from(*b)),
+            /*
+                       Value::Integer(_) => {}
+                       Value::Time(_) => {}
+                       Value::Duration(_) => {}
+                       Value::Glob(_) => {}
+                       Value::Regex(_, _) => {}
+                       Value::Command(_) => {}
+                       Value::TableInputStream(_) => {}
+                       Value::TableOutputStream(_) => {}
+                       Value::File(_) => {}
+                       Value::Table(_) => {}
+                       Value::Struct(_) => {}
+                       Value::List(_) => {}
+                       Value::Dict(_) => {}
+                       Value::Scope(_) => {}
+                       Value::Bool(_) => {}
+
+                       /// The protobuf `int32` type.
+                       Int32,
+                       /// The protobuf `int64` type.
+                       Int64,
+                       /// The protobuf `uint32` type.
+                       Uint32,
+                       /// The protobuf `uint64` type.
+                       Uint64,
+                       /// The protobuf `sint32` type.
+                       Sint32,
+                       /// The protobuf `sint64` type.
+                       Sint64,
+                       /// The protobuf `fixed32` type.
+                       Fixed32,
+                       /// The protobuf `fixed64` type.
+                       Fixed64,
+                       /// The protobuf `sfixed32` type.
+                       Sfixed32,
+                       /// The protobuf `sfixed64` type.
+                       Sfixed64,
+                       /// The protobuf `bool` type.
+                       Bool,
+                       /// The protobuf `string` type.
+                       String,
+                       /// The protobuf `bytes` type.
+                       Bytes,
+                       /// A protobuf message type.
+                       Message(MessageDescriptor),
+                       /// A protobuf enum type.
+                       Enum(EnumDescriptor),
+
+                       Value::BinaryInputStream(_) => {}
+                       Value::Binary(_) => {}
+                       Value::Type(_) => {}
+
+            */
+            _ => command_error("Unexpected type of column"),
+        }
+    }
+
+    fn row_to_message(
+        descriptor: &MessageDescriptor,
+        types: &[ColumnType],
+        row: &Row,
+    ) -> CrushResult<DynamicMessage> {
+        let mut res = DynamicMessage::new(descriptor.clone());
+        for (vt, vv) in types.iter().zip(row.cells().iter()) {
+            let field = descriptor
+                .get_field_by_name(vt.name())
+                .ok_or("Unknown field")?;
+            Self::convert_crush_value_to_protobuf_value(&mut res, &field, vv)?;
+        }
+        Ok(res)
+    }
+
+    fn message_to_row(
+        descriptor: &MessageDescriptor,
+        message: &DynamicMessage,
+    ) -> CrushResult<Row> {
+        let v = descriptor
+            .fields()
+            .map(|column_type| {
+                let protobuf_value = message
+                    .get_field_by_name(column_type.name())
+                    .ok_or("Missing field name")?;
+                let crush_value = Self::convert_protobuf_value_to_crush_value(&protobuf_value)?;
+                Ok(crush_value)
+            })
+            .collect::<CrushResult<Vec<_>>>()?;
+
+        Ok(Row::new(v))
+    }
+
+    fn descriptor_to_column_types(descriptor: &MessageDescriptor) -> Vec<ColumnType> {
+        descriptor
+            .fields()
+            .map(|field| {
+                ColumnType::new_from_string(
+                    field.name().to_string(),
+                    match field.kind() {
+                        Kind::Double => ValueType::Float,
+                        Kind::Float => ValueType::Float,
+                        Kind::Int32 => ValueType::Integer,
+                        Kind::Int64 => ValueType::Integer,
+                        Kind::Uint32 => ValueType::Integer,
+                        Kind::Uint64 => ValueType::Integer,
+                        Kind::Sint32 => ValueType::Integer,
+                        Kind::Sint64 => ValueType::Integer,
+                        Kind::Fixed32 => ValueType::Integer,
+                        Kind::Fixed64 => ValueType::Integer,
+                        Kind::Sfixed32 => ValueType::Integer,
+                        Kind::Sfixed64 => ValueType::Integer,
+                        Kind::Bool => ValueType::Bool,
+                        Kind::String => ValueType::String,
+                        Kind::Bytes => ValueType::Binary,
+                        Kind::Message(_) => ValueType::Struct,
+                        Kind::Enum(_) => ValueType::Integer,
+                    },
+                )
+            })
+            .collect()
+    }
+
     async fn invoke_method(
         &self,
         service_name: &str,
         method_name: &str,
-        data: Option<String>,
-    ) -> CrushResult<String> {
+        mut input: Stream,
+        output: ValueSender,
+        printer: &Printer,
+    ) -> CrushResult<()> {
         let pool = self
             .get_descriptor_pool(&format!("{}.{}", service_name, method_name))
             .await?;
@@ -292,87 +514,122 @@ impl GrpcClient {
                 ))
             })?;
 
-        let input_desc = method_desc.input();
-        let output_desc = method_desc.output();
-
-        let request_bytes = if let Some(json_str) = data {
-            let mut deserializer = serde_json::Deserializer::from_str(&json_str);
-            let msg = DynamicMessage::deserialize(input_desc.clone(), &mut deserializer)
-                .map_err(|e| GenericError(format!("Failed to parse JSON input: {}", e)))?;
-            Bytes::from(msg.encode_to_vec())
-        } else {
-            let msg = DynamicMessage::new(input_desc.clone());
-            Bytes::from(msg.encode_to_vec())
-        };
+        let encode_desc = method_desc.input();
+        let decode_desc = method_desc.output();
 
         let grpc_path = format!("/{}/{}", service_name, method_name);
         let path = http::uri::PathAndQuery::try_from(grpc_path)
             .map_err(|e| GenericError(format!("Invalid method path: {}", e)))?;
 
+        let codec = DynamicMessageCodec {
+            encode_desc: encode_desc.clone(),
+            decode_desc: decode_desc.clone(),
+        };
+        let output_signature = Self::descriptor_to_column_types(&decode_desc);
+
         let mut grpc_client = tonic::client::Grpc::new(self.channel.clone());
+
+        let (tx, rx) = mpsc::channel::<DynamicMessage>(16);
+        let request_stream = ReceiverStream::new(rx);
+
         grpc_client
             .ready()
             .await
-            .map_err(|e| GenericError(format!("Channel not ready: {}", e)))?;
+            .map_err(|e| GenericError(format!("Service not ready: {}", e)))?;
 
-        let request = tonic::Request::new(request_bytes);
-        let response = grpc_client
-            .unary(request, path, RawBytesCodec)
+        let timeout = self.timeout;
+        let printer = printer.clone();
+
+        tokio::spawn(async move {
+            while let Ok(input_row) = input.read_timeout(timeout) {
+                match Self::row_to_message(&encode_desc, input.types(), &input_row) {
+                    Ok(request) => {
+                        if tx.send(request).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        printer.crush_error(e);
+                    }
+                }
+            }
+        });
+
+        let mut response = grpc_client
+            .streaming(Request::new(request_stream), path, codec)
             .await
-            .map_err(|e| GenericError(format!("gRPC call failed: {}", e)))?;
+            .map_err(CrushError::from)?
+            .into_inner();
 
-        let response_bytes = response.into_inner();
-        let response_msg = DynamicMessage::decode(output_desc, &response_bytes[..])
-            .map_err(|e| GenericError(format!("Failed to decode response: {}", e)))?;
+        let output = output.initialize(&output_signature)?;
 
-        Ok(serde_json::to_string_pretty(&response_msg)
-            .map_err(|e| GenericError(format!("Failed to serialize response to JSON: {}", e)))?)
-    }
-}
+        while let Some(response_message) = response
+            .message()
+            .await
+            .map_err(|e| GenericError(format!("Channel not ready: {}", e)))?
+        {
+            let row = Self::message_to_row(&decode_desc, &response_message)?;
+            output.send(row)?;
+        }
 
-#[derive(Default, Clone)]
-struct RawBytesCodec;
-
-impl Codec for RawBytesCodec {
-    type Encode = Bytes;
-    type Decode = Bytes;
-    type Encoder = RawBytesEncoder;
-    type Decoder = RawBytesDecoder;
-
-    fn encoder(&mut self) -> Self::Encoder {
-        RawBytesEncoder
-    }
-
-    fn decoder(&mut self) -> Self::Decoder {
-        RawBytesDecoder
-    }
-}
-
-#[derive(Default, Clone)]
-struct RawBytesEncoder;
-
-impl tonic::codec::Encoder for RawBytesEncoder {
-    type Item = Bytes;
-    type Error = tonic::Status;
-
-    fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
-        dst.put(item);
         Ok(())
     }
 }
 
-#[derive(Default, Clone)]
-struct RawBytesDecoder;
+#[derive(Clone)]
+pub struct DynamicMessageCodec {
+    // Descriptor for the message type we are sending
+    encode_desc: MessageDescriptor,
+    // Descriptor for the message type we expect to receive
+    decode_desc: MessageDescriptor,
+}
 
-impl tonic::codec::Decoder for RawBytesDecoder {
-    type Item = Bytes;
+impl Codec for DynamicMessageCodec {
+    type Encode = DynamicMessage;
+    type Decode = DynamicMessage;
+    type Encoder = DynamicMessageEncoder;
+    type Decoder = DynamicMessageDecoder;
+
+    fn encoder(&mut self) -> Self::Encoder {
+        DynamicMessageEncoder(self.encode_desc.clone())
+    }
+
+    fn decoder(&mut self) -> Self::Decoder {
+        DynamicMessageDecoder(self.decode_desc.clone())
+    }
+}
+
+pub struct DynamicMessageEncoder(MessageDescriptor);
+impl tonic::codec::Encoder for DynamicMessageEncoder {
+    type Item = DynamicMessage;
     type Error = tonic::Status;
 
-    fn decode(&mut self, src: &mut DecodeBuf<'_>) -> Result<Option<Self::Item>, Self::Error> {
-        if src.remaining() == 0 {
+    fn encode(
+        &mut self,
+        item: Self::Item,
+        dst: &mut tonic::codec::EncodeBuf<'_>,
+    ) -> Result<(), Self::Error> {
+        item.encode(dst)
+            .map_err(|e| tonic::Status::internal(format!("Encoding failed: {}", e)))
+    }
+}
+
+pub struct DynamicMessageDecoder(MessageDescriptor);
+impl tonic::codec::Decoder for DynamicMessageDecoder {
+    type Item = DynamicMessage;
+    type Error = tonic::Status;
+
+    fn decode(
+        &mut self,
+        src: &mut tonic::codec::DecodeBuf<'_>,
+    ) -> Result<Option<Self::Item>, Self::Error> {
+        if !src.has_remaining() {
             return Ok(None);
         }
-        Ok(Some(src.copy_to_bytes(src.remaining())))
+        let bytes = src.copy_to_bytes(src.remaining());
+        let msg = DynamicMessage::decode(self.0.clone(), bytes)
+            .map_err(|e| tonic::Status::internal(format!("Decoding failed: {}", e)))?;
+        Ok(Some(msg))
     }
 }
 
@@ -509,80 +766,93 @@ fn grpc_method_call(context: CommandContext) -> CrushResult<()> {
 
 async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
-    let grpc = GrpcClient::get(&this)?;
-    let data = if context.input.is_pipeline() {
-        let data = context.input.recv()?;
-        Some(value_to_json(data)?)
-    } else {
-        if !context.arguments.is_empty() {
-            let mut fields = Vec::new();
-            for a in context.remove_arguments() {
-                if let Some(name) = a.argument_type {
-                    fields.push((name, a.value));
-                } else {
-                    return command_error("gRPC method invocations can only use named arguments.");
-                }
-            }
-            let s = Struct::new(fields, None);
-            Some(value_to_json(Value::Struct(s))?)
-        } else {
-            None
-        }
-    };
+    let grpc_client = GrpcClient::get(&this)?;
+
     match (this.get("service"), this.get("method")) {
         (Some(Value::String(service)), Some(Value::String(method))) => {
-            let out = grpc.invoke_method(&service, &method, data).await?;
+            let signature = grpc_client.describe_method(&service, &method).await?;
 
-            let split = out.split("\n}\n{\n");
-
-            let mut lst = split
-                .into_iter()
-                .map(|i| {
-                    let stripped = i.trim();
-                    match (stripped.starts_with("{"), stripped.ends_with("}")) {
-                        (true, true) => json_to_value(i),
-                        (true, false) => json_to_value(&format!("{}}}", i)),
-                        (false, false) => json_to_value(&format!("{{{}}}", i)),
-                        (false, true) => json_to_value(&format!("{{{}", i)),
-                    }
-                })
-                .collect::<CrushResult<Vec<_>>>()?;
-
-            let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
-            let struct_types: HashSet<Vec<ColumnType>> = lst
-                .iter()
-                .flat_map(|v| match v {
-                    Value::Struct(r) => vec![r.local_signature()],
-                    _ => vec![],
-                })
-                .collect();
-
-            let res = match types.len() {
-                0 => Value::Empty,
-                1 => {
-                    let list_type = types.iter().next().unwrap();
-                    match (list_type, struct_types.len()) {
-                        (ValueType::Struct, 1) => {
-                            let row_list = lst
-                                .drain(..)
-                                .map(|v| match v {
-                                    Value::Struct(r) => Ok(r.to_row()),
-                                    _ => error("Impossible!"),
-                                })
-                                .collect::<CrushResult<Vec<Row>>>()?;
-                            Value::Table(Table::from((
-                                struct_types.iter().next().unwrap().clone(),
-                                row_list,
-                            )))
+            let mut data: Stream = if context.input.is_pipeline() {
+                context.input.recv()?.stream(context.command_handle())?
+            } else {
+                if !context.arguments.is_empty() {
+                    let mut fields = vec![];
+                    let mut input_signature = vec![];
+                    for a in context.remove_arguments() {
+                        if let Some(name) = a.argument_type {
+                            input_signature
+                                .push(ColumnType::new_from_string(name, a.value.value_type()));
+                            fields.push(a.value);
+                        } else {
+                            return command_error(
+                                "gRPC method invocations can only use named arguments.",
+                            );
                         }
-                        _ => List::new(list_type.clone(), lst).into(),
                     }
+                    Box::from(TableReader::new(Table::from((
+                        input_signature,
+                        vec![Row::new(fields)],
+                    ))))
+                } else {
+                    panic!()
                 }
-                _ => List::new(ValueType::Any, lst).into(),
             };
 
-            context.output.send(res)?;
+            grpc_client
+                .invoke_method(&service, &method, data, context.output, context.global_state.printer())
+                .await?;
 
+            /*
+                        let split = out.split("\n}\n{\n");
+
+                        let mut lst = split
+                            .into_iter()
+                            .map(|i| {
+                                let stripped = i.trim();
+                                match (stripped.starts_with("{"), stripped.ends_with("}")) {
+                                    (true, true) => json_to_value(i),
+                                    (true, false) => json_to_value(&format!("{}}}", i)),
+                                    (false, false) => json_to_value(&format!("{{{}}}", i)),
+                                    (false, true) => json_to_value(&format!("{{{}", i)),
+                                }
+                            })
+                            .collect::<CrushResult<Vec<_>>>()?;
+
+                        let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
+                        let struct_types: HashSet<Vec<ColumnType>> = lst
+                            .iter()
+                            .flat_map(|v| match v {
+                                Value::Struct(r) => vec![r.local_signature()],
+                                _ => vec![],
+                            })
+                            .collect();
+
+                        let res = match types.len() {
+                            0 => Value::Empty,
+                            1 => {
+                                let list_type = types.iter().next().unwrap();
+                                match (list_type, struct_types.len()) {
+                                    (ValueType::Struct, 1) => {
+                                        let row_list = lst
+                                            .drain(..)
+                                            .map(|v| match v {
+                                                Value::Struct(r) => Ok(r.to_row()),
+                                                _ => error("Impossible!"),
+                                            })
+                                            .collect::<CrushResult<Vec<Row>>>()?;
+                                        Value::Table(Table::from((
+                                            struct_types.iter().next().unwrap().clone(),
+                                            row_list,
+                                        )))
+                                    }
+                                    _ => List::new(list_type.clone(), lst).into(),
+                                }
+                            }
+                            _ => List::new(ValueType::Any, lst).into(),
+                        };
+
+                        context.output.send(res)?;
+            */
             Ok(())
         }
         _ => command_error("Invalid method field."),

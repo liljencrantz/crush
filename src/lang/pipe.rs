@@ -377,4 +377,4 @@ impl TableStreamReader for TableInputStream {
     }
 }
 
-pub type Stream = Box<dyn TableStreamReader>;
+pub type Stream = Box<dyn TableStreamReader + Send>;

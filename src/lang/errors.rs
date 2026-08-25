@@ -9,6 +9,7 @@ use crate::lang::ast::token;
 use crate::lang::state::scope::Scope;
 use CrushErrorType::*;
 use reqwest::header::ToStrError;
+use tonic::Status;
 
 #[derive(Debug)]
 pub enum CrushErrorType {
@@ -61,7 +62,7 @@ pub enum CrushErrorType {
     ToStrError(ToStrError),
     Message(markdown::message::Message),
     FromHexError(hex::FromHexError),
-
+    GrpcError(Status),
 }
 
 #[derive(Debug)]
@@ -133,6 +134,7 @@ impl CrushError {
             ToStrError(e) => e.to_string(),
             Message(m) => m.to_string(),
             FromHexError(e) => e.to_string(),
+            GrpcError(e) => e.to_string(),
             #[cfg(target_os = "linux")]
             DbusError(e) => e.message().unwrap_or("").to_string(),
             #[cfg(target_os = "linux")]
@@ -474,6 +476,12 @@ impl From<&String> for CrushError {
 impl From<markdown::message::Message> for CrushError {
     fn from(m: markdown::message::Message) -> Self {
         Message(m).into()
+    }
+}
+
+impl From<Status> for CrushError {
+    fn from(s: Status) -> Self {
+        GrpcError(s).into()
     }
 }
 

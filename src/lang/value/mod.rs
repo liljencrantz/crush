@@ -311,6 +311,12 @@ impl From<f64> for Value {
     }
 }
 
+impl From<f32> for Value {
+    fn from(v: f32) -> Value {
+        Value::Float(v as f64)
+    }
+}
+
 impl From<bool> for Value {
     fn from(v: bool) -> Value {
         Value::Bool(v)
