@@ -39,3 +39,4 @@
 * Fix help message for grpc methods
 * Fix repeated arguments
 * Fix grpc nested messages
+* `rename` builtin, renames a column in a stream

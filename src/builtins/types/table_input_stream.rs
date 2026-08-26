@@ -163,7 +163,7 @@ struct Pipe {}
 fn pipe(mut context: CommandContext) -> CrushResult<()> {
     match context.this.r#type()? {
         ValueType::TableInputStream(subtype) => {
-            let (output, input) = streams(subtype);
+            let (output, input) = streams(subtype)?;
             context.output.send(Value::Struct(Struct::new(
                 vec![
                     ("read", Value::TableInputStream(input)),

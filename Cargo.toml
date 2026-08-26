@@ -20,7 +20,7 @@ features = ["lexer"]
 members = [
     "signature",
     "test_finder",
-    "ordered_map",
+    "ordered_map", "tests/grpc-service",
 ]
 
 [dependencies.test_finder]

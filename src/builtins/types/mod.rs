@@ -36,7 +36,7 @@ pub mod time;
     short = "Recursively convert all streams in io to materialized form",
     example = "# Put a table of files in the current directory into the variable $f",
     example = "$f := $(files | materialize)",
-    example = "# Because we materialized the table stream into a table, counting the elements is not destructive",
+    example = "# Because we materialized the table stream into a table, counting the elements is not a destructive operation.",
     example = "$f | count",
 )]
 struct Materialize {}
@@ -49,14 +49,16 @@ fn materialize(context: CommandContext) -> CrushResult<()> {
     types.definition,
     can_block = true,
     output = Known(ValueType::String),
-    short = "Show the definition of the specified closure",
+    short = "Returns the definition of the specified closure as a text string",
     long = "Returns nothing if the command is not a closure",
     long = "",
-    long = "Note that the outputted may be significantly reformatted, including switching code between expression mode and command mode.",
+    long = "Note that the outputted of the `definition` builtin is reformatted, including switching code between expression mode and command mode.",
+    example = "# returns { $files --recursive '/'}",
     example = "$all_the_files := {files --recursive /}",
     example = "definition $all_the_files",
 )]
 struct Definition {
+    #[description("the closure to show the definition of.")]
     command: Command,
 }
 
@@ -123,7 +125,7 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     example = "$p3 := ($p + $p2)",
 )]
 struct Class {
-    #[description("the type to convert the value to.")]
+    #[description("the parent type to inherit members from (if any).")]
     parent: Option<Struct>,
 }
 
@@ -180,7 +182,7 @@ pub fn convert(mut context: CommandContext) -> CrushResult<()> {
     example = "typeof 1.8",
 )]
 struct TypeOf {
-    #[description("the value to convert.")]
+    #[description("the value to provide the type of.")]
     value: Value,
 }
 
@@ -196,7 +198,7 @@ pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
     short = "Modify the specified field to hold the specified value.",
 )]
 struct SetItem {
-    #[description("the name of the field to get the value of.")]
+    #[description("the name of the field to set the value of.")]
     name: String,
     #[description("the new value for the field.")]
     value: Value,
@@ -216,7 +218,7 @@ fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     short = "Modify the specified field to hold the specified value.",
 )]
 struct SetAttr {
-    #[description("the name of the field to get the value of.")]
+    #[description("the name of the field to set the value of.")]
     name: String,
     #[description("the new value for the field.")]
     value: Value,
