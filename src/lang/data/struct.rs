@@ -297,18 +297,26 @@ fn extract_help(value: Value, res: &mut Vec<String>, is_example: bool) {
 
 impl Help for Struct {
     fn signature(&self) -> String {
-        self.get("__signature__")
-            .map(|v| v.to_string())
-            .unwrap_or("type struct".to_string())
+        match (self.get("__call__"), self.get("__signature__")) {
+            (Some(Value::Command(command)), _) => command.signature(),
+            (_, Some(Value::String(str))) => str.to_string(),
+            _ => "A mapping from name to value".to_string(),
+        }
     }
 
     fn short_help(&self) -> String {
-        self.get("__short_help__")
-            .map(|v| v.to_string())
-            .unwrap_or("A mapping from name to value".to_string())
+        match (self.get("__call__"), self.get("__short_help__")) {
+            (Some(Value::Command(command)), _) => command.short_help(),
+            (_, Some(Value::String(str))) => str.to_string(),
+            _ => "A mapping from name to value".to_string(),
+        }
     }
 
     fn long_help(&self) -> Option<String> {
+        if let Some(Value::Command(command)) =  self.get("__call__") {
+            return command.long_help();
+        }
+
         let mut res = Vec::new();
 
         if let Some(l) = self.get("__long_help__") {

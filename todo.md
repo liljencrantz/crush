@@ -37,6 +37,5 @@
 * Fix grpc enums
 * Fix help messages for structs with __call__
 * Fix help message for grpc methods
-* Fix command completion for grpcs methods
 * Fix repeated arguments
 * Fix grpc nested messages

@@ -677,7 +677,7 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
                                     &["global", "grpc", "connect", method, "__call__"],
                                     format!("{} {}", method, signature_str),
                                     format!(
-                                        "Call the {} method of the {} service",
+                                        "Call the {} method of the {} gRPC service",
                                         method, service
                                     ),
                                     Some(generate_long_help(&signature)),
