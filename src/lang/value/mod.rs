@@ -48,6 +48,7 @@ use std::fmt::{Display, Formatter};
 use std::io::Read;
 use std::ops::Add;
 use std::sync::Arc;
+use bytes::Bytes;
 pub use value_definition::ValueDefinition;
 pub use value_type::ValueType;
 
@@ -350,6 +351,12 @@ impl From<&PathBuf> for Value {
 impl From<&Path> for Value {
     fn from(s: &Path) -> Value {
         Value::File(Arc::from(s))
+    }
+}
+
+impl From<&Bytes> for Value {
+    fn from(s: &Bytes) -> Value {
+        Value::Binary(Arc::from(s.to_vec()))
     }
 }
 

@@ -1,34 +1,32 @@
 use crate::CrushResult;
-use crate::builtins::io::json::{json_to_value, value_to_json};
 use crate::data::r#struct::Struct;
 use crate::lang::any_str::AnyStr;
-use crate::lang::command::CrushCommand;
+use crate::lang::command::{CrushCommand, Parameter};
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::data::list::List;
 use crate::lang::data::table::{ColumnType, TableReader};
 use crate::lang::data::table::{Row, Table};
 use crate::lang::errors::{CrushError, CrushErrorType::GenericError, command_error, error};
-use crate::lang::pipe::{Stream, ValueReceiver, ValueSender};
+use crate::lang::pipe::{Stream, ValueSender};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{Buf, Bytes};
 use chrono::Duration;
 use itertools::Itertools;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use prost::Message as ProstMessage;
 use prost_reflect::{
-    DescriptorPool, DynamicMessage, EnumDescriptor, FieldDescriptor, Kind, MessageDescriptor,
+    DescriptorPool, DynamicMessage, FieldDescriptor, Kind, MessageDescriptor,
     MethodDescriptor,
 };
 use signature::signature;
 use std::collections::{HashMap, HashSet};
 use std::iter::zip;
 use std::sync::atomic::{AtomicI32, Ordering};
-use std::sync::{LazyLock, OnceLock};
+use std::sync::{LazyLock};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
@@ -293,6 +291,10 @@ impl GrpcClient {
                 );
                 Ok(())
             }
+            (Kind::Bytes, Value::Binary(s)) => {
+                message.set_field(descriptor, prost_reflect::Value::Bytes(Bytes::copy_from_slice(s)));
+                Ok(())
+            }
             (Kind::Double, Value::Float(f)) => {
                 message.set_field(descriptor, prost_reflect::Value::F64(*f));
                 Ok(())
@@ -305,59 +307,37 @@ impl GrpcClient {
                 message.set_field(descriptor, prost_reflect::Value::Bool(*b));
                 Ok(())
             }
-            /*
-                       Value::Integer(_) => {}
-                       Value::Time(_) => {}
-                       Value::Duration(_) => {}
-                       Value::Glob(_) => {}
-                       Value::Regex(_, _) => {}
-                       Value::Command(_) => {}
-                       Value::TableInputStream(_) => {}
-                       Value::TableOutputStream(_) => {}
-                       Value::File(_) => {}
-                       Value::Table(_) => {}
-                       Value::Struct(_) => {}
-                       Value::List(_) => {}
-                       Value::Dict(_) => {}
-                       Value::Scope(_) => {}
-                       Value::Bool(_) => {}
+            (Kind::Sint32 | Kind::Int32 | Kind::Sfixed32, Value::Integer(i)) => {
+                message.set_field(descriptor, prost_reflect::Value::I32(*i as _));
+                Ok(())
+            }
+            (Kind::Int64 | Kind::Int64 | Kind::Sfixed64, Value::Integer(i)) => {
+                message.set_field(descriptor, prost_reflect::Value::I64(*i as _));
+                Ok(())
+            }
+            (Kind::Uint32 | Kind::Fixed32, Value::Integer(i)) => {
+                message.set_field(descriptor, prost_reflect::Value::U32(*i as _));
+                Ok(())
+            }
+            (Kind::Uint64 | Kind::Fixed64, Value::Integer(i)) => {
+                message.set_field(descriptor, prost_reflect::Value::U64(*i as _));
+                Ok(())
+            }
+            (Kind::Int32, Value::Integer(i)) => {
+                message.set_field(descriptor, prost_reflect::Value::I32(*i as _));
+                Ok(())
+            }
 
-                       /// The protobuf `int32` type.
-                       Int32,
-                       /// The protobuf `int64` type.
-                       Int64,
-                       /// The protobuf `uint32` type.
-                       Uint32,
-                       /// The protobuf `uint64` type.
-                       Uint64,
-                       /// The protobuf `sint32` type.
-                       Sint32,
-                       /// The protobuf `sint64` type.
-                       Sint64,
-                       /// The protobuf `fixed32` type.
-                       Fixed32,
-                       /// The protobuf `fixed64` type.
-                       Fixed64,
-                       /// The protobuf `sfixed32` type.
-                       Sfixed32,
-                       /// The protobuf `sfixed64` type.
-                       Sfixed64,
-                       /// The protobuf `bool` type.
-                       Bool,
-                       /// The protobuf `string` type.
-                       String,
-                       /// The protobuf `bytes` type.
-                       Bytes,
-                       /// A protobuf message type.
-                       Message(MessageDescriptor),
-                       /// A protobuf enum type.
-                       Enum(EnumDescriptor),
+            (Kind::Enum(enum_descriptor), Value::Integer(i)) => {
+                message.set_field(descriptor, prost_reflect::Value::EnumNumber(*i as _));
+                Ok(())
+            }
 
-                       Value::BinaryInputStream(_) => {}
-                       Value::Binary(_) => {}
-                       Value::Type(_) => {}
+            (Kind::Message(message_descriptor), Value::Struct(i)) => {
+                panic!();
+                Ok(())
+            }
 
-            */
             (_, _) => command_error("Unexpected type of column"),
         }
     }
@@ -368,60 +348,15 @@ impl GrpcClient {
             prost_reflect::Value::F64(s) => Ok(Value::from(*s)),
             prost_reflect::Value::F32(s) => Ok(Value::from(*s)),
             prost_reflect::Value::Bool(b) => Ok(Value::from(*b)),
-            /*
-                       Value::Integer(_) => {}
-                       Value::Time(_) => {}
-                       Value::Duration(_) => {}
-                       Value::Glob(_) => {}
-                       Value::Regex(_, _) => {}
-                       Value::Command(_) => {}
-                       Value::TableInputStream(_) => {}
-                       Value::TableOutputStream(_) => {}
-                       Value::File(_) => {}
-                       Value::Table(_) => {}
-                       Value::Struct(_) => {}
-                       Value::List(_) => {}
-                       Value::Dict(_) => {}
-                       Value::Scope(_) => {}
-                       Value::Bool(_) => {}
-
-                       /// The protobuf `int32` type.
-                       Int32,
-                       /// The protobuf `int64` type.
-                       Int64,
-                       /// The protobuf `uint32` type.
-                       Uint32,
-                       /// The protobuf `uint64` type.
-                       Uint64,
-                       /// The protobuf `sint32` type.
-                       Sint32,
-                       /// The protobuf `sint64` type.
-                       Sint64,
-                       /// The protobuf `fixed32` type.
-                       Fixed32,
-                       /// The protobuf `fixed64` type.
-                       Fixed64,
-                       /// The protobuf `sfixed32` type.
-                       Sfixed32,
-                       /// The protobuf `sfixed64` type.
-                       Sfixed64,
-                       /// The protobuf `bool` type.
-                       Bool,
-                       /// The protobuf `string` type.
-                       String,
-                       /// The protobuf `bytes` type.
-                       Bytes,
-                       /// A protobuf message type.
-                       Message(MessageDescriptor),
-                       /// A protobuf enum type.
-                       Enum(EnumDescriptor),
-
-                       Value::BinaryInputStream(_) => {}
-                       Value::Binary(_) => {}
-                       Value::Type(_) => {}
-
-            */
-            _ => command_error("Unexpected type of column"),
+            prost_reflect::Value::I32(v) => Ok(Value::from(*v)),
+            prost_reflect::Value::I64(v) => Ok(Value::Integer(*v as i128)),
+            prost_reflect::Value::U32(v) => Ok(Value::from(*v)),
+            prost_reflect::Value::U64(v) => Ok(Value::from(*v)),
+            prost_reflect::Value::Bytes(b) => Ok(Value::from(b)),
+            prost_reflect::Value::EnumNumber(v) => Ok(Value::from(*v)),
+            prost_reflect::Value::Message(m) => panic!(),
+            prost_reflect::Value::List(l) => panic!(),
+            prost_reflect::Value::Map(l) => panic!(),
         }
     }
 
@@ -720,7 +655,7 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
                 let signature = grpc_client.describe_method(service, method).await?;
                 let input = signature.input();
 
-                let signature = input
+                let signature_str = input
                     .fields()
                     .map(|field| {
                         format!("{}={}", field.name(), crush_type(field.kind()).to_string())
@@ -740,14 +675,14 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
                                     grpc_method_call,
                                     true,
                                     &["global", "grpc", "connect", method, "__call__"],
-                                    format!("{} {}", method, signature),
+                                    format!("{} {}", method, signature_str),
                                     format!(
                                         "Call the {} method of the {} service",
                                         method, service
                                     ),
-                                    None::<AnyStr>,
+                                    Some(generate_long_help(&signature)),
                                     Unknown,
-                                    [],
+                                    generate_parameters(&signature),
                                 )),
                             ),
                         ],
@@ -760,6 +695,32 @@ async fn connect_async(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Struct(grpc_struct))
 }
 
+fn generate_parameters(signature: &MethodDescriptor) -> Vec<Parameter> {
+    signature.input().fields().map(|field| {
+        Parameter {
+            name: field.name().to_string(),
+            value_type: ValueType::String,
+            default: None,
+            allowed: None,
+            description: None,
+            complete: None,
+            named: false,
+            unnamed: false,
+        }
+    }).collect()
+}
+
+fn generate_long_help(signature: &MethodDescriptor) -> String {
+    let mut res = String::new();
+    if signature.input().fields().len() > 0 {
+       res += "This command accepts the following arguments:\n\n";
+        for field in signature.input().fields() {
+            res += format!("* `{}` ({})", field.name(), crush_type(field.kind()).to_string()).as_str();
+        }
+    }
+    res
+}
+
 fn grpc_method_call(context: CommandContext) -> CrushResult<()> {
     runtime().block_on(grpc_method_call_async(context))
 }
@@ -770,9 +731,7 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
 
     match (this.get("service"), this.get("method")) {
         (Some(Value::String(service)), Some(Value::String(method))) => {
-            let signature = grpc_client.describe_method(&service, &method).await?;
-
-            let mut data: Stream = if context.input.is_pipeline() {
+            let data: Stream = if context.input.is_pipeline() {
                 context.input.recv()?.stream(context.command_handle())?
             } else {
                 if !context.arguments.is_empty() {
@@ -800,60 +759,7 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
 
             grpc_client
                 .invoke_method(&service, &method, data, context.output, context.global_state.printer())
-                .await?;
-
-            /*
-                        let split = out.split("\n}\n{\n");
-
-                        let mut lst = split
-                            .into_iter()
-                            .map(|i| {
-                                let stripped = i.trim();
-                                match (stripped.starts_with("{"), stripped.ends_with("}")) {
-                                    (true, true) => json_to_value(i),
-                                    (true, false) => json_to_value(&format!("{}}}", i)),
-                                    (false, false) => json_to_value(&format!("{{{}}}", i)),
-                                    (false, true) => json_to_value(&format!("{{{}", i)),
-                                }
-                            })
-                            .collect::<CrushResult<Vec<_>>>()?;
-
-                        let types: HashSet<ValueType> = lst.iter().map(|v| v.value_type()).collect();
-                        let struct_types: HashSet<Vec<ColumnType>> = lst
-                            .iter()
-                            .flat_map(|v| match v {
-                                Value::Struct(r) => vec![r.local_signature()],
-                                _ => vec![],
-                            })
-                            .collect();
-
-                        let res = match types.len() {
-                            0 => Value::Empty,
-                            1 => {
-                                let list_type = types.iter().next().unwrap();
-                                match (list_type, struct_types.len()) {
-                                    (ValueType::Struct, 1) => {
-                                        let row_list = lst
-                                            .drain(..)
-                                            .map(|v| match v {
-                                                Value::Struct(r) => Ok(r.to_row()),
-                                                _ => error("Impossible!"),
-                                            })
-                                            .collect::<CrushResult<Vec<Row>>>()?;
-                                        Value::Table(Table::from((
-                                            struct_types.iter().next().unwrap().clone(),
-                                            row_list,
-                                        )))
-                                    }
-                                    _ => List::new(list_type.clone(), lst).into(),
-                                }
-                            }
-                            _ => List::new(ValueType::Any, lst).into(),
-                        };
-
-                        context.output.send(res)?;
-            */
-            Ok(())
+                .await
         }
         _ => command_error("Invalid method field."),
     }
