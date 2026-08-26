@@ -254,6 +254,12 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
 fn parse_command_node(node: &Node, scope: &Scope) -> CrushResult<CompletionCommand> {
     match fetch_value(node, scope, true)? {
         Some(Value::Command(command)) => Ok(CompletionCommand::Known(command)),
+        Some(Value::Struct(struc)) => {
+            match struc.get("__call__") {
+                Some(Value::Command(command)) => Ok(CompletionCommand::Known(command)),
+                _ => Ok(CompletionCommand::Unknown)
+            }
+        },
         _ => Ok(CompletionCommand::Unknown),
     }
 }
