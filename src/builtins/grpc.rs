@@ -5,7 +5,7 @@ use crate::lang::command::{CrushCommand, Parameter};
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::data::table::{ColumnType, TableReader};
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::{CrushError, CrushErrorType::GenericError, command_error, error};
+use crate::lang::errors::{CrushErrorType::GenericError, command_error};
 use crate::lang::pipe::{Stream, ValueSender};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
@@ -23,17 +23,14 @@ use prost_reflect::{
     MethodDescriptor,
 };
 use signature::signature;
-use std::collections::{HashMap, HashSet};
-use std::iter::zip;
+use std::collections::{HashMap};
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{LazyLock};
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
-use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Request;
-use tonic::codec::{Codec, DecodeBuf, EncodeBuf};
-use tonic::codegen::Service;
+use tonic::codec::Codec;
 use tonic::transport::{Channel, Endpoint};
 use tonic_reflection::pb::v1::{
     ServerReflectionRequest, server_reflection_client::ServerReflectionClient,
@@ -99,9 +96,7 @@ async fn connect_channel(
         port
     );
 
-    let mut endpoint = Endpoint::from_shared(uri)
-        .map_err(|e| GenericError(e.to_string()))?
-        .timeout(
+    let mut endpoint = Endpoint::from_shared(uri)?.timeout(
             timeout
                 .to_std()
                 .unwrap_or(std::time::Duration::from_secs(5)),
@@ -109,14 +104,12 @@ async fn connect_channel(
 
     if !plaintext {
         endpoint = endpoint
-            .tls_config(tonic::transport::ClientTlsConfig::new())
-            .map_err(|e| GenericError(e.to_string()))?;
+            .tls_config(tonic::transport::ClientTlsConfig::new())?;
     }
 
     Ok(endpoint
         .connect()
-        .await
-        .map_err(|e| GenericError(e.to_string()))?)
+        .await?)
 }
 
 impl GrpcClient {
@@ -189,14 +182,12 @@ impl GrpcClient {
 
         let response = client
             .server_reflection_info(tokio_stream::once(req))
-            .await
-            .map_err(|e| GenericError(format!("Reflection request failed: {}", e)))?;
+            .await?;
 
         let mut stream = response.into_inner();
         let msg = stream
             .message()
-            .await
-            .map_err(|e| GenericError(format!("Failed to read reflection response: {}", e)))?
+            .await?
             .ok_or_else(|| GenericError("Empty reflection response".to_string()))?;
 
         Ok(msg.message_response.ok_or_else(|| {
@@ -232,13 +223,10 @@ impl GrpcClient {
                 let mut fds = prost_types::FileDescriptorSet { file: Vec::new() };
                 for fd_bytes in &fdr.file_descriptor_proto {
                     let fd =
-                        prost_types::FileDescriptorProto::decode(&fd_bytes[..]).map_err(|e| {
-                            GenericError(format!("Failed to decode file descriptor: {}", e))
-                        })?;
+                        prost_types::FileDescriptorProto::decode(&fd_bytes[..])?;
                     fds.file.push(fd);
                 }
-                Ok(DescriptorPool::from_file_descriptor_set(fds)
-                    .map_err(|e| GenericError(format!("Failed to build descriptor pool: {}", e)))?)
+                Ok(DescriptorPool::from_file_descriptor_set(fds)?)
             }
             _ => command_error("Unexpected reflection response type"),
         }
@@ -291,8 +279,12 @@ impl GrpcClient {
                 );
                 Ok(())
             }
+
             (Kind::Bytes, Value::Binary(s)) => {
-                message.set_field(descriptor, prost_reflect::Value::Bytes(Bytes::copy_from_slice(s)));
+                message.set_field(
+                    descriptor,
+                    prost_reflect::Value::Bytes(Bytes::copy_from_slice(s)),
+                );
                 Ok(())
             }
             (Kind::Double, Value::Float(f)) => {
@@ -307,29 +299,34 @@ impl GrpcClient {
                 message.set_field(descriptor, prost_reflect::Value::Bool(*b));
                 Ok(())
             }
-            (Kind::Sint32 | Kind::Int32 | Kind::Sfixed32, Value::Integer(i)) => {
-                message.set_field(descriptor, prost_reflect::Value::I32(*i as _));
-                Ok(())
-            }
-            (Kind::Int64 | Kind::Int64 | Kind::Sfixed64, Value::Integer(i)) => {
-                message.set_field(descriptor, prost_reflect::Value::I64(*i as _));
-                Ok(())
-            }
-            (Kind::Uint32 | Kind::Fixed32, Value::Integer(i)) => {
-                message.set_field(descriptor, prost_reflect::Value::U32(*i as _));
-                Ok(())
-            }
-            (Kind::Uint64 | Kind::Fixed64, Value::Integer(i)) => {
-                message.set_field(descriptor, prost_reflect::Value::U64(*i as _));
-                Ok(())
-            }
-            (Kind::Int32, Value::Integer(i)) => {
-                message.set_field(descriptor, prost_reflect::Value::I32(*i as _));
+
+            (Kind::Int32 | Kind::Sint32 | Kind::Sfixed32, Value::Integer(i)) => {
+                let val = i32::try_from(*i)?;
+                message.set_field(descriptor, prost_reflect::Value::I32(val));
                 Ok(())
             }
 
-            (Kind::Enum(enum_descriptor), Value::Integer(i)) => {
-                message.set_field(descriptor, prost_reflect::Value::EnumNumber(*i as _));
+            (Kind::Int64 | Kind::Sint64 | Kind::Sfixed64, Value::Integer(i)) => {
+                let val = i64::try_from(*i)?;
+                message.set_field(descriptor, prost_reflect::Value::I64(val));
+                Ok(())
+            }
+
+            (Kind::Uint32 | Kind::Fixed32, Value::Integer(i)) => {
+                let val = u32::try_from(*i)?;
+                message.set_field(descriptor, prost_reflect::Value::U32(val));
+                Ok(())
+            }
+
+            (Kind::Uint64 | Kind::Fixed64, Value::Integer(i)) => {
+                let val = u64::try_from(*i)?;
+                message.set_field(descriptor, prost_reflect::Value::U64(val));
+                Ok(())
+            }
+
+            (Kind::Enum(_), Value::Integer(i)) => {
+                let val = i32::try_from(*i)?;
+                message.set_field(descriptor, prost_reflect::Value::EnumNumber(val));
                 Ok(())
             }
 
@@ -453,8 +450,7 @@ impl GrpcClient {
         let decode_desc = method_desc.output();
 
         let grpc_path = format!("/{}/{}", service_name, method_name);
-        let path = http::uri::PathAndQuery::try_from(grpc_path)
-            .map_err(|e| GenericError(format!("Invalid method path: {}", e)))?;
+        let path = http::uri::PathAndQuery::try_from(grpc_path)?;
 
         let codec = DynamicMessageCodec {
             encode_desc: encode_desc.clone(),
@@ -469,8 +465,7 @@ impl GrpcClient {
 
         grpc_client
             .ready()
-            .await
-            .map_err(|e| GenericError(format!("Service not ready: {}", e)))?;
+            .await?;
 
         let timeout = self.timeout;
         let printer = printer.clone();
@@ -492,16 +487,14 @@ impl GrpcClient {
 
         let mut response = grpc_client
             .streaming(Request::new(request_stream), path, codec)
-            .await
-            .map_err(CrushError::from)?
+            .await?
             .into_inner();
 
         let output = output.initialize(&output_signature)?;
 
         while let Some(response_message) = response
             .message()
-            .await
-            .map_err(|e| GenericError(format!("Channel not ready: {}", e)))?
+            .await?
         {
             let row = Self::message_to_row(&decode_desc, &response_message)?;
             output.send(row)?;

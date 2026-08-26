@@ -1,3 +1,5 @@
+use prost::{DecodeError, EncodeError};
+use prost_reflect::DescriptorError;
 /// Crush error handling type.
 ///
 /// Because Crush has a very large number of builtins, many of which use a third party library
@@ -63,6 +65,10 @@ pub enum CrushErrorType {
     Message(markdown::message::Message),
     FromHexError(hex::FromHexError),
     GrpcError(Status),
+    TonicTransportError(tonic::transport::Error),
+    ProstDecodeError(DecodeError),
+    ProstDescriptorError(prost_reflect::DescriptorError),
+    InvalidUri(http::uri::InvalidUri),
 }
 
 #[derive(Debug)]
@@ -139,6 +145,10 @@ impl CrushError {
             DbusError(e) => e.message().unwrap_or("").to_string(),
             #[cfg(target_os = "linux")]
             Roxmltree(e) => e.to_string(),
+            TonicTransportError(e) => e.to_string(),
+            ProstDecodeError(e) => e.to_string(),
+            ProstDescriptorError(e) => e.to_string(),
+            InvalidUri(e) => e.to_string(),
         }
     }
 
@@ -482,6 +492,30 @@ impl From<markdown::message::Message> for CrushError {
 impl From<Status> for CrushError {
     fn from(s: Status) -> Self {
         GrpcError(s).into()
+    }
+}
+
+impl From<tonic::transport::Error> for CrushError {
+    fn from(s: tonic::transport::Error) -> Self {
+        TonicTransportError(s).into()
+    }
+}
+
+impl From<DecodeError> for CrushError {
+    fn from(s: DecodeError) -> Self {
+        ProstDecodeError(s).into()
+    }
+}
+
+impl From<DescriptorError> for CrushError {
+    fn from(s: DescriptorError) -> Self {
+        ProstDescriptorError(s).into()
+    }
+}
+
+impl From<http::uri::InvalidUri> for CrushError {
+    fn from(s: http::uri::InvalidUri) -> Self {
+        InvalidUri(s).into()
     }
 }
 
