@@ -14,8 +14,9 @@ use rustyline::history::{History, SearchDirection};
 use signature::signature;
 mod env {
     use std::sync::Mutex;
+    use libproc::proc_pid::name;
     use signature::signature;
-    use crate::lang::errors::CrushResult;
+    use crate::lang::errors::{command_error, CrushResult};
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::Value;
     use crate::lang::command::OutputType::Known;
@@ -54,6 +55,11 @@ mod env {
 
     fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
         let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+
+        if cfg.name == "" || cfg.name.contains('=') || cfg.name.contains('\0') {
+            return command_error("Invalid environment variable name");
+        }
+
         unsafe {
             let lock = GLOBAL_LOCK.lock();
             std::env::set_var(&cfg.name, &cfg.value);

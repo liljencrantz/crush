@@ -15,6 +15,7 @@ pub fn escape_without_quotes(s: &str) -> String {
             '\n' => res += "\\n",
             '\r' => res += "\\r",
             '\t' => res += "\\t",
+            '\0' => res += "\\0",
             '\x1b' => res += "\\e",
             _ => {
                 if c < '\x20' {
@@ -55,6 +56,7 @@ pub fn unescape(s: &str) -> CrushResult<String> {
                 state = Normal;
                 match c {
                     'n' => res += "\n",
+                    '0' => res += "\0",
                     'r' => res += "\r",
                     't' => res += "\t",
                     'e' => res += "\x1b",
