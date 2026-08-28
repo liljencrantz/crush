@@ -10,7 +10,6 @@ use crate::lang::printer::Printer;
 use crate::lang::value::{Value, ValueType};
 use bytes::Bytes;
 use chrono::Duration;
-use num_format::Locale::fi;
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard};
 use prost::Message;
 use prost_reflect::{
@@ -20,6 +19,7 @@ use prost_reflect::{
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicI32, Ordering};
+use itertools::Itertools;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Request;
@@ -223,6 +223,7 @@ impl GrpcClient {
             match value {
                 Value::List(list) => match (descriptor.kind(), list.element_type()) {
                     (_, ValueType::Empty) => Ok(()),
+
                     (Kind::String, ValueType::String | ValueType::File) => {
                         message.set_field(
                             descriptor,
@@ -289,7 +290,110 @@ impl GrpcClient {
                                 list.iter()
                                     .map(|v| match v {
                                         Value::Bool(b) => Ok(prost_reflect::Value::Bool(b)),
-                                        _ => command_error("Expected a floating point value"),
+                                        _ => command_error("Expected a boolean value"),
+                                    })
+                                    .collect::<CrushResult<Vec<_>>>()?,
+                            ),
+                        );
+                        Ok(())
+                    }
+
+                    // Signed 32-bit integer variants
+                    (Kind::Int32 | Kind::Sint32 | Kind::Sfixed32, ValueType::Integer) => {
+                        message.set_field(
+                            descriptor,
+                            prost_reflect::Value::List(
+                                list.iter()
+                                    .map(|v| match v {
+                                        Value::Integer(i) => Ok(prost_reflect::Value::I32(i as i32)),
+                                        _ => command_error("Expected an integer value"),
+                                    })
+                                    .collect::<CrushResult<Vec<_>>>()?,
+                            ),
+                        );
+                        Ok(())
+                    }
+
+                    (Kind::Int64 | Kind::Sint64 | Kind::Sfixed64, ValueType::Integer) => {
+                        message.set_field(
+                            descriptor,
+                            prost_reflect::Value::List(
+                                list.iter()
+                                    .map(|v| match v {
+                                        Value::Integer(i) => Ok(prost_reflect::Value::I64(i as i64)),
+                                        _ => command_error("Expected an integer value"),
+                                    })
+                                    .collect::<CrushResult<Vec<_>>>()?,
+                            ),
+                        );
+                        Ok(())
+                    }
+
+                    (Kind::Uint32 | Kind::Fixed32, ValueType::Integer) => {
+                        message.set_field(
+                            descriptor,
+                            prost_reflect::Value::List(
+                                list.iter()
+                                    .map(|v| match v {
+                                        Value::Integer(i) => Ok(prost_reflect::Value::U32(i as u32)),
+                                        _ => command_error("Expected an unsigned integer value"),
+                                    })
+                                    .collect::<CrushResult<Vec<_>>>()?,
+                            ),
+                        );
+                        Ok(())
+                    }
+
+                    // Unsigned 64-bit integer variants
+                    (Kind::Uint64 | Kind::Fixed64, ValueType::Integer) => {
+                        message.set_field(
+                            descriptor,
+                            prost_reflect::Value::List(
+                                list.iter()
+                                    .map(|v| match v {
+                                        Value::Integer(i) => Ok(prost_reflect::Value::U64(i as u64)),
+                                        _ => command_error("Expected an unsigned integer value"),
+                                    })
+                                    .collect::<CrushResult<Vec<_>>>()?,
+                            ),
+                        );
+                        Ok(())
+                    }
+
+                    // Enum by string identifier
+                    (Kind::Enum(enum_desc), ValueType::String) => {
+                        message.set_field(
+                            descriptor,
+                            prost_reflect::Value::List(
+                                list.iter()
+                                    .map(|v| match v {
+                                        Value::String(s) => match enum_desc.get_value_by_name(s.as_ref()) {
+                                            Some(val) => Ok(prost_reflect::Value::EnumNumber(val.number())),
+                                            None => command_error(format!(
+                                                "Invalid enum variant `{}` for `{}`",
+                                                s,
+                                                enum_desc.name()
+                                            )),
+                                        },
+                                        _ => command_error("Expected a string value"),
+                                    })
+                                    .collect::<CrushResult<Vec<_>>>()?,
+                            ),
+                        );
+                        Ok(())
+                    }
+
+                    (Kind::Message(msg_desc), ValueType::Struct) => {
+                        message.set_field(
+                            descriptor,
+                            prost_reflect::Value::List(
+                                list.iter()
+                                    .map(|v| match v {
+                                        Value::Struct(s) => {
+                                            let sub = Self::struct_to_message(&msg_desc, &s)?;
+                                            Ok(prost_reflect::Value::Message(sub))
+                                        }
+                                        _ => command_error("Expected a struct/message value"),
                                     })
                                     .collect::<CrushResult<Vec<_>>>()?,
                             ),
@@ -373,9 +477,14 @@ impl GrpcClient {
                     Ok(())
                 }
 
-                (Kind::Enum(_), Value::Integer(i)) => {
-                    let val = i32::try_from(*i)?;
-                    message.set_field(descriptor, prost_reflect::Value::EnumNumber(val));
+                (Kind::Enum(d), Value::String(s)) => {
+                    let val = d.get_value_by_name(s.as_ref())
+                        .ok_or_else(|| format!(
+                            "Unknown enum value `{}` for enum type `{}`. Possible values are `{}`",
+                            s,
+                            d.name(),
+                        d.values().map(|v| v.name().to_string()).join("`, `")))?;
+                    message.set_field(descriptor, prost_reflect::Value::EnumNumber(val.number()));
                     Ok(())
                 }
 
@@ -384,8 +493,8 @@ impl GrpcClient {
                     for column in i.keys() {
                         let field = child_message_descriptor
                             .get_field_by_name(&column)
-                            .ok_or("Unknown field")?;
-                        let vv = i.get(&column).ok_or("Unknown column")?;
+                            .ok_or_else(|| format!("Unknown field `{}`", &column))?;
+                        let vv = i.get(&column).ok_or_else(|| format!("Unknown column `{}`", &column))?;
                         Self::convert_crush_value_to_protobuf_value(&mut sub_message, &field, &vv)?;
                     }
 
@@ -429,12 +538,16 @@ impl GrpcClient {
             prost_reflect::Value::U32(v) => Ok(Value::from(*v)),
             prost_reflect::Value::U64(v) => Ok(Value::from(*v)),
             prost_reflect::Value::Bytes(b) => Ok(Value::from(b)),
-            prost_reflect::Value::EnumNumber(v) => Ok(Value::from(*v)),
+            prost_reflect::Value::EnumNumber(v) => {
+                if let Kind::Enum(enum_descriptor) = field.kind() {
+                    Ok(Value::from(enum_descriptor.get_value(*v).ok_or_else(|| format!("Unknown enum with integer value `{}`", v))?.name()))
+                } else {
+                    command_error("Type mismatch")
+                }
+
+            },
             prost_reflect::Value::Message(m) => {
                 if let Kind::Message(sub_message_descriptor) = field.kind() {
-                    if sub_message_descriptor.is_map_entry() {
-                        panic!();
-                    }
                     Self::message_to_struct(&sub_message_descriptor, &m)
                 } else {
                     command_error("Type mismatch")
@@ -467,6 +580,19 @@ impl GrpcClient {
                 }
             }
         }
+    }
+
+    fn struct_to_message(
+        descriptor: &MessageDescriptor,
+        s: &Struct,
+    ) -> CrushResult<DynamicMessage> {
+        let mut res = DynamicMessage::new(descriptor.clone());
+        for field in descriptor.fields() {
+            if let Some(value) = s.get(field.name()) {
+                Self::convert_crush_value_to_protobuf_value(&mut res, &field, &value)?;
+            }
+        }
+        Ok(res)
     }
 
     fn row_to_message(
@@ -636,6 +762,6 @@ pub fn crush_type(kind: Kind) -> ValueType {
         Kind::Fixed64 => ValueType::Integer,
         Kind::Sfixed32 => ValueType::Integer,
         Kind::Sfixed64 => ValueType::Integer,
-        Kind::Enum(_) => ValueType::Integer,
+        Kind::Enum(_) => ValueType::String,
     }
 }
