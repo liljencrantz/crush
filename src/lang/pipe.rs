@@ -216,8 +216,8 @@ impl TableInputStream {
                     format!(
                         "Pipeline expected column `{}` to be of type `{}`, but was of type `{}`.",
                         ct.name(),
+                        ct.cell_type,
                         c.value_type(),
-                        ct.cell_type
                     )
                     .as_str(),
                 );

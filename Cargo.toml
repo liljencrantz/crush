@@ -20,7 +20,8 @@ features = ["lexer"]
 members = [
     "signature",
     "test_finder",
-    "ordered_map", "tests/grpc-service",
+    "ordered_map",
+    "grpc-service",
 ]
 
 [dependencies.test_finder]
@@ -31,6 +32,9 @@ path = "signature"
 
 [dependencies.ordered_map]
 path = "ordered_map"
+
+[dependencies.grpc-service]
+path = "grpc-service"
 
 [dependencies]
 parking_lot = "0.12"
@@ -83,3 +87,11 @@ systemd = "0.10.0"
 [target.'cfg(target_os = "macos")'.dependencies]
 mach2 = "0.4.1"
 libproc = "0.14.10"
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+escargot = "0.5.15"
+
+[[test]]
+name = "system"
+path = "tests/system.rs"

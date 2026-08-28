@@ -88,9 +88,7 @@ impl CrushError {
             _ => false,
         }
     }
-}
 
-impl CrushError {
     pub fn error_type(&self) -> &CrushErrorType {
         &self.error_type
     }

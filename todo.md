@@ -35,8 +35,5 @@
 * Document job control
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?
 * Fix grpc enums
-* Fix help messages for structs with __call__
-* Fix help message for grpc methods
-* Fix repeated arguments
 * Fix grpc nested messages
 * `rename` builtin, renames a column in a stream

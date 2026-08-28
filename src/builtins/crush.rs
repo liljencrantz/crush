@@ -12,20 +12,61 @@ use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
-use std::env;
+mod env {
+    use std::sync::Mutex;
+    use signature::signature;
+    use crate::lang::errors::CrushResult;
+    use crate::lang::state::contexts::CommandContext;
+    use crate::lang::value::Value;
+    use crate::lang::command::OutputType::Known;
+    use crate::lang::value::ValueType;
+    static GLOBAL_LOCK: Mutex<()> = Mutex::new(());
 
-fn make_env() -> CrushResult<Value> {
-    let e = Dict::new(ValueType::String, ValueType::String)?;
-    for (key, value) in env::vars() {
-        let _ = e.insert(Value::from(key), Value::from(value));
+    #[signature(
+    __getitem__,
+    output = Known(ValueType::String),
+    short = "Gets the variable with the given name",
+    )]
+    pub(crate) struct GetItem {
+        #[description("The name of the environment variable to get")]
+        name: String,
     }
-    Ok(e.into())
+
+    fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+        let lock = GLOBAL_LOCK.lock();
+        let value = std::env::var(&cfg.name)?;
+        drop(lock);
+        context.output.send(Value::from(value))
+    }
+
+    #[signature(
+    __setitem__,
+    output = Known(ValueType::Empty),
+    short = "Gets the variable with the given name",
+    )]
+    pub(crate) struct SetItem {
+        #[description("The name of the environment variable to set")]
+        name: String,
+        #[description("The value to set the environment variable to")]
+        value: String,
+    }
+
+    fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+        unsafe {
+            let lock = GLOBAL_LOCK.lock();
+            std::env::set_var(&cfg.name, &cfg.value);
+            drop(lock);
+        }
+        context.output.send(Value::Empty)
+    }
 }
 
 fn make_arguments() -> Value {
     List::new(
         ValueType::String,
-        env::args().map(|a| Value::from(a)).collect::<Vec<_>>(),
+        std::env::args().map(|a| Value::from(a)).collect::<Vec<_>>(),
     )
     .into()
 }
@@ -463,7 +504,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("error"), Value::from(""))?;
             crush.declare("highlight", highlight.into())?;
 
-            crush.declare("env", make_env()?)?;
             crush.declare("arguments", make_arguments())?;
 
             crush.create_namespace(
@@ -508,6 +548,17 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     Ok(())
                 }),
             )?;
+
+            crush.create_namespace(
+                "env",
+                "Environment variables",
+                Box::new(move |loader| {
+                    env::GetItem::declare(loader)?;
+                    env::SetItem::declare(loader)?;
+                    Ok(())
+                }),
+            )?;
+
             crush.create_namespace(
                 "byte_unit",
                 "Formating style for table columns containing byte sizes.",

@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package reverse;
+
+service Reverser {
+  rpc ReverseString (ReverseRequest) returns (ReverseResponse);
+  rpc ReverseStrings (stream ReverseRequest) returns (stream ReverseResponse);
+  rpc Mirror (stream Blob) returns (stream Blob);
+}
+
+message ReverseRequest {
+  string input = 1;
+}
+
+message ReverseResponse {
+  string output = 1;
+}
+
+message ChildMessage {
+  string child_id = 1;
+  string display_name = 2;
+}
+
+message RepeatedWrapperMessage {
+  repeated string values = 1;
+}
+
+enum StatusEnum {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_INACTIVE = 2;
+  STATUS_PENDING = 3;
+}
+
+message Blob {
+
+  double single_double = 1;
+  float single_float = 2;
+
+  int32 single_int32 = 3;
+  int64 single_int64 = 4;
+  sint32 single_sint32 = 5;      // Efficient for negative numbers (ZigZag)
+  sint64 single_sint64 = 6;      // Efficient for negative numbers (ZigZag)
+
+  uint32 single_uint32 = 7;
+  uint64 single_uint64 = 8;
+
+  fixed32 single_fixed32 = 9;    // Always 4 bytes
+  fixed64 single_fixed64 = 10;   // Always 8 bytes
+  sfixed32 single_sfixed32 = 11; // Always 4 bytes signed
+  sfixed64 single_sfixed64 = 12; // Always 8 bytes signed
+
+  bool single_bool = 13;
+  string single_string = 14;     // UTF-8 or 7-bit ASCII
+  bytes single_bytes = 15;       // Arbitrary byte sequences
+
+
+  StatusEnum single_enum = 16;
+  ChildMessage single_child_message = 17;
+
+  repeated double repeated_double = 18;
+  repeated float repeated_float = 19;
+  repeated int32 repeated_int32 = 20;
+  repeated int64 repeated_int64 = 21;
+  repeated sint32 repeated_sint32 = 22;
+  repeated sint64 repeated_sint64 = 23;
+  repeated uint32 repeated_uint32 = 24;
+  repeated uint64 repeated_uint64 = 25;
+  repeated fixed32 repeated_fixed32 = 26;
+  repeated fixed64 repeated_fixed64 = 27;
+  repeated sfixed32 repeated_sfixed32 = 28;
+  repeated sfixed64 repeated_sfixed64 = 29;
+  repeated bool repeated_bool = 30;
+  repeated string repeated_string = 31;
+  repeated bytes repeated_bytes = 32;
+
+  repeated StatusEnum repeated_enum = 33;
+  repeated ChildMessage repeated_child_messages = 34;
+
+  map<string, int32> map_string_to_int32 = 35;
+  map<int64, ChildMessage> map_int64_to_message = 36;
+  map<string, StatusEnum> map_string_to_enum = 37;
+
+
+  oneof choice_value {
+    // Scalar variants
+    string oneof_string = 38;
+    int64 oneof_int64 = 39;
+    bool oneof_bool = 40;
+    double oneof_double = 41;
+    bytes oneof_bytes = 42;
+
+    // Enum variant
+    StatusEnum oneof_enum = 43;
+
+    // Submessage variant (single)
+    ChildMessage oneof_child_message = 44;
+
+    // Repeated variant (via wrapper message)
+    RepeatedWrapperMessage oneof_repeated_wrapper = 45;
+  }
+}

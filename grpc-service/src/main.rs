@@ -7,7 +7,7 @@ pub mod reverse {
 }
 
 use reverse::reverser_server::{Reverser, ReverserServer};
-use reverse::{ReverseRequest, ReverseResponse};
+use reverse::{ReverseRequest, ReverseResponse, Blob};
 
 #[derive(Debug, Default)]
 pub struct MyReverser {}
@@ -15,6 +15,7 @@ pub struct MyReverser {}
 #[tonic::async_trait]
 impl Reverser for MyReverser {
     type ReverseStringsStream = ReceiverStream<Result<ReverseResponse, Status>>;
+    type MirrorStream = ReceiverStream<Result<Blob, Status>>;
 
     async fn reverse_string(
         &self,
@@ -59,6 +60,37 @@ impl Reverser for MyReverser {
         let output_stream = ReceiverStream::new(rx);
         Ok(Response::new(output_stream))
     }
+
+    async fn mirror(
+        &self,
+        request: Request<tonic::Streaming<Blob>>,
+    ) -> Result<Response<Self::MirrorStream>, Status> {
+        let mut stream = request.into_inner();
+        let (tx, rx) = tokio::sync::mpsc::channel(4);
+
+        tokio::spawn(async move {
+            while let Some(result) = stream.next().await {
+                match result {
+                    Ok(req) => {
+                        let reply = req;
+                        if tx.send(Ok(reply)).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        if tx.send(Err(Status::internal(e.to_string()))).await.is_err() {
+                            break;
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        let output_stream = ReceiverStream::new(rx);
+        Ok(Response::new(output_stream))
+    }
+
 }
 
 #[tokio::main]
