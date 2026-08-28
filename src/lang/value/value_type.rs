@@ -243,33 +243,28 @@ impl Help for ValueType {
         let mut lines = match self {
             ValueType::Duration => {
                 vec![
-                    "A duration instance has nanosecond precision. It is represented internally".to_string(),
-                    "as two 64 bit numbers, one for the number of seconds, and one for the".to_string(),
-                    "nanosecond remainder".to_string(),
-                    "".to_string(),
-                    "durations are signed, i.e. they can be used to denote a negative span of time.".to_string(),
-                    "".to_string(),
+                    "To create your own duration objects, use the `duration:of` method, for example
+
+    duration:of seconds=10
+
+A duration instance has nanosecond precision. It is represented internally as two 64 bit numbers,
+one for the number of seconds, and one for the nanosecond remainder.
+
+durations are signed, i.e. they can be used to denote a negative span of time.".to_string()
                 ]
             }
             ValueType::Time => {
                 vec![
-                    "All time instances use the local time zone.".to_string(),
-                    "".to_string(),
-                    "A time instance has nanosecond precision. It is represented internally"
-                        .to_string(),
-                    "as two 64 bit numbers, one for the number of seconds since the Unix epoc,"
-                        .to_string(),
-                    "and one for the nanosecond remainder".to_string(),
-                    "".to_string(),
+                    "All time instances use the local time zone.
+
+A time instance has nanosecond precision. It is represented internally as two 64 bit numbers, one
+for the number of seconds since the Unix epoc, and one for the nanosecond remainder".to_string(),
                 ]
             }
             ValueType::Integer => {
                 vec![
-                    "A Crush integer uses signed 128 bit precision. This means that the highest"
-                        .to_string(),
-                    format!("number that can be represented is {},", i128::MAX),
-                    format!("and the lowest is {}.", i128::MIN),
-                    "".to_string(),
+                    format!("A Crush integer uses signed 128 bit precision. This means that the
+highest number that can be represented is {}, and the lowest is {}.", i128::MAX, i128::MIN),
                 ]
             }
             ValueType::Float => {
@@ -283,12 +278,22 @@ impl Help for ValueType {
             }
             ValueType::Struct => {
                 vec![
-                    "To create a simple immutable struct, use the `struct:of` command. To create a mutable struct that supports inheritance, use the `class` command.".to_string(),
+                    "To create a simple immutable struct, use the `struct:of` command. To create a
+mutable struct that supports inheritance, use the `class` command.".to_string(),
                 ]
             }
             ValueType::Empty => {
                 vec![
                     "The empty type is returned by commands that don't return any value."
+                        .to_string(),
+                ]
+            }
+            ValueType::Glob => {
+                vec![
+                    "Globs are usually created by writing an unescaped string containing a wildcard
+character (`*` or `?`), like `files *.toml`.
+
+If you want to construct a new glob from a string, use the `glob:new` command, e.g. `glob:new \"*.txt\"`"
                         .to_string(),
                 ]
             }
