@@ -8,6 +8,8 @@ pub static BLUE: &'static str = "\x1b[34m";
 pub static YELLOW: &'static str = "\x1b[33m";
 pub static CYAN: &'static str = "\x1b[36m";
 pub static MAGENTA: &'static str = "\x1b[35m";
+pub static BLACK: &'static str = "\x1b[30m";
+pub static BOLD: &'static str = "\x1b[1m";
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
@@ -15,9 +17,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Constants useful for manipulating the terminal, such as changing text color and text weight.",
         Box::new(move |fd| {
             fd.declare("normal", Value::from("\x1b[0m"))?;
-            fd.declare("bold", Value::from("\x1b[1m"))?;
+            fd.declare("bold", Value::from(BOLD))?;
             fd.declare("underline", Value::from("\x1b[4m"))?;
-            fd.declare("black", Value::from("\x1b[30m"))?;
+            fd.declare("black", Value::from(BLACK))?;
             fd.declare("red", Value::from(RED))?;
             fd.declare("green", Value::from(GREEN))?;
             fd.declare("yellow", Value::from(YELLOW))?;

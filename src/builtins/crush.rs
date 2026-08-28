@@ -1,3 +1,4 @@
+use const_format::concatcp;
 use crate::data::list::List;
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
@@ -12,7 +13,7 @@ use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
-use crate::builtins::term::{CYAN, GREEN, MAGENTA, RED, YELLOW};
+use crate::builtins::term::{BLACK, BOLD, CYAN, GREEN, MAGENTA, RED, YELLOW};
 
 mod env {
     use std::sync::Mutex;
@@ -531,8 +532,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             let highlight = Dict::new(ValueType::String, ValueType::String)?;
             highlight.insert(Value::from("operator"), Value::from(CYAN))?;
-            highlight.insert(Value::from("string_literal"), Value::from(YELLOW))?;
-            highlight.insert(Value::from("file_literal"), Value::from(YELLOW))?;
+            highlight.insert(Value::from("string_literal"), Value::from(CYAN))?;
+            highlight.insert(Value::from("file_literal"), Value::from(CYAN))?;
             highlight.insert(Value::from("identifier"), Value::from(CYAN))?;
             highlight.insert(Value::from("numeric_literal"), Value::from(CYAN))?;
             highlight.insert(Value::from("glob_literal"), Value::from(CYAN))?;
@@ -540,6 +541,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("command"), Value::from(GREEN))?;
             highlight.insert(Value::from("keyword"), Value::from(MAGENTA))?;
             highlight.insert(Value::from("error"), Value::from(RED))?;
+            highlight.insert(Value::from("comment"), Value::from(YELLOW))?;
             crush.declare("highlight", highlight.into())?;
 
             crush.declare("arguments", make_arguments())?;
