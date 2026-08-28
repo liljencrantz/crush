@@ -452,7 +452,7 @@ impl Value {
             }
             v => {
                 return data_error(format!(
-                    "Expected a value that can be streamed, got a value of type `{}`",
+                    "Expected a streamable value, got a value of type `{}`, which is not streamable.",
                     v.value_type()
                 ));
             }

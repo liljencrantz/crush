@@ -36,25 +36,19 @@ message Blob {
 
   double single_double = 1;
   float single_float = 2;
-
   int32 single_int32 = 3;
   int64 single_int64 = 4;
-  sint32 single_sint32 = 5;      // Efficient for negative numbers (ZigZag)
-  sint64 single_sint64 = 6;      // Efficient for negative numbers (ZigZag)
-
+  sint32 single_sint32 = 5;
+  sint64 single_sint64 = 6;
   uint32 single_uint32 = 7;
   uint64 single_uint64 = 8;
-
-  fixed32 single_fixed32 = 9;    // Always 4 bytes
-  fixed64 single_fixed64 = 10;   // Always 8 bytes
-  sfixed32 single_sfixed32 = 11; // Always 4 bytes signed
-  sfixed64 single_sfixed64 = 12; // Always 8 bytes signed
-
+  fixed32 single_fixed32 = 9;
+  fixed64 single_fixed64 = 10;
+  sfixed32 single_sfixed32 = 11;
+  sfixed64 single_sfixed64 = 12;
   bool single_bool = 13;
-  string single_string = 14;     // UTF-8 or 7-bit ASCII
-  bytes single_bytes = 15;       // Arbitrary byte sequences
-
-
+  string single_string = 14;
+  bytes single_bytes = 15;
   StatusEnum single_enum = 16;
   ChildMessage single_child_message = 17;
 
@@ -73,14 +67,12 @@ message Blob {
   repeated bool repeated_bool = 30;
   repeated string repeated_string = 31;
   repeated bytes repeated_bytes = 32;
-
   repeated StatusEnum repeated_enum = 33;
   repeated ChildMessage repeated_child_messages = 34;
 
   map<string, int32> map_string_to_int32 = 35;
   map<int64, ChildMessage> map_int64_to_message = 36;
   map<string, StatusEnum> map_string_to_enum = 37;
-
 
   oneof choice_value {
     // Scalar variants
@@ -89,14 +81,8 @@ message Blob {
     bool oneof_bool = 40;
     double oneof_double = 41;
     bytes oneof_bytes = 42;
-
-    // Enum variant
     StatusEnum oneof_enum = 43;
-
-    // Submessage variant (single)
     ChildMessage oneof_child_message = 44;
-
-    // Repeated variant (via wrapper message)
     RepeatedWrapperMessage oneof_repeated_wrapper = 45;
   }
 }

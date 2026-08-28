@@ -52,15 +52,15 @@ struct Connect {
     service: Patterns,
 
     #[default(false)]
-    #[description("Use plaintext to connect")]
+    #[description("Use plaintext to connect.")]
     plaintext: bool,
 
     #[default(Duration::seconds(5))]
-    #[description("Timeout for making calls")]
+    #[description("Timeout for making calls.")]
     timeout: Duration,
 
-    #[default(5990)]
-    #[description("Port to connect to")]
+    #[default(50051)]
+    #[description("Port to connect to.")]
     port: i128,
 }
 
@@ -196,7 +196,7 @@ fn generate_long_help(signature: &MethodDescriptor) -> String {
         res += "This command accepts the following arguments:\n\n";
         for field in signature.input().fields() {
             res += format!(
-                "* `{}` ({})",
+                "* `{}` (`{}`)\n",
                 field.name(),
                 client::crush_type(field.kind()).to_string()
             )

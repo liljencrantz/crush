@@ -16,10 +16,12 @@ mod env {
     use std::sync::Mutex;
     use libproc::proc_pid::name;
     use signature::signature;
+    use crate::builtins::crush::THREADS_OUTPUT_TYPE;
     use crate::lang::errors::{command_error, CrushResult};
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::Value;
     use crate::lang::command::OutputType::Known;
+    use crate::lang::data::table::{ColumnType, Row};
     use crate::lang::value::ValueType;
     static GLOBAL_LOCK: Mutex<()> = Mutex::new(());
 
@@ -67,6 +69,34 @@ mod env {
         }
         context.output.send(Value::Empty)
     }
+
+    static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
+        ColumnType::new("name", ValueType::String),
+        ColumnType::new("value", ValueType::String),
+    ];
+
+    #[signature(
+    list,
+    output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
+    short = "Returns all environment variables and their values",
+    )]
+    pub(crate) struct List {
+    }
+
+    fn list(mut context: CommandContext) -> CrushResult<()> {
+        let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
+
+
+        unsafe {
+            let lock = GLOBAL_LOCK.lock();
+            for (k, v) in std::env::vars() {
+                output.send(Row::new(vec![Value::from(k), Value::from(v)]))?;
+            }
+            drop(lock);
+        }
+        Ok(())
+    }
+
 }
 
 fn make_arguments() -> Value {
@@ -561,6 +591,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                 Box::new(move |loader| {
                     env::GetItem::declare(loader)?;
                     env::SetItem::declare(loader)?;
+                    env::List::declare(loader)?;
                     Ok(())
                 }),
             )?;

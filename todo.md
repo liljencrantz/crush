@@ -16,7 +16,6 @@
 * Better syntax highlighting for expression mode
 * Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__
-* Fix help messages in grpc connections
 * Fix help messages in dbus connections
 * Completion descriptions
 * Support arbitrary filenames with hex escape codes in globs and other places
@@ -34,6 +33,5 @@
 * Document what causes the next job to execute
 * Document job control
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?
-* Fix grpc enums
-* Fix grpc nested messages
 * `rename` builtin, renames a column in a stream
+* An unknown command, e.g. `fnorp` gives an unhelppful error message.
