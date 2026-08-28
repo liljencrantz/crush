@@ -11,6 +11,7 @@ use ordered_map::OrderedMap;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 use std::sync::OnceLock;
+use const_format::formatcp;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ValueType {
@@ -213,7 +214,7 @@ impl Help for ValueType {
             ValueType::Time => "A point in time with nanosecond precision.",
             ValueType::Duration => "A difference between two points in time.",
             ValueType::Glob => "A pattern containing wildcards.",
-            ValueType::Regex => "An advanced pattern that can be used for matching and replacing.",
+            ValueType::Regex => "A regular expression is an advanced pattern that can be used for matching and replacing text.",
             ValueType::Command => "A piece fo code that can be called.",
             ValueType::File => "Any type of file.",
             ValueType::TableInputStream(_) => "An input stream of table rows.",
@@ -240,9 +241,8 @@ impl Help for ValueType {
     }
 
     fn long_help(&self) -> Option<String> {
-        let mut lines = match self {
-            ValueType::Duration => {
-                vec![
+        let mut lines = vec![match self {
+            ValueType::Duration =>
                     "To create your own duration objects, use the `duration:of` method, for example
 
     duration:of seconds=10
@@ -250,55 +250,36 @@ impl Help for ValueType {
 A duration instance has nanosecond precision. It is represented internally as two 64 bit numbers,
 one for the number of seconds, and one for the nanosecond remainder.
 
-durations are signed, i.e. they can be used to denote a negative span of time.".to_string()
-                ]
-            }
-            ValueType::Time => {
-                vec![
+durations are signed, i.e. they can be used to denote a negative span of time.",
+
+            ValueType::Time =>
                     "All time instances use the local time zone.
 
 A time instance has nanosecond precision. It is represented internally as two 64 bit numbers, one
-for the number of seconds since the Unix epoc, and one for the nanosecond remainder".to_string(),
-                ]
-            }
-            ValueType::Integer => {
-                vec![
-                    format!("A Crush integer uses signed 128 bit precision. This means that the
-highest number that can be represented is {}, and the lowest is {}.", i128::MAX, i128::MIN),
-                ]
-            }
-            ValueType::Float => {
-                vec![
-                    "A Crush float is a IEEE 754 64-bit (double precision) floating point number."
-                        .to_string(),
-                ]
-            }
-            ValueType::Bool => {
-                vec!["A boolean value is one of `$true` or `$false`.".to_string()]
-            }
-            ValueType::Struct => {
-                vec![
-                    "To create a simple immutable struct, use the `struct:of` command. To create a
-mutable struct that supports inheritance, use the `class` command.".to_string(),
-                ]
-            }
-            ValueType::Empty => {
-                vec![
-                    "The empty type is returned by commands that don't return any value."
-                        .to_string(),
-                ]
-            }
-            ValueType::Glob => {
-                vec![
-                    "Globs are usually created by writing an unescaped string containing a wildcard
-character (`*` or `?`), like `files *.toml`.
+for the number of seconds since the Unix epoc, and one for the nanosecond remainder",
 
-If you want to construct a new glob from a string, use the `glob:new` command, e.g. `glob:new \"*.txt\"`"
-                        .to_string(),
-                ]
-            }
-            _ => Vec::new(),
-        };
+            ValueType::Integer =>
+                    formatcp!("A Crush integer uses signed 128 bit precision. This means that the
+highest number that can be represented is {}, and the lowest is {}.", i128::MAX, i128::MIN),
+            ValueType::Float =>
+                    "A Crush float is a IEEE 754 64-bit (double precision) floating point number.",
+            ValueType::Bool => "A boolean value is one of `$true` or `$false`.",
+            ValueType::Struct => "To create a simple immutable struct, use the `struct:of` command.
+To create a mutable struct that supports inheritance, use the `class` command.",
+            ValueType::Empty => "The empty type is returned by commands that don't return any value.",
+            ValueType::Glob => "Globs are usually created by writing an unescaped string containing
+a wildcard character (`*` or `?`), like `files *.toml`.
+
+If you want to construct a new glob from a string, use the `glob:new` command, e.g.
+`glob:new \"*.txt\"`",
+            ValueType::Regex => "Regular expressions are usually created by writing using regexp
+literal syntax, e.g. `files ^(^...$)`.
+
+If you want to construct a new glob from a string, use the `re:new` command, e.g.
+`re:new \"[a-z]*\\.txt\"`",
+            _ => "",
+        }.to_string()
+            ];
 
         let mut keys: Vec<_> = self.fields().into_iter().collect();
         keys.sort_by(|x, y| x.0.cmp(&y.0));
