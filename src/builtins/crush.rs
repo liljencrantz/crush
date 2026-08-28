@@ -12,6 +12,8 @@ use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
+use crate::builtins::term::{CYAN, GREEN, MAGENTA, RED, YELLOW};
+
 mod env {
     use std::sync::Mutex;
     use libproc::proc_pid::name;
@@ -528,16 +530,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
 
             let highlight = Dict::new(ValueType::String, ValueType::String)?;
-            highlight.insert(Value::from("operator"), Value::from(""))?;
-            highlight.insert(Value::from("string_literal"), Value::from(""))?;
-            highlight.insert(Value::from("file_literal"), Value::from(""))?;
-            highlight.insert(Value::from("label"), Value::from(""))?;
-            highlight.insert(Value::from("numeric_literal"), Value::from(""))?;
-            highlight.insert(Value::from("glob_literal"), Value::from(""))?;
-            highlight.insert(Value::from("regex_literal"), Value::from(""))?;
-            highlight.insert(Value::from("command"), Value::from(""))?;
-            highlight.insert(Value::from("keyword"), Value::from(""))?;
-            highlight.insert(Value::from("error"), Value::from(""))?;
+            highlight.insert(Value::from("operator"), Value::from(CYAN))?;
+            highlight.insert(Value::from("string_literal"), Value::from(YELLOW))?;
+            highlight.insert(Value::from("file_literal"), Value::from(YELLOW))?;
+            highlight.insert(Value::from("identifier"), Value::from(CYAN))?;
+            highlight.insert(Value::from("numeric_literal"), Value::from(CYAN))?;
+            highlight.insert(Value::from("glob_literal"), Value::from(CYAN))?;
+            highlight.insert(Value::from("regex_literal"), Value::from(CYAN))?;
+            highlight.insert(Value::from("command"), Value::from(GREEN))?;
+            highlight.insert(Value::from("keyword"), Value::from(MAGENTA))?;
+            highlight.insert(Value::from("error"), Value::from(RED))?;
             crush.declare("highlight", highlight.into())?;
 
             crush.declare("arguments", make_arguments())?;

@@ -266,7 +266,7 @@ highest number that can be represented is {}, and the lowest is {}.", i128::MAX,
             ValueType::Bool => "A boolean value is one of `$true` or `$false`.",
             ValueType::Struct => "To create a simple immutable struct, use the `struct:of` command.
 To create a mutable struct that supports inheritance, use the `class` command.",
-            ValueType::Empty => "The empty type is returned by commands that don't return any value.",
+            ValueType::Empty => "The instance of the empty type is returned by commands that don't return any value.",
             ValueType::Glob => "Globs are usually created by writing an unescaped string containing
 a wildcard character (`*` or `?`), like `files *.toml`.
 
