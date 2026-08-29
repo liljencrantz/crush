@@ -1,3 +1,4 @@
+use chrono::{Duration, Local};
 use crate::builtins::term::{CYAN, GREEN, MAGENTA, RED, YELLOW};
 use crate::data::list::List;
 use crate::lang::ast::lexer::LanguageMode;
@@ -5,14 +6,16 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{command_error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::global_state::RunMode;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
+use rand::Rng;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
+use crate::lang::state::id::JobId;
 
 mod env {
     use crate::lang::command::OutputType::Known;
@@ -141,10 +144,38 @@ struct Exit {
     #[default(0)]
     #[description("The exit status to set for the process")]
     status: i32,
+    #[default(false)]
+    #[description("Terminate all running jobs")]
+    force: bool,
+}
+
+fn random_other_job(context: &CommandContext) -> Option<JobId> {
+    let my_job_id = context.command_handle().job_handle.id();
+    let other_jobs : Vec<_> = context.global_state.jobs().drain(..).filter(|job| {job.id != my_job_id}).collect();
+    match other_jobs.is_empty() {
+        true => None,
+        false => Some(other_jobs[rand::rng().random_range(0..other_jobs.len())].id),
+    }
 }
 
 fn exit(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Exit = Exit::parse(context.remove_arguments(), &context.global_state.printer())?;
+
+    if random_other_job(&context).is_some() {
+        if cfg.force {
+            let stop_time = Local::now() + Duration::seconds(2);
+            while let Some(job) = random_other_job(&context) {
+                if Local::now() > stop_time {
+                    return command_error("Failed to terminate jobs.");
+                }
+                let _ = context.global_state.terminate(job);
+                context.global_state.threads().reap(context.global_state.printer());
+            }
+        } else {
+            return command_error("There are running jobs.");
+        }
+    }
+
     context.scope.do_exit()?;
     context.global_state.set_exit_status(cfg.status as i32);
     context.output.send(Value::Empty)
