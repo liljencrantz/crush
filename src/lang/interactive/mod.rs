@@ -123,12 +123,41 @@ pub fn handle_signals(global_state: &GlobalState) -> CrushResult<Handle> {
     Ok(handle)
 }
 
+fn set_default_prompt(
+    global_env: &Scope,
+    global_state: &GlobalState,
+) {
+    let (send, recv) = pipe();
+
+    global_state.printer().handle_error(execute::string(
+        &global_env,
+        r#"val {"{green}{user}{white}@{host}:{green}{cwd}{white}# ":format user=$(users:me:username) host=$(host:name) cwd=$(fs:cwd) green=$term:green white=$term:white}"#,
+        LanguageMode::Command,
+        &send,
+        global_state,
+        Background,
+    ));
+
+    match recv.recv() {
+        Ok(Value::Command(cmd)) => {
+            global_state.set_prompt(Some(cmd));
+        }
+        _ => {
+            global_state.printer().error("Failed to set prompt");
+        }
+    }
+
+}
+
 pub fn run(
     global_env: Scope,
     pretty_printer: &ValueSender,
     global_state: &GlobalState,
 ) -> CrushResult<()> {
     let printer = global_state.printer().clone();
+
+    set_default_prompt(&global_env, global_state);
+
     printer.handle_error(load_init(&global_env, global_state));
 
     let signal_handle = handle_signals(global_state)?;
