@@ -36,6 +36,10 @@ pub fn config_dir() -> CrushResult<PathBuf> {
         })
 }
 
+pub fn sys_conf_dir() -> PathBuf {
+    PathBuf::from("/etc")
+}
+
 fn crush_history_file() -> CrushResult<PathBuf> {
     Ok(config_dir()?.join("history"))
 }
@@ -75,9 +79,15 @@ fn execute_command(
 }
 
 pub fn load_init(env: &Scope, global_state: &GlobalState) -> CrushResult<()> {
-    let file = config_dir()?.join("config.crush");
-    if file.exists() {
-        execute::file(env, &file, &black_hole(), global_state)
+    let sys_file = sys_conf_dir().join("config.crush");
+
+    if sys_file.exists() {
+        execute::file(env, &sys_file, &black_hole(), global_state)?;
+    }
+
+    let user_file = config_dir()?.join("config.crush");
+    if user_file.exists() {
+        execute::file(env, &user_file, &black_hole(), global_state)
     } else {
         Ok(())
     }
