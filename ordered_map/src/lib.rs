@@ -377,7 +377,7 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         s.finish()
     }
 
-    pub fn entry(&mut self, key: K) -> Entry<K, V> {
+    pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
         if self.capacity() <= (self.len() + self.tombstones) {
             self.reallocate(self.capacity() * 2);
         }
@@ -395,25 +395,25 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         }
     }
 
-    pub fn iter(&self) -> Iter<K, V> {
+    pub fn iter(&self) -> Iter<'_, K, V> {
         Iter {
             liter: self.values.iter(),
         }
     }
 
-    pub fn keys(&self) -> Keys<K, V> {
+    pub fn keys(&self) -> Keys<'_, K, V> {
         Keys {
             liter: self.values.iter(),
         }
     }
 
-    pub fn values(&self) -> Values<K, V> {
+    pub fn values(&self) -> Values<'_, K, V> {
         Values {
             liter: self.values.iter(),
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, K, V> {
         IterMut {
             liter: self.values.iter_mut(),
         }
@@ -425,7 +425,7 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
         self.lookup.clear();
     }
 
-    pub fn drain(&mut self) -> Drain<K, V> {
+    pub fn drain(&mut self) -> Drain<'_, K, V> {
         self.tombstones = 0;
         self.lookup.drain(..);
         Drain {

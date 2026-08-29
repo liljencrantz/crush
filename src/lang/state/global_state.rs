@@ -264,7 +264,7 @@ impl GlobalState {
         *data = editor;
     }
 
-    pub fn editor(&self) -> MutexGuard<Option<Editor<RustylineHelper, DefaultHistory>>> {
+    pub fn editor(&self) -> MutexGuard<'_, Option<Editor<RustylineHelper, DefaultHistory>>> {
         self.editor.lock().unwrap()
     }
 

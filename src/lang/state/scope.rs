@@ -433,7 +433,7 @@ impl Scope {
         self.lock().unwrap().return_value.take()
     }
 
-    fn lock(&self) -> CrushResult<MutexGuard<ScopeData>> {
+    fn lock(&self) -> CrushResult<MutexGuard<'_, ScopeData>> {
         let mut data = self.data.lock().unwrap();
         if data.is_loaded {
             return Ok(data);

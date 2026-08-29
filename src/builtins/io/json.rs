@@ -133,16 +133,6 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     }
 }
 
-pub fn json_to_value(s: &str) -> CrushResult<Value> {
-    let serde_value = serde_json::from_str(s)?;
-    from_json(&serde_value)
-}
-
-pub fn value_to_json(v: Value) -> CrushResult<String> {
-    let json_value = to_json(v)?;
-    Ok(json_value.to_string())
-}
-
 #[signature(
     io.json.from,
     can_block = true,

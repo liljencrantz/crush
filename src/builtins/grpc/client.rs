@@ -689,7 +689,6 @@ impl GrpcClient {
         let path = http::uri::PathAndQuery::try_from(grpc_path)?;
 
         let codec = DynamicMessageCodec {
-            encode_desc: encode_desc.clone(),
             decode_desc: decode_desc.clone(),
         };
         let output_signature = Self::descriptor_to_column_types(&decode_desc);

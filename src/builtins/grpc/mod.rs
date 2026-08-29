@@ -5,8 +5,6 @@ use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::{CrushCommand, Parameter};
 use crate::lang::data::table::{ColumnType, TableReader};
 use crate::lang::data::table::{Row, Table};
-use crate::lang::errors::CrushError;
-use crate::lang::errors::CrushErrorType::InvalidArgument;
 use crate::lang::errors::command_error;
 use crate::lang::pipe::Stream;
 use crate::lang::signature::patterns::Patterns;
@@ -15,16 +13,13 @@ use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
-use bytes::Buf;
 use chrono::Duration;
 use client::GrpcClient;
 use itertools::Itertools;
-use prost::Message as ProstMessage;
 use prost_reflect::MethodDescriptor;
 use signature::signature;
 use std::sync::LazyLock;
 use tokio::runtime::Runtime;
-use tonic::codec::Codec;
 
 mod client;
 mod codec;
@@ -219,38 +214,23 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
             let data: Stream = if context.input.is_pipeline() {
                 context.input.recv()?.stream(context.command_handle())?
             } else {
-                if !context.arguments.is_empty() {
-                    let mut fields = vec![];
-                    let mut input_signature = vec![];
-
-                    let signature = grpc_client.describe_method(&service, &method).await?;
-                    let input_type = signature.input();
-                    for a in context.remove_arguments() {
-                        if let Some(name) = a.argument_type {
-                            let field_type =
-                                input_type.get_field_by_name(&name).ok_or_else(|| {
-                                    CrushError::from(InvalidArgument(format!(
-                                        "Unknown field `{}`",
-                                        name
-                                    )))
-                                })?;
-
-                                input_signature
-                                    .push(ColumnType::new_from_string(name, a.value.value_type()));
-                                fields.push(a.value);
-                        } else {
-                            return command_error(
-                                "gRPC method invocations can only use named arguments.",
-                            );
-                        }
+                let mut fields = vec![];
+                let mut input_signature = vec![];
+                for a in context.remove_arguments() {
+                    if let Some(name) = a.argument_type {
+                        input_signature
+                            .push(ColumnType::new_from_string(name, a.value.value_type()));
+                        fields.push(a.value);
+                    } else {
+                        return command_error(
+                            "gRPC method invocations can only use named arguments.",
+                        );
                     }
-                    Box::from(TableReader::new(Table::from((
-                        input_signature,
-                        vec![Row::new(fields)],
-                    ))))
-                } else {
-                    panic!()
                 }
+                Box::from(TableReader::new(Table::from((
+                    input_signature,
+                    vec![Row::new(fields)],
+                ))))
             };
 
             grpc_client

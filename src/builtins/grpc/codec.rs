@@ -5,9 +5,6 @@ use tonic::codec::Codec;
 
 #[derive(Clone)]
 pub struct DynamicMessageCodec {
-    // Descriptor for the message type we are sending
-    pub encode_desc: MessageDescriptor,
-    // Descriptor for the message type we expect to receive
     pub decode_desc: MessageDescriptor,
 }
 
@@ -18,7 +15,7 @@ impl Codec for DynamicMessageCodec {
     type Decoder = DynamicMessageDecoder;
 
     fn encoder(&mut self) -> Self::Encoder {
-        DynamicMessageEncoder(self.encode_desc.clone())
+        DynamicMessageEncoder()
     }
 
     fn decoder(&mut self) -> Self::Decoder {
@@ -26,7 +23,7 @@ impl Codec for DynamicMessageCodec {
     }
 }
 
-pub struct DynamicMessageEncoder(MessageDescriptor);
+pub struct DynamicMessageEncoder();
 
 impl tonic::codec::Encoder for DynamicMessageEncoder {
     type Item = DynamicMessage;

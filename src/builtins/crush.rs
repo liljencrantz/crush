@@ -1,4 +1,4 @@
-use const_format::concatcp;
+use crate::builtins::term::{CYAN, GREEN, MAGENTA, RED, YELLOW};
 use crate::data::list::List;
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
@@ -13,20 +13,17 @@ use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
-use crate::builtins::term::{BLACK, BOLD, CYAN, GREEN, MAGENTA, RED, YELLOW};
 
 mod env {
-    use std::sync::Mutex;
-    use libproc::proc_pid::name;
-    use signature::signature;
-    use crate::builtins::crush::THREADS_OUTPUT_TYPE;
-    use crate::lang::errors::{command_error, CrushResult};
-    use crate::lang::state::contexts::CommandContext;
-    use crate::lang::value::Value;
     use crate::lang::command::OutputType::Known;
     use crate::lang::data::table::{ColumnType, Row};
+    use crate::lang::errors::{CrushResult, command_error};
+    use crate::lang::state::contexts::CommandContext;
+    use crate::lang::value::Value;
     use crate::lang::value::ValueType;
-    static GLOBAL_LOCK: Mutex<()> = Mutex::new(());
+    use signature::signature;
+    use std::sync::Mutex;
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[signature(
     __getitem__,
@@ -39,8 +36,9 @@ mod env {
     }
 
     fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
-        let cfg: GetItem = GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-        let lock = GLOBAL_LOCK.lock();
+        let cfg: GetItem =
+            GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+        let lock = ENV_LOCK.lock();
         let value = std::env::var(&cfg.name)?;
         drop(lock);
         context.output.send(Value::from(value))
@@ -59,14 +57,15 @@ mod env {
     }
 
     fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
-        let cfg: SetItem = SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
+        let cfg: SetItem =
+            SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
 
         if cfg.name == "" || cfg.name.contains('=') || cfg.name.contains('\0') {
             return command_error("Invalid environment variable name");
         }
 
         unsafe {
-            let lock = GLOBAL_LOCK.lock();
+            let lock = ENV_LOCK.lock();
             std::env::set_var(&cfg.name, &cfg.value);
             drop(lock);
         }
@@ -83,23 +82,17 @@ mod env {
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
     short = "Returns all environment variables and their values",
     )]
-    pub(crate) struct List {
-    }
+    pub(crate) struct List {}
 
-    fn list(mut context: CommandContext) -> CrushResult<()> {
+    fn list(context: CommandContext) -> CrushResult<()> {
         let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
-
-
-        unsafe {
-            let lock = GLOBAL_LOCK.lock();
-            for (k, v) in std::env::vars() {
-                output.send(Row::new(vec![Value::from(k), Value::from(v)]))?;
-            }
-            drop(lock);
+        let lock = ENV_LOCK.lock();
+        for (k, v) in std::env::vars() {
+            output.send(Row::new(vec![Value::from(k), Value::from(v)]))?;
         }
+        drop(lock);
         Ok(())
     }
-
 }
 
 fn make_arguments() -> Value {

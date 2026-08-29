@@ -1,4 +1,3 @@
-use std::collections::{HashMap, HashSet};
 /**
 This file implements the crush equivalent of a pipe from a regular shell.
 
@@ -6,6 +5,7 @@ Unlike normal pipes, these pipes can send *any* crush value, but they are limite
 between threads inside of a single process. The most important use case is to send a single value
 of the type TableInputStream.
  */
+use std::collections::HashMap;
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::errors::{CrushError, CrushResult, error, terminate};

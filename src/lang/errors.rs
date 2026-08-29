@@ -1,4 +1,4 @@
-use prost::{DecodeError, EncodeError};
+use prost::DecodeError;
 use prost_reflect::DescriptorError;
 /// Crush error handling type.
 ///
