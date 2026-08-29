@@ -497,7 +497,7 @@ impl GrpcClient {
                         let vv = i.get(&column).ok_or_else(|| format!("Unknown column `{}`", &column))?;
                         Self::convert_crush_value_to_protobuf_value(&mut sub_message, &field, &vv)?;
                     }
-
+                    message.set_field(descriptor, prost_reflect::Value::Message(sub_message));
                     Ok(())
                 }
 
@@ -521,13 +521,11 @@ impl GrpcClient {
             MapKey::String(s) => Value::from(s),
         }
     }
+
     fn convert_protobuf_value_to_crush_value(
         field: &FieldDescriptor,
         value: &prost_reflect::Value,
     ) -> CrushResult<Value> {
-        if field.name() == "map_string_to_int32" {
-            println!("map_string_to_int32");
-        }
         match value {
             prost_reflect::Value::String(s) => Ok(Value::from(s)),
             prost_reflect::Value::F64(s) => Ok(Value::from(*s)),
