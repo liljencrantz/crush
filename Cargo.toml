@@ -33,50 +33,47 @@ path = "signature"
 [dependencies.ordered_map]
 path = "ordered_map"
 
-[dependencies.grpc-service]
-path = "grpc-service"
-
 [dependencies]
-parking_lot = "0.12"
-lalrpop-util = { version = "0.22.1", features = [ "lexer"] }
-chrono = "0.4.41"
-regex = "1.11.1"
-rustyline = { version = "15.0.0", features = ["with-file-history"] }
+parking_lot = "0.12.5"
+lalrpop-util = { version = "0.22.2", features = [ "lexer"] }
+chrono = "0.4.45"
+regex = "1.13.1"
+rustyline = { version = "18.0.1", features = ["with-file-history"] }
 rustyline-derive = "0.11.0"
 dirs = "6.0.0"
-serde_json = { version = "1.0.140", features = ["preserve_order"] }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
 serde_yaml = { version = "0.9.34" }
 toml = "0.8.23"
-reqwest = { version = "0.12.20", features = ["blocking"] }
+reqwest = { version = "0.12.28", features = ["blocking"] }
 crossbeam = "0.8.4"
-prost = "0.14.1"
-termion = "4.0.5"
+prost = "0.14.4"
+termion = "4.0.6"
 float-ord = "0.3.2"
 maplit = "1.0.2"
-ssh2 = "0.9.5"
-rand = "0.9.1"
+ssh2 = "0.9.6"
+rand = "0.10.2"
 battery = "0.7.8"
 nix = { version = "0.30.1", features = ["process", "user", "signal", "fs", "hostname"] }
-sysinfo = "0.35.2"
+sysinfo = "0.39.6"
 num-format = { version = "0.4.4", features = ["with-system-locale"] }
-unicode-width = "0.2.1"
-os_pipe = "1.2.2"
+unicode-width = "0.2.2"
+os_pipe = "1.2.3"
 trust-dns-client = "0.23.2"
-resolv-conf = "0.7.4"
+resolv-conf = "0.7.6"
 itertools = "0.14.0"
 mountpoints = "0.2.1"
 markdown = "1.0.0"
 hex = "0.4.3"
-base64 = "0.22.1"
+base64 = "0.23.1"
 signal-hook = "0.3.18"
 tonic = { version = "0.14.6", features = ["tls-ring", "tls-native-roots"] }
-tonic-reflection = "0.14.2"
-tokio = { version = "1", features = ["rt"] }
-tokio-stream = "0.1"
-prost-types = "0.14.1"
-prost-reflect = { version = "0.16", features = ["serde"] }
-bytes = "1"
-http = "1"
+tonic-reflection = "0.14.6"
+tokio = { version = "1.53.1", features = ["rt"] }
+tokio-stream = "0.1.19"
+prost-types = "0.14.4"
+prost-reflect = { version = "0.16.5", features = ["serde"] }
+bytes = "1.12.1"
+http = "1.5.0"
 const_format = "0.2.36"
 
 [target.'cfg(target_os = "linux")'.dependencies]

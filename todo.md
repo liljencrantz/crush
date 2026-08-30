@@ -9,7 +9,6 @@
 * Support __str__ method for string rendering
 * fix dynamic loading deadlocks
 * tab completions for external commands
-* More shell-like syntax for background jobs
 * Make IFS configurable for cmd command
 * Add signal handlers to fix ^C and ^Z during regular execution
 * Dict literals in expression mode ({key: value})
@@ -35,5 +34,3 @@
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?
 * `rename` builtin, renames a column in a stream
 * An unknown command, e.g. `fnorp` gives an unhelppful error message.
-* Terminate all child threads on exit
-* Let list:push take multiple arguments, push them in order
