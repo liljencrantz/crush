@@ -25,8 +25,7 @@ mod env {
     use crate::lang::value::Value;
     use crate::lang::value::ValueType;
     use signature::signature;
-    use std::sync::Mutex;
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
+    use crate::util::env;
 
     #[signature(
     __getitem__,
@@ -41,10 +40,7 @@ mod env {
     fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
         let cfg: GetItem =
             GetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-        let lock = ENV_LOCK.lock();
-        let value = std::env::var(&cfg.name)?;
-        drop(lock);
-        context.output.send(Value::from(value))
+        context.output.send(Value::from(env::get(&cfg.name)?))
     }
 
     #[signature(
@@ -62,16 +58,7 @@ mod env {
     fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
         let cfg: SetItem =
             SetItem::parse(context.remove_arguments(), &context.global_state.printer())?;
-
-        if cfg.name == "" || cfg.name.contains('=') || cfg.name.contains('\0') {
-            return command_error("Invalid environment variable name");
-        }
-
-        unsafe {
-            let lock = ENV_LOCK.lock();
-            std::env::set_var(&cfg.name, &cfg.value);
-            drop(lock);
-        }
+        env::set(&cfg.name, &cfg.value)?;
         context.output.send(Value::Empty)
     }
 
@@ -89,11 +76,9 @@ mod env {
 
     fn list(context: CommandContext) -> CrushResult<()> {
         let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
-        let lock = ENV_LOCK.lock();
-        for (k, v) in std::env::vars() {
+        for (k, v) in env::list() {
             output.send(Row::new(vec![Value::from(k), Value::from(v)]))?;
         }
-        drop(lock);
         Ok(())
     }
 }

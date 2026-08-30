@@ -36,3 +36,4 @@
 * `rename` builtin, renames a column in a stream
 * An unknown command, e.g. `fnorp` gives an unhelppful error message.
 * Terminate all child threads on exit
+* Let list:push take multiple arguments, push them in order

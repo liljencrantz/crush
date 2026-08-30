@@ -82,9 +82,11 @@ pub fn user_struct() -> &'static Struct {
             r#do,
             true,
             &["global", "user"],
-            "do command",
+            "users[USERNAME]do command=command",
             "Run specified closure or command as another user",
-            None::<AnyStr>,
+            Some("# Example\
+    # Calculate what root thinks 1+1 is
+    users[root]:do {(1+1)}"),
             Unknown,
             [],
         );
@@ -120,8 +122,10 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
         let mut cmd = process::Command::new("sudo");
         let printer = context.global_state.printer().clone();
 
+        let exe = std::env::current_exe()?.to_str().ok_or("crush")?.to_string();
+
         cmd.arg("--user").arg(&username.to_string());
-        cmd.arg("--").arg("crush").arg("--pup");
+        cmd.arg("--").arg(exe).arg("--pup");
         cmd.stdin(Stdio::piped());
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());

@@ -17,9 +17,11 @@ use crate::lang::state::contexts::{EvalContext, JobContext};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{ValueDefinition, ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, value::Value};
+use crate::util::env;
 use crate::util::repr::Repr;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::thread::ThreadId;
 
 #[derive(Clone)]
@@ -278,20 +280,17 @@ fn eval_command(
 }
 
 pub fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
-    if let Some(Value::List(path)) = env.get("cmd_path")? {
-        let path_vec: Vec<_> = path.iter().collect();
-        for val in path_vec {
-            match val {
-                Value::File(el) => {
-                    let full = el.join(name);
-                    if full.exists() {
-                        return Ok(Some(full));
-                    }
-                }
-                _ => {}
+    let path_str = env::get("PATH")?;
+    let path_vec: Vec<_> = path_str.split(':').collect();
+    for i in path_vec {
+        if let Ok(val) = PathBuf::from_str(i) {
+            let full = val.join(name);
+            if full.exists() {
+                return Ok(Some(full));
             }
         }
     }
+
     Ok(None)
 }
 

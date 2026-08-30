@@ -24,11 +24,12 @@ use signal_hook::iterator::Handle;
 use signal_hook::{consts::SIGINT, iterator::Signals};
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::util::env;
 
 const DEFAULT_PROMPT: &'static str = "crush# ";
 
 pub fn config_dir() -> CrushResult<PathBuf> {
-    std::env::var("XDG_CONFIG_HOME")
+    env::get("XDG_CONFIG_HOME")
         .map(|s| PathBuf::from(s).join("crush"))
         .or_else(|_| match home() {
             Ok(home) => Ok(home.join(".config/crush")),

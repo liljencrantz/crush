@@ -15,10 +15,10 @@ use crate::util::regex::RegexFileMatcher;
 use chrono::Duration;
 use os_pipe::PipeReader;
 use signature::signature;
-use std::env;
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+use crate::util::env;
 
 mod cmd;
 mod r#for;
@@ -290,7 +290,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.which,
     short = "Find the path of an executable",
-    long = "`which` searches the directories of the `$global:control:cmd_path` list for the specified command and returns the path to the first match.",
+    long = "`which` searches the directories of the `$crush:end[PATH]` enivornment variable list for the specified command and returns the path to the first match.",
     output = Known(ValueType::File),
     example = "# Returns '/bin/ps'",
     example = "which ps",
@@ -313,15 +313,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "control",
         "Commands for flow control, (loops, etc)",
         Box::new(move |env| {
-            let path = List::new(ValueType::File, []);
-            env::var("PATH").map(|v| {
-                let mut dirs: Vec<Value> = v
-                    .split(':')
-                    .map(|s| Value::from(PathBuf::from(s)))
-                    .collect();
-                let _ = path.append(&mut dirs);
-            })?;
-            env.declare("cmd_path", path.into())?;
             r#if::If::declare(env)?;
             r#while::While::declare(env)?;
             r#loop::Loop::declare(env)?;

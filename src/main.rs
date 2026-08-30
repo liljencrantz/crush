@@ -19,6 +19,7 @@ use lang::{data, state};
 use num_format::SystemLocale;
 use std::io::Read;
 use std::path::PathBuf;
+use crate::util::env;
 
 #[derive(PartialEq, Eq)]
 enum Mode {
@@ -142,7 +143,7 @@ fn run() -> CrushResult<i32> {
 }
 
 fn set_initial_locale(global_state: &GlobalState) {
-    if let Ok(lang) = std::env::var("LANG") {
+    if let Ok(lang) = env::get("LANG") {
         match SystemLocale::from_name(&lang) {
             Ok(new_locale) => global_state.set_locale(new_locale),
             Err(_) => global_state

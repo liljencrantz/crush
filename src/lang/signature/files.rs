@@ -20,6 +20,7 @@ pub enum Files {
     File(Arc<Path>),
     Glob(Glob),
     Regex(Regex),
+    String(Arc<str>),
 }
 
 impl TryFrom<Value> for Files {
@@ -27,6 +28,7 @@ impl TryFrom<Value> for Files {
 
     fn try_from(value: Value) -> CrushResult<Self> {
         match value {
+            Value::String(v) => Ok(Files::String(v)),
             Value::File(v) => Ok(Files::File(v)),
             Value::Glob(v) => Ok(Files::Glob(v)),
             Value::Regex(_, v) => Ok(Files::Regex(v)),
@@ -43,6 +45,7 @@ impl TryInto<Vec<PathBuf>> for Files {
 
     fn try_into(self) -> CrushResult<Vec<PathBuf>> {
         match self {
+            Files::String(p) => Ok(vec![PathBuf::from(p.as_ref())]),
             Files::File(p) => Ok(vec![p.to_path_buf()]),
             Files::Glob(pattern) => {
                 let mut tmp = Vec::new();

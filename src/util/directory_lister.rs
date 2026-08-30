@@ -18,11 +18,6 @@ pub struct Directory {
     pub is_directory: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FakeListerEntry {
-    pub name: PathBuf,
-    pub is_directory: bool,
-}
 
 pub trait DirectoryLister {
     type DirectoryIter: Iterator<Item = Directory>;
@@ -75,6 +70,12 @@ pub mod tests {
     use super::*;
     use ordered_map::{Entry, OrderedMap};
     use std::collections::VecDeque;
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub struct FakeListerEntry {
+        pub name: PathBuf,
+        pub is_directory: bool,
+    }
 
     pub struct FakeDirectoryLister {
         cwd: PathBuf,

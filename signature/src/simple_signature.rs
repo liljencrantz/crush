@@ -151,6 +151,7 @@ impl SimpleSignature {
             )},
             SimpleSignature::Files => quote! {crate::lang::value::ValueType::OneOf(
                 vec![
+                    crate::lang::value::ValueType::String,
                     crate::lang::value::ValueType::File,
                     crate::lang::value::ValueType::Glob,
                     crate::lang::value::ValueType::Regex,
@@ -182,7 +183,7 @@ impl SimpleSignature {
             SimpleSignature::BinaryInput => {
                 "one_of $file $string $binary $binary_input_stream $glob $re"
             }
-            SimpleSignature::Files => "one_of $file $glob $re",
+            SimpleSignature::Files => "one_of $string $file $glob $re",
         }
     }
 
