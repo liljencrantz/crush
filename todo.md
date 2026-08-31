@@ -33,4 +33,5 @@
 * Document job control
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?
 * `rename` builtin, renames a column in a stream
-* An unknown command, e.g. `fnorp` gives an unhelppful error message.
+* An unknown command, e.g. `fnorp` gives an unhelpful error message.
+* Regular file completion of strings
