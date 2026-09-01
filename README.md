@@ -25,7 +25,7 @@ a syntax geared toward both batch and interactive shell usage.
 ### Ubuntu dependencies
 
 * Update apt index `apt update`
-* Install dependencies `apt install build-essential git curl pkg-config libssl-dev libdbus-1-dev libsystemd-dev`
+* Install dependencies `apt install build-essential git curl pkg-config libssl-dev libdbus-1-dev libsystemd-dev protobuf-compiler-grpc`
 
 ### Install Rust
 
