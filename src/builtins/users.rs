@@ -1,4 +1,3 @@
-use crate::lang::any_str::AnyStr;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::{Command, CrushCommand};

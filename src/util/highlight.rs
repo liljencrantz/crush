@@ -177,7 +177,7 @@ fn get_color<'a>(
                         Some(MemberOperator(_)) => colors.get("command"),
                         _ => match scope {
                             None => colors.get("command"),
-                            Some(s) => match resolve_external_command(name, s) {
+                            Some(s) => match resolve_external_command(name) {
                                 Ok(Some(_)) => colors.get("command"),
                                 _ => colors.get("error"),
                             },

@@ -12,7 +12,7 @@ use crate::lang::state::global_state::RunMode;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
-use rand::{Rng, RngExt};
+use rand::{RngExt};
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
 use crate::lang::state::id::JobId;
@@ -20,7 +20,7 @@ use crate::lang::state::id::JobId;
 mod env {
     use crate::lang::command::OutputType::Known;
     use crate::lang::data::table::{ColumnType, Row};
-    use crate::lang::errors::{CrushResult, command_error};
+    use crate::lang::errors::CrushResult;
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::Value;
     use crate::lang::value::ValueType;

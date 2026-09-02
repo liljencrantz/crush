@@ -194,7 +194,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             let file = if f.exists() {
                 Some(f.to_path_buf())
             } else {
-                resolve_external_command(f.to_str().ok_or("Invalid command name")?, &context.scope)?
+                resolve_external_command(f.to_str().ok_or("Invalid command name")?)?
             };
 
             if let Some(file) = file {
@@ -207,7 +207,7 @@ fn cmd(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         Value::String(s) => {
-            if let Some(file) = resolve_external_command(s.as_ref(), &context.scope)? {
+            if let Some(file) = resolve_external_command(s.as_ref())? {
                 cmd_internal(context, file, arguments)
             } else {
                 command_error(format!("Unknown command `{}`", s))

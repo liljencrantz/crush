@@ -9,16 +9,14 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::id::JobId;
 use crate::lang::state::scope::Scope;
-use crate::lang::{data::binary::BinaryReader, data::list::List, value::Value, value::ValueType};
+use crate::lang::{data::binary::BinaryReader, value::Value, value::ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;
 use chrono::Duration;
 use os_pipe::PipeReader;
 use signature::signature;
 use std::io::Read;
-use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use crate::util::env;
 
 mod cmd;
 mod r#for;
@@ -303,7 +301,7 @@ struct Which {
 fn which(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Which::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::from(
-        resolve_external_command(&cfg.command, &context.scope)?
+        resolve_external_command(&cfg.command)?
             .ok_or_else(|| format!("Could not find the command `{}` on your path", &cfg.command))?,
     ))
 }

@@ -1,7 +1,5 @@
 use std::sync::Mutex;
-use crate::lang::data::table::Row;
 use crate::lang::errors::{command_error, CrushResult};
-use crate::lang::value::Value;
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 

@@ -14,7 +14,6 @@ use crate::lang::command::Command;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::contexts::{EvalContext, JobContext};
-use crate::lang::state::scope::Scope;
 use crate::lang::value::{ValueDefinition, ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, value::Value};
 use crate::util::env;
@@ -279,15 +278,14 @@ fn eval_command(
     }
 }
 
-pub fn resolve_external_command(name: &str, env: &Scope) -> CrushResult<Option<PathBuf>> {
+pub fn resolve_external_command(name: &str) -> CrushResult<Option<PathBuf>> {
     let path_str = env::get("PATH")?;
     let path_vec: Vec<_> = path_str.split(':').collect();
     for i in path_vec {
-        if let Ok(val) = PathBuf::from_str(i) {
-            let full = val.join(name);
-            if full.exists() {
-                return Ok(Some(full));
-            }
+        let Ok(val) = PathBuf::from_str(i);
+        let full = val.join(name);
+        if full.exists() {
+            return Ok(Some(full));
         }
     }
 
@@ -299,7 +297,7 @@ fn try_external_command(
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
 ) -> CrushResult<Option<ThreadId>> {
-    match resolve_external_command(&cmd.str(), &context.scope)? {
+    match resolve_external_command(&cmd.str())? {
         None => error(format!("Unknown command name `{}`", cmd.str()).as_str()),
         Some(path) => {
             arguments.insert(

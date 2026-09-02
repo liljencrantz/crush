@@ -28,6 +28,7 @@ static TCP_OUTPUT_TYPE: LazyLock<[ColumnType; 6]> = LazyLock::new(|| [
 struct TCP {}
 
 fn tcp(mut context: CommandContext) -> CrushResult<()> {
+    let _ = TCP::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.initialize_output(TCP_OUTPUT_TYPE.as_ref())?;
 
     let af_flags = AddressFamilyFlags::IPV4 | AddressFamilyFlags::IPV6;
@@ -44,7 +45,7 @@ fn tcp(mut context: CommandContext) -> CrushResult<()> {
                 Value::List(List::new(ValueType::Integer, si.associated_pids.iter().map(|i| Value::from(*i)).collect::<Vec<_>>())),
                 Value::from(tcp_si.state.to_string()),
             ]))?,
-            ProtocolSocketInfo::Udp(udp_si) => (),
+            ProtocolSocketInfo::Udp(_) => (),
         }
     }
     Ok(())
@@ -66,6 +67,7 @@ static UDP_OUTPUT_TYPE: LazyLock<[ColumnType; 3]> = LazyLock::new(|| [
 struct UDP {}
 
 fn udp(mut context: CommandContext) -> CrushResult<()> {
+    let _ = UDP::parse(context.remove_arguments(), &context.global_state.printer())?;
     let output = context.initialize_output(UDP_OUTPUT_TYPE.as_ref())?;
 
     let af_flags = AddressFamilyFlags::IPV4 | AddressFamilyFlags::IPV6;
@@ -74,7 +76,7 @@ fn udp(mut context: CommandContext) -> CrushResult<()> {
 
     for si in sockets_info {
         match si.protocol_socket_info {
-            ProtocolSocketInfo::Tcp(tcp_si) => (),
+            ProtocolSocketInfo::Tcp(_) => (),
             ProtocolSocketInfo::Udp(udp_si) => output.send(Row::new(vec![
                 Value::from(udp_si.local_addr.to_string()),
                 Value::from(udp_si.local_port),
@@ -84,7 +86,6 @@ fn udp(mut context: CommandContext) -> CrushResult<()> {
     }
     Ok(())
 }
-
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
