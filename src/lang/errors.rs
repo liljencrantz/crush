@@ -69,6 +69,7 @@ pub enum CrushErrorType {
     ProstDecodeError(DecodeError),
     ProstDescriptorError(prost_reflect::DescriptorError),
     InvalidUri(http::uri::InvalidUri),
+    Netstat2Error(netstat2::error::Error),
 }
 
 #[derive(Debug)]
@@ -147,6 +148,7 @@ impl CrushError {
             ProstDecodeError(e) => e.to_string(),
             ProstDescriptorError(e) => e.to_string(),
             InvalidUri(e) => e.to_string(),
+            Netstat2Error(e) => e.to_string(),
         }
     }
 
@@ -514,6 +516,12 @@ impl From<DescriptorError> for CrushError {
 impl From<http::uri::InvalidUri> for CrushError {
     fn from(s: http::uri::InvalidUri) -> Self {
         InvalidUri(s).into()
+    }
+}
+
+impl From<netstat2::error::Error> for CrushError {
+    fn from(s: netstat2::error::Error) -> Self {
+        Netstat2Error(s).into()
     }
 }
 
