@@ -66,7 +66,6 @@ A grep-command.
 Simple column renaming in select, e.g. 'ps|select time=cpu'
 xml:from/to using html5ever under the hood
 html:from/to using html5ever under the hood
-Add hex and base64 en/decoding methods to the binary/string types
 Add utf-8 and other character encoding methods to the binary/string types
 Maybe unset should only be able to delete members of the current scope
 sticky bits support for chmod

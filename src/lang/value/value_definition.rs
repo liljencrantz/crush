@@ -73,17 +73,13 @@ impl ValueDefinition {
                 (None, last_input.recv()?)
             }
             ValueDefinition::JobListDefinition(defs, _) => {
-    //            if defs.len() == 0 {
-  //                  
-//                } else {
-                    for def in defs[..defs.len() - 1].iter() {
-                        def.eval(context.job_context(empty_channel(), black_hole()))?;
-                    }
-                    let (last_output, last_input) = pipe();
-                    let last_def = &defs[defs.len() - 1];
-                    last_def.eval(context.job_context(empty_channel(), last_output))?;
-                    (None, last_input.recv()?)
-      //          }
+                for def in defs[..defs.len() - 1].iter() {
+                    def.eval(context.job_context(empty_channel(), black_hole()))?;
+                }
+                let (last_output, last_input) = pipe();
+                let last_def = &defs[defs.len() - 1];
+                last_def.eval(context.job_context(empty_channel(), last_output))?;
+                (None, last_input.recv()?)
             }
 
             ValueDefinition::ClosureDefinition {

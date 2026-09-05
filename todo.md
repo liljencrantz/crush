@@ -33,5 +33,9 @@
 * Document job control
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?
 * `rename` builtin, renames a column in a stream
-* An unknown command, e.g. `fnorp` gives an unhelpful error message.
+* Entering an unknown command, e.g. `fnorp` gives an unhelpful error message.
 * Regular file completion of strings
+* crush:commands command, showing all currently executing commands
+* Make `(1+1)` work again
+* Reserve `$global`. Possibly also `$true`, `$false` and a few more?
+* 

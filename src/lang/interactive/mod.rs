@@ -132,7 +132,7 @@ fn set_default_prompt(
 
     global_state.printer().handle_error(execute::string(
         &global_env,
-        r#"val {"{green}{user}{white}@{host}:{green}{cwd}{white}# ":format user=$(users:me:username) host=$(host:name) cwd=$(fs:cwd) green=$term:green white=$term:white}"#,
+        r#"val {"{green}{user}{white}@{host}:{green}{cwd}{white}# ":format user=$(val $(users:me):username) host=$(host:name) cwd=$(fs:cwd) green=$term:green white=$term:white}"#,
         LanguageMode::Command,
         &send,
         global_state,
