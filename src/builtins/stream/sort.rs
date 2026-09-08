@@ -5,8 +5,25 @@ use crate::lang::errors::CrushResult;
 use crate::lang::errors::command_error;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ComparisonMode::{CaseInsensitive, Regular};
+use crate::lang::value::{ComparisonMode, Value};
 use signature::signature;
 use std::cmp::Ordering;
+
+/// Like `Value::param_partial_cmp`, but never returns `None`: the only comparable value
+/// that can make `param_partial_cmp` return `None` is a NaN `Float` (`is_comparable()`
+/// only excludes whole *types*, and NaN is a property of a *value*), so this gives NaN a
+/// defined position -- it always sorts as the greatest value, regardless of which side
+/// of the comparison it's on, matching `f64::total_cmp`'s convention.
+fn compare_for_sort(this: &Value, other: &Value, mode: ComparisonMode) -> Ordering {
+    match this.param_partial_cmp(other, mode) {
+        Some(ordering) => ordering,
+        None => match (this, other) {
+            (Value::Float(x), _) if x.is_nan() => Ordering::Greater,
+            (_, Value::Float(y)) if y.is_nan() => Ordering::Less,
+            _ => Ordering::Equal,
+        },
+    }
+}
 
 #[signature(
     stream.sort,
@@ -67,10 +84,9 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
     if cfg.reverse {
         res.sort_by(|a, b| {
             for idx in &indices {
-                match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
-                    None => panic!("Unexpected sort failure"),
-                    Some(Ordering::Equal) => {}
-                    Some(ordering) => return ordering,
+                match compare_for_sort(&b.cells()[*idx], &a.cells()[*idx], comparison_mode) {
+                    Ordering::Equal => {}
+                    ordering => return ordering,
                 }
             }
             Ordering::Equal
@@ -78,10 +94,9 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
     } else {
         res.sort_by(|b, a| {
             for idx in &indices {
-                match b.cells()[*idx].param_partial_cmp(&a.cells()[*idx], comparison_mode) {
-                    None => panic!("Unexpected sort failure"),
-                    Some(Ordering::Equal) => {}
-                    Some(ordering) => return ordering,
+                match compare_for_sort(&b.cells()[*idx], &a.cells()[*idx], comparison_mode) {
+                    Ordering::Equal => {}
+                    ordering => return ordering,
                 }
             }
             Ordering::Equal
