@@ -185,6 +185,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         output_type.push(ColumnType::new_from_string(name.clone(), ValueType::Any));
     }
 
+    let output_type = output_type.as_slice().deduplicate_names();
     let output = context.initialize_output(&output_type)?;
     let mut groups: HashMap<Vec<Value>, TableOutputStream> = HashMap::new();
 

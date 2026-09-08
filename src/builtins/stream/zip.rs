@@ -1,3 +1,4 @@
+use crate::lang::data::table::ColumnVec;
 use crate::lang::errors::CrushResult;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
@@ -25,6 +26,7 @@ pub fn zip(mut context: CommandContext) -> CrushResult<()> {
     let mut second = cfg.second.stream(context.command_handle())?;
     output_type.append(&mut first.types().to_vec());
     output_type.append(&mut second.types().to_vec());
+    let output_type = output_type.as_slice().deduplicate_names();
     let output = context.initialize_output(&output_type)?;
     while let (Ok(mut row1), Ok(row2)) = (first.read(), second.read()) {
         row1.append(&mut Vec::from(row2));

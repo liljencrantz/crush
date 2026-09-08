@@ -273,6 +273,14 @@ impl Display for ColumnType {
 
 pub trait ColumnVec {
     fn find(&self, needle: &str) -> CrushResult<usize>;
+
+    /// Returns a copy of this column list where any column whose name collides with an
+    /// earlier column's name has been renamed by appending `_2`, `_3`, etc. (repeating
+    /// until the generated name is unique), so the result is always safe to use as a
+    /// stream/table signature. Used by commands like `zip`, `group` and `select` that
+    /// build their output columns by combining names from more than one source and can't
+    /// otherwise guarantee those names don't collide.
+    fn deduplicate_names(&self) -> Vec<ColumnType>;
 }
 
 impl ColumnVec for &[ColumnType] {
@@ -293,6 +301,22 @@ impl ColumnVec for &[ColumnType] {
             )
             .as_str(),
         )
+    }
+
+    fn deduplicate_names(&self) -> Vec<ColumnType> {
+        let mut seen = HashSet::new();
+        self.iter()
+            .map(|c| {
+                let mut name = c.name().to_string();
+                let mut version = 1;
+                while seen.contains(&name) {
+                    version += 1;
+                    name = format!("{}_{}", c.name(), version);
+                }
+                seen.insert(name.clone());
+                ColumnType::new_with_format_from_string(name, c.format, c.cell_type.clone())
+            })
+            .collect()
     }
 }
 

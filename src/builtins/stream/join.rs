@@ -14,7 +14,6 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use ordered_map::{Entry, OrderedMap};
 use signature::signature;
-use std::collections::HashSet;
 
 fn combine(l: &Row, r: &Row, right_idx: usize) -> Row {
     let mut l = l.clone();
@@ -60,24 +59,15 @@ fn get_output_type(
     right_type: &[ColumnType],
     right_key_idx: usize,
 ) -> Result<Vec<ColumnType>, CrushError> {
-    let seen = left_type.iter().map(|c| c.name()).collect::<HashSet<_>>();
-    let mut res = left_type.to_vec();
-
-    for (idx, c) in right_type.iter().enumerate() {
-        let mut name = c.name().to_string();
-        let mut version = 1;
-        while seen.contains(name.as_str()) {
-            version += 1;
-            name = format!("{}_{}", c.name(), version);
-        }
-
-        let column = ColumnType::new_from_string(name.to_string(), c.cell_type.clone());
-
-        if idx != right_key_idx {
-            res.push(column);
-        }
-    }
-    Ok(res)
+    let mut combined = left_type.to_vec();
+    combined.extend(
+        right_type
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| *idx != right_key_idx)
+            .map(|(_, c)| c.clone()),
+    );
+    Ok(combined.as_slice().deduplicate_names())
 }
 
 #[signature(

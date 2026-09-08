@@ -56,6 +56,7 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
         }
     }
 
+    let output_type = output_type.as_slice().deduplicate_names();
     let output = context.initialize_output(&output_type)?;
 
     while let Ok(row) = input.read() {
