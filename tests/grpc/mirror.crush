@@ -1,0 +1,158 @@
+# Connects to the grpc-service test server (see grpc-service/) started by the
+# `test_grpc` Rust test in tests/system.rs, sends a fully populated `Blob` message
+# (every scalar, repeated, map and oneof field declared in grpc-service/proto/reverse.proto)
+# to the streaming `Mirror` RPC, and verifies that every field comes back unchanged.
+#
+# This exercises the crush gRPC client's encoder and decoder (src/builtins/grpc/client.rs)
+# against a real server, rather than just the individual type-conversion functions.
+
+$conn := $(grpc:connect host="localhost" service="reverse.Reverser" plaintext=$true)
+
+$child1 := $(struct:of child_id="c1" display_name="Child One")
+$child2 := $(struct:of child_id="c2" display_name="Child Two")
+
+$input := $(struct:of \
+    single_double=1.5 \
+    single_float=2.5 \
+    single_int32=(0-3) \
+    single_int64=4 \
+    single_sint32=(0-5) \
+    single_sint64=6 \
+    single_uint32=7 \
+    single_uint64=8 \
+    single_fixed32=9 \
+    single_fixed64=10 \
+    single_sfixed32=(0-11) \
+    single_sfixed64=12 \
+    single_bool=$true \
+    single_string="hello, world!" \
+    single_bytes=$(convert $binary "some bytes") \
+    single_enum="STATUS_ACTIVE" \
+    single_child_message=$child1 \
+    repeated_double=$(list:of 1.5 2.5) \
+    repeated_float=$(list:of 3.5 4.5) \
+    repeated_int32=$(list:of (0-1) 2) \
+    repeated_int64=$(list:of 3 (0-4)) \
+    repeated_sint32=$(list:of (0-5) 6) \
+    repeated_sint64=$(list:of 7 (0-8)) \
+    repeated_uint32=$(list:of 9 10) \
+    repeated_uint64=$(list:of 11 12) \
+    repeated_fixed32=$(list:of 13 14) \
+    repeated_fixed64=$(list:of 15 16) \
+    repeated_sfixed32=$(list:of (0-17) 18) \
+    repeated_sfixed64=$(list:of 19 (0-20)) \
+    repeated_bool=$(list:of $true $false $true) \
+    repeated_string=$(list:of "alpha" "beta") \
+    repeated_bytes=$(list:of $(convert $binary "one") $(convert $binary "two")) \
+    repeated_enum=$(list:of "STATUS_ACTIVE" "STATUS_INACTIVE" "STATUS_PENDING") \
+    repeated_child_messages=$(list:of $child1 $child2) \
+    map_string_to_int32=$(dict:of a=1 b=2 c=3) \
+    map_int64_to_message=$(dict:of 1 $child1 2 $child2) \
+    map_string_to_enum=$(dict:of active="STATUS_ACTIVE" pending="STATUS_PENDING") \
+    oneof_string="this is the chosen oneof member")
+
+$received := $($conn:Mirror \
+    single_double=$input:single_double \
+    single_float=$input:single_float \
+    single_int32=$input:single_int32 \
+    single_int64=$input:single_int64 \
+    single_sint32=$input:single_sint32 \
+    single_sint64=$input:single_sint64 \
+    single_uint32=$input:single_uint32 \
+    single_uint64=$input:single_uint64 \
+    single_fixed32=$input:single_fixed32 \
+    single_fixed64=$input:single_fixed64 \
+    single_sfixed32=$input:single_sfixed32 \
+    single_sfixed64=$input:single_sfixed64 \
+    single_bool=$input:single_bool \
+    single_string=$input:single_string \
+    single_bytes=$input:single_bytes \
+    single_enum=$input:single_enum \
+    single_child_message=$input:single_child_message \
+    repeated_double=$input:repeated_double \
+    repeated_float=$input:repeated_float \
+    repeated_int32=$input:repeated_int32 \
+    repeated_int64=$input:repeated_int64 \
+    repeated_sint32=$input:repeated_sint32 \
+    repeated_sint64=$input:repeated_sint64 \
+    repeated_uint32=$input:repeated_uint32 \
+    repeated_uint64=$input:repeated_uint64 \
+    repeated_fixed32=$input:repeated_fixed32 \
+    repeated_fixed64=$input:repeated_fixed64 \
+    repeated_sfixed32=$input:repeated_sfixed32 \
+    repeated_sfixed64=$input:repeated_sfixed64 \
+    repeated_bool=$input:repeated_bool \
+    repeated_string=$input:repeated_string \
+    repeated_bytes=$input:repeated_bytes \
+    repeated_enum=$input:repeated_enum \
+    repeated_child_messages=$input:repeated_child_messages \
+    map_string_to_int32=$input:map_string_to_int32 \
+    map_int64_to_message=$input:map_int64_to_message \
+    map_string_to_enum=$input:map_string_to_enum \
+    oneof_string=$input:oneof_string)[0]
+
+$conn:close
+
+$mismatches := $($(list $string):new)
+$check := {
+    |$name $sent $got|
+    if ($sent != $got) {
+        $mismatches:push $("{}: sent `{}`, got `{}`":format $name $sent $got)
+    }
+}
+
+# Every field declared on the Blob message. The six oneof_* siblings of oneof_string
+# were never set, so they must still come back as their type's zero value.
+$check "single_double" $input:single_double $received:single_double
+$check "single_float" $input:single_float $received:single_float
+$check "single_int32" $input:single_int32 $received:single_int32
+$check "single_int64" $input:single_int64 $received:single_int64
+$check "single_sint32" $input:single_sint32 $received:single_sint32
+$check "single_sint64" $input:single_sint64 $received:single_sint64
+$check "single_uint32" $input:single_uint32 $received:single_uint32
+$check "single_uint64" $input:single_uint64 $received:single_uint64
+$check "single_fixed32" $input:single_fixed32 $received:single_fixed32
+$check "single_fixed64" $input:single_fixed64 $received:single_fixed64
+$check "single_sfixed32" $input:single_sfixed32 $received:single_sfixed32
+$check "single_sfixed64" $input:single_sfixed64 $received:single_sfixed64
+$check "single_bool" $input:single_bool $received:single_bool
+$check "single_string" $input:single_string $received:single_string
+$check "single_bytes" $input:single_bytes $received:single_bytes
+$check "single_enum" $input:single_enum $received:single_enum
+$check "single_child_message" $input:single_child_message $received:single_child_message
+$check "repeated_double" $input:repeated_double $received:repeated_double
+$check "repeated_float" $input:repeated_float $received:repeated_float
+$check "repeated_int32" $input:repeated_int32 $received:repeated_int32
+$check "repeated_int64" $input:repeated_int64 $received:repeated_int64
+$check "repeated_sint32" $input:repeated_sint32 $received:repeated_sint32
+$check "repeated_sint64" $input:repeated_sint64 $received:repeated_sint64
+$check "repeated_uint32" $input:repeated_uint32 $received:repeated_uint32
+$check "repeated_uint64" $input:repeated_uint64 $received:repeated_uint64
+$check "repeated_fixed32" $input:repeated_fixed32 $received:repeated_fixed32
+$check "repeated_fixed64" $input:repeated_fixed64 $received:repeated_fixed64
+$check "repeated_sfixed32" $input:repeated_sfixed32 $received:repeated_sfixed32
+$check "repeated_sfixed64" $input:repeated_sfixed64 $received:repeated_sfixed64
+$check "repeated_bool" $input:repeated_bool $received:repeated_bool
+$check "repeated_string" $input:repeated_string $received:repeated_string
+$check "repeated_bytes" $input:repeated_bytes $received:repeated_bytes
+$check "repeated_enum" $input:repeated_enum $received:repeated_enum
+$check "repeated_child_messages" $input:repeated_child_messages $received:repeated_child_messages
+$check "map_string_to_int32" $input:map_string_to_int32 $received:map_string_to_int32
+$check "map_int64_to_message" $input:map_int64_to_message $received:map_int64_to_message
+$check "map_string_to_enum" $input:map_string_to_enum $received:map_string_to_enum
+$check "oneof_string" $input:oneof_string $received:oneof_string
+$check "oneof_int64 (unset sibling)" 0 $received:oneof_int64
+$check "oneof_bool (unset sibling)" $false $received:oneof_bool
+$check "oneof_double (unset sibling)" 0.0 $received:oneof_double
+$check "oneof_bytes (unset sibling)" $(convert $binary "") $received:oneof_bytes
+$check "oneof_enum (unset sibling)" "STATUS_UNSPECIFIED" $received:oneof_enum
+$check "oneof_child_message (unset sibling)" $(struct:of child_id="" display_name="") $received:oneof_child_message
+
+if $($mismatches:empty) {
+    echo "MIRROR_TEST_RESULT: PASS"
+} else {
+    echo "MIRROR_TEST_RESULT: FAIL"
+    for m=$mismatches {
+        echo $("  {}":format $m)
+    }
+}

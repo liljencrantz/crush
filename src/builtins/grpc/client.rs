@@ -501,6 +501,25 @@ impl GrpcClient {
                     Ok(())
                 }
 
+                (Kind::Message(map_entry_descriptor), Value::Dict(d)) if map_entry_descriptor.is_map_entry() => {
+                    let key_field = map_entry_descriptor.map_entry_key_field();
+                    let value_field = map_entry_descriptor.map_entry_value_field();
+                    let mut entries = HashMap::new();
+                    for (k, v) in d.elements() {
+                        let mut entry = DynamicMessage::new(map_entry_descriptor.clone());
+                        Self::convert_crush_value_to_protobuf_value(&mut entry, &key_field, &k)?;
+                        Self::convert_crush_value_to_protobuf_value(&mut entry, &value_field, &v)?;
+                        let key = entry
+                            .get_field(&key_field)
+                            .into_owned()
+                            .into_map_key()
+                            .ok_or("Invalid map key type")?;
+                        entries.insert(key, entry.get_field(&value_field).into_owned());
+                    }
+                    message.set_field(descriptor, prost_reflect::Value::Map(entries));
+                    Ok(())
+                }
+
                 (expected, actual) => command_error(format!(
                     "Unexpected type of column {}. Expected {}, got {}.",
                     descriptor.name(),

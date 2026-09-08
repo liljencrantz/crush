@@ -49,20 +49,33 @@ fn test_grpc() {
         .run()
         .expect("Failed to build grpc-service binary");
 
-
-
     let mut server = Command::new(run.path())
         .spawn()
         .expect("Failed to start gRPC service");
 
-    // 2. Give the server a moment to bind and listen
+    // Give the server a moment to bind and listen
     thread::sleep(Duration::from_millis(500));
 
-    // 3. Run your gRPC client test logic here...
+    // Run the crush gRPC client against the server: send a fully populated `Blob` message
+    // to the streaming `Mirror` RPC and verify every field comes back unchanged. See
+    // tests/grpc/mirror.crush for the actual test logic; it prints a MIRROR_TEST_RESULT
+    // marker rather than relying on the process exit code, since `crush:exit` can't
+    // reliably terminate a script that still has an open gRPC connection in flight.
+    let output = Command::new("./target/debug/crush")
+        .args(&["tests/grpc/mirror.crush"])
+        .output()
+        .expect("failed to execute process");
 
-    // 4. Clean up the process
     let _ = server.kill();
     let _ = server.wait();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("MIRROR_TEST_RESULT: PASS"),
+        "gRPC Mirror round-trip test did not pass.\nStdout:\n{}\nStderr:\n{}",
+        stdout,
+        String::from_utf8_lossy(&output.stderr),
+    );
 }
 
 test_finder!();
