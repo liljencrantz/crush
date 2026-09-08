@@ -11,12 +11,19 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Silent-corruption bugs (no crash, just wrong data)
 
-- [ ] `pup` serialization drops a struct's parent chain — `src/lang/serialization/struct_serializer.rs:70-79`.
+- [x] `pup` serialization drops a struct's parent chain — `src/lang/serialization/struct_serializer.rs:70-79`.
       `serialize()` hardcodes `parent: None`, ignoring the struct's real parent. Any
       `class()`-based object (inheritance, custom methods, `__setattr__`) sent through
       `pup:to`/`sudo`/`remote:exec` silently degrades to a bare data struct on the other
       side — it looks fine until you call an inherited method. `tests/serialization.crush`
       only round-trips a plain Table/Row, never a class instance.
+      Fixed: added `Struct::parent()` (`src/lang/data/struct.rs`) and made
+      `serialize()` encode the real parent via `ParentValue(...)`. Covered by
+      `struct_parent_survives_pup_round_trip` in `struct_serializer.rs`, plus a manual
+      end-to-end check through the interpreter with a pure custom class hierarchy. Note:
+      exposed a separate bug in the process — see "`Command::deserialize` uses the wrong
+      element index" below, which still blocks the common case of `class()`'s *default*
+      parent (`scope.root_object()`, which holds native builtin commands).
 - [ ] `pup` serialization truncates `Duration` to whole seconds — `src/lang/serialization/value_serializer.rs:160-170`.
       `nanos` is zeroed unconditionally even though the wire format and the deserializer
       both support it. Any sub-second duration silently loses precision crossing a
@@ -33,6 +40,25 @@ stream handling" and "Write tests that use `schedule` and job control".
 - [ ] Float `NaN`/`±0.0`/`±inf` in comparisons/sort/dedup have no test coverage in
       `src/lang/value/mod.rs`'s `PartialEq`/`PartialOrd`, which back `sort`, `==`, and
       dict/table keys. Silently wrong order or dedup, not a crash.
+
+## Reachable bugs found while fixing other items on this list
+
+- [ ] `Command::deserialize` uses the wrong element index —
+      `src/lang/command/mod.rs:228-229`. `serialize()` for a native command emits
+      `element::Element::Command(strings_idx)`, where `strings_idx` points at a separate
+      `Element::Strings` holding the command's full path (e.g. `["global", "io",
+      "echo"]`). `deserialize()` matches `element::Element::Command(_)` and **discards**
+      that index, then calls `Vec::deserialize(id, ...)` reusing the *outer* command
+      element's own `id` — which points at the `Command` element, not the `Strings`
+      element — so it always fails with `Expected string list`. This path was
+      apparently never reachable by any existing test, because nothing ever
+      pup-serialized a literal `Value::Command` before. Surfaced while fixing the
+      struct-parent bug above: `class()`'s default parent is `scope.root_object()`,
+      whose fields are native `Command`s, so `pup:to`/`pup:from` (and therefore
+      `sudo`/`remote:exec`) on *any* ordinary `class()`-based struct with default
+      inheritance still fails today, just with a loud error instead of silent data
+      loss. Minimal fix looks like capturing `strings_idx` from the match arm instead
+      of `id`.
 
 ## Reachable panics (should be `CrushResult` errors, aren't)
 
