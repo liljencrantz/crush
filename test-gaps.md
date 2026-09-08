@@ -109,7 +109,7 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Test infrastructure gaps
 
-- [ ] `run_system_test` in `tests/system.rs` compares expected vs. actual output via
+- [x] `run_system_test` in `tests/system.rs` compares expected vs. actual output via
       `expected_lines.iter().zip(actual_lines.iter())`, which silently stops comparing at
       the shorter of the two — if a regression makes a script produce *fewer* lines than
       expected (e.g. a top-level statement now errors and `source()` in
@@ -117,10 +117,26 @@ stream handling" and "Write tests that use `schedule` and job control".
       never checked and the golden test can pass even though the output is wrong. Found
       while writing a repro for the struct-parent-in-pup bug above: a naive `.crush`
       golden test for that bug would have passed today despite the bug being present,
-      because the buggy run produces empty output rather than a differing line. Fix
-      should assert `actual_lines.len() == expected_lines.len()` (or equivalent) in
-      addition to the per-line comparison. Deliberately treated as a separate task from
-      any specific bug fix.
+      because the buggy run produces empty output rather than a differing line.
+      Fixed: added a length check (`actual_lines.len() == expected_lines.len()`) after
+      the per-line comparison. Covered by two new tests in `tests/system.rs` using
+      fixtures under `tests/harness/` (too few / too many actual lines vs. expected).
+      Fixing this immediately turned up a real, separate bug — see `test_zip` below.
+
+- [ ] `test_zip` (`tests/zip.crush`) has apparently been silently broken for a while,
+      masked by the `run_system_test` gap above. Running it directly shows it produces
+      **zero** stdout output: `zip $(lines:from ./example_data/age.csv|...) $(lines:from
+      ./example_data/home.csv|...)` errors immediately with `global:stream:zip:
+      Duplicate column name, column 0 and column 1 are both named 'line'`, from the
+      duplicate-column-name check in `src/lang/pipe.rs:334-343`. The committed
+      `tests/zip.crush.output` expects 13 lines of successfully zipped output with both
+      columns literally named `line` side by side — so either that validation was added
+      after this test was written (a regression), or `zip` was always meant to tolerate
+      duplicate column names, unlike `join` (which auto-renames colliding columns to
+      `_2`/`_3`, see the join.rs entry below). Left as a genuinely failing test
+      (`cargo test` is red on `test_zip`) rather than worked around, per instruction —
+      needs its own test-first cycle to sort out which side (the validation or the test
+      fixture) is wrong.
 
 ## Untested control-flow / stream ops (lower severity, still real gaps)
 

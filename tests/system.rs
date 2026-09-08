@@ -31,7 +31,22 @@ fn run_system_test(name: &Path) {
             name.to_str().unwrap()
         );
     }
-    
+
+    // The loop above only compares the overlapping prefix, via zip(), so it can't by
+    // itself catch a run that produces a different number of lines than expected (e.g.
+    // one that now errors out partway through and produces fewer lines, or that emits
+    // unexpected trailing output). Check the lengths too.
+    assert_eq!(
+        actual_lines.len(),
+        expected_lines.len(),
+        "Wrong number of output lines while running file {}. Expected {} lines, got {}.\n\
+         Expected output:\n{}\nActual output:\n{}",
+        name.to_str().unwrap(),
+        expected_lines.len(),
+        actual_lines.len(),
+        expected_output,
+        actual_string,
+    );
 }
 
 #[test]
