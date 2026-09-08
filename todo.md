@@ -36,6 +36,5 @@
 * Entering an unknown command, e.g. `fnorp` gives an unhelpful error message.
 * Regular file completion of strings
 * crush:commands command, showing all currently executing commands
-* Make `(1+1)` work again
 * Reserve `$global`. Possibly also `$true`, `$false` and a few more?
-* 
+* Directory-only completion, e.g. for `cd`.

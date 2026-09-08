@@ -309,6 +309,7 @@ fn complete_partial_argument(
 
         LastArgument::Field(label) => {
             if parse_result.last_argument_name.is_none() {
+                complete_file(lister, &label, Unquoted, &argument_type, cursor, res)?;
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.completion_data(), &label, cursor, res, false)?;
                 }

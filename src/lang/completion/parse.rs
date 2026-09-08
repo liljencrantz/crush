@@ -203,6 +203,23 @@ fn find_command_in_job(job: JobNode, cursor: usize) -> CrushResult<CommandNode> 
     Ok(job.commands.last().ok_or("Nothing to complete")?.clone())
 }
 
+/// A bare `(expr)` used as a command argument is desugared by the parser into a synthetic
+/// two-expression command invoking the hidden `global:io:val` builtin on `expr` (see
+/// `Node::val`), so that e.g. `(1 + 1)` evaluates the expression and returns its value. That
+/// desugaring reuses `expr`'s own source location for the synthetic `val` reference, which a
+/// user-typed identifier never does, so it doubles as a reliable marker for detecting it here.
+fn is_synthetic_val_wrapper(node: &Node) -> bool {
+    match node {
+        Node::GetAttr(parent, field) if field.string == "val" => match parent.as_ref() {
+            Node::GetAttr(grandparent, field2) if field2.string == "io" => {
+                matches!(grandparent.as_ref(), Node::Identifier(id) if id.string == "global")
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
 fn find_command_in_job_list(ast: JobListNode, cursor: usize) -> CrushResult<CommandNode> {
     for job in &ast.jobs {
         if job.location.contains(cursor) {
@@ -306,6 +323,17 @@ pub fn parse(
     }
 
     let cmd = find_command_in_job_list(ast, cursor)?;
+
+    // Complete `(expr` the same way as `$(expr` and top-level `expr`, rather than as an
+    // argument to the hidden `val` command it desugars to (see `is_synthetic_val_wrapper`).
+    let cmd = if cmd.expressions.len() == 2 && is_synthetic_val_wrapper(&cmd.expressions[0]) {
+        CommandNode {
+            expressions: vec![cmd.expressions[1].clone()],
+            location: cmd.location,
+        }
+    } else {
+        cmd
+    };
 
     match cmd.expressions.len() {
         0 => Ok(ParseResult::Nothing),
