@@ -28,12 +28,15 @@ stream handling" and "Write tests that use `schedule` and job control".
       `nanos` is zeroed unconditionally even though the wire format and the deserializer
       both support it. Any sub-second duration silently loses precision crossing a
       `--pup` boundary.
-- [ ] `stream/join.rs` column-collision renaming is unexercised (lines ~56-75) — when both
-      sides share a non-key column name, output columns get renamed `_2`, `_3`, etc.
-      `tests/join.crush`'s only shared column is the join key itself, so this logic has
-      never actually run. Also unverified: right-side rows with no left match are
-      silently dropped, and duplicate left keys fanning out — nothing confirms `join`
-      behaves like a real inner join with correct multiplicity.
+- [ ] `stream/join.rs` — right-side rows with no left match are silently dropped, and
+      duplicate left keys fanning out, are both still unverified — nothing confirms
+      `join` behaves like a real inner join with correct multiplicity.
+      Column-collision renaming (originally flagged here as unexercised, since
+      `tests/join.crush`'s only shared column is the join key itself) is no longer a
+      gap: `get_output_type` now calls the shared `ColumnVec::deduplicate_names()`
+      (`src/lang/data/table.rs`), which is directly exercised by `tests/zip.crush`,
+      `tests/group.crush` and `tests/select.crush` — see the `test_zip` entry below for
+      the full story of how that surfaced.
 - [ ] `stream/aggregation.rs` mixed Integer+Float columns fall through `sum_any`/`avg_any`'s
       type-tracking match to an unverified catch-all — could be silent data loss rather
       than a sensible error.
@@ -123,20 +126,18 @@ stream handling" and "Write tests that use `schedule` and job control".
       fixtures under `tests/harness/` (too few / too many actual lines vs. expected).
       Fixing this immediately turned up a real, separate bug — see `test_zip` below.
 
-- [ ] `test_zip` (`tests/zip.crush`) has apparently been silently broken for a while,
-      masked by the `run_system_test` gap above. Running it directly shows it produces
-      **zero** stdout output: `zip $(lines:from ./example_data/age.csv|...) $(lines:from
-      ./example_data/home.csv|...)` errors immediately with `global:stream:zip:
-      Duplicate column name, column 0 and column 1 are both named 'line'`, from the
-      duplicate-column-name check in `src/lang/pipe.rs:334-343`. The committed
-      `tests/zip.crush.output` expects 13 lines of successfully zipped output with both
-      columns literally named `line` side by side — so either that validation was added
-      after this test was written (a regression), or `zip` was always meant to tolerate
-      duplicate column names, unlike `join` (which auto-renames colliding columns to
-      `_2`/`_3`, see the join.rs entry below). Left as a genuinely failing test
-      (`cargo test` is red on `test_zip`) rather than worked around, per instruction —
-      needs its own test-first cycle to sort out which side (the validation or the test
-      fixture) is wrong.
+- [x] `test_zip` (`tests/zip.crush`) had apparently been silently broken for a while,
+      masked by the `run_system_test` gap above: `zip $(lines:from
+      ./example_data/age.csv|...) $(lines:from ./example_data/home.csv|...)` errored with
+      `global:stream:zip: Duplicate column name, column 0 and column 1 are both named
+      'line'`, from the duplicate-column-name check in `src/lang/pipe.rs:334-343` —
+      `streams()`'s validation was added (commit `3489e7a`) well after `zip.crush` was
+      last written, a genuine regression. Investigating turned out the same
+      no-collision-handling pattern also existed in `select` and `group` (see the
+      `stream/join.rs` entry above, now folded into the fix). Fixed: all three now auto-rename
+      colliding columns via the new `ColumnVec::deduplicate_names()`, matching `join`'s
+      existing behavior. Covered by `tests/zip.crush` (updated), `tests/group.crush`
+      (new collision case added) and `tests/select.crush` (new).
 
 ## Untested control-flow / stream ops (lower severity, still real gaps)
 
