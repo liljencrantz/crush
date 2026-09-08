@@ -376,6 +376,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             let mut assignments = proc_macro2::TokenStream::new();
             let mut named_fallback = proc_macro2::TokenStream::new();
             let mut had_unnamed_target = false;
+            let mut had_named_target = false;
             let struct_name = s.ident.clone();
             let mut had_field_description = false;
 
@@ -397,8 +398,20 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             default_value_node =
                                 quote! {Some(crate::lang::value::Value::from(#default_value))};
                         } else if call_is_named(attr, "unnamed") {
+                            if had_unnamed_target {
+                                return fail!(
+                                    attr.span(),
+                                    "A signature struct can only have one #[unnamed()] field"
+                                );
+                            }
                             is_unnamed_target = true;
                         } else if call_is_named(attr, "named") {
+                            if had_named_target {
+                                return fail!(
+                                    attr.span(),
+                                    "A signature struct can only have one #[named()] field"
+                                );
+                            }
                             is_named_target = true;
                         } else if call_is_named(attr, "values") {
                             allowed_values = Some(call_trees(attr)?);
@@ -466,6 +479,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
                 assignments.extend(type_data.assign);
                 had_unnamed_target |= is_unnamed_target;
+                had_named_target |= is_named_target;
                 let crush_internal_type = type_data.crush_internal_type;
 
                 let allowed_values = match &type_data.allowed_values {
