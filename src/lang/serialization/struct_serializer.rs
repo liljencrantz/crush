@@ -72,9 +72,16 @@ impl Serializable<Struct> for Struct {
                     elements.push(el);
                 }
 
+                let parent = match self.parent() {
+                    Some(p) => Some(model::r#struct::Parent::ParentValue(
+                        p.serialize(elements, state)? as u64,
+                    )),
+                    None => None,
+                };
+
                 elements[idx] = model::Element {
                     element: Some(element::Element::Struct(model::Struct {
-                        parent: None,
+                        parent,
                         members,
                     })),
                 };

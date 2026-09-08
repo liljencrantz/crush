@@ -230,6 +230,10 @@ impl Struct {
     pub fn set_parent(&self, parent: Option<Struct>) {
         self.data.lock().unwrap().parent = parent;
     }
+
+    pub fn parent(&self) -> Option<Struct> {
+        self.data.lock().unwrap().parent.clone()
+    }
 }
 
 impl DisplayNonRecursive for Struct {
