@@ -21,6 +21,8 @@ pub mod pretty;
 pub mod printer;
 pub mod serialization;
 pub mod signature;
+#[cfg(test)]
+mod signature_binding_tests;
 pub mod state;
 pub mod threads;
 pub mod value;

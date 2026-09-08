@@ -103,12 +103,25 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Framework code everything else depends on
 
-- [ ] `signature` crate's argument-binding algorithm — `signature/src/lib.rs:375-507`.
-      Generates the parser for essentially every builtin (~150+ commands) and has zero
-      tests of its own. The binding order has a genuine subtlety: once an `#[unnamed()]`
-      collector field is seen, later fields only still consume positional args if they
-      *also* have a `#[default(...)]`. A regression here silently mis-binds arguments
-      across the whole command surface.
+- [x] `signature` crate's argument-binding algorithm — `signature/src/lib.rs:375-507`.
+      Generates the parser for essentially every builtin (~150+ commands) and had zero
+      tests of its own. Added `src/lang/signature_binding_tests.rs` (18 tests): baseline
+      named/unnamed binding order, duplicate named args, stray unnamed args, type
+      mismatches, `#[unnamed()]` `Vec` collectors, and specifically the flagged
+      subtlety — a field declared *after* an `#[unnamed()]` collector. Traced the
+      generated code precisely: the collector's `while !_unnamed.is_empty()` drain runs
+      before any later field's own binding code (mutate blocks are emitted in struct
+      declaration order and execute sequentially), so such a field can only ever be
+      filled by name — a `#[default(...)]` on it doesn't let it "reach past" the
+      collector and steal a positional value, it only changes what happens when nothing
+      names it (falls back to the default) vs. when it's required (errors clearly). All
+      18 tests pass against the current implementation — no bug found this pass, but
+      this was previously completely unverified and is exactly the kind of thing a
+      refactor could silently break. `#[named()]` collectors were also checked and don't
+      have the same effect on later fields (they don't set the same internal flag), which
+      is what `control::for`'s `For` struct relies on in production (`#[named()]
+      iterator` followed by a plain positional `body`) — also now covered.
+      No production code was touched, per instruction.
 
 ## Test infrastructure gaps
 
