@@ -75,9 +75,12 @@ stream handling" and "Write tests that use `schedule` and job control".
 - [ ] `stream/aggregation.rs::median_*` (lines 207-211) indexes `res[...]` directly with no
       empty-check — `median` (or `avg`/`min`/`max`, also untested) on an empty stream
       underflows/panics instead of erroring.
-- [ ] `stream/sort.rs` — an incomparable pair (e.g. NaN) hits
-      `panic!("Unexpected sort failure")` rather than a graceful error; nothing sorts a
+- [x] `stream/sort.rs` — an incomparable pair (e.g. NaN) hit
+      `panic!("Unexpected sort failure")` rather than a graceful error; nothing sorted a
       column that could produce `None` from `partial_cmp`.
+      Fixed: added `compare_for_sort()`, giving NaN a defined position (always sorts as
+      the greatest value — last ascending, first descending) instead of panicking.
+      Covered by `tests/sort_nan.crush`.
 
 ## Pipeline whose last command errors before producing output
 
