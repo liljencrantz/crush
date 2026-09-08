@@ -614,3 +614,111 @@ pub fn signature(
         Ok(res) | Err(res) => proc_macro::TokenStream::from(res),
     }
 }
+
+// These tests call signature_real() -- the plain Rust function the #[proc_macro_attribute]
+// wrapper above delegates to -- directly, rather than actually expanding #[signature(...)]
+// on a struct compiled elsewhere. Doing a real expansion would need a struct whose fields
+// use crate::lang::* types, which only resolve inside the crush binary crate (this crate
+// can't depend on it as a library, and it has no lib target to depend on anyway); calling
+// signature_real() directly sidesteps that entirely, and lets these check only what we
+// actually care about -- did it accept or reject the input? -- without pinning down any
+// wording, since a Result::Err here is exactly what becomes a compile_error!(...) for real
+// callers of the macro.
+#[cfg(test)]
+mod tests {
+    use super::signature_real;
+    use proc_macro2::TokenStream;
+    use std::str::FromStr;
+
+    fn expand(metadata: &str, input: &str) -> Result<TokenStream, TokenStream> {
+        signature_real(
+            TokenStream::from_str(metadata).unwrap(),
+            TokenStream::from_str(input).unwrap(),
+        )
+    }
+
+    #[test]
+    fn two_unnamed_collector_fields_are_rejected() {
+        let result = expand(
+            "dummy",
+            "struct Foo {
+                #[unnamed()]
+                a: Vec<String>,
+                #[unnamed()]
+                b: Vec<String>,
+            }",
+        );
+        assert!(
+            result.is_err(),
+            "a signature struct with two #[unnamed()] fields should be rejected"
+        );
+    }
+
+    #[test]
+    fn two_named_collector_fields_are_rejected() {
+        let result = expand(
+            "dummy",
+            "struct Foo {
+                #[named()]
+                a: OrderedStringMap<String>,
+                #[named()]
+                b: OrderedStringMap<String>,
+            }",
+        );
+        assert!(
+            result.is_err(),
+            "a signature struct with two #[named()] fields should be rejected"
+        );
+    }
+
+    #[test]
+    fn a_single_unnamed_collector_field_is_still_accepted() {
+        let result = expand(
+            "dummy",
+            "struct Foo {
+                first: i128,
+                #[unnamed()]
+                rest: Vec<String>,
+            }",
+        );
+        assert!(
+            result.is_ok(),
+            "a single #[unnamed()] field should still be accepted"
+        );
+    }
+
+    #[test]
+    fn a_single_named_collector_field_is_still_accepted() {
+        let result = expand(
+            "dummy",
+            "struct Foo {
+                first: i128,
+                #[named()]
+                rest: OrderedStringMap<String>,
+            }",
+        );
+        assert!(
+            result.is_ok(),
+            "a single #[named()] field should still be accepted"
+        );
+    }
+
+    #[test]
+    fn one_unnamed_and_one_named_collector_field_together_is_accepted() {
+        // Different collector kinds don't conflict with each other, only with a second
+        // instance of the same kind.
+        let result = expand(
+            "dummy",
+            "struct Foo {
+                #[unnamed()]
+                items: Vec<String>,
+                #[named()]
+                extra: OrderedStringMap<String>,
+            }",
+        );
+        assert!(
+            result.is_ok(),
+            "one #[unnamed()] field and one #[named()] field together should be fine"
+        );
+    }
+}
