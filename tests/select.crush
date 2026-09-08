@@ -1,0 +1,3 @@
+# Two newly-appended columns that happen to share a chosen name must be auto-renamed
+# rather than making select fail with a duplicate-column error.
+seq 0 3 | select * double={(value*2)} double={(value*3)} | echo
