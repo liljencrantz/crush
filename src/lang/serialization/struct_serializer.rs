@@ -84,3 +84,46 @@ impl Serializable<Struct> for Struct {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::serialization::{deserialize, serialize};
+    use crate::lang::state::scope::Scope;
+
+    /// A struct's parent carries its inherited members (e.g. methods declared via
+    /// `class()`). serialize() must preserve it so a struct sent through pup (used by
+    /// `pup:to`/`pup:from`, `sudo`, and `remote:exec`) still has access to everything it
+    /// inherited once deserialized on the other side.
+    #[test]
+    fn struct_parent_survives_pup_round_trip() {
+        let parent = Struct::new(
+            vec![("greeting", Value::from("hello from parent"))],
+            None,
+        );
+        let child = Struct::new(vec![("name", Value::from("child"))], Some(parent));
+
+        let mut buf = Vec::new();
+        serialize(&Value::Struct(child), &mut buf).unwrap();
+
+        let env = Scope::create_root();
+        let restored = deserialize(&buf, &env).unwrap();
+
+        let restored_struct = match restored {
+            Value::Struct(s) => s,
+            other => panic!("expected a struct, got {}", other.value_type().to_string()),
+        };
+
+        // The child's own field must survive the round trip.
+        assert!(
+            restored_struct.get("name") == Some(Value::from("child")),
+            "child's own field `name` did not survive the round trip",
+        );
+        // The field inherited from the parent must also survive.
+        assert!(
+            restored_struct.get("greeting") == Some(Value::from("hello from parent")),
+            "field `greeting` inherited from the parent did not survive the round trip \
+             (the parent link was likely dropped during serialization)",
+        );
+    }
+}
