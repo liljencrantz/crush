@@ -92,6 +92,34 @@ fn test_run_system_test_catches_extra_trailing_lines() {
 }
 
 
+// See tests/error_handling/last_command_error.crush for the full explanation. In short:
+// when the last command in a pipeline errors before ever sending output, job.rs still
+// unconditionally tries to receive from its (by-then sender-less) output channel,
+// producing a second, unrelated "receiving on an empty and disconnected channel" error
+// that leaks an implementation detail and drowns out the real one. This only checks
+// stderr content, not the exit status -- whether a failing last command should also
+// change the process's exit code is a separate, deliberately unresolved question.
+#[test]
+fn test_last_command_error_does_not_leak_a_stray_channel_error() {
+    let output = Command::new("./target/debug/crush")
+        .args(&["tests/error_handling/last_command_error.crush"])
+        .output()
+        .expect("failed to execute process");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.is_empty(),
+        "expected the real conversion error to still be printed, got empty stderr"
+    );
+    assert!(
+        !stderr.contains("disconnected channel"),
+        "the real error (about the failed conversion) should be the only error printed; \
+         a second, unrelated channel-disconnection error should not leak through.\n\
+         Stderr was:\n{}",
+        stderr,
+    );
+}
+
 #[test]
 fn test_grpc() {
     let run = escargot::CargoBuild::new()

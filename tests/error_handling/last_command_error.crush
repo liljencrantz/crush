@@ -1,0 +1,18 @@
+# Minimal reproduction for the "stray channel error" bug: when the *last* command in a
+# pipeline errors before ever sending output, Job::eval (src/lang/job.rs) still
+# unconditionally does `context.output.send(last_input.recv()?)?` after evaluating it.
+# The real error was already printed (it goes through printer().handle_error() inside
+# command_invocation.rs's eval_command, which swallows it rather than propagating it),
+# but by then the sender on the other end of that channel has been dropped, so
+# `last_input.recv()` immediately returns a RecvError -- a second, unrelated
+# "receiving on an empty and disconnected channel" message that leaks an implementation
+# detail and drowns out the real one.
+#
+# This is NOT a deadlock (crossbeam channels don't block once every sender is dropped) --
+# confirmed empirically with a timeout guard before writing this. See test-gaps.md.
+#
+# This script exercises the can_block=false path (convert's handler errors synchronously,
+# without spawning a thread); the can_block=true path (e.g. a failing `select` call) was
+# also verified by hand to show the identical symptom, sharing the same root cause in
+# job.rs, so one repro covers both.
+seq 0 3 | convert $integer "notanumber"

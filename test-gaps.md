@@ -79,15 +79,29 @@ stream handling" and "Write tests that use `schedule` and job control".
       `panic!("Unexpected sort failure")` rather than a graceful error; nothing sorts a
       column that could produce `None` from `partial_cmp`.
 
-## Likely deadlock
+## Pipeline whose last command errors before producing output
 
-- [ ] Pipeline whose last command errors before producing output —
-      `src/lang/job.rs:62-70` + `src/lang/command_invocation.rs:256-262`. The non-blocking
-      eval path swallows command errors via `printer().handle_error()` and returns
-      `Ok(None)`, but `Job::eval` then unconditionally does
-      `context.output.send(last_input.recv()?)`. If the last stage never sent anything,
-      that `recv()` blocks forever with no sender left. This is the exit path of every
-      pipeline, and "last command fails" is never tested.
+- [ ] `src/lang/job.rs:62-70` + `src/lang/command_invocation.rs:256-262`. The
+      non-blocking eval path swallows command errors via `printer().handle_error()` and
+      returns `Ok(None)`, but `Job::eval` then unconditionally does
+      `context.output.send(last_input.recv()?)`. **Correction:** originally flagged here
+      as a likely deadlock — verified by hand (with a timeout guard) and it is not one.
+      `crossbeam::channel::Receiver::recv()` returns `Err` as soon as every `Sender` is
+      dropped rather than blocking forever, so this resolves almost instantly. The real,
+      confirmed bug: that `RecvError` (`"receiving on an empty and disconnected
+      channel"`, from `crossbeam::channel::RecvError`'s own `Display`, wrapped by
+      `CrushErrorType::RecvError` in `src/lang/errors.rs` — note `is_disconnected()`
+      already exists there as a way to recognize this specific error class) gets
+      propagated as *the* job error via the trailing `?`, silently replacing/burying the
+      real error that was already printed a moment earlier by `handle_error()`. Every
+      pipeline whose last command fails leaks this confusing second, unrelated message —
+      verified identically on both the non-blocking path (`convert` erroring
+      synchronously) and the blocking/threaded path (a failing `select` call).
+      Reproduced in `tests/error_handling/last_command_error.crush`, asserted by
+      `test_last_command_error_does_not_leak_a_stray_channel_error` in
+      `tests/system.rs` (currently red). Deliberately out of scope for now: whether a
+      failing last command should also make the process exit non-zero (currently exits
+      0) — punted as a separate, unresolved design question, not asserted by the test.
 
 ## Security-relevant, untested
 
@@ -125,22 +139,11 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Test infrastructure gaps
 
-- [x] `run_system_test` in `tests/system.rs` compares expected vs. actual output via
-      `expected_lines.iter().zip(actual_lines.iter())`, which silently stops comparing at
-      the shorter of the two — if a regression makes a script produce *fewer* lines than
-      expected (e.g. a top-level statement now errors and `source()` in
-      `src/lang/execute.rs` aborts the rest of the script), the missing/extra lines are
-      never checked and the golden test can pass even though the output is wrong. Found
-      while writing a repro for the struct-parent-in-pup bug above: a naive `.crush`
-      golden test for that bug would have passed today despite the bug being present,
-      because the buggy run produces empty output rather than a differing line.
-      Fixed: added a length check (`actual_lines.len() == expected_lines.len()`) after
-      the per-line comparison. Covered by two new tests in `tests/system.rs` using
-      fixtures under `tests/harness/` (too few / too many actual lines vs. expected).
-      Fixing this immediately turned up a real, separate bug — see `test_zip` below.
-
 - [x] `test_zip` (`tests/zip.crush`) had apparently been silently broken for a while,
-      masked by the `run_system_test` gap above: `zip $(lines:from
+      masked by a gap in `run_system_test` itself (its expected-vs-actual comparison
+      used `expected_lines.iter().zip(actual_lines.iter())`, which silently stopped at
+      the shorter of the two — since fixed with an added length check, and covered by
+      two tests in `tests/system.rs` using fixtures under `tests/harness/`): `zip $(lines:from
       ./example_data/age.csv|...) $(lines:from ./example_data/home.csv|...)` errored with
       `global:stream:zip: Duplicate column name, column 0 and column 1 are both named
       'line'`, from the duplicate-column-name check in `src/lang/pipe.rs:334-343` —
