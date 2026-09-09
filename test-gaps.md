@@ -24,10 +24,15 @@ stream handling" and "Write tests that use `schedule` and job control".
       exposed a separate bug in the process — see "`Command::deserialize` uses the wrong
       element index" below, which still blocks the common case of `class()`'s *default*
       parent (`scope.root_object()`, which holds native builtin commands).
-- [ ] `pup` serialization truncates `Duration` to whole seconds — `src/lang/serialization/value_serializer.rs:160-170`.
-      `nanos` is zeroed unconditionally even though the wire format and the deserializer
-      both support it. Any sub-second duration silently loses precision crossing a
-      `--pup` boundary.
+- [x] `pup` serialization truncates `Duration` to whole seconds — `src/lang/serialization/value_serializer.rs:160-170`.
+      `nanos` was zeroed unconditionally even though the wire format and the deserializer
+      both support it. Any sub-second duration silently lost precision crossing a
+      `--pup` boundary (e.g. via `sudo`, `remote:exec`, or `users:me:do`).
+      Fixed: serialize side now uses `chrono::TimeDelta::subsec_nanos()`, which pairs
+      with `num_seconds()` (truncate-toward-zero) to exactly match the reconstruction
+      formula already used on the deserialize side. Covered by
+      `tests/duration_via_pup.crush` (500ms through `users:me:do`, confirmed red before
+      the fix, green after).
 - [ ] `stream/join.rs` — right-side rows with no left match are silently dropped, and
       duplicate left keys fanning out, are both still unverified — nothing confirms
       `join` behaves like a real inner join with correct multiplicity.
