@@ -116,7 +116,11 @@ macro_rules! avg_function {
                     Err(_) => break,
                 }
             }
-            Ok(Value::$value_type(res / (count as $count_type)))
+            if count == 0 {
+                error("Can't calculate average of empty set")
+            } else {
+                Ok(Value::$value_type(res / (count as $count_type)))
+            }
         }
     };
 }
@@ -244,21 +248,21 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
         ValueType::Integer => {
             context
                 .output
-                .send(crate::builtins::stream::aggregation::median_int(
+                .send(median_int(
                     input, column,
                 )?)
         }
         ValueType::Float => {
             context
                 .output
-                .send(crate::builtins::stream::aggregation::median_float(
+                .send(median_float(
                     input, column,
                 )?)
         }
         ValueType::Duration => {
             context
                 .output
-                .send(crate::builtins::stream::aggregation::median_duration(
+                .send(median_duration(
                     input, column,
                 )?)
         }
