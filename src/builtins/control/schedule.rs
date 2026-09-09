@@ -10,6 +10,7 @@ use chrono::{Duration, Local};
 use crossbeam::channel::{Receiver, bounded};
 use signature::signature;
 use std::mem::swap;
+use crate::builtins::control::r#return;
 
 #[signature(
     control.schedule,
@@ -48,9 +49,10 @@ pub struct Schedule {
 }
 
 fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> CrushResult<()> {
+loop {
     match control.recv_timeout(duration.to_std()?) {
         Ok(msg) => match msg {
-            StreamControlMessage::Terminate => terminate(),
+            StreamControlMessage::Terminate => return terminate(),
             StreamControlMessage::Pause => loop {
                 match control.recv() {
                     Ok(StreamControlMessage::Terminate) => {
@@ -61,10 +63,11 @@ fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> Crush
                     Err(_) => return terminate(),
                 }
             },
-            StreamControlMessage::Resume => panic!(),
+            StreamControlMessage::Resume => {},
         },
-        Err(_) => Ok(()),
+        Err(_) => return Ok(()),
     }
+}
 }
 
 fn schedule(mut context: CommandContext) -> CrushResult<()> {

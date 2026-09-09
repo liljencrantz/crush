@@ -263,27 +263,28 @@ struct InterruptibleTableInputStream {
 
 impl TableStreamReader for InterruptibleTableInputStream {
     fn read(&mut self) -> CrushResult<Row> {
-        select! {
-            recv(self.input.receiver) -> r => Ok(r?),
-            recv(self.control) -> msg => {
-                match msg {
-                    Ok(StreamControlMessage::Terminate) => {terminate()}
-                    Ok(StreamControlMessage::Pause) => {
-                        loop {
-                            match self.control.recv() {
-                            Ok(StreamControlMessage::Terminate) => {
-                                    return terminate();
-                                    }
-                            Ok(StreamControlMessage::Resume) => break,
-                            Ok(StreamControlMessage::Pause) => {}
-                            Err(_) => return terminate(),
+        loop {
+            select! {
+                recv(self.input.receiver) -> r => return Ok(r?),
+                recv(self.control) -> msg => {
+                    match msg {
+                        Ok(StreamControlMessage::Terminate) => { return terminate();}
+                        Ok(StreamControlMessage::Pause) => {
+                            loop {
+                                match self.control.recv() {
+                                Ok(StreamControlMessage::Terminate) => {
+                                        return terminate();
+                                        }
+                                Ok(StreamControlMessage::Resume) => break,
+                                Ok(StreamControlMessage::Pause) => {}
+                                Err(_) => return terminate(),
+                                }
                             }
                         }
-                        self.read()
-                    }
-                    Ok(StreamControlMessage::Resume) => {panic!()}
-                    Err(e) => {
-                        Err(e.into())
+                        Ok(StreamControlMessage::Resume) => {}
+                        Err(e) => {
+                            return Err(e.into());
+                        }
                     }
                 }
             }

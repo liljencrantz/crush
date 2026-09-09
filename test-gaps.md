@@ -65,13 +65,33 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Reachable panics (should be `CrushResult` errors, aren't)
 
-- [ ] `InterruptibleTableInputStream::read`, `src/lang/pipe.rs:284` — a `Resume` control
-      message arriving while not paused hits a bare `panic!()`. No test drives job-control
+- [x] `InterruptibleTableInputStream::read`, `src/lang/pipe.rs:284` — a `Resume` control
+      message arriving while not paused hit a bare `panic!()`. No test drove job-control
       (pause/resume/terminate) signals through a stream at all.
-- [ ] `control/schedule.rs` — same `Resume`-outside-pause `panic!()` pattern in its
-      `sleep()`, plus a fixed-rate catch-up mode (`next_duration = last_time - Local::now()`,
-      skips sleep if overrun) that's classic drift logic with zero coverage of any kind —
-      no `.crush` file even mentions `schedule`.
+      Fixed: the `select!` loop moved inside an outer `loop {}`, and an unexpected
+      `Resume` now just falls through to the next iteration (silently ignored) instead
+      of panicking. Verified by hand: backgrounded `files --recurse / | echo`, then
+      `crush:resume jid=<id>` on it *without* ever pausing first — no panic, script
+      continued normally. Not yet wired into an automated test (would need to drive
+      job-control messages from a `.crush` script, which isn't easily expressible
+      today) — the manual repro above is the only verification.
+- [x] `control/schedule.rs` had the same `Resume`-outside-pause `panic!()` pattern in
+      its `sleep()`.
+      Fixed the same way (wrap in an outer `loop {}`, `Resume` falls through instead of
+      panicking). Verified by hand: backgrounded `schedule $(duration:of seconds=10)`,
+      then `crush:resume jid=<id>` on it while it was still in its initial sleep — no
+      panic.
+      **Correction on the rest of this item:** the fixed-rate catch-up logic
+      (`next_duration = last_time - Local::now()`, skipping `sleep` if overrun) is *not*
+      a bug — `schedule_at_fixed_rate` is a real, documented, opt-in mode (default
+      `false`; the default mode always sleeps the full interval regardless of how long
+      the previous heartbeat took). `last_time` accumulates from a fixed baseline
+      (`t0, t0+interval, t0+2*interval, ...`), so skipping the sleep when behind and
+      firing immediately is exactly the documented "catch up by sending more heartbeats
+      afterwards" behavior, matching e.g. Java's `scheduleAtFixedRate`. Mischaracterized
+      this as "classic drift logic" without first checking there was a documented mode
+      governing it. What's still accurate: `schedule` has zero test coverage for either
+      mode — no `.crush` file even mentions it.
 - [x] `stream/aggregation.rs` on an empty stream — audited every aggregator by hand via
       `tests/aggregation_empty.crush`. **Correction:** `median_*` already had an explicit
       `res.is_empty()` check returning a clean error (the original note that it indexes
