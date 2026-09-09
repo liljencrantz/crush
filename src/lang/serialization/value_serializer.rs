@@ -161,7 +161,7 @@ impl Serializable<Value> for Value {
                 let mut node = Element::default();
                 let mut dd = model::Duration::default();
                 dd.secs = d.num_seconds();
-                dd.nanos = 0;
+                dd.nanos = d.subsec_nanos();
                 node.element = Some(element::Element::Duration(dd));
                 let idx = elements.len();
                 state.values.insert(self.clone(), idx);
