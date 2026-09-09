@@ -274,48 +274,52 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
 }
 
 macro_rules! aggr_function {
-    ($name:ident, $value_type:ident, $desc:literal, $op:expr) => {
+    ($name:ident, $value_type:ident, $op_desc:literal, $type_desc:literal, $op:expr) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
-            let mut res = match s.read()?.into_cells().replace(column, Value::Empty) {
-                Value::$value_type(i) => i,
-                _ => return error(concat!("Invalid cell value, expected ", $desc)),
-            };
-            while let Ok(row) = s.read() {
-                match row.into_cells().replace(column, Value::Empty) {
-                    Value::$value_type(i) => res = $op(i, res),
-                    _ => return error(concat!("Invalid cell value, expected ", $desc)),
+            if let Ok(first_value) = s.read() {
+                let mut res = match first_value.into_cells().replace(column, Value::Empty) {
+                    Value::$value_type(i) => i,
+                    _ => return error(concat!("Invalid cell value, expected ", $type_desc)),
+                };
+                while let Ok(row) = s.read() {
+                    match row.into_cells().replace(column, Value::Empty) {
+                        Value::$value_type(i) => res = $op(i, res),
+                        _ => return error(concat!("Invalid cell value, expected ", $type_desc)),
+                    }
                 }
+                Ok(Value::$value_type(res))
+            } else {
+                error(concat!("Can't calculate ", $op_desc, " of empty set"))
             }
-            Ok(Value::$value_type(res))
         }
     };
 }
 
-aggr_function!(min_int, Integer, "integer", |a, b| std::cmp::min(a, b));
-aggr_function!(min_float, Float, "float", |a, b| std::cmp::min(
+aggr_function!(min_int, Integer, "min", "integer", |a, b| std::cmp::min(a, b));
+aggr_function!(min_float, Float, "min", "float", |a, b| std::cmp::min(
     FloatOrd(a),
     FloatOrd(b)
 )
 .0);
-aggr_function!(min_duration, Duration, "duration", |a, b| std::cmp::min(
+aggr_function!(min_duration, Duration, "min", "duration", |a, b| std::cmp::min(
     a, b
 ));
-aggr_function!(min_time, Time, "time", |a, b| std::cmp::min(a, b));
-aggr_function!(min_string, String, "string", |a, b| std::cmp::min(a, b));
-aggr_function!(min_file, File, "file", |a, b| std::cmp::min(a, b));
+aggr_function!(min_time, Time, "min", "time", |a, b| std::cmp::min(a, b));
+aggr_function!(min_string, String, "min", "string", |a, b| std::cmp::min(a, b));
+aggr_function!(min_file, File, "min", "file", |a, b| std::cmp::min(a, b));
 
-aggr_function!(max_int, Integer, "integer", |a, b| std::cmp::max(a, b));
-aggr_function!(max_float, Float, "float", |a, b| std::cmp::max(
+aggr_function!(max_int, Integer, "max", "integer", |a, b| std::cmp::max(a, b));
+aggr_function!(max_float, Float, "max", "float", |a, b| std::cmp::max(
     FloatOrd(a),
     FloatOrd(b)
 )
 .0);
-aggr_function!(max_duration, Duration, "duration", |a, b| std::cmp::max(
+aggr_function!(max_duration, Duration, "max", "duration", |a, b| std::cmp::max(
     a, b
 ));
-aggr_function!(max_time, Time, "time", |a, b| std::cmp::max(a, b));
-aggr_function!(max_string, String, "string", |a, b| std::cmp::max(a, b));
-aggr_function!(max_file, File, "file", |a, b| std::cmp::max(a, b));
+aggr_function!(max_time, Time, "max", "time", |a, b| std::cmp::max(a, b));
+aggr_function!(max_string, String, "max", "string", |a, b| std::cmp::max(a, b));
+aggr_function!(max_file, File, "max", "file", |a, b| std::cmp::max(a, b));
 
 #[signature(
     stream.min,

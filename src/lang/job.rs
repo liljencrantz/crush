@@ -66,7 +66,9 @@ impl Job {
             last_element()
         };
         let res = last_call_def.eval(context.with_io(input, last_output));
-        context.output.send(last_input.recv()?)?;
+        if let Ok(v) = last_input.recv() {
+            context.output.send(v)?;
+        }
         res
     }
 }
