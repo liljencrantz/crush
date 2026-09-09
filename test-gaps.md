@@ -136,22 +136,29 @@ stream handling" and "Write tests that use `schedule` and job control".
       (no block) correctly stopping the script. `tests/exit.crush` itself is still red
       for an unrelated, newly-exposed reason — see the next item.
 
-- [ ] `crush:exit`'s "are there other jobs running" check (`random_other_job()` in
-      `src/builtins/crush.rs`) filters only by `job.id != my_job_id` — it doesn't
+- [x] `crush:exit`'s "are there other jobs running" check (`random_other_job()` in
+      `src/builtins/crush.rs`) filtered only by `job.id != my_job_id` — it didn't
       recognize "this other job is my own enclosing block/closure, not a genuinely
       unrelated concurrent job." So `crush:exit` called from *inside* any block, closure,
-      or function body always spuriously fails with `"There are running jobs."` (the
-      enclosing block itself counts as "another job"), regardless of whether anything
-      else is actually running — confirmed with a single, bare `{crush:exit; 2}` as the
+      or function body always spuriously failed with `"There are running jobs."` (the
+      enclosing block itself counted as "another job"), regardless of whether anything
+      else was actually running — confirmed with a single, bare `{crush:exit; 2}` as the
       very first statement in an otherwise empty script. `tests/exit.crush` uses exactly
       this shape (`{crush:exit; 2}`) and was never actually testing "exit successfully
       stops the script" — it happened to produce the expected output only because the
       job.rs bug above *also* propagated this failure up and aborted the script for an
-      unrelated reason, which looked identical to "exit worked." Now that both bugs
-      above are fixed, this one is exposed directly and `tests/exit.crush` is red.
-      Deliberately left unfixed and untested-beyond-manual-repro for now, per
-      instruction — needs its own test-first cycle. `tests/exit.crush` stays red until
-      then; not worked around.
+      unrelated reason, which looked identical to "exit worked."
+      Fixed: `JobData`/`JobInfo` gained a `parent: Option<JobId>` field, set via a new
+      `GlobalState::create_nested_job_handle()` / `JobContext::new_nested()` pair (used
+      by `closure.rs`'s `eval_inner`, the only place a job is evaluated *inside* another
+      one today); `random_other_job()` now walks the parent chain via a new
+      `is_ancestor()` helper and excludes ancestors, not just self. Verified a genuinely
+      unrelated concurrent job (`loop {} &`) is still correctly detected and still
+      blocks a plain `crush:exit`. `tests/exit.crush` now passes for the right reason.
+      Known follow-up, not covered by this fix: command substitutions (`$(...)`, via
+      `value_definition.rs`'s `EvalContext`, which carries no job-handle info at all
+      today) likely have the same underlying issue but go through a different,
+      untouched path.
 
 ## Security-relevant, untested
 
