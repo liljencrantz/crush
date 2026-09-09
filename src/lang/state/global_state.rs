@@ -131,6 +131,18 @@ impl GlobalState {
     }
 
     pub fn create_job_handle(&self, job_type: JobType) -> JobHandle {
+        self.create_job_handle_with_parent(job_type, None)
+    }
+
+    /// Like `create_job_handle`, but records `parent` as the job this new job is nested
+    /// inside (e.g. a closure/block body being evaluated as part of `parent`). Used so
+    /// job-related checks can recognize an ancestor job as not being a genuinely separate,
+    /// unrelated one.
+    pub fn create_nested_job_handle(&self, job_type: JobType, parent: JobId) -> JobHandle {
+        self.create_job_handle_with_parent(job_type, Some(parent))
+    }
+
+    fn create_job_handle_with_parent(&self, job_type: JobType, parent: Option<JobId>) -> JobHandle {
         let mut data = self.data.lock().unwrap();
         remove_finished_jobs(&mut data);
         let id = next_id(&data);
@@ -138,6 +150,7 @@ impl GlobalState {
         let jd = JobData {
             id,
             job_type,
+            parent,
             job_control_data: job.weak_ref(),
         };
         data.jobs.push(jd);
@@ -236,6 +249,7 @@ impl GlobalState {
                         job_type: jd.job_type,
                         description: live_job.description.clone(),
                         status: live_job.status(),
+                        parent: jd.parent,
                     });
                 }
                 None => {}

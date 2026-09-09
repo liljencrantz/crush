@@ -606,6 +606,7 @@ impl Closure {
     }
 
     fn eval_inner(&self, context: CommandContext) -> CrushResult<()> {
+        let parent_job_id = context.command_handle().job_handle.id();
         let job_definitions = self.jobs.clone();
         let parent_env = self.parent_scope.clone();
 
@@ -637,12 +638,13 @@ impl Closure {
                     empty_channel()
                 };
                 let (sender, receiver) = pipe();
-                let job = job_definition.eval(JobContext::new(
+                let job = job_definition.eval(JobContext::new_nested(
                     input,
                     sender,
                     env.clone(),
                     context.global_state.clone(),
                     context.job_type,
+                    parent_job_id,
                 ))?;
 
                 let local_printer = context.global_state.printer().clone();

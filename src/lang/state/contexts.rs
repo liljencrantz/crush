@@ -8,6 +8,7 @@ use crate::lang::pipe::{
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::handles::{CommandHandle, JobHandle, JobType};
+use crate::lang::state::id::JobId;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use std::mem::swap;
@@ -83,6 +84,29 @@ impl JobContext {
             handle: global_state.create_job_handle(job_type),
             global_state,
             job_type: job_type,
+        }
+    }
+
+    /// Like `new`, but for a job that's nested inside another one already being
+    /// evaluated (e.g. a closure/block body run as part of `parent`), rather than a
+    /// fresh top-level statement. Recording `parent` lets job-related checks (like
+    /// `crush:exit`'s running-jobs check) recognize an ancestor job as not being a
+    /// genuinely separate, unrelated one.
+    pub fn new_nested(
+        input: ValueReceiver,
+        output: ValueSender,
+        env: Scope,
+        global_state: GlobalState,
+        job_type: JobType,
+        parent: JobId,
+    ) -> JobContext {
+        JobContext {
+            input,
+            output,
+            scope: env,
+            handle: global_state.create_nested_job_handle(job_type, parent),
+            global_state,
+            job_type,
         }
     }
 

@@ -134,12 +134,31 @@ struct Exit {
     force: bool,
 }
 
+/// True if `candidate` is an ancestor of `of` -- i.e. `of` is a closure/block body (or
+/// other nested job) running as part of `candidate`, directly or transitively. Used to
+/// tell a job's own enclosing job apart from a genuinely separate, unrelated one.
+fn is_ancestor(jobs: &[crate::lang::state::handles::JobInfo], candidate: JobId, of: JobId) -> bool {
+    let mut current = of;
+    while let Some(parent) = jobs.iter().find(|j| j.id == current).and_then(|j| j.parent) {
+        if parent == candidate {
+            return true;
+        }
+        current = parent;
+    }
+    false
+}
+
 fn random_other_job(context: &CommandContext) -> Option<JobId> {
     let my_job_id = context.command_handle().job_handle.id();
-    let other_jobs : Vec<_> = context.global_state.jobs().drain(..).filter(|job| {job.id != my_job_id}).collect();
-    match other_jobs.is_empty() {
+    let jobs = context.global_state.jobs();
+    let other_job_ids: Vec<JobId> = jobs
+        .iter()
+        .filter(|job| job.id != my_job_id && !is_ancestor(&jobs, job.id, my_job_id))
+        .map(|job| job.id)
+        .collect();
+    match other_job_ids.is_empty() {
         true => None,
-        false => Some(other_jobs[rand::rng().random_range(0..other_jobs.len())].id),
+        false => Some(other_job_ids[rand::rng().random_range(0..other_job_ids.len())]),
     }
 }
 

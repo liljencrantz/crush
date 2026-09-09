@@ -143,6 +143,11 @@ pub struct JobInfo {
     pub job_type: JobType,
     pub description: String,
     pub status: JobStatus,
+    /// The job this job is nested inside (e.g. a closure/block body evaluated as part of
+    /// an enclosing job), if any. Lets code that needs to know about "other" jobs (like
+    /// `crush:exit`'s running-jobs check) tell an ancestor apart from a genuinely
+    /// unrelated, concurrently running job.
+    pub parent: Option<JobId>,
 }
 
 pub struct JobControlData {
@@ -155,6 +160,7 @@ pub struct JobControlData {
 pub struct JobData {
     pub id: JobId,
     pub job_type: JobType,
+    pub parent: Option<JobId>,
     pub job_control_data: Weak<Mutex<JobControlData>>,
 }
 
