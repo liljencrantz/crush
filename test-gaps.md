@@ -72,9 +72,22 @@ stream handling" and "Write tests that use `schedule` and job control".
       `sleep()`, plus a fixed-rate catch-up mode (`next_duration = last_time - Local::now()`,
       skips sleep if overrun) that's classic drift logic with zero coverage of any kind —
       no `.crush` file even mentions `schedule`.
-- [ ] `stream/aggregation.rs::median_*` (lines 207-211) indexes `res[...]` directly with no
-      empty-check — `median` (or `avg`/`min`/`max`, also untested) on an empty stream
-      underflows/panics instead of erroring.
+- [x] `stream/aggregation.rs` on an empty stream — audited every aggregator by hand via
+      `tests/aggregation_empty.crush`. **Correction:** `median_*` already had an explicit
+      `res.is_empty()` check returning a clean error (the original note that it indexes
+      `res[...]` unchecked was wrong, or true of an older version of the code). The real,
+      confirmed bugs: `avg_int`/`avg_float`/`avg_duration` (the `avg_function!` macro)
+      divided by the row count unconditionally, panicking with "attempt to divide by
+      zero" on an empty stream; `min`/`max` (`aggr_function!`) didn't panic but leaked
+      the raw `s.read()?` `RecvError` ("receiving on an empty and disconnected channel")
+      instead of a clear message. `sum`/`prod`/`concat` were already fine (correctly
+      return `0`/`1`/`""`). Fixed in two commits: `40e812d` (avg: explicit `count == 0`
+      check before dividing) and `ef7c37b` (min/max: explicit `s.read()` check up front
+      with a proper "Can't calculate {min,max} of empty set" message).
+      `tests/aggregation_empty.crush` exercises all of them by hand; not wired into an
+      automated assertion (each erroring line aborts the rest of the script under the
+      job.rs bug fixed just above, which made testing several aggregators in one file
+      that way impractical).
 - [x] `stream/sort.rs` — an incomparable pair (e.g. NaN) hit
       `panic!("Unexpected sort failure")` rather than a graceful error; nothing sorted a
       column that could produce `None` from `partial_cmp`.
@@ -84,9 +97,9 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Pipeline whose last command errors before producing output
 
-- [ ] `src/lang/job.rs:62-70` + `src/lang/command_invocation.rs:256-262`. The
+- [x] `src/lang/job.rs:62-70` + `src/lang/command_invocation.rs:256-262`. The
       non-blocking eval path swallows command errors via `printer().handle_error()` and
-      returns `Ok(None)`, but `Job::eval` then unconditionally does
+      returns `Ok(None)`, but `Job::eval` then unconditionally did
       `context.output.send(last_input.recv()?)`. **Correction:** originally flagged here
       as a likely deadlock — verified by hand (with a timeout guard) and it is not one.
       `crossbeam::channel::Receiver::recv()` returns `Err` as soon as every `Sender` is
@@ -94,17 +107,51 @@ stream handling" and "Write tests that use `schedule` and job control".
       confirmed bug: that `RecvError` (`"receiving on an empty and disconnected
       channel"`, from `crossbeam::channel::RecvError`'s own `Display`, wrapped by
       `CrushErrorType::RecvError` in `src/lang/errors.rs` — note `is_disconnected()`
-      already exists there as a way to recognize this specific error class) gets
+      already exists there as a way to recognize this specific error class) got
       propagated as *the* job error via the trailing `?`, silently replacing/burying the
       real error that was already printed a moment earlier by `handle_error()`. Every
-      pipeline whose last command fails leaks this confusing second, unrelated message —
-      verified identically on both the non-blocking path (`convert` erroring
+      pipeline whose last command failed leaked this confusing second, unrelated
+      message — verified identically on both the non-blocking path (`convert` erroring
       synchronously) and the blocking/threaded path (a failing `select` call).
-      Reproduced in `tests/error_handling/last_command_error.crush`, asserted by
+      Fixed (commit `ef7c37b`): only forward `last_input.recv()`'s value downstream if it
+      actually arrives; a disconnect is now treated as "the last command produced
+      nothing" rather than a fresh error, and whatever `last_call_def.eval()` actually
+      returned decides the job's own result. Reproduced in
+      `tests/error_handling/last_command_error.crush`, asserted by
       `test_last_command_error_does_not_leak_a_stray_channel_error` in
-      `tests/system.rs` (currently red). Deliberately out of scope for now: whether a
-      failing last command should also make the process exit non-zero (currently exits
-      0) — punted as a separate, unresolved design question, not asserted by the test.
+      `tests/system.rs` — now passing. Deliberately out of scope: whether a failing last
+      command should also make the process exit non-zero (currently exits 0) — punted as
+      a separate, unresolved design question, not asserted by the test.
+      This fix also turned up two further issues — see below.
+
+- [ ] `execute.rs`'s `source()` never checked `Scope::is_stopped()` between top-level
+      statements in a script — `crush:exit`/`return`/`break` setting `is_stopped` only
+      actually stopped the rest of a script *by accident*, because the job.rs bug above
+      turned "the stopped statement produced no output" into a `RecvError` that
+      propagated up through `source()`'s `?` and aborted its loop. Fixing job.rs above
+      removed that accidental mechanism, regressing `tests/exit.crush` (which expects
+      `echo 3` to never run after `crush:exit`) — `echo 3` started running again.
+      Fixed: added an explicit `if global_env.is_stopped() { break; }` after each
+      top-level job in `source()`'s loop. Verified directly with a bare `crush:exit`
+      (no block) correctly stopping the script. `tests/exit.crush` itself is still red
+      for an unrelated, newly-exposed reason — see the next item.
+
+- [ ] `crush:exit`'s "are there other jobs running" check (`random_other_job()` in
+      `src/builtins/crush.rs`) filters only by `job.id != my_job_id` — it doesn't
+      recognize "this other job is my own enclosing block/closure, not a genuinely
+      unrelated concurrent job." So `crush:exit` called from *inside* any block, closure,
+      or function body always spuriously fails with `"There are running jobs."` (the
+      enclosing block itself counts as "another job"), regardless of whether anything
+      else is actually running — confirmed with a single, bare `{crush:exit; 2}` as the
+      very first statement in an otherwise empty script. `tests/exit.crush` uses exactly
+      this shape (`{crush:exit; 2}`) and was never actually testing "exit successfully
+      stops the script" — it happened to produce the expected output only because the
+      job.rs bug above *also* propagated this failure up and aborted the script for an
+      unrelated reason, which looked identical to "exit worked." Now that both bugs
+      above are fixed, this one is exposed directly and `tests/exit.crush` is red.
+      Deliberately left unfixed and untested-beyond-manual-repro for now, per
+      instruction — needs its own test-first cycle. `tests/exit.crush` stays red until
+      then; not worked around.
 
 ## Security-relevant, untested
 

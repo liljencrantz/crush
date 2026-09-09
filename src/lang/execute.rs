@@ -121,6 +121,10 @@ fn source(
             job_type,
         ))?;
         handle.map(|id| global_state.threads().join_one(id, &global_state.printer()));
+
+        if global_env.is_stopped() {
+            break;
+        }
     }
     Ok(())
 }
