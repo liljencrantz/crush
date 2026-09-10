@@ -2,3 +2,11 @@ $home:=$(csv:from ./example_data/home.csv name=$string country=$string)
 $age:=$(csv:from ./example_data/age.csv name=$string age=$integer)
 
 join name=$home name=$age | sort name | echo
+
+# join must behave like a real inner join with correct multiplicity: a key present on
+# both sides fans out to one output row per (left, right) pair sharing that key (whether
+# the duplicate is on the left, the right, or the join is 1:1), and a key present on only
+# one side produces no output row at all rather than a row with empty/missing columns.
+$left := $(csv:from "dup_left,l1\ndup_left,l2\ndup_right,l3\nleft_only,l4\nsingle,l5\n" key=$string val=$string)
+$right := $(csv:from "dup_left,r1\ndup_right,r2\ndup_right,r3\nright_only,r4\nsingle,r5\n" key=$string val=$string)
+join key=$left key=$right | sort key val | materialize | echo

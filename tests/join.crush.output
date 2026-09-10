@@ -5,3 +5,9 @@ bob    India     54
 eva    Sweden    9
 isac   Gambia    2
 jeremy Russia    12
+key       val val_2
+dup_left  l1  r1
+dup_left  l2  r1
+dup_right l3  r2
+dup_right l3  r3
+single    l5  r5
