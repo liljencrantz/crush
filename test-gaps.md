@@ -155,7 +155,7 @@ stream handling" and "Write tests that use `schedule` and job control".
       a separate, unresolved design question, not asserted by the test.
       This fix also turned up two further issues — see below.
 
-- [ ] `execute.rs`'s `source()` never checked `Scope::is_stopped()` between top-level
+- [x] `execute.rs`'s `source()` never checked `Scope::is_stopped()` between top-level
       statements in a script — `crush:exit`/`return`/`break` setting `is_stopped` only
       actually stopped the rest of a script *by accident*, because the job.rs bug above
       turned "the stopped statement produced no output" into a `RecvError` that
@@ -164,8 +164,9 @@ stream handling" and "Write tests that use `schedule` and job control".
       `echo 3` to never run after `crush:exit`) — `echo 3` started running again.
       Fixed: added an explicit `if global_env.is_stopped() { break; }` after each
       top-level job in `source()`'s loop. Verified directly with a bare `crush:exit`
-      (no block) correctly stopping the script. `tests/exit.crush` itself is still red
-      for an unrelated, newly-exposed reason — see the next item.
+      (no block) correctly stopping the script. `tests/exit.crush` itself was still red
+      at the time for an unrelated, newly-exposed reason — see the next item, also now
+      fixed — and is green again as of that fix.
 
 - [x] `crush:exit`'s "are there other jobs running" check (`random_other_job()` in
       `src/builtins/crush.rs`) filtered only by `job.id != my_job_id` — it didn't
