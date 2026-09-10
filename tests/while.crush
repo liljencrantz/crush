@@ -1,0 +1,14 @@
+$i := 0
+while {($i < 3)} {
+    echo $i
+    $i = ($i + 1)
+}
+
+# The body is optional -- when omitted, the condition doubles as the body,
+# and the loop stops as soon as it returns false.
+$j := 0
+while {
+    echo $j
+    $j = ($j + 1)
+    ($j < 3)
+}

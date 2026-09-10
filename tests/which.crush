@@ -1,0 +1,2 @@
+# `sh` is assumed to be present on $PATH on any supported platform.
+typeof $(which sh) | echo

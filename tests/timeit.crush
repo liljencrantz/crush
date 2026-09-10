@@ -1,0 +1,3 @@
+# The actual duration is non-deterministic, so this only checks the type of
+# the result rather than its value.
+typeof $(timeit number=1 repeat=1 it={echo "x"}) | echo

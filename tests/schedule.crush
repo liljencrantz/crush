@@ -1,0 +1,3 @@
+schedule $(duration:of milliseconds=1) command={echo "tick"} --once
+schedule $(duration:of milliseconds=1) --once | echo
+seq 0 2 | schedule $(duration:of milliseconds=1) --once | echo

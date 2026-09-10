@@ -1,0 +1,2 @@
+cmd echo "hello" "world"
+cmd echo "one" "two" "three"

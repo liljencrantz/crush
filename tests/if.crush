@@ -1,0 +1,11 @@
+if $true {
+    echo "yes"
+}
+if $false {
+    echo "no"
+} else {
+    echo "fallback"
+}
+if $false {
+    echo "no"
+}
