@@ -65,17 +65,21 @@ mod env {
     #[signature(
     unset,
     output = Known(ValueType::Empty),
-    short = "Removes the environment variable with the given name",
+    short = "Removes the environment variables with the given names",
+    example = "crush:env:unset \"FOO\" \"BAR\"",
     )]
     pub(crate) struct Unset {
-        #[description("The name of the environment variable to remove")]
-        name: String,
+        #[description("the names of the environment variables to remove")]
+        #[unnamed()]
+        name: Vec<String>,
     }
 
     fn unset(mut context: CommandContext) -> CrushResult<()> {
         let cfg: Unset =
             Unset::parse(context.remove_arguments(), &context.global_state.printer())?;
-        env::unset(&cfg.name)?;
+        for name in cfg.name {
+            env::unset(&name)?;
+        }
         context.output.send(Value::Empty)
     }
 

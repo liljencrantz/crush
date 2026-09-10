@@ -1,4 +1,5 @@
-# crush:env supports get/set/list of environment variables, but had no way to remove one.
+# crush:env supports get/set/list of environment variables, but had no way to remove
+# one. Like var:unset, crush:env:unset takes any number of names, not just one.
 crush:env["CRUSH_TEST_VAR"] = "hello"
 $v1 := $(crush:env["CRUSH_TEST_VAR"])
 assert ($v1 == "hello")
@@ -7,3 +8,13 @@ crush:env:unset "CRUSH_TEST_VAR"
 $unset_errored := $false
 try { crush:env["CRUSH_TEST_VAR"] } catch { |$e| $unset_errored = $true }
 assert $unset_errored "getting an unset environment variable should error"
+
+crush:env["CRUSH_TEST_VAR_A"] = "a"
+crush:env["CRUSH_TEST_VAR_B"] = "b"
+crush:env:unset "CRUSH_TEST_VAR_A" "CRUSH_TEST_VAR_B"
+$a_errored := $false
+try { crush:env["CRUSH_TEST_VAR_A"] } catch { |$e| $a_errored = $true }
+assert $a_errored "crush:env:unset should remove multiple variables in one call"
+$b_errored := $false
+try { crush:env["CRUSH_TEST_VAR_B"] } catch { |$e| $b_errored = $true }
+assert $b_errored "crush:env:unset should remove multiple variables in one call"
