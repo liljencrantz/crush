@@ -19,4 +19,4 @@ $sum_job_id := $(pipe:read | sum &)
 pipe:close
 
 # Wait for the sum command to finish
-echo $(fg $sum_job_id)
+assert (($(fg $sum_job_id)) == 19_999_800_000)

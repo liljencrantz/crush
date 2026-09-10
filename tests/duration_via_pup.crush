@@ -1,1 +1,1 @@
-users:me:do {duration:of milliseconds=500} | echo
+assert (($(users:me:do {duration:of milliseconds=500})) == $(duration:of milliseconds=500))

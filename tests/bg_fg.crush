@@ -1,7 +1,7 @@
 # fg with an explicit job handle
 $h := $(seq 0 3 | sum &)
-echo $(fg $h)
+assert (($(fg $h)) == 3)
 
 # fg with no argument defaults to the most recently backgrounded job
 seq 0 3 | sum | bg
-echo $(fg)
+assert (($(fg)) == 3)

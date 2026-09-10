@@ -1,2 +1,3 @@
+# No assertion needed beyond "this completes": if sleep errored instead of sleeping,
+# the script would exit non-zero (see tests/uncaught_error_exit_status.crush).
 sleep $(duration:of milliseconds=1)
-echo "done"

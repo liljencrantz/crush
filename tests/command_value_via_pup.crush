@@ -1,3 +1,6 @@
+# See src/lang/command/mod.rs's Command::deserialize for the full explanation: this
+# round-trips a bare native command reference through pup:to/pup:from in-process. No
+# assertion needed beyond "this completes": if the round trip failed, the uncaught error
+# would exit the script non-zero (see tests/uncaught_error_exit_status.crush).
 val $global:io:echo | pup:to ./.command_pup_test
 $(pup:from ./.command_pup_test)
-echo "reached"
