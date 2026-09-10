@@ -1,0 +1,29 @@
+# try { body } catch { |$error| handler }, modeled on if's true_clause/else/false_clause
+# structure (control/if.rs): `catch` is a literal keyword (like `else`), matched the same
+# way if matches "else", and the catch clause is optional -- omitting it means an error
+# in body propagates normally, exactly as if `try` weren't there.
+
+echo "body succeeds: catch is not invoked, output flows through normally"
+try {
+    echo "body ran"
+} catch {
+    |$error| echo "should not run"
+}
+
+echo "body succeeds: a variable assignment inside body takes effect normally"
+$result := "before"
+try {
+    $result = "success"
+} catch {
+    |$error| echo "should not run"
+}
+echo $result
+
+echo "body fails: catch is invoked with the error message as its unnamed argument"
+try {
+    echo "reached inside body"
+    convert $integer "notanumber"
+    echo "should not run: body stops at the failing statement"
+} catch {
+    |$error| echo "caught:" $error
+}

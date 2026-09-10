@@ -25,6 +25,7 @@ mod r#if;
 mod r#loop;
 mod schedule;
 mod timeit;
+mod r#try;
 mod timer;
 mod r#while;
 
@@ -312,6 +313,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Commands for flow control, (loops, etc)",
         Box::new(move |env| {
             r#if::If::declare(env)?;
+            r#try::Try::declare(env)?;
             r#while::While::declare(env)?;
             r#loop::Loop::declare(env)?;
             r#for::For::declare(env)?;

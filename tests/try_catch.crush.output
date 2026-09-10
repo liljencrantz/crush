@@ -1,0 +1,8 @@
+body succeeds: catch is not invoked, output flows through normally
+body ran
+body succeeds: a variable assignment inside body takes effect normally
+success
+body fails: catch is invoked with the error message as its unnamed argument
+reached inside body
+caught:
+invalid digit found in string
