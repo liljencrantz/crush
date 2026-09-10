@@ -22,8 +22,8 @@ stream handling" and "Write tests that use `schedule` and job control".
       `struct_parent_survives_pup_round_trip` in `struct_serializer.rs`, plus a manual
       end-to-end check through the interpreter with a pure custom class hierarchy. Note:
       exposed a separate bug in the process — see "`Command::deserialize` uses the wrong
-      element index" below, which still blocks the common case of `class()`'s *default*
-      parent (`scope.root_object()`, which holds native builtin commands).
+      element index" below (now fixed), which had blocked the common case of `class()`'s
+      *default* parent (`scope.root_object()`, which holds native builtin commands).
 - [x] `pup` serialization truncates `Duration` to whole seconds — `src/lang/serialization/value_serializer.rs:160-170`.
       `nanos` was zeroed unconditionally even though the wire format and the deserializer
       both support it. Any sub-second duration silently lost precision crossing a
@@ -51,22 +51,28 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Reachable bugs found while fixing other items on this list
 
-- [ ] `Command::deserialize` uses the wrong element index —
+- [x] `Command::deserialize` uses the wrong element index —
       `src/lang/command/mod.rs:228-229`. `serialize()` for a native command emits
       `element::Element::Command(strings_idx)`, where `strings_idx` points at a separate
       `Element::Strings` holding the command's full path (e.g. `["global", "io",
-      "echo"]`). `deserialize()` matches `element::Element::Command(_)` and **discards**
-      that index, then calls `Vec::deserialize(id, ...)` reusing the *outer* command
+      "echo"]`). `deserialize()` matched `element::Element::Command(_)` and **discarded**
+      that index, then called `Vec::deserialize(id, ...)` reusing the *outer* command
       element's own `id` — which points at the `Command` element, not the `Strings`
-      element — so it always fails with `Expected string list`. This path was
+      element — so it always failed with `Expected string list`. This path was
       apparently never reachable by any existing test, because nothing ever
       pup-serialized a literal `Value::Command` before. Surfaced while fixing the
       struct-parent bug above: `class()`'s default parent is `scope.root_object()`,
       whose fields are native `Command`s, so `pup:to`/`pup:from` (and therefore
       `sudo`/`remote:exec`) on *any* ordinary `class()`-based struct with default
-      inheritance still fails today, just with a loud error instead of silent data
-      loss. Minimal fix looks like capturing `strings_idx` from the match arm instead
-      of `id`.
+      inheritance had failed too, just with a loud error instead of silent data loss.
+      Fixed: capture `strings_idx` from the match arm and deserialize that element
+      instead of the outer one. Covered by `tests/command_value_via_pup.crush`, which
+      round-trips a bare `global:io:echo` reference through `pup:to`/`pup:from`
+      in-process (no subprocess needed to hit the same code path) and echoes a marker
+      afterward — since an uncaught error aborts the rest of the script (`source()`
+      propagates a job's `Err` via `?`), the marker only appears once the round trip
+      actually succeeds, giving a plain stdout diff. Confirmed red before the fix,
+      green after.
 
 ## Reachable panics (should be `CrushResult` errors, aren't)
 
