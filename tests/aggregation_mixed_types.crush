@@ -1,0 +1,35 @@
+# stream/aggregation.rs's sum_any/avg_any track which of {Integer, Float, Duration} were
+# actually seen in an $any-typed column and error out if more than one showed up, rather
+# than silently producing a wrong answer by only summing the first type encountered or
+# similar. min/max/median/prod don't have an $any dispatch arm at all, so they reject
+# $any-typed columns unconditionally, whether or not the actual content happens to be
+# homogeneous.
+#
+# Every case below is expected to error (to stderr) and print nothing on its own line --
+# a wrong/silent numeric answer here instead of an error would be exactly the "silent
+# data loss" failure mode this test exists to catch. The final "done" line confirms the
+# script ran to completion rather than aborting partway through.
+$mixed_int_float := $(list:of 1 2.5)
+$mixed_int_duration := $(list:of 1 $(duration:of seconds=1))
+$mixed_float_duration := $(list:of 1.5 $(duration:of seconds=1))
+$non_numeric := $(list:of 1 "hello")
+
+echo "sum (int+float):"
+$mixed_int_float | sum | echo
+echo "avg (int+float):"
+$mixed_int_float | avg | echo
+echo "min (int+float):"
+$mixed_int_float | min | echo
+echo "max (int+float):"
+$mixed_int_float | max | echo
+echo "median (int+float):"
+$mixed_int_float | median | echo
+echo "prod (int+float):"
+$mixed_int_float | prod | echo
+echo "sum (int+duration):"
+$mixed_int_duration | sum | echo
+echo "sum (float+duration):"
+$mixed_float_duration | sum | echo
+echo "sum (non-numeric):"
+$non_numeric | sum | echo
+echo "done"

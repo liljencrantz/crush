@@ -1,0 +1,10 @@
+sum (int+float):
+avg (int+float):
+min (int+float):
+max (int+float):
+median (int+float):
+prod (int+float):
+sum (int+duration):
+sum (float+duration):
+sum (non-numeric):
+done
