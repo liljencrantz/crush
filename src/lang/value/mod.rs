@@ -760,7 +760,13 @@ impl Hash for Value {
             | Value::TableOutputStream(_)
             | Value::BinaryInputStream(_) => panic!("Can't hash output"),
             Value::Float(v) => {
-                let (m, x, s) = integer_decode(*v);
+                // Canonicalize -0.0 to 0.0 first: they're `==` per IEEE 754 (and per
+                // this type's PartialEq, which just delegates to f64's `==`), but
+                // integer_decode distinguishes the sign bit even for zero, which would
+                // otherwise violate the Hash/Eq contract (`a == b` must imply
+                // `hash(a) == hash(b)`).
+                let v = if *v == 0.0 { 0.0 } else { *v };
+                let (m, x, s) = integer_decode(v);
                 m.hash(state);
                 x.hash(state);
                 s.hash(state);
