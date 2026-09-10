@@ -1,0 +1,89 @@
+# match branches on a value against a sequence of arms in a block body:
+#   case <value> {...}  -- matches on exact equality
+#   any <stream> {...}  -- matches if the subject equals any value the stream produces
+#   is <type> {...}     -- matches if the subject's type is <type>
+#   default {...}       -- always matches
+# Arms are tried in order; the first match wins and the rest are skipped. Unlike `if`,
+# match's body isn't evaluated as an ordinary sequence of jobs -- each arm's own
+# command (`case`/`any`/`is`/`default`) is read directly off the closure's raw,
+# unevaluated jobs (Command::jobs()) and interpreted by match itself, which is what
+# lets `case 10 {...}` sit as a bare invocation inside the block instead of needing its
+# own special grammar.
+
+$r1 := $(match 5 {
+    case 10 {"wrong"}
+    case 5 {"exact"}
+    default {"wrong default"}
+})
+assert ($r1 == "exact")
+
+$r2 := $(match 99 {
+    case 10 {"wrong"}
+    default {"default"}
+})
+assert ($r2 == "default")
+
+$r3 := $(match 7 {
+    case 10 {"wrong"}
+    any $(seq 5 10) {"any"}
+    default {"wrong default"}
+})
+assert ($r3 == "any")
+
+$r4 := $(match "hello" {
+    case 10 {"wrong"}
+    is $string {"is string"}
+    default {"wrong default"}
+})
+assert ($r4 == "is string")
+
+$r5 := $(match 10 {
+    is $string {"wrong"}
+    default {"correct: an integer is not a string"}
+})
+assert ($r5 == "correct: an integer is not a string")
+
+# a case pattern is always compared by whole-value equality, never treated as a
+# membership set, even when the subject is itself a list -- that ambiguity is why
+# `any` exists as a separate, explicit arm kind instead of being inferred.
+$subject := $(list:of 1 2 3)
+$r6 := $(match $subject {
+    case $(list:of 1 2 3) {"whole-list equality"}
+    default {"wrong"}
+})
+assert ($r6 == "whole-list equality")
+
+$r7 := $(match $subject {
+    any $(list:of 1 2 3) {"wrong: subject should not match itself as a member"}
+    default {"correct: [1,2,3] is not a member of [1,2,3]'s own elements"}
+})
+assert ($r7 == "correct: [1,2,3] is not a member of [1,2,3]'s own elements")
+
+# no matching arm and no default: errors rather than silently doing nothing
+$no_match_errored := $false
+try {
+    match 42 {
+        case 1 {"wrong"}
+    }
+} catch { |$e| $no_match_errored = $true }
+assert $no_match_errored "match with no matching arm and no default should error"
+
+# a variable declared inside an arm's body does not leak to the caller's scope
+match 10 {
+    case 10 {
+        $leaked := "inner"
+    }
+    default {}
+}
+$leak_check_errored := $false
+try { echo $leaked } catch { |$e| $leak_check_errored = $true }
+assert $leak_check_errored "a variable declared inside a match arm should not leak out"
+
+# an arm whose bareword isn't case/any/is/default errors clearly
+$unknown_arm_errored := $false
+try {
+    match 5 {
+        wat 5 {"wrong"}
+    }
+} catch { |$e| $unknown_arm_errored = $true }
+assert $unknown_arm_errored "an unrecognized arm keyword should error"

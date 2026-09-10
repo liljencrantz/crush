@@ -407,6 +407,10 @@ impl CrushCommand for Closure {
     fn definition(&self) -> Option<String> {
         Some(self.to_string())
     }
+
+    fn jobs(&self) -> Option<&[Job]> {
+        Some(&self.jobs)
+    }
 }
 
 fn compile_signature(

@@ -87,6 +87,13 @@ pub trait CrushCommand: Help + Display {
     /// Information about the parameters that can be passed to this command, which is useful for providing completions
     fn completion_data(&self) -> &[Parameter];
     fn definition(&self) -> Option<String>;
+    /// The raw, unevaluated jobs that make up this command's body, if it is a literal
+    /// closure/block -- None for anything else (a native builtin, a bound method). Lets
+    /// a command like `match` interpret its own block argument's structure directly,
+    /// instead of evaluating it as an ordinary sequence of jobs.
+    fn jobs(&self) -> Option<&[Job]> {
+        None
+    }
 }
 
 pub trait TypeMap {
