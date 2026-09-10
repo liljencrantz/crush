@@ -565,6 +565,42 @@ mod locale {
     }
 }
 
+mod warning_limit {
+    use super::*;
+
+    #[signature(
+        crush.warning_limit.set,
+        output = Known(ValueType::Empty),
+        short = "Set how many warnings crush:warnings keeps before evicting the oldest."
+    )]
+    pub struct Set {
+        #[description("the new warning limit.")]
+        limit: i128,
+    }
+
+    fn set(mut context: CommandContext) -> CrushResult<()> {
+        let config: Set = Set::parse(context.remove_arguments(), &context.global_state.printer())?;
+        if config.limit < 0 {
+            return command_error("The warning limit can't be negative.");
+        }
+        context.global_state.set_warning_limit(config.limit as usize);
+        context.output.send(Value::Empty)
+    }
+
+    #[signature(
+        crush.warning_limit.get,
+        output = Known(ValueType::Integer),
+        short = "Get how many warnings crush:warnings keeps before evicting the oldest."
+    )]
+    pub struct Get {}
+
+    fn get(context: CommandContext) -> CrushResult<()> {
+        context
+            .output
+            .send(Value::from(context.global_state.warning_limit() as i128))
+    }
+}
+
 mod byte_unit {
     use super::*;
     use crate::util::byte_unit::ByteUnit;
@@ -701,6 +737,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     byte_unit::List::declare(env)?;
                     byte_unit::Get::declare(env)?;
                     byte_unit::Set::declare(env)?;
+                    Ok(())
+                }),
+            )?;
+            crush.create_namespace(
+                "warning_limit",
+                "How many warnings crush:warnings keeps before evicting the oldest.",
+                Box::new(move |env| {
+                    warning_limit::Get::declare(env)?;
+                    warning_limit::Set::declare(env)?;
                     Ok(())
                 }),
             )?;

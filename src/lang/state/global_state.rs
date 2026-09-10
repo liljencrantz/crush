@@ -18,9 +18,10 @@ use std::collections::VecDeque;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-/// How many warnings GlobalState keeps around for later inspection (e.g. via
-/// `crush:warnings`) before evicting the oldest.
-const MAX_WARNINGS: usize = 100;
+/// The default value for how many warnings GlobalState keeps around for later
+/// inspection (e.g. via `crush:warnings`) before evicting the oldest -- adjustable at
+/// runtime via `crush:warning_limit:set`.
+const DEFAULT_WARNING_LIMIT: usize = 100;
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -108,6 +109,7 @@ struct StateData {
     language_mode: LanguageMode,
     run_mode: RunMode,
     warnings: VecDeque<Warning>,
+    warning_limit: usize,
 }
 
 impl GlobalState {
@@ -130,6 +132,7 @@ impl GlobalState {
                 language_mode: LanguageMode::Command,
                 run_mode,
                 warnings: VecDeque::new(),
+                warning_limit: DEFAULT_WARNING_LIMIT,
             })),
             threads: ThreadStore::new(),
             printer,
@@ -221,14 +224,14 @@ impl GlobalState {
     }
 
     /// Report a non-fatal, partial failure. Stores it in the bounded warning log
-    /// (evicting the oldest entry past MAX_WARNINGS) and, in interactive mode, also
-    /// prints it immediately via the printer.
+    /// (evicting the oldest entry past the current warning_limit) and, in interactive
+    /// mode, also prints it immediately via the printer.
     pub fn warn(&self, err: &CrushError) {
         let warning = Warning::from_error(err);
         let run_mode = {
             let mut data = self.data.lock().unwrap();
             data.warnings.push_back(warning.clone());
-            if data.warnings.len() > MAX_WARNINGS {
+            while data.warnings.len() > data.warning_limit {
                 data.warnings.pop_front();
             }
             data.run_mode
@@ -242,6 +245,23 @@ impl GlobalState {
     pub fn warnings(&self) -> Vec<Warning> {
         let data = self.data.lock().unwrap();
         data.warnings.iter().cloned().collect()
+    }
+
+    /// How many warnings are kept before the oldest gets evicted.
+    pub fn warning_limit(&self) -> usize {
+        let data = self.data.lock().unwrap();
+        data.warning_limit
+    }
+
+    /// Change how many warnings are kept before the oldest gets evicted. If the log
+    /// already holds more than the new limit, it's trimmed immediately rather than
+    /// waiting for the next warning to catch up.
+    pub fn set_warning_limit(&self, limit: usize) {
+        let mut data = self.data.lock().unwrap();
+        data.warning_limit = limit;
+        while data.warnings.len() > data.warning_limit {
+            data.warnings.pop_front();
+        }
     }
 
     pub fn set_locale(&self, new_locale: SystemLocale) {

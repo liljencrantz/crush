@@ -51,3 +51,28 @@ $last_command := $($($(crush:warnings | materialize) | select command | list:col
 assert ($last_command == "files") "the fs:files warning should record which command reported it"
 $last_source_file := $($($(crush:warnings | materialize) | select file | list:collect)[1])
 assert ($last_source_file == "tests/warnings.crush") "the fs:files warning's source should point at this script, not be empty"
+
+# The warning log's size is runtime-configurable, defaulting to 100.
+$default_limit := $(crush:warning_limit:get)
+assert ($default_limit == 100) "the default warning limit should be 100"
+
+crush:warning_limit:set 3
+$after_set := $(crush:warning_limit:get)
+assert ($after_set == 3)
+
+# there are 2 warnings already logged above; adding 3 more should push the total past
+# the new limit of 3, evicting the oldest ones rather than growing without bound.
+files ./this_path_does_not_exist_5678
+files ./this_path_does_not_exist_9012
+files ./this_path_does_not_exist_3456
+$count_at_limit := $($(crush:warnings | materialize) | count)
+assert ($count_at_limit == 3) "the log should be capped at the current limit, not grow past it"
+
+# lowering the limit trims the existing log immediately, not just on the next warning.
+crush:warning_limit:set 1
+$count_after_shrink := $($(crush:warnings | materialize) | count)
+assert ($count_after_shrink == 1) "shrinking the limit should immediately trim the existing log"
+
+$negative_limit_errored := $false
+try { crush:warning_limit:set (0 - 1) } catch { |$e| $negative_limit_errored = $true }
+assert $negative_limit_errored "a negative warning limit should error"
