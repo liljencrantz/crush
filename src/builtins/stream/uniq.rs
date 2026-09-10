@@ -1,7 +1,7 @@
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::Value;
 use signature::signature;
@@ -28,6 +28,18 @@ pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
         None => {
             let mut seen: HashSet<Row> = HashSet::new();
             while let Some(row) = input.next_row()? {
+                // A column's *declared* type can be `$any` (e.g. any closure-computed
+                // `select` column), which is always hashable -- the actual value only
+                // exists at runtime, so this has to be checked per row rather than once
+                // up front, the same way sum/avg handle `$any` columns.
+                for cell in row.cells() {
+                    if !cell.value_type().is_hashable() {
+                        return command_error(format!(
+                            "Can't deduplicate whole rows: encountered a value of type `{}`, which is not hashable.",
+                            cell.value_type(),
+                        ));
+                    }
+                }
                 if !seen.contains(&row) {
                     seen.insert(row.clone());
                     output.send(row)?;
@@ -37,6 +49,13 @@ pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
         Some(idx) => {
             let mut seen: HashSet<Value> = HashSet::new();
             while let Some(row) = input.next_row()? {
+                if !row.cells()[idx].value_type().is_hashable() {
+                    return command_error(format!(
+                        "Can't deduplicate on column `{}`: encountered a value of type `{}`, which is not hashable.",
+                        input.types()[idx].name(),
+                        row.cells()[idx].value_type(),
+                    ));
+                }
                 if !seen.contains(&row.cells()[idx]) {
                     seen.insert(row.cells()[idx].clone());
                     output.send(row)?;
