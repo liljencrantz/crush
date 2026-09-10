@@ -1,0 +1,3 @@
+val $global:io:echo | pup:to ./.command_pup_test
+$(pup:from ./.command_pup_test)
+echo "reached"
