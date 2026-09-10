@@ -1,99 +1,93 @@
-echo "Integer comparisons"
+# Integer comparisons
+assert (!(1 > 2))
+assert (1 < 2)
+assert (!(1 >= 2))
+assert (1 <= 2)
+assert (1 != 2)
+assert (!(1 == 2))
 
-echo (1>2)
-echo (1<2)
-echo (1>=2)
-echo (1<=2)
-echo (1!=2)
-echo (1==2)
+assert (!(2 > 2))
+assert (!(2 < 2))
+assert (2 >= 2)
+assert (2 <= 2)
+assert (!(2 != 2))
+assert (2 == 2)
 
-echo (2>2)
-echo (2<2)
-echo (2>=2)
-echo (2<=2)
-echo (2!=2)
-echo (2==2)
+assert (2 > 1)
+assert (!(2 < 1))
+assert (2 >= 1)
+assert (!(2 <= 1))
+assert (2 != 1)
+assert (!(2 == 1))
 
-echo (2>1)
-echo (2<1)
-echo (2>=1)
-echo (2<=1)
-echo (2!=1)
-echo (2==1)
-echo "Float comparisons"
+# Float comparisons
+assert (!(1.0 > 2.0))
+assert (1.0 < 2.0)
+assert (!(1.0 >= 2.0))
+assert (1.0 <= 2.0)
+assert (1.0 != 2.0)
+assert (!(1.0 == 2.0))
 
-echo (1.0>2.0)
-echo (1.0<2.0)
-echo (1.0>=2.0)
-echo (1.0<=2.0)
-echo (1.0!=2.0)
-echo (1.0==2.0)
-echo "Duration comparisons"
+# Duration comparisons
+assert (!($(duration:of seconds=1) > $(duration:of seconds=2)))
+assert ($(duration:of seconds=1) < $(duration:of seconds=2))
+assert (!($(duration:of seconds=1) >= $(duration:of seconds=2)))
+assert ($(duration:of seconds=1) <= $(duration:of seconds=2))
+assert ($(duration:of seconds=1) != $(duration:of seconds=2))
+assert (!($(duration:of seconds=1) == $(duration:of seconds=2)))
 
-echo ($(duration:of seconds=1) > $(duration:of seconds=2))
-echo ($(duration:of seconds=1) < $(duration:of seconds=2))
-echo ($(duration:of seconds=1) >= $(duration:of seconds=2))
-echo ($(duration:of seconds=1) <= $(duration:of seconds=2))
-echo ($(duration:of seconds=1) != $(duration:of seconds=2))
-echo ($(duration:of seconds=1) == $(duration:of seconds=2))
-
-echo "Time comparisons"
-
+# Time comparisons
 $t1 := (time.now())
 $t2 := (time.now() + duration.of(seconds=1))
+assert (!($t1 > $t2))
+assert ($t1 < $t2)
+assert (!($t1 >= $t2))
+assert ($t1 <= $t2)
+assert ($t1 != $t2)
+assert (!($t1 == $t2))
 
-echo ($t1 > $t2)
-echo ($t1 < $t2)
-echo ($t1 >= $t2)
-echo ($t1 <= $t2)
-echo ($t1 != $t2)
-echo ($t1 == $t2)
+# String comparisons
+assert (!("a" > "b"))
+assert ("a" < "b")
+assert (!("a" >= "b"))
+assert ("a" <= "b")
+assert ("a" != "b")
+assert (!("a" == "b"))
 
-echo "String comparisons"
-
-echo ("a" > "b")
-echo ("a" < "b")
-echo ("a" >= "b")
-echo ("a" <= "b")
-echo ("a" != "b")
-echo ("a" == "b")
-
-echo "Float edge cases: NaN equality (never equal, even to itself)"
-
+# Float edge cases: NaN equality (never equal, even to itself)
 $nan := (0.0 / 0.0)
-echo ($nan == $nan)
-echo ($nan != $nan)
-echo ($nan == 5.0)
-echo ($nan != 5.0)
+assert (!($nan == $nan))
+assert ($nan != $nan)
+assert (!($nan == 5.0))
+assert ($nan != 5.0)
 
-echo "Float edge cases: signed zero (equal per IEEE 754, despite the differing sign bit)"
+# Float edge cases: signed zero (equal per IEEE 754, despite the differing sign bit)
+assert (0.0 == (-0.0))
+assert (!(0.0 != (-0.0)))
+assert (!(0.0 > (-0.0)))
+assert (!(0.0 < (-0.0)))
+assert (0.0 >= (-0.0))
+assert (0.0 <= (-0.0))
 
-echo (0.0 == (-0.0))
-echo (0.0 != (-0.0))
-echo (0.0 > (-0.0))
-echo (0.0 < (-0.0))
-echo (0.0 >= (-0.0))
-echo (0.0 <= (-0.0))
-
-echo "Float edge cases: infinity"
-
+# Float edge cases: infinity
 $inf := (1.0 / 0.0)
 $ninf := (-1.0 / 0.0)
-echo ($inf == $inf)
-echo ($inf != $ninf)
-echo ($inf > 999999999.0)
-echo ($ninf < (-999999999.0))
-echo ($inf > $ninf)
-echo ($ninf < $inf)
-echo ($inf >= $inf)
-echo ($ninf <= $inf)
+assert ($inf == $inf)
+assert ($inf != $ninf)
+assert ($inf > 999999999.0)
+assert ($ninf < (-999999999.0))
+assert ($inf > $ninf)
+assert ($ninf < $inf)
+assert ($inf >= $inf)
+assert ($ninf <= $inf)
 
 # Ordering comparisons (unlike == and !=) go through partial_cmp, and NaN is unordered
 # with respect to everything, including itself -- comp.rs's cmp! macro treats a `None`
-# result from partial_cmp as an error rather than silently returning false. This must be
-# the last thing in this script: unlike a failure inside a multi-stage pipeline (whose
-# per-stage errors are caught and printed without aborting the job), an error while
-# evaluating a single job's arguments -- which is what a comparison operator failing
-# here is -- aborts the rest of the script, so nothing after this line would run.
-echo "Float edge cases: NaN ordering comparisons error rather than returning a boolean"
-echo ($nan > 5)
+# result from partial_cmp as an error rather than silently returning false.
+$nan_ordering_errored := $false
+try {
+    ($nan > 5)
+} catch {
+    |$error| $nan_ordering_errored = $true
+}
+assert $nan_ordering_errored "NaN ordering comparisons should error rather than return a boolean"
