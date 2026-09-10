@@ -79,10 +79,12 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 
     // Call constructor if one exists
     if let Some(Value::Command(c)) = res.get("__init__") {
-        let p = context.global_state.printer().clone();
+        let global_state = context.global_state.clone();
         context.output = black_hole();
         context.this = Some(Value::Struct(res.clone()));
-        p.handle_error(c.eval(context));
+        if let Err(e) = c.eval(context) {
+            global_state.warn(&e);
+        }
     }
     o.send(Value::Struct(res))
 }

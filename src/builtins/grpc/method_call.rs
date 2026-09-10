@@ -45,7 +45,7 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
                     &method,
                     data,
                     context.output,
-                    context.global_state.printer(),
+                    &context.global_state,
                 )
                 .await
         }

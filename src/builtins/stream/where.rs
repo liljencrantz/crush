@@ -73,7 +73,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
                     break;
                 }
             }
-            Err(e) => base_context.global_state.printer().crush_error(e),
+            Err(e) => base_context.global_state.warn(&e),
         }
     }
     Ok(())

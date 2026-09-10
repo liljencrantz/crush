@@ -52,6 +52,35 @@ assert ($last_command == "files") "the fs:files warning should record which comm
 $last_source_file := $($($(crush:warnings | materialize) | select file | list:collect)[1])
 assert ($last_source_file == "tests/warnings.crush") "the fs:files warning's source should point at this script, not be empty"
 
+# where's per-row predicate failure is reported the same way -- the offending row is
+# simply dropped from the output (where's normal filtering behavior), continuing to
+# the rest, rather than aborting the whole pipeline.
+$where_row_count := $($(seq 0 3) | select m={($value):mod 3} | where {if ($m == 0) {convert $integer "notanumber"} else {$true}} | materialize | count)
+assert ($where_row_count == 2) "where should drop just the row whose predicate failed, not abort the pipeline"
+$w1 := $($(crush:warnings | materialize) | count)
+assert ($w1 == 3) "a failing where predicate should add a third warning"
+
+# each's per-row command failure is reported too, rather than aborting the pipeline
+# after the first bad row.
+$(seq 0 3) | select m={($value):mod 3} | each {if ($m == 0) {convert $integer "notanumber"} else {}}
+$w2 := $($(crush:warnings | materialize) | count)
+assert ($w2 == 4) "a failing each body should add a fourth warning"
+
+# A failing class constructor (__init__) is reported too, instead of the object
+# silently ending up partially initialized with no indication anything went wrong.
+$Point := $(class)
+$Point:__init__ = { |$x:$float| convert $integer "notanumber"; this:x = $x }
+$p := $(Point:new x=1.0)
+$w3 := $($(crush:warnings | materialize) | count)
+assert ($w3 == 5) "a failing __init__ should record a fifth warning"
+
+# where/each report the anonymous block they were given, since their body isn't a
+# named command; the class constructor's warning identifies it as __init__.
+$commands := $($(crush:warnings | materialize) | select command | list:collect)
+assert ($($commands[2]) == "<block>") "the where warning's command should identify the anonymous predicate block"
+assert ($($commands[3]) == "<block>") "the each warning's command should identify the anonymous body block"
+assert ($($commands[4]) == "__init__") "the class-init warning's command should identify the __init__ method"
+
 # The warning log's size is runtime-configurable, defaulting to 100.
 $default_limit := $(crush:warning_limit:get)
 assert ($default_limit == 100) "the default warning limit should be 100"

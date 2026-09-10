@@ -38,20 +38,17 @@ fn run(
 }
 
 pub fn each(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Each::parse(
-        context.remove_arguments().clone(),
-        &context.global_state.printer(),
-    )?;
-    let source = &context.arguments[0].source;
+    let source = context.arguments[0].source.clone();
+    let cfg = Each::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(Value::Empty)?;
 
     let mut input = context.input_stream()?;
     let base_context = context.empty();
 
     while let Some(row) = input.next_row()? {
-        match run(&cfg.body, source, &row, input.types(), &base_context) {
+        match run(&cfg.body, &source, &row, input.types(), &base_context) {
             Ok(_) => (),
-            Err(e) => base_context.global_state.printer().crush_error(e),
+            Err(e) => base_context.global_state.warn(&e),
         }
     }
     Ok(())

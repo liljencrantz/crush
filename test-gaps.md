@@ -299,6 +299,25 @@ open in `todo.md`.
       Fixed: added `compare_for_sort()`, giving NaN a defined position (always sorts as
       the greatest value — last ascending, first descending) instead of panicking.
       Covered by `tests/sort_nan.crush`.
+- [x] `stream/each.rs:45` panicked unconditionally on essentially every normal
+      invocation — "index out of bounds: the len is 0 but the index is 0". Cause:
+      `each()` called `Each::parse(context.remove_arguments(), ...)` and *then* read
+      `context.arguments[0].source` on the next line, but `remove_arguments()`
+      (`src/lang/state/contexts.rs`) empties `context.arguments` via `mem::swap` before
+      returning the removed values, so that second line always indexed into an
+      already-empty vec. `where.rs`'s `r#where()` has the same two operations in the
+      opposite (correct) order — clone the source out first, then call
+      `remove_arguments()`. Never caught before because no existing `tests/*.crush` file
+      actually invoked `each` as the stream command (`grep -rl '\beach\b' tests/*.crush`
+      only matched the English word inside comments). Fixed by reordering each.rs to
+      match where.rs's pattern. Covered by `tests/warnings.crush`'s new each.rs section
+      (added while retrofitting each.rs to the warning log below), which would have hit
+      this panic on its very first `each` invocation before the fix.
+- [ ] `types/integer.rs:117` (integer `/`) panics with "attempt to divide by zero"
+      instead of returning a `CrushResult::Err`, the same bug class as the
+      already-fixed `stream/aggregation.rs` avg-of-empty-stream panic above. Found
+      incidentally while probing for an `each.rs`/`where.rs` warning-retrofit repro
+      (`10 / $value` where `$value` could be `0`); not yet fixed or covered by a test.
 
 ## Pipeline whose last command errors before producing output
 
@@ -456,3 +475,48 @@ open in `todo.md`.
       `tests/closures.crush`: variable capture, default parameter values, repeated
       named arguments collecting into a list, `@$rest`/`@@$rest` collectors, and
       `return`'s bare-block restriction. No bugs found.
+- [x] Extended the warning-log retrofit (see `stream/group.rs` above) to the other
+      swallow points that were identified when the warning log was first designed, plus
+      a fresh audit of the rest of the builtins for the same pattern. `stream/where.rs`
+      (a failing predicate) and `stream/each.rs` (a failing body, once its own indexing
+      panic above was fixed) now report per-row failures via `global_state.warn(&e)`
+      instead of just printing, exactly like `group.rs`/`fs:files`. Also retrofitted:
+      `types/mod.rs`'s `new()` (a `class()`-based object's `__init__` constructor
+      failing no longer just prints — the object is still returned, partially
+      initialized, matching prior behavior, but the failure is now visible via
+      `crush:warnings`) and `grpc/client.rs`'s `invoke_method` (a streaming RPC response
+      row that fails to convert). Unlike `fs:files`, none of these four needed a bespoke
+      command/source-attaching helper: their errors all originate from evaluating a
+      user-supplied `Command`/closure (`condition.eval(...)`, `c.eval(...)`), which goes
+      through `Closure::eval()`'s normal `.with_command(self.name())` /
+      `.with_source_fallback(&source)` enrichment automatically — confirmed live: an
+      anonymous closure body's warning records `command == "<block>"`
+      (`ClosureType::Block`'s `name()`), and `__init__`'s records `command ==
+      "__init__"`. Covered by three new sections in `tests/warnings.crush` (where/each/
+      class-init), extending the existing group/files/warning_limit coverage.
+      Deliberately **not** converted, with reasoning: `stream/join.rs:50`
+      (`printer.handle_error(output.send(...))`) is output-channel-closed handling, not
+      a data-quality partial failure — warning on it would spam once the pipe is
+      already broken. `control/timeit.rs:49` is about an internal output-draining
+      helper thread's own failure, not the timed closure's result (which already
+      propagates via `?`) — a much weaker candidate than the other four. `users.rs`'s
+      and `control/cmd.rs`'s `printer.error(err)` calls are both subprocess-stderr-relay
+      loops (sudo and `cmd`, respectively), printing arbitrary external-process text
+      lines — philosophically different from a structured per-item command warning.
+      Various discarded `let _ = ...send(...)` results in `group.rs`/`io/csv.rs`/
+      `fs/watch.rs` are channel-lifecycle noise (receiver disconnected), not
+      data-quality issues.
+      **New evidence for the existing `Job::eval()` non-last-pipeline-stage
+      thread-join-gap entry above:** writing this coverage surfaced the same race from a
+      new angle. Two consecutive `can_block=true` top-level jobs run back-to-back with
+      no intervening statement (e.g. an `each` invocation immediately followed by a
+      `class():new` call, with nothing between them) reliably raced a *subsequent*
+      `crush:warnings | materialize | select ... | list:collect` read with "receiving
+      on an empty and disconnected channel" — reproduced deterministically (not flaky)
+      across several minimal variants; inserting any cheap top-level statement (an
+      `echo`, or a `crush:warnings | materialize | count` check) immediately after each
+      trigger reliably avoided it. `tests/warnings.crush`'s new sections use exactly
+      that pattern (an immediate `count`-based `assert` after every triggering
+      statement) deliberately, not just for readability. Not investigated further or
+      fixed — same underlying class as the existing entry, just a second, easier
+      repro shape.

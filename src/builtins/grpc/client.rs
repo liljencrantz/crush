@@ -6,7 +6,7 @@ use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::CrushErrorType::GenericError;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::pipe::{Stream, ValueSender};
-use crate::lang::printer::Printer;
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::value::{Value, ValueType};
 use bytes::Bytes;
 use chrono::Duration;
@@ -679,7 +679,7 @@ impl GrpcClient {
         method_name: &str,
         mut input: Stream,
         output: ValueSender,
-        printer: &Printer,
+        global_state: &GlobalState,
     ) -> CrushResult<()> {
         let pool = self
             .get_descriptor_pool(&format!("{}.{}", service_name, method_name))
@@ -718,7 +718,7 @@ impl GrpcClient {
         grpc_client.ready().await?;
 
         let timeout = self.timeout;
-        let printer = printer.clone();
+        let global_state = global_state.clone();
 
         tokio::spawn(async move {
             while let Ok(input_row) = input.read_timeout(timeout) {
@@ -729,7 +729,7 @@ impl GrpcClient {
                         }
                     }
                     Err(e) => {
-                        printer.crush_error(e);
+                        global_state.warn(&e);
                     }
                 }
             }
