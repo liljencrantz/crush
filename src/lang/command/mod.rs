@@ -226,8 +226,8 @@ impl dyn CrushCommand {
         state: &mut DeserializationState,
     ) -> CrushResult<Command> {
         match elements[id].element.as_ref().unwrap() {
-            element::Element::Command(_) => {
-                let strings = Vec::deserialize(id, elements, state)?;
+            element::Element::Command(strings_idx) => {
+                let strings = Vec::deserialize(*strings_idx as usize, elements, state)?;
 
                 let val = state
                     .env
