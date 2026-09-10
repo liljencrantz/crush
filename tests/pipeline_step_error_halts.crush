@@ -1,0 +1,8 @@
+# A command failing partway through a pipeline should halt the rest of the script, not
+# just print the error and continue on to whatever comes after. This exercises
+# eval_command's synchronous (can_block=false) dispatch path specifically: `convert` is
+# a can_block=false command used here as a non-last pipeline stage.
+#
+# Expected output is empty: "reached" must never print.
+("notanumber") | convert $integer | echo
+echo "reached"
