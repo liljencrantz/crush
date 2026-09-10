@@ -140,6 +140,33 @@ fn test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input() {
     );
 }
 
+// See tests/error_handling/uniq_unhashable_type.crush for the full explanation. In
+// short: deduplicating on an unhashable type (Struct) used to hit a panic guard inside
+// Value::hash() directly, because uniq.rs never checked is_hashable() first the way
+// sort.rs does for is_comparable(). Fixed to check per-value at runtime (a select
+// closure's output column is always statically $any, so the unhashable type only shows
+// up at runtime) and return a graceful error instead. A panicking worker thread and a
+// graceful CrushResult::Err both leave stdout empty, so this can only be distinguished
+// via stderr, not a plain stdout diff.
+#[test]
+fn test_uniq_does_not_panic_on_unhashable_type() {
+    let output = Command::new("./target/debug/crush")
+        .args(&["tests/error_handling/uniq_unhashable_type.crush"])
+        .output()
+        .expect("failed to execute process");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains("panicked"),
+        "expected a graceful error, not a panic, got stderr:\n{}",
+        stderr,
+    );
+    assert!(
+        !stderr.is_empty(),
+        "expected a graceful error to still be printed, got empty stderr"
+    );
+}
+
 #[test]
 fn test_grpc() {
     let run = escargot::CargoBuild::new()

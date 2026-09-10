@@ -1,0 +1,19 @@
+# Deduplicating on a value of a type that isn't hashable (Struct here) must be a
+# graceful error, not a Rust panic. Value::hash() has a guard
+# (`if !self.value_type().is_hashable() { panic!(...) }`) meant to be prevented by
+# callers checking is_hashable() first -- sort.rs does this via is_comparable(), but
+# uniq.rs had no such check before calling HashSet::contains/insert on a Row, so a
+# Struct-typed column reached the panic directly.
+#
+# A `select`-computed column is always statically declared as $any (a closure's output
+# type is never known ahead of time -- see Closure::output_type), so the unhashable
+# value only exists at runtime; this can't be caught by checking the column's declared
+# type the way sort.rs does, only by checking each actual value as it's processed.
+#
+# This is a custom Rust assertion (see tests/system.rs) rather than a plain stdout diff:
+# a panicking worker thread and a graceful CrushResult::Err both leave this line's stdout
+# empty, and whether the panic message itself makes it to stderr before the whole
+# process exits is a race in a longer script (confirmed by hand), so this is kept as its
+# own short, isolated script instead of being folded into a larger combined test.
+$t := $(csv:from "a,1\nb,2\n" key=$string val=$integer)
+$t | select s={struct:of val=$val} | uniq | echo

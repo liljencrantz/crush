@@ -1,0 +1,4 @@
+# uniq's whole-row dedup (no `field` given) compares entire rows, not just a single
+# column, and its HashSet<Row> path was untested with a float column in particular.
+$t := $(csv:from "a,1.5,x\na,1.5,x\na,1.5,y\nb,1.5,x\n" k=$string v=$float m=$string)
+$t | uniq | materialize | echo
