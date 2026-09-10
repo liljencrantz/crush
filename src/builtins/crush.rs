@@ -62,6 +62,23 @@ mod env {
         context.output.send(Value::Empty)
     }
 
+    #[signature(
+    unset,
+    output = Known(ValueType::Empty),
+    short = "Removes the environment variable with the given name",
+    )]
+    pub(crate) struct Unset {
+        #[description("The name of the environment variable to remove")]
+        name: String,
+    }
+
+    fn unset(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: Unset =
+            Unset::parse(context.remove_arguments(), &context.global_state.printer())?;
+        env::unset(&cfg.name)?;
+        context.output.send(Value::Empty)
+    }
+
     static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
         ColumnType::new("name", ValueType::String),
         ColumnType::new("value", ValueType::String),
@@ -624,6 +641,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     env::GetItem::declare(loader)?;
                     env::SetItem::declare(loader)?;
                     env::List::declare(loader)?;
+                    env::Unset::declare(loader)?;
                     Ok(())
                 }),
             )?;

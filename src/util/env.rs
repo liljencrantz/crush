@@ -29,3 +29,15 @@ pub fn list() -> Vec<(String, String)> {
     let _lock = ENV_LOCK.lock();
     std::env::vars().collect()
 }
+
+pub fn unset(name: &str) -> CrushResult<()> {
+    if name == "" || name.contains('=') || name.contains('\0') {
+        return command_error("Invalid environment variable name");
+    }
+
+    let _lock = ENV_LOCK.lock();
+    unsafe {
+        std::env::remove_var(name);
+    }
+    Ok(())
+}
