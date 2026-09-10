@@ -1,0 +1,17 @@
+# rename renames one or more columns of a stream; every argument name is a current column
+# name and its value is the new name. Columns not mentioned pass through unchanged.
+
+$t := $($(seq 0 3) | rename value=number | materialize)
+$row0 := $($t[0])
+$val := $($row0:number)
+assert ($val == 0)
+
+$t2 := $($(csv:from "1,2\n" a=$integer b=$integer) | rename a=x b=y | materialize)
+$row2 := $($t2[0])
+assert (($($row2:x)) == 1)
+assert (($($row2:y)) == 2)
+
+# renaming a column that doesn't exist should error, not silently do nothing
+$rename_errored := $false
+try { $(seq 0 3) | rename nonexistent=foo } catch { |$e| $rename_errored = $true }
+assert $rename_errored "renaming a column that doesn't exist should error"

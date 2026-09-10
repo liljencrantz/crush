@@ -11,12 +11,14 @@ mod each;
 mod group;
 mod head;
 mod join;
+mod rename;
 mod reverse;
 mod select;
 mod seq;
 mod skip;
 mod sort;
 mod tail;
+mod union;
 mod uniq;
 mod r#where;
 mod zip;
@@ -68,6 +70,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
             seq::Seq::declare(env)?;
             zip::Zip::declare(env)?;
+            union::Union::declare(env)?;
+            rename::Rename::declare(env)?;
             Ok(())
         }),
     )?;

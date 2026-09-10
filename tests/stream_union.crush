@@ -1,0 +1,27 @@
+# union concatenates two or more streams with identical column types into one, in order.
+
+$u := $($(union $(seq 0 3) $(seq 10 13)) | materialize)
+$c := $($u | count)
+assert ($c == 6) "union of two 3-row streams should have 6 rows"
+
+$first := $($($u[0]):value)
+assert ($first == 0)
+$last := $($($u[5]):value)
+assert ($last == 12)
+
+# three streams at once
+$u3 := $($(union $(seq 0 2) $(seq 10 12) $(seq 20 22)) | materialize)
+$c3 := $($u3 | count)
+assert ($c3 == 6) "union of three 2-row streams should have 6 rows"
+
+# mismatched column types should error rather than silently truncate or coerce
+$union_errored := $false
+try {
+    union $(seq 0 2) $(csv:from "a\n" a=$string)
+} catch { |$e| $union_errored = $true }
+assert $union_errored "union of streams with different column types should error"
+
+# fewer than two streams should error
+$union_arity_errored := $false
+try { union $(seq 0 2) } catch { |$e| $union_arity_errored = $true }
+assert $union_arity_errored "union needs at least two streams"
