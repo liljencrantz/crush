@@ -120,6 +120,30 @@ fn test_last_command_error_does_not_leak_a_stray_channel_error() {
     );
 }
 
+// See tests/error_handling/command_value_via_pup.crush for the full explanation. In short:
+// SimpleCommand::serialize() emits an element::Element::Command(strings_idx) pointing at a
+// separate Strings element holding the command's full path, but Command::deserialize
+// discards that index and instead reuses the outer Command element's own id, which points
+// at the wrong element -- so any literal (non-closure) Value::Command sent through pup
+// (e.g. via `users:me:do`, `sudo`, `remote:exec`) fails with "Expected string list". A
+// plain stdout diff can't distinguish "bug present" from "bug fixed" here -- stdout is
+// empty either way -- so this only checks stderr.
+#[test]
+fn test_command_value_survives_pup_round_trip() {
+    let output = Command::new("./target/debug/crush")
+        .args(&["tests/error_handling/command_value_via_pup.crush"])
+        .output()
+        .expect("failed to execute process");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.is_empty(),
+        "expected a bare native command value to round-trip through pup serialization \
+         without error, got stderr:\n{}",
+        stderr,
+    );
+}
+
 #[test]
 fn test_grpc() {
     let run = escargot::CargoBuild::new()

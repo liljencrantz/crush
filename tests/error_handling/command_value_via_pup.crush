@@ -1,0 +1,19 @@
+# Minimal reproduction for the "Command::deserialize uses the wrong element index" bug
+# (src/lang/command/mod.rs). SimpleCommand::serialize() emits
+# element::Element::Command(strings_idx), where strings_idx points at a separate
+# Element::Strings holding the command's full path. Command::deserialize's
+# element::Element::Command(_) arm discards that index and instead calls
+# Vec::deserialize(id, ...) reusing the *outer* Command element's own id, which points
+# at the wrong element -- so it always fails with "Expected string list".
+#
+# `users:me:do` pup-serializes its argument as a literal Value::Command and sends it to
+# a child process, which deserializes and executes it. Passing a bare native command
+# reference (not wrapped in a closure -- closures take the unaffected
+# element::Element::Closure(_) path) hits this exact code path on the child. See
+# test-gaps.md.
+#
+# A plain stdout diff can't distinguish "bug present" from "bug fixed" here: even once
+# fixed, `echo` invoked with no arguments and no input under the pup no-op printer
+# produces no visible stdout either way. This is exercised in tests/system.rs instead,
+# asserting on stderr.
+users:me:do $global:io:echo
