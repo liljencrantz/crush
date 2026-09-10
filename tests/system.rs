@@ -120,6 +120,26 @@ fn test_last_command_error_does_not_leak_a_stray_channel_error() {
     );
 }
 
+// See tests/error_handling/schedule_exhausted_input.crush for the full explanation. In
+// short: schedule's piped-input branch propagates ordinary stream exhaustion (a
+// disconnected channel, which is the *only* thing a disconnect on this pipe can mean) as
+// a hard error instead of treating it like every other stream consumer in the codebase
+// does. Once fixed, exhausting the input should be silent -- no error at all.
+#[test]
+fn test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input() {
+    let output = Command::new("./target/debug/crush")
+        .args(&["tests/error_handling/schedule_exhausted_input.crush"])
+        .output()
+        .expect("failed to execute process");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.is_empty(),
+        "expected exhausting schedule's piped input to be silent, got stderr:\n{}",
+        stderr,
+    );
+}
+
 #[test]
 fn test_grpc() {
     let run = escargot::CargoBuild::new()

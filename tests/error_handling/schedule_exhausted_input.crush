@@ -1,0 +1,19 @@
+# Minimal reproduction for schedule.rs's piped-input branch propagating raw channel
+# disconnection as a hard error instead of treating it as ordinary stream exhaustion.
+#
+# `schedule`'s piped branch does `output.send(input.read()?)` in a loop with no `--once`
+# and no bound on the input; once the input stream (`seq 0 2`, 3 rows) is exhausted,
+# `input.read()` returns Err (a crossbeam RecvError, since the row channel carries plain
+# `Row`, not `Result<Row, _>`, and can't express "there was an upstream error" -- it can
+# only ever mean "no more rows"). Every other consumer of `TableStreamReader::read()` in
+# the codebase treats this as ordinary end-of-stream (`while let Ok(row) = ... { }`);
+# schedule.rs is the one place that instead propagates it with `?`, turning normal
+# exhaustion into a spurious "receiving on an empty and disconnected channel" error.
+#
+# Unlike the Command::deserialize bug (tests/command_value_via_pup.crush), this can't be
+# made observable via a plain stdout diff: the error occurs on the pipeline's own
+# background thread, caught and printed by command_invocation.rs's eval_command (the same
+# per-stage error handling as tests/error_handling/last_command_error.crush), not
+# propagated as a hard failure of the containing job -- so source() never aborts, and
+# there's no synchronous point to hang a "did it succeed" marker on. See test-gaps.md.
+seq 0 2 | schedule $(duration:of milliseconds=1) | echo
