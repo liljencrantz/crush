@@ -1,0 +1,7 @@
+# Demonstrates the tests/<name>.crush.status mechanism: a non-zero exit status is
+# checked via a .crush.status file (containing "7" here) rather than the implicit
+# "must exit 0" default every other test gets. This test has no .crush.output file --
+# run_system_test skips the output comparison entirely when one isn't present, so this
+# only checks the exit status.
+echo "before exit"
+crush:exit status=7
