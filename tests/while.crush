@@ -1,14 +1,23 @@
+# Method calls with arguments (e.g. `list:of 0 1 2`) don't parse when nested directly
+# inside another (...), so the expected list is computed into a variable first.
+$log_type := $(list $integer)
+$expected := $(list:of 0 1 2)
+
 $i := 0
+$log := $($log_type:new)
 while {($i < 3)} {
-    echo $i
+    $log:push $i
     $i = ($i + 1)
 }
+assert ($log == $expected)
 
 # The body is optional -- when omitted, the condition doubles as the body,
 # and the loop stops as soon as it returns false.
 $j := 0
+$log2 := $($log_type:new)
 while {
-    echo $j
+    $log2:push $j
     $j = ($j + 1)
     ($j < 3)
 }
+assert ($log2 == $expected)

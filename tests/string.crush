@@ -1,10 +1,21 @@
-"abc":lpad 2 | echo
-"abc":lpad 5 "A" | echo
-"abc":rpad 2 | echo
-"abc":rpad 5 "A" | echo
-"\n\n\n\t abc \n\t":trim | echo
-"abcABC":upper | echo
-"abcABC":lower | echo
-"a b c d":split " " | echo
-"Hello, {}!":format "world" | echo
-"Hello, {name}!":format name="world" | echo
+$r1 := $("abc":lpad 2)
+assert ($r1 == "ab")
+$r2 := $("abc":lpad 5 "A")
+assert ($r2 == "AAabc")
+$r3 := $("abc":rpad 2)
+assert ($r3 == "ab")
+$r4 := $("abc":rpad 5 "A")
+assert ($r4 == "abcAA")
+$r5 := $("\n\n\n\t abc \n\t":trim)
+assert ($r5 == "abc")
+$r6 := $("abcABC":upper)
+assert ($r6 == "ABCABC")
+$r7 := $("abcABC":lower)
+assert ($r7 == "abcabc")
+$r8 := $("a b c d":split " ")
+$expected8 := $(list:of "a" "b" "c" "d")
+assert ($r8 == $expected8)
+$r9 := $("Hello, {}!":format "world")
+assert ($r9 == "Hello, world!")
+$r10 := $("Hello, {name}!":format name="world")
+assert ($r10 == "Hello, world!")

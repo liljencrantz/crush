@@ -9,23 +9,27 @@
 # it, and +-infinity's sign is a genuine, meaningful difference (inf != -inf), not a case
 # of two equal values with different bit patterns.
 
-echo "uniq, whole-value dedup: +0.0 and -0.0 collapse to a single row"
-list:of 0.0 (-0.0) | uniq | count | echo
+$c1 := $(list:of 0.0 (-0.0) | uniq | count)
+assert ($c1 == 1) "+0.0 and -0.0 should collapse to a single row"
 
-echo "uniq, whole-value dedup: distinct NaN values never collapse, even identical ones"
 $nan := (0.0 / 0.0)
-list:of $nan $nan $nan | uniq | count | echo
+$c2 := $(list:of $nan $nan $nan | uniq | count)
+assert ($c2 == 3) "distinct NaN values should never collapse, even identical ones"
 
-echo "uniq, whole-value dedup: +infinity collapses with itself, -infinity stays distinct"
-list:of $(float:infinity) $(float:infinity) (0.0 - $(float:infinity)) | uniq | count | echo
+$c3 := $(list:of $(float:infinity) $(float:infinity) (0.0 - $(float:infinity)) | uniq | count)
+assert ($c3 == 2) "+infinity should collapse with itself, -infinity should stay distinct"
 
-echo "uniq, column dedup: a row whose column value is -0.0 is dropped as a duplicate of a prior 0.0"
-$t := $(csv:from "first,0.0\nsecond,-0.0\nthird,1.0\n" id=$string val=$float)
-$t | uniq field=val | materialize | echo
+# a row whose column value is -0.0 is dropped as a duplicate of a prior 0.0
+$t := $($(csv:from "first,0.0\nsecond,-0.0\nthird,1.0\n" id=$string val=$float) | uniq field=val | materialize)
+$expected_t := $($(csv:from "first,0.0\nthird,1.0\n" id=$string val=$float) | materialize)
+assert ($t == $expected_t)
 
-echo "dict: 0.0 and -0.0 are the same key"
-$d := (dict($float, $string).new())
+# dict: 0.0 and -0.0 are the same key
+$dict_type := $(dict $float $string)
+$d := $($dict_type:new)
 $d[0.0] = "first"
 $d[(-0.0)] = "second"
-$d:len | echo
-$d[0.0] | echo
+$dlen := $($d:len)
+assert ($dlen == 1) "0.0 and -0.0 should be the same dict key"
+$dval := $($d[0.0])
+assert ($dval == "second")

@@ -1,13 +1,20 @@
+$count := 0
 loop {
-    echo 1
+    $count = ($count + 1)
     break
-    echo "NO"
+    $count = 9999
 }
+assert ($count == 1) "break should stop the loop before the unreachable statement runs"
+
 $a := $false
+$two_count := 0
+$continue_ran_unreachable := $false
 loop {
     if $a $break
     $a = $true
-    echo 2
+    $two_count = ($two_count + 1)
     continue
-    echo "NO"
+    $continue_ran_unreachable = $true
 }
+assert ($two_count == 1) "the loop body should run exactly once before break"
+assert (!$continue_ran_unreachable) "continue should skip the statement after it"

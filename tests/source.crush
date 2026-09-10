@@ -1,1 +1,4 @@
-source "echo \"sourced\""
+# source runs the given code in the calling scope, so it can mutate an outer variable.
+$ran := $false
+source "$ran = $true"
+assert $ran "source should execute the given code in the calling scope"

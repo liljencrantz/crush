@@ -1,11 +1,19 @@
+$branch := ""
 if $true {
-    echo "yes"
+    $branch = "yes"
 }
+assert ($branch == "yes")
+
+$branch2 := ""
 if $false {
-    echo "no"
+    $branch2 = "no"
 } else {
-    echo "fallback"
+    $branch2 = "fallback"
 }
+assert ($branch2 == "fallback")
+
+$branch3 := "unchanged"
 if $false {
-    echo "no"
+    $branch3 = "no"
 }
+assert ($branch3 == "unchanged") "the body of a false if with no else should not run"
