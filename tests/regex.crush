@@ -4,49 +4,69 @@
 # counts balanced parens to find the end of the literal: `^((a)@(b))` for pattern
 # `(a)@(b)`, not `^((a)@(b)`.
 
-echo "match / not_match"
-$re := ^(a+b)
-$re:match "aaab" | echo
-$re:not_match "aaab" | echo
-$re:match "xyz" | echo
+# match / not_match. Note: a method call like `$my_re:match "aaab"` doesn't parse when
+# nested directly inside another (...), so each result is computed via a separate
+# $(...) substitution first (a pre-existing parser quirk, unrelated to this change).
+$my_re := ^(a+b)
+$m1 := $($my_re:match "aaab")
+assert $m1
+$m2 := $($my_re:not_match "aaab")
+assert (!$m2)
+$m3 := $($my_re:match "xyz")
+assert (!$m3)
 
-echo "replace (first match only) vs replace_all"
+# replace (first match only) vs replace_all
 $digits := ^([0-9]+)
-$digits:replace "abc123def456" "X" | echo
-$digits:replace_all "abc123def456" "X" | echo
+$r1 := $($digits:replace "abc123def456" "X")
+assert ($r1 == "abcXdef456")
+$r2 := $($digits:replace_all "abc123def456" "X")
+assert ($r2 == "abcXdefX")
 
-echo "replace supports capture group references in the replacement"
+# replace supports capture group references in the replacement
 $email := ^(([a-z]+)@([a-z]+))
-$email:replace "user@host" "$2!$1" | echo
+$r3 := $($email:replace "user@host" "$2!$1")
+assert ($r3 == "host!user")
 
-echo "re:new compiles a string into the same kind of value as a ^(...) literal"
+# re:new compiles a string into the same kind of value as a ^(...) literal
 $compiled := $(re:new "[0-9]+")
-$compiled:match "abc123" | echo
-typeof $compiled | echo
+$m4 := $($compiled:match "abc123")
+assert $m4
+$compiled_type := $(typeof $compiled)
+assert ($compiled_type == $re)
 
-echo "filter: default searches all textual columns"
-$t := $(csv:from "alice,eng,30\nbob,sales,25\ncarol,engineering,40\n" name=$string dept=$string age=$integer)
-$t | ^(eng):filter | materialize | echo
-echo "filter: restricted to a single named column"
-$t | ^(eng):filter name | materialize | echo
-echo "filter: no match at all"
-$t | ^(zzz):filter | materialize | echo
+# filter: default searches all textual columns; restricted to a single named column;
+# no match at all. Both sides of a table comparison need to have gone through
+# `| materialize`: a bare table-producing pipeline (e.g. csv:from) yields a
+# table_input_stream, a different value type than table, and comparing across value
+# types is always false -- streams aren't auto-materialized for comparison since doing
+# so would consume them, so the caller has to materialize explicitly on both sides.
+# $t itself is materialized here (rather than left as a stream) because it's read
+# multiple times below -- a stream is one-shot, so reusing it unmaterialized would leave
+# every read after the first seeing an already-drained, empty stream.
+$t := $($(csv:from "alice,eng,30\nbob,sales,25\ncarol,engineering,40\n" name=$string dept=$string age=$integer) | materialize)
+$matched := $($t | ^(eng):filter | select name | materialize)
+$expected_matched := $($(csv:from "alice\ncarol\n" name=$string) | materialize)
+assert ($matched == $expected_matched)
+assert (($($t | ^(eng):filter name | materialize | count)) == 0)
+assert (($($t | ^(zzz):filter | materialize | count)) == 0)
 
-# The remaining cases are all expected to error; each prints nothing on its own line.
-# Any command's failure now halts the whole script (see
-# tests/pipeline_step_error_halts.crush and tests/try_no_catch_propagates.crush), so
-# each is wrapped in try/catch with an empty catch clause -- without it, only the first
-# of these would ever run. The final "done" marker confirms the script ran to
-# completion rather than aborting partway through.
-echo "filter on a non-textual column errors"
-try { $t | ^(eng):filter age | echo } catch {}
-echo "re:new on an invalid pattern errors"
-try { re:new "[" } catch {}
+# filter on a non-textual column errors
+$filter_type_errored := $false
+try { $t | ^(eng):filter age } catch { |$e| $filter_type_errored = $true }
+assert $filter_type_errored "filter on a non-textual column should error"
 
-echo "one_of restricts a closure parameter to a set of allowed types"
+# re:new on an invalid pattern errors
+$bad_pattern_errored := $false
+try { re:new "[" } catch { |$e| $bad_pattern_errored = $true }
+assert $bad_pattern_errored "re:new on an invalid pattern should error"
+
+# one_of restricts a closure parameter to a set of allowed types
 $string_or_int := $(one_of $string $integer)
-$f := {|$x: $string_or_int| typeof $x | echo}
-$f "hello"
-$f 5
-try { $f 3.5 } catch {}
-echo "done"
+$f := {|$x: $string_or_int| typeof $x}
+$string_result := $($f "hello")
+assert ($string_result == $string)
+$int_result := $($f 5)
+assert ($int_result == $integer)
+$one_of_errored := $false
+try { $f 3.5 } catch { |$e| $one_of_errored = $true }
+assert $one_of_errored "a float should be rejected by a one_of $string $integer parameter"
