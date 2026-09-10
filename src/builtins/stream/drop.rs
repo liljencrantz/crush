@@ -43,7 +43,7 @@ fn drop(mut context: CommandContext) -> CrushResult<()> {
             .filter(|_| !*(it.next().unwrap()))
             .collect::<Vec<_>>(),
     )?;
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         let mut row = Vec::from(row);
         let mut it = inc.iter();
         output.send(Row::new(

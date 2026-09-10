@@ -20,7 +20,7 @@ fn head(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let output = context.initialize_output(input.types())?;
     let mut count = 0;
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         if count >= cfg.rows {
             break;
         }

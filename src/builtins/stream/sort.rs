@@ -72,7 +72,7 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
 
     let mut res: Vec<Row> = Vec::new();
 
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         res.push(row);
     }
 

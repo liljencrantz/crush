@@ -22,7 +22,7 @@ fn tail(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let output = context.initialize_output(input.types())?;
     let mut q: VecDeque<Row> = VecDeque::new();
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         if q.len() >= cfg.rows as usize {
             q.pop_front();
         }

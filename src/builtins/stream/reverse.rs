@@ -19,7 +19,7 @@ fn reverse(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let output = context.initialize_output(input.types())?;
     let mut q: Vec<Row> = Vec::new();
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         q.push(row);
     }
     while !q.is_empty() {

@@ -155,7 +155,7 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let columns = find_string_columns(input.types(), cfg.columns);
     let output = context.initialize_output(input.types())?;
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         let mut found = false;
         for idx in &columns {
             match &row.cells()[*idx] {

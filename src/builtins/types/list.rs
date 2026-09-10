@@ -142,7 +142,7 @@ fn collect_internal(
     output: ValueSender,
 ) -> CrushResult<()> {
     let mut lst = Vec::new();
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         lst.push(Vec::from(row).replace(idx, Value::Empty));
     }
 

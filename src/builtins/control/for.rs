@@ -51,7 +51,7 @@ fn r#for(mut context: CommandContext) -> CrushResult<()> {
 
     let mut input = input.stream(context.command_handle())?;
 
-    while let Ok(line) = input.read() {
+    while let Some(line) = input.next_row()? {
         let env = context.scope.create_child(&context.scope, Loop);
 
         let vvv = if input.types().len() == 1 {

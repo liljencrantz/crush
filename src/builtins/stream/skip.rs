@@ -21,12 +21,12 @@ fn skip(mut context: CommandContext) -> CrushResult<()> {
     let output = context.initialize_output(input.types())?;
     let mut res: i128 = 0;
     while res < cfg.rows {
-        if let Err(_) = input.read() {
+        if input.next_row()?.is_none() {
             return Ok(());
         }
         res += 1;
     }
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         output.send(row)?;
     }
     Ok(())

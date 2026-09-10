@@ -27,7 +27,7 @@ pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
     match cfg.field.map(|f| input.types().find(&f)).transpose()? {
         None => {
             let mut seen: HashSet<Row> = HashSet::new();
-            while let Ok(row) = input.read() {
+            while let Some(row) = input.next_row()? {
                 if !seen.contains(&row) {
                     seen.insert(row.clone());
                     output.send(row)?;
@@ -36,7 +36,7 @@ pub fn uniq(mut context: CommandContext) -> CrushResult<()> {
         }
         Some(idx) => {
             let mut seen: HashSet<Value> = HashSet::new();
-            while let Ok(row) = input.read() {
+            while let Some(row) = input.next_row()? {
                 if !seen.contains(&row.cells()[idx]) {
                     seen.insert(row.cells()[idx].clone());
                     output.send(row)?;

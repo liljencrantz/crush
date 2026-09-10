@@ -71,7 +71,7 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     let real_output = context.this.table_output_stream()?;
     let mut stream = context.input_stream()?;
 
-    while let Ok(row) = stream.read() {
+    while let Some(row) = stream.next_row()? {
         real_output.send(row)?;
     }
     context.output.send(Value::Empty)

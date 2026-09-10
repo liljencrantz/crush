@@ -92,10 +92,19 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             if context.input.is_pipeline() {
                 let mut input = context.input_stream()?;
                 let output = context.initialize_output(input.types())?;
-                run(cfg, &control_receiver, || output.send(input.read()?))
+                run(cfg, &control_receiver, || match input.next_row()? {
+                    Some(row) => {
+                        output.send(row)?;
+                        Ok(true)
+                    }
+                    None => Ok(false),
+                })
             } else {
                 let output = context.initialize_output(&[])?;
-                run(cfg, &control_receiver, || output.send(Row::new(vec![])))
+                run(cfg, &control_receiver, || {
+                    output.send(Row::new(vec![]))?;
+                    Ok(true)
+                })
             }
         }
         Some(cmd) => {
@@ -110,21 +119,27 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
                         .with_scope(env.clone())
                         .with_output(sender.clone()),
                 )?;
-                output.send(Row::new(vec![receiver.recv()?]))
+                output.send(Row::new(vec![receiver.recv()?]))?;
+                Ok(true)
             })
         }
     }
 }
 
+/// Runs `f` on the configured cadence. `f` returns `Ok(true)` to keep going, `Ok(false)`
+/// to stop (e.g. the piped input stream is exhausted), or `Err` for a genuine failure,
+/// which stops the loop and propagates.
 fn run(
     cfg: Schedule,
     control_receiver: &Receiver<StreamControlMessage>,
-    mut f: impl FnMut() -> CrushResult<()>,
+    mut f: impl FnMut() -> CrushResult<bool>,
 ) -> CrushResult<()> {
     if cfg.schedule_at_fixed_rate {
         let mut last_time = Local::now();
         loop {
-            f()?;
+            if !f()? {
+                break;
+            }
             if cfg.once {
                 break;
             }
@@ -136,7 +151,9 @@ fn run(
         }
     } else {
         loop {
-            f()?;
+            if !f()? {
+                break;
+            }
             if cfg.once {
                 break;
             }

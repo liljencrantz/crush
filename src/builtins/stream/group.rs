@@ -205,7 +205,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
 
     drop(task_input);
 
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         let key = indices
             .iter()
             .map(|idx| row.cells()[*idx].clone())

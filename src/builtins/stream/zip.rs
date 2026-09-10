@@ -28,7 +28,7 @@ pub fn zip(mut context: CommandContext) -> CrushResult<()> {
     output_type.append(&mut second.types().to_vec());
     let output_type = output_type.as_slice().deduplicate_names();
     let output = context.initialize_output(&output_type)?;
-    while let (Ok(mut row1), Ok(row2)) = (first.read(), second.read()) {
+    while let (Some(mut row1), Some(row2)) = (first.next_row()?, second.next_row()?) {
         row1.append(&mut Vec::from(row2));
         output.send(row1)?;
     }

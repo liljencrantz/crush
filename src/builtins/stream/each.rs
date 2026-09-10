@@ -48,7 +48,7 @@ pub fn each(mut context: CommandContext) -> CrushResult<()> {
     let mut input = context.input_stream()?;
     let base_context = context.empty();
 
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         match run(&cfg.body, source, &row, input.types(), &base_context) {
             Ok(_) => (),
             Err(e) => base_context.global_state.printer().crush_error(e),

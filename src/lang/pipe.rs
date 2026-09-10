@@ -376,6 +376,28 @@ pub trait TableStreamReader {
     fn read(&mut self) -> CrushResult<Row>;
     fn read_timeout(&mut self, timeout: Duration) -> CrushResult<Row>;
     fn types(&self) -> &[ColumnType];
+
+    /// Read the next row, treating ordinary stream exhaustion as `Ok(None)` rather than
+    /// an error.
+    ///
+    /// A disconnected/exhausted stream (`CrushError::is_disconnected()`) is the only
+    /// outcome `read()` can produce that isn't either a row or a genuine error -- it's
+    /// the normal way a stream signals "no more rows," whether that's because a
+    /// materialized source (a `Table`, `Dict`, etc.) ran out of elements, or because a
+    /// channel-backed stream's sender was dropped once its producer finished. Anything
+    /// else `read()` returns -- an explicit `Terminate` interrupt, or a genuine data/
+    /// validation error from `TableInputStream::recv()`'s schema check -- is a real
+    /// condition the caller should see, not silently swallow. This is the replacement
+    /// for the `while let Ok(row) = ... .read() { }` pattern used throughout the
+    /// codebase, which conflates all three cases; use `while let Some(row) =
+    /// ... .next_row()? { }` instead.
+    fn next_row(&mut self) -> CrushResult<Option<Row>> {
+        match self.read() {
+            Ok(row) => Ok(Some(row)),
+            Err(e) if e.is_disconnected() => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 impl TableStreamReader for TableInputStream {

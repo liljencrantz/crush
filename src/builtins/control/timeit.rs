@@ -35,7 +35,7 @@ pub fn time_run(it: &Command, context: &CommandContext) -> CrushResult<Duration>
         move || {
             let res = reciever.recv()?;
             if let Ok(mut stream) = res.stream(&handle) {
-                while let Ok(_) = stream.read() {}
+                while let Some(_) = stream.next_row()? {}
             }
             Ok(())
         },

@@ -79,7 +79,7 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
     if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
         return data_error("Expected an input iterator containing a single column of type string.");
     }
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         match Vec::from(row).remove(0) {
             Value::String(s) => {
                 let mut s = s.to_string();

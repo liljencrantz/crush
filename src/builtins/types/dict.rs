@@ -396,7 +396,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
         input_type.as_slice().find(&cfg.value_column),
     ) {
         (Ok(key_idx), Ok(value_idx)) => {
-            while let Ok(row) = input.read() {
+            while let Some(row) = input.next_row()? {
                 let mut row = Vec::from(row);
                 res.insert(
                     row.replace(key_idx, Value::Empty),

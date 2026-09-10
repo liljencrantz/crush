@@ -36,7 +36,7 @@ fn do_join(
     let mut l_data: OrderedMap<Value, Vec<Row>> = OrderedMap::new();
 
     // Read left table into memory
-    while let Ok(row) = l.read() {
+    while let Some(row) = l.next_row()? {
         match l_data.entry(row.cells()[left_idx].clone()) {
             Entry::Occupied(o) => o.into_mut().push(row),
             Entry::Vacant(v) => v.insert(vec![row]),
@@ -44,7 +44,7 @@ fn do_join(
     }
 
     // Read one row at a time of right table, and join on the left table.
-    while let Ok(r_row) = r.read() {
+    while let Some(r_row) = r.next_row()? {
         l_data.get(&r_row.cells()[right_idx]).map(|l_rows| {
             for l_row in l_rows {
                 printer.handle_error(output.send(combine(l_row, &r_row, right_idx)));

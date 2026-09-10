@@ -24,7 +24,7 @@ macro_rules! sum_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: $var_type = $var_initializer;
-            while let Ok(row) = s.read() {
+            while let Some(row) = s.next_row()? {
                 match &row.cells()[column] {
                     Value::$value_type(i) => res = res + *i,
                     v => return error(format!("Invalid cell value type `{}`.", v.value_type())),
@@ -46,7 +46,7 @@ fn sum_any(mut s: Stream, column: usize) -> CrushResult<Value> {
     let mut sum_int = 0;
     let mut sum_float = 0.0;
     let mut sum_duration = Duration::seconds(0);
-    while let Ok(row) = s.read() {
+    while let Some(row) = s.next_row()? {
         match &row.cells()[column] {
             Value::Integer(i) => {
                 had_integer = true;
@@ -105,15 +105,15 @@ macro_rules! avg_function {
             let mut res: $var_type = $var_initializer;
             let mut count: i128 = 0;
             loop {
-                match s.read() {
-                    Ok(row) => {
+                match s.next_row()? {
+                    Some(row) => {
                         count += 1;
                         match row.cells()[column] {
                             Value::$value_type(i) => res = res + i,
                             _ => return error("Invalid cell value"),
                         }
                     }
-                    Err(_) => break,
+                    None => break,
                 }
             }
             if count == 0 {
@@ -137,7 +137,7 @@ fn avg_any(mut s: Stream, column: usize) -> CrushResult<Value> {
     let mut sum_float = 0.0;
     let mut sum_duration = Duration::seconds(0);
     let mut count: usize = 0;
-    while let Ok(row) = s.read() {
+    while let Some(row) = s.next_row()? {
         match &row.cells()[column] {
             Value::Integer(i) => {
                 had_integer = true;
@@ -196,12 +196,12 @@ macro_rules! median_function {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: Vec<$var_type> = Vec::new();
             loop {
-                match s.read() {
-                    Ok(row) => match row.cells()[column] {
+                match s.next_row()? {
+                    Some(row) => match row.cells()[column] {
                         Value::$value_type(i) => res.push(i),
                         _ => return error("Invalid cell value"),
                     },
-                    Err(_) => break,
+                    None => break,
                 }
             }
             res.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -276,12 +276,12 @@ fn median(mut context: CommandContext) -> CrushResult<()> {
 macro_rules! aggr_function {
     ($name:ident, $value_type:ident, $op_desc:literal, $type_desc:literal, $op:expr) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
-            if let Ok(first_value) = s.read() {
+            if let Some(first_value) = s.next_row()? {
                 let mut res = match first_value.into_cells().replace(column, Value::Empty) {
                     Value::$value_type(i) => i,
                     _ => return error(concat!("Invalid cell value, expected ", $type_desc)),
                 };
-                while let Ok(row) = s.read() {
+                while let Some(row) = s.next_row()? {
                     match row.into_cells().replace(column, Value::Empty) {
                         Value::$value_type(i) => res = $op(i, res),
                         _ => return error(concat!("Invalid cell value, expected ", $type_desc)),
@@ -377,7 +377,7 @@ macro_rules! prod_function {
     ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: $var_type = $var_initializer;
-            while let Ok(row) = s.read() {
+            while let Some(row) = s.next_row()? {
                 match row.cells()[column] {
                     Value::$value_type(i) => res = res * i,
                     _ => return error("Invalid cell value"),
@@ -437,7 +437,7 @@ fn concat(mut context: CommandContext) -> CrushResult<()> {
     let column = parse(input.types(), cfg.field)?;
     let mut res = String::new();
 
-    if let Ok(row) = input.read() {
+    if let Some(row) = input.next_row()? {
         match row.into_cells().replace(column, Value::Empty) {
             Value::String(i) => res.push_str(i.deref()),
             Value::File(i) => res.push_str(i.to_str().unwrap_or("<Invalid>")),
@@ -445,7 +445,7 @@ fn concat(mut context: CommandContext) -> CrushResult<()> {
             Value::Float(i) => res.push_str(&i.to_string()),
             _ => return error("Invalid cell value, expected number or text"),
         };
-        while let Ok(row) = input.read() {
+        while let Some(row) = input.next_row()? {
             res.push_str(&cfg.separator);
             match row.into_cells().replace(column, Value::Empty) {
                 Value::String(i) => res.push_str(i.deref()),

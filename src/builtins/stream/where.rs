@@ -60,7 +60,7 @@ pub fn r#where(mut context: CommandContext) -> CrushResult<()> {
     let base_context = context.empty();
 
     let output = context.initialize_output(input.types())?;
-    while let Ok(row) = input.read() {
+    while let Some(row) = input.next_row()? {
         match evaluate(
             cfg.condition.clone(),
             &source,
