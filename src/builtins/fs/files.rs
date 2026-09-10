@@ -1,6 +1,7 @@
 use crate::data::table::ColumnFormat;
+use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Unknown;
-use crate::lang::errors::{CrushResult, data_error};
+use crate::lang::errors::{CrushResult, CrushResultExtra, data_error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
@@ -115,6 +116,22 @@ fn insert_entity(
     output.send(Row::new(row))
 }
 
+/// data_error(...) builds a bare CrushError with no command/source attached -- those
+/// normally get filled in by the dispatch chain that evaluates a user's script
+/// (Closure::eval()'s with_command()/with_source_fallback() calls), which these
+/// internal per-entry errors never go through, since they're reported directly instead
+/// of propagated. Attach them explicitly so a warning built from this is actually
+/// useful: the reporting command's name and the fs:files invocation's own location.
+fn warn_data_error(global_state: &GlobalState, source: &Source, message: String) {
+    global_state.warn(
+        &data_error::<()>(message)
+            .with_command("files")
+            .with_source_fallback(source)
+            .err()
+            .unwrap(),
+    );
+}
+
 fn run_for_single_directory_or_file(
     path: PathBuf,
     users: &HashMap<sysinfo::Uid, String>,
@@ -124,6 +141,7 @@ fn run_for_single_directory_or_file(
     q: &mut VecDeque<PathBuf>,
     output: &mut TableOutputStream,
     global_state: &GlobalState,
+    source: &Source,
 ) -> CrushResult<()> {
     if path.is_dir() {
         match fs::read_dir(&path) {
@@ -143,14 +161,14 @@ fn run_for_single_directory_or_file(
                                     )?;
                                 }
                                 Err(err) => {
-                                    global_state.warn(
-                                        &data_error::<()>(format!(
+                                    warn_data_error(
+                                        global_state,
+                                        source,
+                                        format!(
                                             "Failed to access metadata for file {}. Reason: {}",
                                             path.to_str().unwrap_or("<Illegal file name>"),
                                             err.to_string()
-                                        ))
-                                        .err()
-                                        .unwrap(),
+                                        ),
                                     );
                                 }
                             }
@@ -162,28 +180,28 @@ fn run_for_single_directory_or_file(
                             }
                         }
                         Err(err) => {
-                            global_state.warn(
-                                &data_error::<()>(format!(
+                            warn_data_error(
+                                global_state,
+                                source,
+                                format!(
                                     "Failed to list a file in directory {}. Reason: {}",
                                     path.to_str().unwrap_or("<Illegal file name>"),
                                     err.to_string()
-                                ))
-                                .err()
-                                .unwrap(),
+                                ),
                             );
                         }
                     }
                 }
             }
             Err(err) => {
-                global_state.warn(
-                    &data_error::<()>(format!(
+                warn_data_error(
+                    global_state,
+                    source,
+                    format!(
                         "Failed to list contents of directory {}. Reason: {}",
                         path.to_str().unwrap_or("<Illegal file name>"),
                         err.to_string()
-                    ))
-                    .err()
-                    .unwrap(),
+                    ),
                 );
             }
         }
@@ -194,25 +212,25 @@ fn run_for_single_directory_or_file(
                     insert_entity(&p, path, users, groups, cols, output)?;
                 }
                 Err(err) => {
-                    global_state.warn(
-                        &data_error::<()>(format!(
+                    warn_data_error(
+                        global_state,
+                        source,
+                        format!(
                             "Failed to access metadata for file {}. Reason: {}",
                             path.to_str().unwrap_or("<Illegal file name>"),
                             err.to_string()
-                        ))
-                        .err()
-                        .unwrap(),
+                        ),
                     );
                 }
             },
             None => {
-                global_state.warn(
-                    &data_error::<()>(format!(
+                warn_data_error(
+                    global_state,
+                    source,
+                    format!(
                         "Invalid file name {}.",
                         path.to_str().unwrap_or("<Illegal file name>")
-                    ))
-                    .err()
-                    .unwrap(),
+                    ),
                 );
             }
         }
@@ -356,6 +374,7 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
                 &mut q,
                 &mut output,
                 &context.global_state,
+                &context.source,
             )?,
         }
     }

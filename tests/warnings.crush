@@ -42,3 +42,12 @@ assert ($warning_count2 == 2) "a file files can't stat should add a second warni
 $last_message := $($($(crush:warnings | materialize) | select message | list:collect)[1])
 $last_message_len := $($last_message:len)
 assert ($last_message_len > 0) "the fs:files warning should have a non-empty message"
+
+# data_error(...) builds a bare CrushError with no command/source of its own -- those
+# only get attached by the normal script-dispatch chain, which this internal, directly
+# reported error never goes through. fs:files attaches them itself
+# (.with_command()/.with_source_fallback()) specifically so this isn't empty.
+$last_command := $($($(crush:warnings | materialize) | select command | list:collect)[1])
+assert ($last_command == "files") "the fs:files warning should record which command reported it"
+$last_source_file := $($($(crush:warnings | materialize) | select file | list:collect)[1])
+assert ($last_source_file == "tests/warnings.crush") "the fs:files warning's source should point at this script, not be empty"
