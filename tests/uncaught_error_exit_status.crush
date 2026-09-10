@@ -1,0 +1,5 @@
+# An error that escapes all the way to the top of the script (not wrapped in try/catch)
+# should make the process exit non-zero -- otherwise a caller invoking a crush script
+# can't tell success from failure via $?. No .crush.output file: this only checks the
+# exit status (see tests/uncaught_error_exit_status.crush.status).
+convert $integer "notanumber"
