@@ -81,6 +81,32 @@ open in `todo.md`.
 
 ## Reachable bugs found while fixing other items on this list
 
+- [ ] `Job::eval()` (`src/lang/job.rs`) only tracks and joins the thread for a
+      pipeline's *last* command. Non-last stages' `call_def.eval(context.with_io(input,
+      output))?;` return value (an `Option<ThreadId>`) is discarded outright, so if that
+      stage is dispatched to a thread (can_block=true, the default for most builtins),
+      nobody ever joins it — its result, success or failure, never reaches anywhere that
+      would report it. Found while making pipeline-step failures halt the script: a
+      non-last `uniq` failing (in a `... | uniq | echo` pipe) still silently vanished
+      even after fixing every swallow point in the dispatch chain (`eval_command`,
+      `CommandInvocation::eval()`, `join_one()`), because nothing ever called
+      `join_one()` for that stage's thread at all. Not fixed — worked around in
+      `tests/error_handling/uniq_unhashable_type.crush` by making the failing command
+      the pipeline's last stage instead. Fixing this properly needs `Job::eval()`
+      restructured to track every stage's thread ID (not just discard non-last ones)
+      and join each of them, converting a failure into the job's own failure — a bigger
+      change than the dispatch-chain fixes already made.
+- [ ] `control/schedule.rs` has a genuine, pre-existing race in its own output-channel
+      lifecycle: when its result is left as a bare, unconsumed top-level statement (no
+      pipe, no assignment), the row it sends via `output.send(Row::new(vec![]))` (or the
+      equivalent for the `command=` variant) races against its own
+      `initialize_output`-sent handshake sitting unread, and fails with "sending on a
+      disconnected channel". This was always happening — confirmed by hand — but was
+      silently swallowed by `join_one()`'s old discard-everything behavior, so it never
+      surfaced as a real error before pipeline/closure error propagation was fixed (see
+      the two entries above this one). Worked around in `tests/schedule.crush` by piping
+      the `command=` case to `| echo` instead of leaving it bare, which avoids
+      triggering the race, rather than fixing schedule.rs's own channel handling.
 - [x] `Command::deserialize` uses the wrong element index —
       `src/lang/command/mod.rs:228-229`. `serialize()` for a native command emits
       `element::Element::Command(strings_idx)`, where `strings_idx` points at a separate
