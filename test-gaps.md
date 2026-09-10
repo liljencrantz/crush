@@ -367,5 +367,7 @@ open in `todo.md`.
       `[]` turned out to be a real, notable finding worth documenting: it doesn't
       produce an empty list — `[...]` always desugars to `list:of`, which needs at
       least one argument to infer the element type from, so `[]` errors.
-- [ ] `closure.rs` (1323 lines, largest file in the crate) has zero direct unit tests;
-      only indirectly covered via `tests/closure_signatures.crush`.
+- [x] `closure.rs` (1323 lines, largest file in the crate) now covered by
+      `tests/closures.crush`: variable capture, default parameter values, repeated
+      named arguments collecting into a list, `@$rest`/`@@$rest` collectors, and
+      `return`'s bare-block restriction. No bugs found.
