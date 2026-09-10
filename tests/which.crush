@@ -1,2 +1,4 @@
 # `sh` is assumed to be present on $PATH on any supported platform.
-typeof $(which sh) | echo
+$w := $(which sh)
+$t := $(typeof $w)
+assert ($t == $file)

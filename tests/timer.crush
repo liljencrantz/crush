@@ -1,3 +1,7 @@
-# The actual duration is non-deterministic, so this only checks the type of
-# the result rather than its value.
-typeof $(timer {echo "x"}) | echo
+# The actual duration is non-deterministic, so this only checks the type of the result
+# and that the timed closure actually ran (via a side-effect variable).
+$ran := $false
+$d := $(timer {$ran = $true})
+$t := $(typeof $d)
+assert ($t == $duration)
+assert $ran "the timed closure should have run"

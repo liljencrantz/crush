@@ -5,4 +5,4 @@ $factorial := {
     }
     return ($n * factorial($n - 1))
 }
-echo $(factorial 5)
+assert (($(factorial 5)) == 120)
