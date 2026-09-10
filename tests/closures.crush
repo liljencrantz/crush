@@ -2,38 +2,58 @@
 # direct test coverage beyond tests/closure_signatures.crush's single typed-dict-param
 # example. tests/return.crush separately covers recursion and returning a value.
 
-echo "a closure captures variables from its enclosing scope"
+# a closure captures variables from its enclosing scope
 $x := 10
-$f := {|$y| echo ($x + $y)}
-$f 5
+$f := {|$y| ($x + $y)}
+$r1 := $($f 5)
+assert ($r1 == 15)
 
-echo "default parameter values"
-$g := {|$a: $integer=1 $b: $integer=2| echo ($a + $b)}
-$g
-$g a=10
-$g a=10 b=20
+# default parameter values
+$g := {|$a: $integer=1 $b: $integer=2| ($a + $b)}
+$r2 := $($g)
+assert ($r2 == 3)
+$r3 := $(g a=10)
+assert ($r3 == 12)
+$r4 := $(g a=10 b=20)
+assert ($r4 == 30)
 
-echo "repeating a named argument collects it into a list-typed parameter"
-$h := {|$items: $(list $integer)| echo $items}
-$h items=1 items=2 items=3
+# repeating a named argument collects it into a list-typed parameter
+$h := {|$items: $(list $integer)| $items}
+$r5 := $(h items=1 items=2 items=3)
+$expected5 := $(list:of 1 2 3)
+assert ($r5 == $expected5)
 
-echo "@$rest collects leftover unnamed arguments into a list"
-$i := {|$first @$rest| echo $first; echo $rest}
-$i 1 2 3
+# @$rest collects leftover unnamed arguments into a list
+$any_list_type := $(list $any)
+$first_out := 0
+$rest_out := $($any_list_type:new)
+$i := {|$first @$rest| $first_out = $first; $rest_out = $rest}
+i 1 2 3
+assert ($first_out == 1)
+$expected_rest := $(list:of 2 3)
+assert ($rest_out == $expected_rest)
 
-echo "@@$rest collects leftover named arguments"
-$j := {|$first @@$rest| echo $first; echo $rest}
-$j first=1 a=2 b=3
+# @@$rest collects leftover named arguments into a dict
+$string_any_dict_type := $(dict $string $any)
+$first2_out := 0
+$rest2_out := $($string_any_dict_type:new)
+$j := {|$first @@$rest| $first2_out = $first; $rest2_out = $rest}
+j first=1 a=2 b=3
+assert ($first2_out == 1)
+$a_val := $($rest2_out["a"])
+$b_val := $($rest2_out["b"])
+assert ($a_val == 2)
+assert ($b_val == 3)
+$rest2_len := $($rest2_out:len)
+assert ($rest2_len == 2)
 
 # `return` can only be used inside a closure *command* (one with a `{|...| ...}`
 # signature); a bare `{...}` block -- like an `if`/`while` body, which is what this is
-# -- can't break early with it. Any command's failure now halts the whole script (see
-# tests/pipeline_step_error_halts.crush and tests/try_no_catch_propagates.crush), so
-# this is wrapped in try/catch to let the script reach the final "done" marker.
-echo "return inside a bare block (not a closure command) errors"
+# -- can't break early with it.
+$return_in_block_errored := $false
 try {
     if $true {
         return 5
     }
-} catch {}
-echo "done"
+} catch { |$e| $return_in_block_errored = $true }
+assert $return_in_block_errored "return inside a bare block (not a closure command) should error"
