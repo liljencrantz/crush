@@ -74,6 +74,47 @@ stream handling" and "Write tests that use `schedule` and job control".
       actually succeeds, giving a plain stdout diff. Confirmed red before the fix,
       green after.
 
+- [x] `control/schedule.rs`'s piped-input branch did `output.send(input.read()?)` with no
+      bound on the input; once the input stream was exhausted, `input.read()` returned
+      Err (a crossbeam `RecvError` — the row channel carries plain `Row`, not
+      `Result<Row, _>`, so a disconnect can only ever mean "no more rows"), and the `?`
+      propagated it as a spurious "receiving on an empty and disconnected channel" error
+      instead of stopping cleanly, unlike every other `TableStreamReader` consumer in the
+      codebase (`while let Ok(row) = ... .read() { }`, which already treats any error as
+      "stop"). Fixed by generalizing: added `TableStreamReader::next_row()`, a default
+      method mapping `CrushError::is_disconnected()` to `Ok(None)` and propagating
+      everything else as a real `Err`, and migrated every read-loop call site (~20 files)
+      to `while let Some(row) = ... .next_row()? { }`. Covered by
+      `tests/error_handling/schedule_exhausted_input.crush` (a custom Rust assertion on
+      stderr, not a plain stdout diff — the error happens on the pipeline's own
+      background thread and is caught/printed by `command_invocation.rs`'s
+      `eval_command` per-stage, not propagated as a hard job failure, so there's no
+      synchronous point for a stdout marker, unlike the `Command::deserialize` case
+      above). Confirmed red before the fix, green after.
+      **Follow-up, not done as part of this fix:** the generalization is deliberately
+      scoped to fixing ordinary stream exhaustion, which was the one thing actually
+      broken. It does *not* add test coverage proving that the other two things
+      `next_row()` now propagates as real errors — an explicit `Terminate` interrupt
+      arriving mid-read, and a genuine data/validation error from
+      `TableInputStream::recv()`'s schema check — actually behave correctly at each of
+      the ~20 migrated call sites. Before this fix, both were silently swallowed as if
+      the stream had just ended cleanly everywhere (e.g. an interrupted `sort | head`
+      would quietly return a normal, just-truncated result instead of aborting); after
+      this fix, they propagate as a real `Err` from `next_row()?`, which should be
+      correct, but that's reasoned from the code, not verified per-site. A validation
+      error should never fire in practice (both ends of a pipe agree on schema when it's
+      created), so this is a defense-in-depth concern more than a live bug.
+      **Related, unexplained:** investigating this surfaced that piping the schedule
+      output into `count` (`seq 0 2 | schedule $(duration:of milliseconds=1) | count`)
+      produced *no* output at all on the buggy code, not even a partial/wrong count —
+      `count` computes `res` internally without ever seeing an error (it already used
+      `while let Ok(_) = input.read() { }`), so its own `context.output.send(...)` should
+      have run and produced `3`. Something at the job/pipeline level appears to suppress
+      a stage's otherwise-successful output when an *earlier*, non-last stage in the same
+      pipeline errored, which would be a distinct mechanism from both this bug and the
+      already-fixed "last command errors" stray-channel-error bug. Not investigated
+      further — noted here in case it recurs.
+
 ## Reachable panics (should be `CrushResult` errors, aren't)
 
 - [x] `InterruptibleTableInputStream::read`, `src/lang/pipe.rs:284` — a `Resume` control
@@ -101,8 +142,9 @@ stream handling" and "Write tests that use `schedule` and job control".
       firing immediately is exactly the documented "catch up by sending more heartbeats
       afterwards" behavior, matching e.g. Java's `scheduleAtFixedRate`. Mischaracterized
       this as "classic drift logic" without first checking there was a documented mode
-      governing it. What's still accurate: `schedule` has zero test coverage for either
-      mode — no `.crush` file even mentions it.
+      governing it. `schedule` now has coverage for its ordinary (non-fixed-rate) usage
+      forms via `tests/schedule.crush`; `schedule_at_fixed_rate` itself is still
+      untested.
 - [x] `stream/aggregation.rs` on an empty stream — audited every aggregator by hand via
       `tests/aggregation_empty.crush`. **Correction:** `median_*` already had an explicit
       `res.is_empty()` check returning a clean error (the original note that it indexes
@@ -246,8 +288,8 @@ stream handling" and "Write tests that use `schedule` and job control".
 
 ## Untested control-flow / stream ops (lower severity, still real gaps)
 
-- [ ] `control/while.rs` — completely untested (no `while` in any `.crush` file), including
-      its documented "no body -> condition is the body" alternate mode.
+- [x] `control/while.rs` — now covered by `tests/while.crush`, including its documented
+      "no body -> condition is the body" alternate mode.
 - [ ] `stream/group.rs` — only single-key, non-empty grouping is exercised; multi-column
       grouping, empty-stream grouping, and aggregator-command failure inside the spawned
       worker thread are not.
