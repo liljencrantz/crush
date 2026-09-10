@@ -13,11 +13,30 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
-#[derive(PartialEq, PartialOrd, Clone)]
+#[derive(Clone)]
 pub struct Table {
     types: Vec<ColumnType>,
     rows: Arc<[Row]>,
     materialized: bool,
+}
+
+// `materialized` is an internal bookkeeping flag (whether nested stream values have been
+// eagerly resolved), not part of a table's logical content, so it's deliberately excluded
+// here: two tables with identical types and rows are equal regardless of which one happens
+// to have been materialized.
+impl PartialEq for Table {
+    fn eq(&self, other: &Table) -> bool {
+        self.types == other.types && self.rows == other.rows
+    }
+}
+
+impl PartialOrd for Table {
+    fn partial_cmp(&self, other: &Table) -> Option<std::cmp::Ordering> {
+        match self.types.partial_cmp(&other.types) {
+            Some(std::cmp::Ordering::Equal) => self.rows.partial_cmp(&other.rows),
+            other => other,
+        }
+    }
 }
 
 pub struct Iter {
