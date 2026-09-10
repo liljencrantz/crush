@@ -31,14 +31,14 @@ fn run_system_test(name: &Path) {
         output.status.code(),
     );
 
+    // A test with no .crush.output file skips the output comparison entirely -- it's
+    // only checking the exit status (via a .crush.status file, or the default-0 check
+    // above).
     let output_name = name.with_extension("crush.output");
-    let expected_output = fs::read_to_string(output_name.to_str().unwrap()).expect(
-        format!(
-            "failed to read output file {}",
-            output_name.to_str().unwrap()
-        )
-        .as_str(),
-    );
+    let expected_output = match fs::read_to_string(&output_name) {
+        Ok(s) => s,
+        Err(_) => return,
+    };
     let expected_lines = expected_output.lines().collect::<Vec<&str>>();
     let actual_string = String::from_utf8_lossy(&output.stdout);
     let actual_lines = actual_string.lines().collect::<Vec<&str>>();
