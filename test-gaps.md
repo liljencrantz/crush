@@ -60,9 +60,24 @@ open in `todo.md`.
       `avg_any`'s mismatch error message was copy-pasted from `sum_any` verbatim
       ("Received multiple types in sum" even when the mismatch was in `avg`) — cosmetic
       only, didn't affect whether it errored, fixed to say "average".
-- [ ] Float `NaN`/`±0.0`/`±inf` in comparisons/sort/dedup have no test coverage in
-      `src/lang/value/mod.rs`'s `PartialEq`/`PartialOrd`, which back `sort`, `==`, and
-      dict/table keys. Silently wrong order or dedup, not a crash.
+- [x] Float `NaN`/`±0.0`/`±inf` in comparisons/sort/dedup had no test coverage in
+      `src/lang/value/mod.rs`'s `PartialEq`/`PartialOrd`/`Hash`, which back `sort`, `==`,
+      and dict/table keys. Covered by `tests/comparisons.crush` (`==`/`!=` for all three,
+      plus ordering operators for `±0.0`/`±inf`), `tests/sort_nan.crush` (extended with
+      `±0.0`/`±inf`), and the new `tests/float_edge_case_dedup.crush`.
+      A real bug turned up: `Value`'s `Hash` impl decomposed a float's raw bits
+      including the sign, so `+0.0` and `-0.0` — `==` per `PartialEq`/IEEE 754 — hashed
+      differently, violating the Hash/Eq contract (`a == b` must imply
+      `hash(a) == hash(b)`). This broke `uniq` (both the whole-value and column-based
+      dedup paths) and `Dict`, which both treated `+0.0`/`-0.0` as distinct when they
+      should collapse to one. Fixed by canonicalizing `-0.0` to `0.0` before hashing.
+      Also confirmed, as expected and not bugs: ordering comparisons (`>`/`<`/`>=`/`<=`)
+      on `NaN` error rather than returning a bool, since `partial_cmp` returns `None`
+      for it and `comp.rs`'s `cmp!` macro treats that as an error; `sort` gives `NaN` a
+      defined last position (already fixed earlier this session) and leaves `±0.0` in
+      their stable-sort relative order; `uniq` never dedups identical `NaN` values
+      (matches `NaN != NaN`) and correctly dedups `+infinity` with itself while keeping
+      `-infinity` distinct.
 
 ## Reachable bugs found while fixing other items on this list
 
