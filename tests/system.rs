@@ -10,6 +10,27 @@ fn run_system_test(name: &Path) {
         .args(&[name.to_str().unwrap()])
         .output()
         .expect("failed to execute process");
+
+    let status_name = name.with_extension("crush.status");
+    let expected_status: i32 = match fs::read_to_string(&status_name) {
+        Ok(s) => s.trim().parse::<i32>().unwrap_or_else(|_| {
+            panic!(
+                "failed to parse expected exit status from {}: {:?}",
+                status_name.to_str().unwrap(),
+                s
+            )
+        }),
+        Err(_) => 0,
+    };
+    assert_eq!(
+        output.status.code(),
+        Some(expected_status),
+        "Wrong exit status while running file {}. Expected {}, got {:?}.",
+        name.to_str().unwrap(),
+        expected_status,
+        output.status.code(),
+    );
+
     let output_name = name.with_extension("crush.output");
     let expected_output = fs::read_to_string(output_name.to_str().unwrap()).expect(
         format!(
