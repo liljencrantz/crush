@@ -50,9 +50,16 @@ open in `todo.md`.
       (`src/lang/data/table.rs`), which is directly exercised by `tests/zip.crush`,
       `tests/group.crush` and `tests/select.crush` — see the `test_zip` entry below for
       the full story of how that surfaced.
-- [ ] `stream/aggregation.rs` mixed Integer+Float columns fall through `sum_any`/`avg_any`'s
-      type-tracking match to an unverified catch-all — could be silent data loss rather
-      than a sensible error.
+- [x] `stream/aggregation.rs` mixed Integer+Float columns fall through `sum_any`/`avg_any`'s
+      type-tracking match to a catch-all — confirmed it's a correct error, not silent
+      data loss. Covered by `tests/aggregation_mixed_types.crush`: mixed Integer+Float,
+      Integer+Duration, and Float+Duration all correctly error for `sum`/`avg`, a
+      non-numeric value mixed in correctly errors too, and `min`/`max`/`median`/`prod`
+      all reject `$any`-typed columns unconditionally (no `$any` dispatch arm), so mixed
+      types trivially error there as well. One real bug found and fixed separately:
+      `avg_any`'s mismatch error message was copy-pasted from `sum_any` verbatim
+      ("Received multiple types in sum" even when the mismatch was in `avg`) — cosmetic
+      only, didn't affect whether it errored, fixed to say "average".
 - [ ] Float `NaN`/`±0.0`/`±inf` in comparisons/sort/dedup have no test coverage in
       `src/lang/value/mod.rs`'s `PartialEq`/`PartialOrd`, which back `sort`, `==`, and
       dict/table keys. Silently wrong order or dedup, not a crash.
