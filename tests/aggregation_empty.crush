@@ -1,7 +1,13 @@
-seq 0 0 | avg
-seq 0 0 | median
-seq 0 0 | max
-seq 0 0 | min
-seq 0 0 | prod
-seq 0 0 | sum
-
+# avg/median/max/min have no sensible default for an empty stream and are expected to
+# error; sum/prod do (0 and 1 respectively) and are expected to succeed silently (their
+# output isn't displayed anywhere, since these are bare statements). Each is wrapped in
+# try so that one erroring aggregator doesn't stop the rest from being exercised too --
+# an uncaught error now halts the whole script (see tests/pipeline_step_error_halts.crush),
+# and try without a catch clause recovers silently rather than propagating (see
+# tests/try_no_catch_recovers.crush).
+try { seq 0 0 | avg }
+try { seq 0 0 | median }
+try { seq 0 0 | max }
+try { seq 0 0 | min }
+try { seq 0 0 | prod }
+try { seq 0 0 | sum }
