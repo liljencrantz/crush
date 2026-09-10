@@ -1,13 +1,21 @@
 # avg/median/max/min have no sensible default for an empty stream and are expected to
-# error; sum/prod do (0 and 1 respectively) and are expected to succeed silently (their
-# output isn't displayed anywhere, since these are bare statements). Each is wrapped in
-# try so that one erroring aggregator doesn't stop the rest from being exercised too --
-# an uncaught error now halts the whole script (see tests/pipeline_step_error_halts.crush),
-# and try without a catch clause recovers silently rather than propagating (see
-# tests/try_no_catch_recovers.crush).
-try { seq 0 0 | avg }
-try { seq 0 0 | median }
-try { seq 0 0 | max }
-try { seq 0 0 | min }
-try { seq 0 0 | prod }
-try { seq 0 0 | sum }
+# error; sum/prod do (0 and 1 respectively) and are expected to succeed with that value.
+
+$avg_errored := $false
+try { seq 0 0 | avg } catch { |$e| $avg_errored = $true }
+assert $avg_errored "avg of an empty stream should error"
+
+$median_errored := $false
+try { seq 0 0 | median } catch { |$e| $median_errored = $true }
+assert $median_errored "median of an empty stream should error"
+
+$max_errored := $false
+try { seq 0 0 | max } catch { |$e| $max_errored = $true }
+assert $max_errored "max of an empty stream should error"
+
+$min_errored := $false
+try { seq 0 0 | min } catch { |$e| $min_errored = $true }
+assert $min_errored "min of an empty stream should error"
+
+assert (($(seq 0 0 | prod)) == 1) "prod of an empty stream should be 1"
+assert (($(seq 0 0 | sum)) == 0) "sum of an empty stream should be 0"

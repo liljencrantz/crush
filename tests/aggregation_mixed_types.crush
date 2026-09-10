@@ -4,35 +4,43 @@
 # similar. min/max/median/prod don't have an $any dispatch arm at all, so they reject
 # $any-typed columns unconditionally, whether or not the actual content happens to be
 # homogeneous.
-#
-# Every case below is expected to error and print nothing on its own line -- a
-# wrong/silent numeric answer here instead of an error would be exactly the "silent data
-# loss" failure mode this test exists to catch. Each is wrapped in try/catch with an
-# empty catch clause: any command's failure now halts the whole script (see
-# tests/pipeline_step_error_halts.crush and tests/try_no_catch_propagates.crush), so
-# without try/catch only the first case here would ever run. The final "done" line
-# confirms the script ran to completion rather than aborting partway through.
 $mixed_int_float := $(list:of 1 2.5)
 $mixed_int_duration := $(list:of 1 $(duration:of seconds=1))
 $mixed_float_duration := $(list:of 1.5 $(duration:of seconds=1))
 $non_numeric := $(list:of 1 "hello")
 
-echo "sum (int+float):"
-try { $mixed_int_float | sum } catch {}
-echo "avg (int+float):"
-try { $mixed_int_float | avg } catch {}
-echo "min (int+float):"
-try { $mixed_int_float | min } catch {}
-echo "max (int+float):"
-try { $mixed_int_float | max } catch {}
-echo "median (int+float):"
-try { $mixed_int_float | median } catch {}
-echo "prod (int+float):"
-try { $mixed_int_float | prod } catch {}
-echo "sum (int+duration):"
-try { $mixed_int_duration | sum } catch {}
-echo "sum (float+duration):"
-try { $mixed_float_duration | sum } catch {}
-echo "sum (non-numeric):"
-try { $non_numeric | sum } catch {}
-echo "done"
+$sum_errored := $false
+try { $mixed_int_float | sum } catch { |$e| $sum_errored = $true }
+assert $sum_errored "sum of mixed int+float should error"
+
+$avg_errored := $false
+try { $mixed_int_float | avg } catch { |$e| $avg_errored = $true }
+assert $avg_errored "avg of mixed int+float should error"
+
+$min_errored := $false
+try { $mixed_int_float | min } catch { |$e| $min_errored = $true }
+assert $min_errored "min of mixed int+float should error"
+
+$max_errored := $false
+try { $mixed_int_float | max } catch { |$e| $max_errored = $true }
+assert $max_errored "max of mixed int+float should error"
+
+$median_errored := $false
+try { $mixed_int_float | median } catch { |$e| $median_errored = $true }
+assert $median_errored "median of mixed int+float should error"
+
+$prod_errored := $false
+try { $mixed_int_float | prod } catch { |$e| $prod_errored = $true }
+assert $prod_errored "prod of mixed int+float should error"
+
+$sum_id_errored := $false
+try { $mixed_int_duration | sum } catch { |$e| $sum_id_errored = $true }
+assert $sum_id_errored "sum of mixed int+duration should error"
+
+$sum_fd_errored := $false
+try { $mixed_float_duration | sum } catch { |$e| $sum_fd_errored = $true }
+assert $sum_fd_errored "sum of mixed float+duration should error"
+
+$sum_nn_errored := $false
+try { $non_numeric | sum } catch { |$e| $sum_nn_errored = $true }
+assert $sum_nn_errored "sum of a non-numeric value should error"
