@@ -187,16 +187,31 @@ open in `todo.md`.
       implicitly by every `assert (... == ...)` in `tests/members.crush` and
       `tests/fs_watch.crush`'s schema check, both of which compare `members`' output
       tables directly and would fail immediately without the fix.
-- [ ] Struct field access (`$s:fieldname`) breaks when the field's value is a `File` —
-      reproduces with a plain `struct:of somefile=./x kind="y"` (no class, no parent
-      chain) followed by `$s:somefile`: no panic message, just "receiving on an empty
-      and disconnected channel", the same symptom as a thread that exited without ever
-      sending a reply. Other field types (`String`, `Type`, ...) on the same struct
-      access fine via the identical `:fieldname` syntax. Root cause not investigated.
-      Found while writing `tests/fs_watch.crush` (whose rows have a `File`-typed `path`
-      column) — worked around there by reading columns via `select`/`list:collect`
-      instead of materializing a row and indexing into it, and not fixed, since it's
-      unrelated to what that test is actually meant to cover.
+- [x] Struct field access (`$s:fieldname`) broke when the field's value was a `File` —
+      reproduced with a plain `struct:of somefile=./x kind="y"` followed by `$s:somefile`:
+      no panic message, just "receiving on an empty and disconnected channel". Root
+      cause: `eval_command_definition` (`src/lang/command_invocation.rs`, added by
+      `ea58c71` "When a path is given as the command, execute it") treated *any*
+      zero-argument expression that *resolved* to a `Value::File` as something to `cd`
+      into or execute — not only a File literal genuinely written at the head of a job
+      (`./foo`). Member access (`$s:x`) is evaluated through the same function with
+      `this` bound and zero arguments, so a `File`-valued field got silently run as a
+      subprocess (confirmed directly: pointing the field at a real executable made it
+      actually execute and its stdout come back as the "result"). Fixed by checking the
+      *unevaluated* command position, not just the resolved value: only
+      `ValueDefinition::Identifier`/`Value` (a bareword or literal path token) may
+      trigger execution now; anything else that merely evaluates to a File (`GetAttr`,
+      i.e. member access, and by extension anything else that might resolve to one)
+      falls through to plain passthrough, matching every other value type. Deliberately
+      an allow-list, not a deny-list on `GetAttr` specifically, so a future
+      `ValueDefinition` variant fails closed (never executes) by default. Covered by
+      `tests/file_value_member_access.crush` (confirmed red before the fix, green
+      after), which also guards the original feature (`./foo` still executes when
+      genuinely written at a job's head). Originally found while writing
+      `tests/fs_watch.crush` (whose rows have a `File`-typed `path` column), which still
+      reads its columns via `select`/`list:collect` rather than materializing a row and
+      indexing into it directly — that workaround wasn't reverted, since it's unrelated
+      to what that test is actually meant to cover.
 
 ## Reachable panics (should be `CrushResult` errors, aren't)
 

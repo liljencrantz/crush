@@ -149,7 +149,22 @@ pub fn eval_command_definition(
                 }
                 Value::Type(t) => eval_type(t, local_arguments, context, source),
                 Value::Struct(s) => eval_struct(s, local_arguments, context, source),
-                Value::File(s) => {
+                // Only treat a File value as something to cd into or execute when it was
+                // *written* as a bareword/path in command position (Identifier or a literal
+                // Value token) -- this is what makes `./foo` at the head of a job run `foo`.
+                // A File that merely *results* from evaluating some other expression here
+                // (e.g. `GetAttr`, member access like `$s:x`) must not trigger execution,
+                // or any struct/dict/row field holding a File would get silently run as a
+                // subprocess the moment it's read. This list is deliberately an allow-list,
+                // not a `!matches!(.., GetAttr(..))` deny-list: execution is the dangerous
+                // side, so a future ValueDefinition variant should fail closed (never
+                // execute) by default, not fail open.
+                Value::File(s)
+                    if matches!(
+                        command,
+                        ValueDefinition::Identifier(_) | ValueDefinition::Value(_, _)
+                    ) =>
+                {
                     if s.is_dir() && arguments.len() == 0 {
                         change_directory(s.to_path_buf(), command.source(), arguments.clone(), context)
                     } else {

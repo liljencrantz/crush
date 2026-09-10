@@ -1,0 +1,20 @@
+# eval_command_definition's File branch (src/lang/command_invocation.rs) used to treat any
+# zero-argument expression that *resolved* to a File value as something to cd into or
+# execute -- not just a File literal genuinely written at the head of a job (`./foo`).
+# This meant reading a struct/dict/row field that happened to hold a File value via
+# ordinary member access (e.g. `$s:somefile`) silently ran it as a subprocess instead of
+# just returning it. Fixed by only treating a File value as executable when the
+# unevaluated command position was actually written as an Identifier or a literal Value
+# token, not when it merely results from evaluating something else (like `GetAttr`,
+# i.e. member access).
+
+$s := $(struct:of somefile=./nonexistent_marker_file)
+$v := $($s:somefile)
+$t := $(typeof $v)
+assert ($t == $file) "reading a struct field holding a File value should return the File, not execute it"
+
+# A File literal genuinely at the head of a job must still execute -- this is the actual
+# feature the File branch exists for, and the fix above must not break it.
+$out := $($(/bin/echo hello) | lines:from | list:collect)
+$first_line := $($out[0])
+assert ($first_line == "hello") "a File literal genuinely at the head of a job should still execute"
