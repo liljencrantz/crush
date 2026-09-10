@@ -147,6 +147,25 @@ open in `todo.md`.
 
 ## Reachable panics (should be `CrushResult` errors, aren't)
 
+- [x] `stream/uniq.rs` — `Value::hash()` has a guard
+      (`if !self.value_type().is_hashable() { panic!(...) }`) meant to be prevented by
+      callers checking `is_hashable()` first (`sort.rs` does this via `is_comparable()`
+      before comparing a column), but `uniq.rs` had no equivalent check before calling
+      `HashSet::contains`/`insert` on a `Row` (whole-row path) or a `Value` (column
+      path), so deduplicating a stream with a `Struct`- or `List`-typed column crashed
+      the worker thread directly with "Can't hash mutable cell types!". Found while
+      adding whole-row dedup coverage for `stream/uniq.rs` above.
+      Fixed: check each value's actual runtime type before hashing, returning a graceful
+      `command_error` instead. Has to be a per-value check, not a single check against
+      the column's declared type — a `select`-computed column is always statically
+      declared as `$any` (a closure's output type is never known ahead of time), so the
+      unhashable type only exists at runtime, the same reason `sum_any`/`avg_any` check
+      per-row. Covered by `tests/error_handling/uniq_unhashable_type.crush` — a custom
+      Rust assertion on stderr, since a panicking thread and a graceful error both leave
+      stdout empty, and whether the panic message reaches stderr before the whole
+      process exits turned out to be a race in a longer script (confirmed by hand),
+      hence keeping it as its own short, isolated script rather than folding it into a
+      larger combined test.
 - [x] `InterruptibleTableInputStream::read`, `src/lang/pipe.rs:284` — a `Resume` control
       message arriving while not paused hit a bare `panic!()`. No test drove job-control
       (pause/resume/terminate) signals through a stream at all.
@@ -320,11 +339,22 @@ open in `todo.md`.
 
 - [x] `control/while.rs` — now covered by `tests/while.crush`, including its documented
       "no body -> condition is the body" alternate mode.
-- [ ] `stream/group.rs` — only single-key, non-empty grouping is exercised; multi-column
-      grouping, empty-stream grouping, and aggregator-command failure inside the spawned
-      worker thread are not.
-- [ ] `stream/uniq.rs` whole-row dedup (`field: None`, hashing an entire `Row` including
-      floats/structs) is untested — only column-based uniq is covered.
+- [x] `stream/group.rs` — only single-key, non-empty grouping was exercised. Covered by
+      `tests/group.crush`: multi-column grouping, and grouping an empty stream (no crash
+      or hang, just an empty output). Aggregator-command failure inside the spawned
+      worker thread turned up a real, notable behavior worth documenting precisely:
+      when an aggregator fails for one group's rows, that group's row is silently
+      dropped from the output entirely — `group` itself doesn't fail, and other groups
+      whose aggregation succeeds are emitted correctly and unaffected. The error is
+      printed (along with a secondary, unrelated stray-channel-error message, the same
+      class already fixed elsewhere in the codebase but not yet addressed here in
+      group.rs's own internal worker-thread channels), but nothing about stdout or exit
+      status indicates a group went missing. Captured as confirmed current behavior, not
+      fixed — whether a failed group should instead make the whole `group` command fail
+      is a real design question, not decided here.
+- [x] `stream/uniq.rs` whole-row dedup (`field: None`, hashing an entire `Row` including
+      floats) is now covered by `tests/uniq_whole_row.crush`. The "structs" half of this
+      turned up a real, reachable panic — see the `Reachable panics` section below.
 - [ ] `types/re.rs` / `one_of.rs` — no dedicated test file at all despite regex
       capture/replace and multi-pattern matching being nontrivial.
 - [ ] `(expr)` -> synthetic `val` desugaring and `[...]` list-literal desugaring
