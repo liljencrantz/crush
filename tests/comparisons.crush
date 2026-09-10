@@ -57,3 +57,43 @@ echo ("a" >= "b")
 echo ("a" <= "b")
 echo ("a" != "b")
 echo ("a" == "b")
+
+echo "Float edge cases: NaN equality (never equal, even to itself)"
+
+$nan := (0.0 / 0.0)
+echo ($nan == $nan)
+echo ($nan != $nan)
+echo ($nan == 5.0)
+echo ($nan != 5.0)
+
+echo "Float edge cases: signed zero (equal per IEEE 754, despite the differing sign bit)"
+
+echo (0.0 == (-0.0))
+echo (0.0 != (-0.0))
+echo (0.0 > (-0.0))
+echo (0.0 < (-0.0))
+echo (0.0 >= (-0.0))
+echo (0.0 <= (-0.0))
+
+echo "Float edge cases: infinity"
+
+$inf := (1.0 / 0.0)
+$ninf := (-1.0 / 0.0)
+echo ($inf == $inf)
+echo ($inf != $ninf)
+echo ($inf > 999999999.0)
+echo ($ninf < (-999999999.0))
+echo ($inf > $ninf)
+echo ($ninf < $inf)
+echo ($inf >= $inf)
+echo ($ninf <= $inf)
+
+# Ordering comparisons (unlike == and !=) go through partial_cmp, and NaN is unordered
+# with respect to everything, including itself -- comp.rs's cmp! macro treats a `None`
+# result from partial_cmp as an error rather than silently returning false. This must be
+# the last thing in this script: unlike a failure inside a multi-stage pipeline (whose
+# per-stage errors are caught and printed without aborting the job), an error while
+# evaluating a single job's arguments -- which is what a comparison operator failing
+# here is -- aborts the rest of the script, so nothing after this line would run.
+echo "Float edge cases: NaN ordering comparisons error rather than returning a boolean"
+echo ($nan > 5)

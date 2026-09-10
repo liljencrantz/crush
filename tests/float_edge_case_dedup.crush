@@ -1,0 +1,31 @@
+# Value's Hash impl (src/lang/value/mod.rs) must agree with its PartialEq impl: if
+# a == b then hash(a) must equal hash(b), or hash-based structures (uniq's HashSet, and
+# Dict's underlying map) can wrongly treat equal values as distinct. +0.0 and -0.0 are
+# `==` per IEEE 754 (see tests/comparisons.crush), but the Hash impl used to decompose
+# the float's raw bits including the sign, so the two zeros hashed differently despite
+# being equal -- this file exercises every place that distinction could leak through.
+# NaN and +-infinity, for contrast, do not need any special-casing here: NaN is never
+# `==` to anything (including itself), so the Hash/Eq contract has nothing to require of
+# it, and +-infinity's sign is a genuine, meaningful difference (inf != -inf), not a case
+# of two equal values with different bit patterns.
+
+echo "uniq, whole-value dedup: +0.0 and -0.0 collapse to a single row"
+list:of 0.0 (-0.0) | uniq | count | echo
+
+echo "uniq, whole-value dedup: distinct NaN values never collapse, even identical ones"
+$nan := (0.0 / 0.0)
+list:of $nan $nan $nan | uniq | count | echo
+
+echo "uniq, whole-value dedup: +infinity collapses with itself, -infinity stays distinct"
+list:of $(float:infinity) $(float:infinity) (0.0 - $(float:infinity)) | uniq | count | echo
+
+echo "uniq, column dedup: a row whose column value is -0.0 is dropped as a duplicate of a prior 0.0"
+$t := $(csv:from "first,0.0\nsecond,-0.0\nthird,1.0\n" id=$string val=$float)
+$t | uniq field=val | materialize | echo
+
+echo "dict: 0.0 and -0.0 are the same key"
+$d := (dict($float, $string).new())
+$d[0.0] = "first"
+$d[(-0.0)] = "second"
+$d:len | echo
+$d[0.0] | echo

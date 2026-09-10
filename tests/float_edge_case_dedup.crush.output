@@ -1,0 +1,13 @@
+uniq, whole-value dedup: +0.0 and -0.0 collapse to a single row
+1
+uniq, whole-value dedup: distinct NaN values never collapse, even identical ones
+3
+uniq, whole-value dedup: +infinity collapses with itself, -infinity stays distinct
+2
+uniq, column dedup: a row whose column value is -0.0 is dropped as a duplicate of a prior 0.0
+id    val
+first 0.0000
+third 1.0000
+dict: 0.0 and -0.0 are the same key
+1
+second

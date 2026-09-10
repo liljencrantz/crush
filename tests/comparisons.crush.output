@@ -45,3 +45,25 @@ $false
 $true
 $true
 $false
+Float edge cases: NaN equality (never equal, even to itself)
+$false
+$true
+$false
+$true
+Float edge cases: signed zero (equal per IEEE 754, despite the differing sign bit)
+$true
+$false
+$false
+$false
+$true
+$true
+Float edge cases: infinity
+$true
+$true
+$true
+$true
+$true
+$true
+$true
+$true
+Float edge cases: NaN ordering comparisons error rather than returning a boolean
