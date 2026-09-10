@@ -1,0 +1,38 @@
+# closure.rs (src/lang/command/closure.rs) is the largest file in the crate and had no
+# direct test coverage beyond tests/closure_signatures.crush's single typed-dict-param
+# example. tests/return.crush separately covers recursion and returning a value.
+
+echo "a closure captures variables from its enclosing scope"
+$x := 10
+$f := {|$y| echo ($x + $y)}
+$f 5
+
+echo "default parameter values"
+$g := {|$a: $integer=1 $b: $integer=2| echo ($a + $b)}
+$g
+$g a=10
+$g a=10 b=20
+
+echo "repeating a named argument collects it into a list-typed parameter"
+$h := {|$items: $(list $integer)| echo $items}
+$h items=1 items=2 items=3
+
+echo "@$rest collects leftover unnamed arguments into a list"
+$i := {|$first @$rest| echo $first; echo $rest}
+$i 1 2 3
+
+echo "@@$rest collects leftover named arguments"
+$j := {|$first @@$rest| echo $first; echo $rest}
+$j first=1 a=2 b=3
+
+# `return` can only be used inside a closure *command* (one with a `{|...| ...}`
+# signature); a bare `{...}` block -- like an `if`/`while` body, which is what this is
+# -- can't break early with it. Must be last: this is an error during a job's own
+# execution (dispatched via if, similar to command_invocation.rs's per-stage leniency
+# elsewhere in this session), which doesn't abort the script, but there's nothing after
+# it to lose anyway.
+echo "return inside a bare block (not a closure command) errors"
+if $true {
+    return 5
+}
+echo "done"
