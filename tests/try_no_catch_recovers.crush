@@ -1,0 +1,12 @@
+# try without a catch clause behaves as if an empty one had been given: body's failure
+# stops execution of body at the failing statement, but does not propagate past try --
+# execution continues normally with whatever comes after it. This is a deliberate
+# design choice: try is how you opt in to a section of script being non-fatal, whether
+# or not you also want custom recovery logic.
+echo "before"
+try {
+    echo "inside body, before failure"
+    convert $integer "notanumber"
+    echo "should not run: body stops at the failing statement"
+}
+echo "after: try without catch swallows the error, script continues"

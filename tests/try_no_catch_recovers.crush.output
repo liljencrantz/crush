@@ -1,0 +1,3 @@
+before
+inside body, before failure
+after: try without catch swallows the error, script continues
