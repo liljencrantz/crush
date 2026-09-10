@@ -1323,3 +1323,72 @@ impl<'a> ClosureDeserializer<'a> {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::ast::location::Location;
+    use crate::lang::ast::source::SourceType;
+
+    fn tracked(s: &str) -> TrackedString {
+        TrackedString::new(s, Location::new(0, s.len()))
+    }
+
+    fn int_literal(i: i128) -> ValueDefinition {
+        ValueDefinition::Value(
+            Value::Integer(i),
+            Source::new(SourceType::Input, Arc::from("")),
+        )
+    }
+
+    #[test]
+    fn format_default_with_no_default_is_empty() {
+        assert_eq!(format_default(&None), "");
+    }
+
+    #[test]
+    fn format_default_with_a_default_wraps_it_in_parens() {
+        assert_eq!(format_default(&Some(int_literal(5))), "(5) ");
+    }
+
+    #[test]
+    fn create_signature_string_with_no_name_uses_anonymous_placeholder() {
+        assert_eq!(
+            create_signature_string(&None, &vec![]),
+            "<anonymous command> "
+        );
+    }
+
+    #[test]
+    fn create_signature_string_with_a_name_uses_it() {
+        assert_eq!(
+            create_signature_string(&Some("foo".to_string()), &vec![]),
+            "foo "
+        );
+    }
+
+    #[test]
+    fn create_short_help_extracts_the_short_help_meta_entry() {
+        // unescape() strips the first/last char, assuming they're the quotes a real
+        // quoted-string token's raw text would include -- e.g. `"does a thing"`.
+        let signature = vec![ParameterDefinition::Meta(
+            tracked("short_help"),
+            tracked("\"does a thing\""),
+        )];
+        assert_eq!(create_short_help(&signature), "does a thing");
+    }
+
+    #[test]
+    fn create_short_help_ignores_unrelated_meta_entries() {
+        let signature = vec![ParameterDefinition::Meta(
+            tracked("long_help"),
+            tracked("more detail"),
+        )];
+        assert_eq!(create_short_help(&signature), "");
+    }
+
+    #[test]
+    fn create_short_help_with_no_signature_is_empty() {
+        assert_eq!(create_short_help(&vec![]), "");
+    }
+}
