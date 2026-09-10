@@ -15,6 +15,7 @@ use std::sync::Arc;
 mod files;
 mod mounts;
 mod usage;
+mod watch;
 
 #[signature(
     fs.cd,
@@ -170,6 +171,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Cwd::declare(fs)?;
             Stat::declare(fs)?;
             usage::Usage::declare(fs)?;
+            watch::Watch::declare(fs)?;
             Ok(())
         }),
     )?;
