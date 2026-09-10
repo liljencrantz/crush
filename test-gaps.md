@@ -360,10 +360,12 @@ open in `todo.md`.
       the replacement text), filter's per-column and error behavior, `re:new`'s
       invalid-pattern error, and `one_of` restricting a closure parameter's allowed
       types. No bugs found.
-- [ ] `(expr)` -> synthetic `val` desugaring and `[...]` list-literal desugaring
-      (`src/lang/ast/node.rs`) — this exact mechanism is what caused the real completion
-      bug fixed earlier this session. `list_literal` uses a structurally similar
-      synthetic-command trick and has no test for nested `(expr)` inside `[...]`, empty
-      `[]`, or interaction between the two.
+- [x] `(expr)` -> synthetic `val` desugaring and `[...]` list-literal desugaring
+      (`src/lang/ast/node.rs`) now covered by `tests/math_mode_expressions.crush`:
+      plain `(expr)`/`[...]`, nested `(expr)` inside `[...]`, a list literal nested
+      inside another, a list element that's a command substitution, and empty `[]`.
+      `[]` turned out to be a real, notable finding worth documenting: it doesn't
+      produce an empty list — `[...]` always desugars to `list:of`, which needs at
+      least one argument to infer the element type from, so `[]` errors.
 - [ ] `closure.rs` (1323 lines, largest file in the crate) has zero direct unit tests;
       only indirectly covered via `tests/closure_signatures.crush`.
