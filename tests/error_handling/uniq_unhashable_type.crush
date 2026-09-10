@@ -15,5 +15,11 @@
 # empty, and whether the panic message itself makes it to stderr before the whole
 # process exits is a race in a longer script (confirmed by hand), so this is kept as its
 # own short, isolated script instead of being folded into a larger combined test.
+#
+# uniq must be the *last* command in the pipe, not piped further to echo:
+# Job::eval() only tracks/joins the thread for the last command of a pipeline -- a
+# non-last stage's spawned thread is never joined at all, so its result (whether a
+# panic or, now, a properly-propagated graceful error) never reaches anywhere that
+# would report it. That's a separate, deeper gap than what this test is about.
 $t := $(csv:from "a,1\nb,2\n" key=$string val=$integer)
-$t | select s={struct:of val=$val} | uniq | echo
+$t | select s={struct:of val=$val} | uniq

@@ -27,12 +27,13 @@ $j first=1 a=2 b=3
 
 # `return` can only be used inside a closure *command* (one with a `{|...| ...}`
 # signature); a bare `{...}` block -- like an `if`/`while` body, which is what this is
-# -- can't break early with it. Must be last: this is an error during a job's own
-# execution (dispatched via if, similar to command_invocation.rs's per-stage leniency
-# elsewhere in this session), which doesn't abort the script, but there's nothing after
-# it to lose anyway.
+# -- can't break early with it. Any command's failure now halts the whole script (see
+# tests/pipeline_step_error_halts.crush and tests/try_no_catch_propagates.crush), so
+# this is wrapped in try/catch to let the script reach the final "done" marker.
 echo "return inside a bare block (not a closure command) errors"
-if $true {
-    return 5
-}
+try {
+    if $true {
+        return 5
+    }
+} catch {}
 echo "done"

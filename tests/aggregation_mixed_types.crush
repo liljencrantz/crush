@@ -5,38 +5,34 @@
 # $any-typed columns unconditionally, whether or not the actual content happens to be
 # homogeneous.
 #
-# Every case below is expected to error (to stderr) and print nothing on its own line --
-# a wrong/silent numeric answer here instead of an error would be exactly the "silent
-# data loss" failure mode this test exists to catch. The final "done" line confirms the
-# script ran to completion rather than aborting partway through.
-#
-# Deliberately not piped to `| echo`: since a pipeline step failing now halts the script
-# (see tests/pipeline_step_error_halts.crush), piping these scalar-producing aggregators
-# into echo would make echo's own downstream read fail too (unlike a *streaming*
-# command's failure, e.g. re:filter, whose downstream disconnect is already handled as
-# ordinary end-of-stream by TableStreamReader::next_row()) -- and that would abort the
-# script after the first case instead of exercising all of them.
+# Every case below is expected to error and print nothing on its own line -- a
+# wrong/silent numeric answer here instead of an error would be exactly the "silent data
+# loss" failure mode this test exists to catch. Each is wrapped in try/catch with an
+# empty catch clause: any command's failure now halts the whole script (see
+# tests/pipeline_step_error_halts.crush and tests/try_no_catch_propagates.crush), so
+# without try/catch only the first case here would ever run. The final "done" line
+# confirms the script ran to completion rather than aborting partway through.
 $mixed_int_float := $(list:of 1 2.5)
 $mixed_int_duration := $(list:of 1 $(duration:of seconds=1))
 $mixed_float_duration := $(list:of 1.5 $(duration:of seconds=1))
 $non_numeric := $(list:of 1 "hello")
 
 echo "sum (int+float):"
-$mixed_int_float | sum
+try { $mixed_int_float | sum } catch {}
 echo "avg (int+float):"
-$mixed_int_float | avg
+try { $mixed_int_float | avg } catch {}
 echo "min (int+float):"
-$mixed_int_float | min
+try { $mixed_int_float | min } catch {}
 echo "max (int+float):"
-$mixed_int_float | max
+try { $mixed_int_float | max } catch {}
 echo "median (int+float):"
-$mixed_int_float | median
+try { $mixed_int_float | median } catch {}
 echo "prod (int+float):"
-$mixed_int_float | prod
+try { $mixed_int_float | prod } catch {}
 echo "sum (int+duration):"
-$mixed_int_duration | sum
+try { $mixed_int_duration | sum } catch {}
 echo "sum (float+duration):"
-$mixed_float_duration | sum
+try { $mixed_float_duration | sum } catch {}
 echo "sum (non-numeric):"
-$non_numeric | sum
+try { $non_numeric | sum } catch {}
 echo "done"

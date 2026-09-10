@@ -32,26 +32,21 @@ $t | ^(eng):filter name | materialize | echo
 echo "filter: no match at all"
 $t | ^(zzz):filter | materialize | echo
 
-# The remaining cases are all expected to error; each prints nothing on its own line,
-# and the final "done" marker confirms the script ran to completion rather than
-# aborting partway through.
-#
-# `filter`'s failure is mid-*stream* (it already sent a valid handshake before erroring
-# on a later row), so echo's downstream read just sees ordinary end-of-stream via
-# TableStreamReader::next_row() -- no error, ordinary leniency, safe to pipe to echo.
-# re:new's failure happens before it ever sends anything, so piping it to echo would
-# make echo's own single-value read fail too and abort the script (see
-# tests/aggregation_mixed_types.crush for the same distinction) -- so this one is not
-# piped to echo.
+# The remaining cases are all expected to error; each prints nothing on its own line.
+# Any command's failure now halts the whole script (see
+# tests/pipeline_step_error_halts.crush and tests/try_no_catch_propagates.crush), so
+# each is wrapped in try/catch with an empty catch clause -- without it, only the first
+# of these would ever run. The final "done" marker confirms the script ran to
+# completion rather than aborting partway through.
 echo "filter on a non-textual column errors"
-$t | ^(eng):filter age | echo
+try { $t | ^(eng):filter age | echo } catch {}
 echo "re:new on an invalid pattern errors"
-re:new "["
+try { re:new "[" } catch {}
 
 echo "one_of restricts a closure parameter to a set of allowed types"
 $string_or_int := $(one_of $string $integer)
 $f := {|$x: $string_or_int| typeof $x | echo}
 $f "hello"
 $f 5
-$f 3.5
+try { $f 3.5 } catch {}
 echo "done"

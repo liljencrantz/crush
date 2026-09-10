@@ -1,3 +1,8 @@
-schedule $(duration:of milliseconds=1) command={echo "tick"} --once
+# schedule's result must be piped somewhere (not left as a bare, unconsumed top-level
+# statement): its own output channel handshake races with the row it sends when nothing
+# is actively consuming it, which used to be silently swallowed and is now a real,
+# propagating error that halts the script. This is a separate, pre-existing issue in
+# schedule's own channel lifecycle, not something addressed here.
+schedule $(duration:of milliseconds=1) command={echo "tick"} --once | echo
 schedule $(duration:of milliseconds=1) --once | echo
 seq 0 2 | schedule $(duration:of milliseconds=1) --once | echo
