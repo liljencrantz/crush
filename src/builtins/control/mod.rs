@@ -2,7 +2,7 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::pipe::ValueReceiver;
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
@@ -80,6 +80,31 @@ struct Continue {}
 fn r#continue(context: CommandContext) -> CrushResult<()> {
     context.scope.do_continue()?;
     context.output.empty()
+}
+
+#[signature(
+    control.assert,
+    can_block = false,
+    short = "Error out if the condition is false.",
+    output = Known(ValueType::Empty),
+    example = "assert (1 + 1 == 2)",
+    example = "assert ($x > 0) \"x must be positive\"",
+)]
+struct Assert {
+    #[description("the condition to check.")]
+    condition: bool,
+    #[description("the message to show if the condition is false.")]
+    #[default("Assertion failed")]
+    message: String,
+}
+
+fn assert(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Assert = Assert::parse(context.remove_arguments(), &context.global_state.printer())?;
+    if cfg.condition {
+        context.output.empty()
+    } else {
+        command_error(cfg.message)
+    }
 }
 
 impl BinaryReader for PipeReader {
@@ -324,6 +349,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             timer::Timer::declare(env)?;
             schedule::Schedule::declare(env)?;
             Continue::declare(env)?;
+            Assert::declare(env)?;
             Sleep::declare(env)?;
             Bg::declare(env)?;
             Fg::declare(env)?;

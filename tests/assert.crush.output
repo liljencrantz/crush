@@ -1,0 +1,9 @@
+a true condition passes silently
+reached
+a false condition errors with a default message
+caught:
+Assertion failed
+a custom message can be given
+caught:
+custom message here
+done

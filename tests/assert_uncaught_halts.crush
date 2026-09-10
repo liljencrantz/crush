@@ -1,0 +1,6 @@
+# An uncaught assert failure halts the script (like any other uncaught error -- see
+# tests/pipeline_step_error_halts.crush) and exits non-zero (see
+# tests/uncaught_error_exit_status.crush). No .crush.output file: this only checks the
+# exit status (see tests/assert_uncaught_halts.crush.status). "reached" must never print.
+assert (1 == 2)
+echo "reached"

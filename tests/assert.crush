@@ -1,0 +1,23 @@
+# assert checks a condition and errors (halting the script, unless caught by try/catch --
+# see tests/try_catch.crush) if it's false.
+
+echo "a true condition passes silently"
+assert (1 + 1 == 2)
+echo "reached"
+
+echo "a false condition errors with a default message"
+try {
+    assert (1 + 1 == 3)
+    echo "should not run"
+} catch {
+    |$error| echo "caught:" $error
+}
+
+echo "a custom message can be given"
+try {
+    assert (1 > 2) "custom message here"
+} catch {
+    |$error| echo "caught:" $error
+}
+
+echo "done"
