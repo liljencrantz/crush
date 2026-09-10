@@ -1,0 +1,29 @@
+# abs/sign preserve whether the input was an integer or a float; round always returns a
+# float (matching ceil/floor's existing convention in this file); clamp returns whichever
+# of number/min/max applies, in that argument's own type.
+
+$a := $(math:abs (0 - 5))
+assert ($a == 5)
+$b := $(math:abs (0.0 - 5.5))
+assert ($b == 5.5)
+
+$c := $(math:sign (0 - 5))
+assert ($c == (0 - 1))
+$d := $(math:sign 5)
+assert ($d == 1)
+$e := $(math:sign 0)
+assert ($e == 0)
+$f := $(math:sign (0.0 - 5.5))
+assert ($f == (0.0 - 1.0))
+
+$g := $(math:round 2.4)
+assert ($g == 2.0)
+$h := $(math:round 2.6)
+assert ($h == 3.0)
+
+$i := $(math:clamp 15 min=0 max=10)
+assert ($i == 10)
+$j := $(math:clamp (0 - 5) min=0 max=10)
+assert ($j == 0)
+$k := $(math:clamp 5 min=0 max=10)
+assert ($k == 5)

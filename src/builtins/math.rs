@@ -1,4 +1,4 @@
-use crate::lang::command::OutputType::Known;
+use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::errors::CrushResult;
 use crate::lang::signature::number::Number;
 use crate::lang::state::contexts::CommandContext;
@@ -6,6 +6,13 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use signature::signature;
+
+fn number_to_value(n: Number) -> Value {
+    match n {
+        Number::Integer(i) => Value::Integer(i),
+        Number::Float(f) => Value::Float(f),
+    }
+}
 
 macro_rules! math_fun {
     ($name:ident, $Signature: ident, $op:expr) => {
@@ -145,6 +152,74 @@ fn pow(mut context: CommandContext) -> CrushResult<()> {
         .send(Value::Float(cfg.base.as_float().powf(cfg.n.as_float())))
 }
 
+#[signature(
+    math.abs,
+    output = Unknown,
+    short = "The absolute value of number.",
+    example = "math:abs -5",
+)]
+pub struct Abs {
+    number: Number,
+}
+
+fn abs(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Abs = Abs::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(match cfg.number {
+        Number::Integer(i) => Value::Integer(i.abs()),
+        Number::Float(f) => Value::Float(f.abs()),
+    })
+}
+
+#[signature(
+    math.sign,
+    output = Unknown,
+    short = "-1, 0 or 1 depending on the sign of number.",
+    example = "math:sign -5",
+)]
+pub struct Sign {
+    number: Number,
+}
+
+fn sign(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Sign = Sign::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.output.send(match cfg.number {
+        Number::Integer(i) => Value::Integer(i.signum()),
+        Number::Float(f) => Value::Float(if f == 0.0 { 0.0 } else { f.signum() }),
+    })
+}
+
+#[signature(
+    math.round,
+    output = Known(ValueType::Float),
+    short = "Number rounded to the nearest whole number.")]
+pub struct Round {
+    number: Number,
+}
+math_fun!(round, Round, |x: f64| x.round());
+
+#[signature(
+    math.clamp,
+    output = Unknown,
+    short = "Number restricted to the inclusive range [min, max].",
+    example = "math:clamp 15 min=0 max=10",
+)]
+pub struct Clamp {
+    number: Number,
+    min: Number,
+    max: Number,
+}
+
+fn clamp(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Clamp = Clamp::parse(context.remove_arguments(), &context.global_state.printer())?;
+    if cfg.number.as_float() < cfg.min.as_float() {
+        context.output.send(number_to_value(cfg.min))
+    } else if cfg.number.as_float() > cfg.max.as_float() {
+        context.output.send(number_to_value(cfg.max))
+    } else {
+        context.output.send(number_to_value(cfg.number))
+    }
+}
+
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "math",
@@ -162,6 +237,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Ceil::declare(env)?;
             Log::declare(env)?;
             Pow::declare(env)?;
+            Abs::declare(env)?;
+            Sign::declare(env)?;
+            Round::declare(env)?;
+            Clamp::declare(env)?;
             env.declare("pi", Value::Float(std::f64::consts::PI))?;
             env.declare("tau", Value::Float(std::f64::consts::PI * 2.0))?;
             env.declare("e", Value::Float(std::f64::consts::E))?;
