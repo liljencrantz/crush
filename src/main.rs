@@ -123,12 +123,18 @@ fn run() -> CrushResult<i32> {
             execute::pup(local_scope, &buff, &global_state)?;
         }
 
-        Mode::File(f) => global_state.printer().handle_error(execute::file(
-            &local_scope,
-            f.as_path(),
-            &black_hole(),
-            &global_state,
-        )),
+        Mode::File(f) => {
+            let result = execute::file(&local_scope, f.as_path(), &black_hole(), &global_state);
+            // An error that escapes all the way to the top of the script should make
+            // the process exit non-zero, so a caller can detect failure via $?. Don't
+            // override an exit status the script already set explicitly (e.g. via
+            // crush:exit) -- though in practice execute::file only returns Err here
+            // when nothing already did that, since crush:exit itself doesn't error.
+            if result.is_err() && global_state.exit_status().is_none() {
+                global_state.set_exit_status(1);
+            }
+            global_state.printer().handle_error(result);
+        }
 
         Mode::Help => print_help(&global_state.printer()),
     }
