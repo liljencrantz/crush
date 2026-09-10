@@ -28,7 +28,6 @@
 * Implement job control for timeit
 * Make sure that passing through streams from closures doesn't block
 * Job control for cmd command
-* Write tests that use `schedule` and job control
 * Document what causes the next job to execute
 * Document job control
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?

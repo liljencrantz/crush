@@ -6,8 +6,10 @@ Each item was checked against `tests/*.crush` and existing `#[cfg(test)]` blocks
 being listed here — these are confirmed gaps, not guesses. Check items off as they get a
 test (and, where noted, a fix).
 
-Two items already overlap with existing entries in `todo.md`: "Add system tests for binary
-stream handling" and "Write tests that use `schedule` and job control".
+One item already overlapped with an existing entry in `todo.md`, "Write tests that use
+`schedule` and job control" — done via `tests/schedule.crush` and `tests/bg_fg.crush`,
+removed from `todo.md`. A second, "Add system tests for binary stream handling", is still
+open in `todo.md`.
 
 ## Silent-corruption bugs (no crash, just wrong data)
 
