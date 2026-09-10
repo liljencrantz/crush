@@ -212,6 +212,21 @@ open in `todo.md`.
       reads its columns via `select`/`list:collect` rather than materializing a row and
       indexing into it directly — that workaround wasn't reverted, since it's unrelated
       to what that test is actually meant to cover.
+- [ ] `!~` (the negated-match expression-mode operator) does not parse at all —
+      `assert (fooo !~ ^(zzz))` fails with `Unrecognized token '!' ... Expected one of
+      LogicalOperator, MemberOperator, ...`, even standalone. Confirmed pre-existing:
+      reproduces identically on the unmodified binary from before this session's
+      `like`/`match` work, which only touched `!~`'s *semantic* desugaring (the string
+      passed to `operator_method`, now `"not_like"` instead of `"not_match"`) — the
+      failure is a lexer/parser-level token recognition problem, upstream of anything
+      changed here. `=~` (the positive form) parses and works correctly. Root cause not
+      investigated.
+- [ ] A glob literal on the right-hand side of `=~` inside `(...)` expression mode does
+      not parse — `assert (foo.txt =~ *.txt)` fails with `Unrecognized token '*' ...`.
+      Also confirmed pre-existing on the unmodified binary. `docs/overview.md`'s own
+      documented example for this (`crush# foo.txt =~ *.txt`) is apparently only ever
+      exercised at the bare interactive-prompt level, never inside `(...)`/`assert`, so
+      this was never caught by existing tests. Root cause not investigated.
 
 ## Reachable panics (should be `CrushResult` errors, aren't)
 

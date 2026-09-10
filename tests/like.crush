@@ -1,0 +1,30 @@
+# The value-against-pattern command used to be named `match`, and its underlying
+# per-type methods (string/regex/glob) used to be `:match`/`:not_match`. Both were
+# renamed to `like`/`:like`/`:not_like` (and `not_match` to `not_like`) to free up the
+# name `match` for the pattern-matching control-flow construct (see tests/match.crush).
+# The `=~`/`!~` expression-mode operators desugar to `:like`/`:not_like` under the hood
+# and should be unaffected by the rename.
+
+$l1 := $(like fooo ^(ooo))
+assert $l1
+$l2 := $(like fooo ^(zzz))
+assert (!$l2)
+
+assert (fooo =~ ^(ooo))
+
+$re := ^(a+b)
+$r1 := $($re:like "aaab")
+assert $r1
+$r2 := $($re:not_like "aaab")
+assert (!$r2)
+
+$g := $(glob:new "*.txt")
+$g1 := $($g:like "foo.txt")
+assert $g1
+$g2 := $($g:not_like "foo.txt")
+assert (!$g2)
+
+$s1 := $($("abc"):like "abc")
+assert $s1
+$s2 := $($("abc"):not_like "abc")
+assert (!$s2)

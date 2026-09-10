@@ -126,14 +126,14 @@ The `and` and `or` commands are used to combine logical expressions:
 
 ### Globs and regular expressions
 
-The `match` command is used for matching a value against a pattern:
+The `like` command is used for matching a value against a pattern:
 
     # The * character is the wildcard operator in globs
-    crush# match foo.txt *.txt
+    crush# like foo.txt *.txt
     true
 
     # This is how you construct and match against a regular expression
-    crush# match abbbbbc ^(ab+c)
+    crush# like abbbbbc ^(ab+c)
     true
 
 Regexps also support replacement using the `replace` and `replace_all` methods.

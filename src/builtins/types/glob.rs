@@ -21,8 +21,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     CELL.get_or_init(|| {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         New::declare_method(&mut res);
-        Match::declare_method(&mut res);
-        NotMatch::declare_method(&mut res);
+        Like::declare_method(&mut res);
+        NotLike::declare_method(&mut res);
         Files::declare_method(&mut res);
         Filter::declare_method(&mut res);
 
@@ -106,39 +106,39 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.glob.r#match,
+    types.glob.like,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the needle matches the pattern",
 )]
-struct Match {
+struct Like {
     #[description("the text to match this glob against.")]
     needle: Text,
 }
 
-fn r#match(mut context: CommandContext) -> CrushResult<()> {
+fn like(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Like = Like::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(g.matches(&cfg.needle.as_string())))
 }
 
 #[signature(
-    types.glob.not_match,
+    types.glob.not_like,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "False if the needle matches the pattern",
 )]
-struct NotMatch {
+struct NotLike {
     #[description("the text to match this glob against.")]
     needle: Text,
 }
 
-fn not_match(mut context: CommandContext) -> CrushResult<()> {
+fn not_like(mut context: CommandContext) -> CrushResult<()> {
     let g = context.this.glob()?;
-    let cfg: NotMatch =
-        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: NotLike =
+        NotLike::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!g.matches(&cfg.needle.as_string())))

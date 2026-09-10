@@ -169,8 +169,8 @@ pub fn expr_operator(iop: impl Into<TrackedString>, l: Box<Node>, r: Box<Node>) 
         "or" => operator_function(&["global", "cond", "or"], op.location, l, r),
 
         // Note that these operators reverse the arguments because the method exists on the second argument!
-        "=~" => operator_method("match", op.location, r, l),
-        "!~" => operator_method("not_match", op.location, r, l),
+        "=~" => operator_method("like", op.location, r, l),
+        "!~" => operator_method("not_like", op.location, r, l),
 
         _ => panic!("Unknown operator {}", &op.string),
     }

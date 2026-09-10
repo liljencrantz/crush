@@ -41,8 +41,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         IsDigit::declare_method(&mut res);
         Substr::declare_method(&mut res);
         GetItem::declare_method(&mut res);
-        Match::declare_method(&mut res);
-        NotMatch::declare_method(&mut res);
+        Like::declare_method(&mut res);
+        NotLike::declare_method(&mut res);
 
         res
     })
@@ -452,39 +452,39 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.string.r#match,
+    types.string.like,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if the needle matches the pattern",
 )]
-struct Match {
+struct Like {
     #[description("the text to match this string against.")]
     needle: Text,
 }
 
-fn r#match(mut context: CommandContext) -> CrushResult<()> {
+fn like(mut context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
-    let cfg: Match = Match::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Like = Like::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(s.eq(&cfg.needle.as_string())))
 }
 
 #[signature(
-    types.string.not_match,
+    types.string.not_like,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "False if the needle matches the pattern",
 )]
-struct NotMatch {
+struct NotLike {
     #[description("the text to match this glob against.")]
     needle: Text,
 }
 
-fn not_match(mut context: CommandContext) -> CrushResult<()> {
+fn not_like(mut context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
-    let cfg: NotMatch =
-        NotMatch::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: NotLike =
+        NotLike::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!s.eq(&cfg.needle.as_string())))

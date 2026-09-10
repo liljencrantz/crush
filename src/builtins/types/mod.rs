@@ -252,29 +252,29 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.r#match,
+    types.like,
     can_block = true,
     output = Known(ValueType::Bool),
     short = "Check if the specified value matches the pattern.",
     long = "The pattern can be another string, a glob or a regular expression. If multiple patterns are specified, they are checked in order and if any of them match, then true is returned.",
     long = "",
-    long = "Under the hood, matching is performed by calling the `match` method on the value. `$string`, `$regex` and `$glob` all implement this method. You can create custom matching objects that are compatible with the match command by implementing this method yourself.",
+    long = "Under the hood, matching is performed by calling the `match` method on the value. `$string`, `$regex` and `$glob` all implement this method. You can create custom matching objects that are compatible with the like command by implementing this method yourself.",
     long = "",
     long = "In expression mode, this method can be used via the the `=~` operator.",
     example = "# Match the string \"foo\" against the regex ooo",
-    example = "match fooo ^(ooo)",
+    example = "like fooo ^(ooo)",
     example = "# Match the string \"foo\" against the regex ooo using the expression mode",
     example = "(fooo =~ ^(ooo))",
 )]
-struct Match {
+struct Like {
     #[description("the value.")]
     value: String,
     #[description("the pattern.")]
     pattern: Patterns,
 }
 
-fn r#match(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Match::parse(context.remove_arguments(), context.global_state.printer())?;
+fn like(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Like::parse(context.remove_arguments(), context.global_state.printer())?;
     context
         .output
         .send(Value::from(cfg.pattern.test(&cfg.value)))
@@ -305,7 +305,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Class::declare(env)?;
             Convert::declare(env)?;
             TypeOf::declare(env)?;
-            Match::declare(env)?;
+            Like::declare(env)?;
             Materialize::declare(env)?;
             Definition::declare(env)?;
 
