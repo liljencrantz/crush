@@ -2,10 +2,10 @@ use crate::data::table::ColumnFormat;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::pipe::TableOutputStream;
-use crate::lang::printer::Printer;
 use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value::ValueType};
 use crate::util::user_map::{create_group_map, create_user_map};
 use chrono::{DateTime, Local};
@@ -123,7 +123,7 @@ fn run_for_single_directory_or_file(
     cols: &[Column],
     q: &mut VecDeque<PathBuf>,
     output: &mut TableOutputStream,
-    printer: &Printer,
+    global_state: &GlobalState,
 ) -> CrushResult<()> {
     if path.is_dir() {
         match fs::read_dir(&path) {
@@ -143,8 +143,8 @@ fn run_for_single_directory_or_file(
                                     )?;
                                 }
                                 Err(err) => {
-                                    printer.crush_error(
-                                        data_error::<()>(format!(
+                                    global_state.warn(
+                                        &data_error::<()>(format!(
                                             "Failed to access metadata for file {}. Reason: {}",
                                             path.to_str().unwrap_or("<Illegal file name>"),
                                             err.to_string()
@@ -162,8 +162,8 @@ fn run_for_single_directory_or_file(
                             }
                         }
                         Err(err) => {
-                            printer.crush_error(
-                                data_error::<()>(format!(
+                            global_state.warn(
+                                &data_error::<()>(format!(
                                     "Failed to list a file in directory {}. Reason: {}",
                                     path.to_str().unwrap_or("<Illegal file name>"),
                                     err.to_string()
@@ -176,8 +176,8 @@ fn run_for_single_directory_or_file(
                 }
             }
             Err(err) => {
-                printer.crush_error(
-                    data_error::<()>(format!(
+                global_state.warn(
+                    &data_error::<()>(format!(
                         "Failed to list contents of directory {}. Reason: {}",
                         path.to_str().unwrap_or("<Illegal file name>"),
                         err.to_string()
@@ -194,8 +194,8 @@ fn run_for_single_directory_or_file(
                     insert_entity(&p, path, users, groups, cols, output)?;
                 }
                 Err(err) => {
-                    printer.crush_error(
-                        data_error::<()>(format!(
+                    global_state.warn(
+                        &data_error::<()>(format!(
                             "Failed to access metadata for file {}. Reason: {}",
                             path.to_str().unwrap_or("<Illegal file name>"),
                             err.to_string()
@@ -206,8 +206,8 @@ fn run_for_single_directory_or_file(
                 }
             },
             None => {
-                printer.crush_error(
-                    data_error::<()>(format!(
+                global_state.warn(
+                    &data_error::<()>(format!(
                         "Invalid file name {}.",
                         path.to_str().unwrap_or("<Illegal file name>")
                     ))
@@ -355,7 +355,7 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
                 &cols,
                 &mut q,
                 &mut output,
-                &context.global_state.printer(),
+                &context.global_state,
             )?,
         }
     }

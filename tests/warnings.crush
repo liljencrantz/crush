@@ -25,6 +25,20 @@ $timestamp := $($timestamps[0])
 $timestamp_type := $(typeof $timestamp)
 assert ($timestamp_type == $time) "the warning should carry a real timestamp"
 
-$files := $($(crush:warnings | materialize) | select file | list:collect)
-$file := $($files[0])
-assert ($file == "tests/warnings.crush") "the warning's source should point at this script"
+# Note: this variable deliberately isn't named $files -- that would shadow the global
+# `files` command for the rest of the script, since a bareword command lookup and a
+# $-prefixed variable lookup share the same scope namespace.
+$warning_source_files := $($(crush:warnings | materialize) | select file | list:collect)
+$source_file := $($warning_source_files[0])
+assert ($source_file == "tests/warnings.crush") "the warning's source should point at this script"
+
+# fs:files also reports a warning per entry it can't stat, rather than aborting -- e.g.
+# a nonexistent path given directly. The command itself still succeeds (with no output
+# for the unstatable entry), it just no longer fails silently.
+files ./this_path_does_not_exist_1234
+$warning_count2 := $($(crush:warnings | materialize) | count)
+assert ($warning_count2 == 2) "a file files can't stat should add a second warning"
+
+$last_message := $($($(crush:warnings | materialize) | select message | list:collect)[1])
+$last_message_len := $($last_message:len)
+assert ($last_message_len > 0) "the fs:files warning should have a non-empty message"
