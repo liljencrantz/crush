@@ -5,7 +5,7 @@ use crate::lang::serialization::model::source::Replacement;
 use crate::lang::serialization::model::{Element, element, source};
 use crate::lang::serialization::{DeserializationState, Serializable, SerializationState, model};
 use std::fmt::{Debug, Display, Formatter};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -79,6 +79,15 @@ impl Source {
 
     pub fn location(&self) -> Location {
         self.location
+    }
+
+    /// The file this source came from, if any -- None for input typed directly at an
+    /// interactive prompt rather than read from a file.
+    pub fn file(&self) -> Option<&Path> {
+        match &self.source_type {
+            SourceType::Input => None,
+            SourceType::File(file) => Some(file.as_path()),
+        }
     }
 
     pub fn string(&self) -> String {

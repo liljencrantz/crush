@@ -1,0 +1,30 @@
+# When a command experiences a partial failure -- e.g. one group out of many failing to
+# aggregate -- it can report a warning rather than just silently continuing. Warnings
+# are kept in a bounded log, queryable via crush:warnings, and (only in interactive
+# mode, not exercised here) also printed immediately as they happen.
+#
+# group's per-group aggregator failure is the motivating case this was built for: group
+# "b" below always fails, since its val column is non-numeric, so sum can't aggregate
+# it -- its row is dropped from group's own output (a separate, already-documented
+# behavior), but the failure is no longer invisible.
+
+$result := $(seq 0 6 | select m={($value):mod 3} | select key={if ($m == 0) {"a"} else {if ($m == 1) {"b"} else {"c"}}} val={if ($m == 1) {"bad"} else {($m)}} | group key c={sum val} | sort key | materialize)
+$row_count := $($result | count)
+assert ($row_count == 2) "group b's aggregator should have failed, dropping its row from the output"
+
+$warning_count := $($(crush:warnings | materialize) | count)
+assert ($warning_count == 1) "the failed aggregator should have recorded exactly one warning"
+
+$messages := $($(crush:warnings | materialize) | select message | list:collect)
+$message := $($messages[0])
+$message_len := $($message:len)
+assert ($message_len > 0) "the warning should have a non-empty message"
+
+$timestamps := $($(crush:warnings | materialize) | select timestamp | list:collect)
+$timestamp := $($timestamps[0])
+$timestamp_type := $(typeof $timestamp)
+assert ($timestamp_type == $time) "the warning should carry a real timestamp"
+
+$files := $($(crush:warnings | materialize) | select file | list:collect)
+$file := $($files[0])
+assert ($file == "tests/warnings.crush") "the warning's source should point at this script"

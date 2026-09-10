@@ -1,20 +1,26 @@
 use crate::interactive::rustyline_helper::RustylineHelper;
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
-use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::errors::{CrushError, CrushResult, command_error};
 use crate::lang::parser::Parser;
 use crate::lang::printer::Printer;
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, JobType};
 use crate::lang::state::id::JobId;
+use crate::lang::state::warning::Warning;
 use crate::lang::threads::ThreadStore;
 use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
 use num_format::{Grouping, SystemLocale};
 use rustyline::Editor;
 use rustyline::history::DefaultHistory;
+use std::collections::VecDeque;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
+
+/// How many warnings GlobalState keeps around for later inspection (e.g. via
+/// `crush:warnings`) before evicting the oldest.
+const MAX_WARNINGS: usize = 100;
 
 /**
 A type representing the shared crush state, such as the printer, the running jobs, the running
@@ -101,6 +107,7 @@ struct StateData {
     exit_status: Option<i32>,
     language_mode: LanguageMode,
     run_mode: RunMode,
+    warnings: VecDeque<Warning>,
 }
 
 impl GlobalState {
@@ -122,6 +129,7 @@ impl GlobalState {
                 jobs: Vec::new(),
                 language_mode: LanguageMode::Command,
                 run_mode,
+                warnings: VecDeque::new(),
             })),
             threads: ThreadStore::new(),
             printer,
@@ -210,6 +218,30 @@ impl GlobalState {
     pub fn run_mode(&self) -> RunMode {
         let data = self.data.lock().unwrap();
         data.run_mode
+    }
+
+    /// Report a non-fatal, partial failure. Stores it in the bounded warning log
+    /// (evicting the oldest entry past MAX_WARNINGS) and, in interactive mode, also
+    /// prints it immediately via the printer.
+    pub fn warn(&self, err: &CrushError) {
+        let warning = Warning::from_error(err);
+        let run_mode = {
+            let mut data = self.data.lock().unwrap();
+            data.warnings.push_back(warning.clone());
+            if data.warnings.len() > MAX_WARNINGS {
+                data.warnings.pop_front();
+            }
+            data.run_mode
+        };
+        if let RunMode::Interactive = run_mode {
+            self.printer.warning(warning);
+        }
+    }
+
+    /// The current contents of the bounded warning log, oldest first.
+    pub fn warnings(&self) -> Vec<Warning> {
+        let data = self.data.lock().unwrap();
+        data.warnings.iter().cloned().collect()
     }
 
     pub fn set_locale(&self, new_locale: SystemLocale) {

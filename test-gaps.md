@@ -428,13 +428,15 @@ open in `todo.md`.
       worker thread turned up a real, notable behavior worth documenting precisely:
       when an aggregator fails for one group's rows, that group's row is silently
       dropped from the output entirely — `group` itself doesn't fail, and other groups
-      whose aggregation succeeds are emitted correctly and unaffected. The error is
-      printed (along with a secondary, unrelated stray-channel-error message, the same
-      class already fixed elsewhere in the codebase but not yet addressed here in
-      group.rs's own internal worker-thread channels), but nothing about stdout or exit
-      status indicates a group went missing. Captured as confirmed current behavior, not
-      fixed — whether a failed group should instead make the whole `group` command fail
-      is a real design question, not decided here.
+      whose aggregation succeeds are emitted correctly and unaffected. Nothing about
+      stdout or exit status indicates a group went missing, and whether a failed group
+      should instead make the whole `group` command fail is still a real, undecided
+      design question — but the failure is no longer *invisible*: `group.rs`'s two
+      swallow points (the per-column aggregator failure and the group-collection
+      failure) now both report through the new warning log
+      (`GlobalState::warn`/`crush:warnings`, see `tests/warnings.crush`) instead of just
+      printing via `Printer::handle_error`, so a script can check afterward whether any
+      groups were dropped.
 - [x] `stream/uniq.rs` whole-row dedup (`field: None`, hashing an entire `Row` including
       floats) is now covered by `tests/uniq_whole_row.crush`. The "structs" half of this
       turned up a real, reachable panic — see the `Reachable panics` section below.

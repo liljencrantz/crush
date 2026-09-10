@@ -4,7 +4,6 @@ use crate::lang::data::table::ColumnVec;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::{TableInputStream, pipe};
-use crate::lang::printer::Printer;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::state::handles::JobType::Background;
@@ -82,7 +81,7 @@ fn aggregate(
                     let local_scope = scope.clone();
                     let local_state = global_state.clone();
                     let local_source = context.source.clone();
-                    let local_printer = context.global_state.printer().clone();
+                    let warning_state = local_state.clone();
                     let next_id = context.next_command_handle();
                     let new_context = CommandContext::new(
                         &local_scope,
@@ -98,7 +97,9 @@ fn aggregate(
                         "group:aggr",
                         &context.next_command_handle(),
                         move || {
-                            local_printer.handle_error(local_command.eval(new_context));
+                            if let Err(e) = local_command.eval(new_context) {
+                                warning_state.warn(&e);
+                            }
                             Ok(())
                         },
                     )?;
@@ -125,7 +126,6 @@ fn aggregate(
 
 fn create_worker_thread(
     cfg: &Group,
-    printer: &Printer,
     scope: &Scope,
     destination: &TableOutputStream,
     task_input: &Receiver<(Vec<Value>, TableInputStream)>,
@@ -137,7 +137,6 @@ fn create_worker_thread(
         .iter()
         .map(|(_name, cmd)| cmd.clone())
         .collect::<Vec<_>>();
-    let my_printer = printer.clone();
     let my_scope = scope.clone();
     let my_input = task_input.clone();
     let my_destination = destination.clone();
@@ -147,15 +146,17 @@ fn create_worker_thread(
         "group:collect",
         &context.next_command_handle(),
         move || {
-            let local_printer = my_printer.clone();
-            local_printer.handle_error(aggregate(
+            let warning_state = my_state.clone();
+            if let Err(e) = aggregate(
                 my_commands,
                 &my_context,
                 my_state,
                 my_scope,
                 my_destination,
                 my_input,
-            ));
+            ) {
+                warning_state.warn(&e);
+            }
             Ok(())
         },
     )?;
@@ -194,7 +195,6 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
     for _ in 0..16 {
         create_worker_thread(
             &cfg,
-            &context.global_state.printer(),
             &context.scope,
             &output,
             &task_input,

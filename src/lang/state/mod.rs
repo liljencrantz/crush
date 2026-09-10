@@ -5,3 +5,4 @@ pub mod handles;
 pub mod id;
 pub mod scope;
 pub mod this;
+pub mod warning;

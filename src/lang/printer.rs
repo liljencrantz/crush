@@ -5,6 +5,7 @@
 use crate::lang::errors::{CrushError, CrushErrorType, CrushResult};
 use crate::lang::printer::PrinterMessage::*;
 use crate::lang::state::scope::Scope;
+use crate::lang::state::warning::Warning;
 use crate::util::highlight::highlight_colors;
 use crate::util::md::render;
 use crossbeam::channel::Receiver;
@@ -16,9 +17,13 @@ use std::thread;
 use std::thread::JoinHandle;
 use termion::terminal_size;
 
+const WARNING_YELLOW: &str = "\x1b[33m";
+const COLOR_RESET: &str = "\x1b[0m";
+
 pub enum PrinterMessage {
     Ping,
     CrushError(CrushError),
+    Warning(Warning),
     Error(String),
     Line(String),
 }
@@ -90,6 +95,25 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
                             if let Some(trace) = err.trace() {
                                 eprintln!("Stack trace:");
                                 eprintln!("{}", trace);
+                            }
+                        }
+                        Warning(w) => {
+                            let prefix = match w.command() {
+                                Some(cmd) => format!("warning ({})", cmd),
+                                None => "warning".to_string(),
+                            };
+                            eprintln!(
+                                "{}{}{}: {}",
+                                WARNING_YELLOW,
+                                prefix,
+                                COLOR_RESET,
+                                w.message()
+                            );
+                            if let Some(ctx) = w.source() {
+                                match ctx.show() {
+                                    Ok(ctx) => eprintln!("{}", ctx),
+                                    Err(_) => {}
+                                }
                             }
                         }
                         Line(line) => println!("{}", line),
@@ -177,6 +201,13 @@ impl Printer {
                 _ = self.sender.send(PrinterMessage::CrushError(err));
             }
         }
+    }
+
+    /**
+       Print the passed in warning.
+    */
+    pub fn warning(&self, w: Warning) {
+        let _ = self.sender.send(PrinterMessage::Warning(w));
     }
 
     /**

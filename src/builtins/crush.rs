@@ -439,6 +439,49 @@ fn history(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+static WARNINGS_OUTPUT_TYPE: [ColumnType; 5] = [
+    ColumnType::new("timestamp", ValueType::Time),
+    ColumnType::new("command", ValueType::String),
+    ColumnType::new("message", ValueType::String),
+    ColumnType::new("file", ValueType::String),
+    ColumnType::new("location", ValueType::String),
+];
+
+#[signature(
+    crush.warnings,
+    can_block = false,
+    short = "List recent warnings reported by commands that experienced a partial failure.",
+    output = Known(ValueType::table_input_stream(&WARNINGS_OUTPUT_TYPE)),
+    long = "Commands that continue past a partial failure (e.g. one bad row out of a",
+    long = "stream) report it as a warning rather than aborting. A bounded number of the",
+    long = "most recent warnings are kept here; in interactive mode, they are also",
+    long = "printed as soon as they happen.",
+)]
+struct Warnings {}
+
+fn warnings(context: CommandContext) -> CrushResult<()> {
+    let output = context.initialize_output(&WARNINGS_OUTPUT_TYPE)?;
+    for w in context.global_state.warnings() {
+        let (file, location) = match w.source() {
+            Some(s) => (
+                s.file()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                format!("{}-{}", s.location().start, s.location().end),
+            ),
+            None => (String::new(), String::new()),
+        };
+        output.send(Row::new(vec![
+            Value::Time(w.timestamp()),
+            Value::from(w.command().clone().unwrap_or_default()),
+            Value::from(w.message()),
+            Value::from(file),
+            Value::from(location),
+        ]))?;
+    }
+    Ok(())
+}
+
 mod locale {
     use super::*;
     use crate::lang::completion::Completion;
@@ -626,6 +669,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
             HistoryCommand::declare(crush)?;
+            Warnings::declare(crush)?;
 
             crush.create_namespace(
                 "locale",
