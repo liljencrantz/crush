@@ -171,6 +171,33 @@ open in `todo.md`.
       already-fixed "last command errors" stray-channel-error bug. Not investigated
       further — noted here in case it recurs.
 
+- [x] `Value::param_partial_cmp` (`src/lang/value/mod.rs`) had no match arm for
+      `(Value::Type(val1), Value::Type(val2))`, so it fell through to the catch-all
+      `_ => None` — the same "incomparable" result `f64::partial_cmp` gives for NaN.
+      `Value::Table`'s `PartialEq` (and `Struct`'s, and `List`'s in `Regular` mode) is
+      implemented via `partial_cmp(...) == Some(Equal)`, not a direct recursive `eq()`,
+      so this meant any `Table`/`Struct`/`List` containing a `Type`-valued cell never
+      compared equal to anything — including itself. Invisible until now because nothing
+      previously produced `Type` values as *stream/table data* rather than a bare
+      top-level value (where `Value`'s own `PartialEq::eq()` — a separate, direct match
+      that does handle `Type` — is what actually gets used). Surfaced immediately by the
+      new `members` builtin, whose entire output is `type`-valued cells: `$m == $m` was
+      `$false` for its own materialized output. Fixed by adding
+      `(Value::Type(val1), Value::Type(val2)) => Some(val1.cmp(val2))`. Covered
+      implicitly by every `assert (... == ...)` in `tests/members.crush` and
+      `tests/fs_watch.crush`'s schema check, both of which compare `members`' output
+      tables directly and would fail immediately without the fix.
+- [ ] Struct field access (`$s:fieldname`) breaks when the field's value is a `File` —
+      reproduces with a plain `struct:of somefile=./x kind="y"` (no class, no parent
+      chain) followed by `$s:somefile`: no panic message, just "receiving on an empty
+      and disconnected channel", the same symptom as a thread that exited without ever
+      sending a reply. Other field types (`String`, `Type`, ...) on the same struct
+      access fine via the identical `:fieldname` syntax. Root cause not investigated.
+      Found while writing `tests/fs_watch.crush` (whose rows have a `File`-typed `path`
+      column) — worked around there by reading columns via `select`/`list:collect`
+      instead of materializing a row and indexing into it, and not fixed, since it's
+      unrelated to what that test is actually meant to cover.
+
 ## Reachable panics (should be `CrushResult` errors, aren't)
 
 - [x] `stream/uniq.rs` — `Value::hash()` has a guard

@@ -679,6 +679,7 @@ impl Value {
             (Value::Dict(val1), Value::Dict(val2)) => val1.partial_cmp(val2),
             (Value::Bool(val1), Value::Bool(val2)) => Some(val1.cmp(val2)),
             (Value::Binary(val1), Value::Binary(val2)) => Some(val1.cmp(val2)),
+            (Value::Type(val1), Value::Type(val2)) => Some(val1.cmp(val2)),
             _ => None,
         }
     }
