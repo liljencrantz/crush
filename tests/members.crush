@@ -1,0 +1,21 @@
+# members reports the column shape of anything readable as a stream (table, list, dict,
+# struct, ...) as name/type rows -- without consuming any of the underlying rows. The
+# `type` column holds an actual $type value, not its string representation.
+
+$d := $($(dict $string $duration):new)
+$d["key"] = $(duration:of seconds=1)
+$m := $($d | members | materialize)
+$expected := $($(csv:from "key,value\n" key=$string value=$duration) | members | materialize)
+assert ($m == $expected) "members on a dict should report key/value columns with their real types"
+
+$row0 := $($m[0])
+$first_type := $($row0:type)
+$type_of_first_type := $(typeof $first_type)
+assert ($type_of_first_type == $type) "the type column should hold actual $type values, not strings"
+assert ($first_type == $string)
+
+# works on a list too, not just tables/dicts
+$l := $(list:of 1 2 3)
+$lm := $($l | members | materialize)
+$expected_lm := $($(csv:from "value\n" value=$integer) | members | materialize)
+assert ($lm == $expected_lm) "members on a list should report a single value:integer column"

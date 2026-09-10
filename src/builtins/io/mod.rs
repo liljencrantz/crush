@@ -1,6 +1,7 @@
 use crate::data::table::ColumnFormat;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::list::List;
+use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::interactive::config_dir;
 use crate::lang::pretty::PrettyPrinter;
@@ -135,6 +136,36 @@ fn member(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+static MEMBERS_OUTPUT_TYPE: [ColumnType; 2] = [
+    ColumnType::new("name", ValueType::String),
+    ColumnType::new("type", ValueType::Type),
+];
+
+#[signature(
+    io.members,
+    can_block = true,
+    output = Known(ValueType::table_input_stream(&MEMBERS_OUTPUT_TYPE)),
+    short = "List the columns of any streamable input value as name/type pairs.",
+    long = "Works on anything that can be read as a stream of rows -- a table, a list, a",
+    long = "dict, a struct, a scope -- and reports that stream's shape without consuming",
+    long = "any of its actual rows.",
+    example = "$my_dict | members",
+)]
+struct Members {}
+
+fn members(mut context: CommandContext) -> CrushResult<()> {
+    Members::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let input = context.input_stream()?;
+    let output = context.initialize_output(&MEMBERS_OUTPUT_TYPE)?;
+    for ct in input.types() {
+        output.send(Row::new(vec![
+            Value::from(ct.name().to_string()),
+            Value::Type(ct.cell_type.clone()),
+        ]))?;
+    }
+    Ok(())
+}
+
 fn history_file(name: &str) -> CrushResult<PathBuf> {
     Ok(config_dir()?.join(&format!("{}_history", name)))
 }
@@ -203,6 +234,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             http::Http::declare(env)?;
             Echo::declare(env)?;
             Member::declare(env)?;
+            Members::declare(env)?;
             Val::declare(env)?;
             Dir::declare(env)?;
             Readline::declare(env)?;
