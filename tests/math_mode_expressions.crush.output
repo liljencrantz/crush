@@ -1,0 +1,13 @@
+(expr) desugaring: a plain arithmetic expression
+7
+[...] desugaring: a plain list literal
+[1, 2, 3]
+nested (expr) inside [...]: each element is its own expression
+[2, 6, 10]
+list $integer
+interaction between the two: a list literal nested inside another
+[[1, 2], [3, 4]]
+list $(list $integer)
+a list literal element can be a full command substitution, not just a literal
+[3, 99]
+empty [] errors rather than producing an empty list

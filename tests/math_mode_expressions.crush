@@ -1,0 +1,43 @@
+# `(expr)` and `[...]` are both syntactic sugar over ordinary command invocations
+# (src/lang/ast/node.rs): `(expr)` desugars to `global:io:val expr`, and `[a; b; c]`
+# desugars to `global:types:list:of a b c`. This is the exact mechanism that caused the
+# real completion bug fixed earlier this session, and had no test coverage of its own.
+#
+# List literal syntax notes: elements are semicolon- (or newline-) separated, not
+# comma-separated, since `[...]`'s contents are a job list, not an argument list; a bare
+# `[...]` immediately after another expression parses as indexing (`GetItem`) rather
+# than a list literal, so a standalone list literal needs to be wrapped in `(...)`, e.g.
+# `([1; 2; 3])`, not bare `[1; 2; 3]`; and because `[...]`'s contents are lexed in
+# whatever mode already surrounds it (expression mode, here, since it's wrapped in
+# `(...)`), a plain multi-word command as an element (e.g. `seq 0 3 | count`) needs an
+# explicit `$(...)` command substitution to switch back to command mode, the same as
+# anywhere else in expression mode.
+
+echo "(expr) desugaring: a plain arithmetic expression"
+echo (1 + 2 * 3)
+
+echo "[...] desugaring: a plain list literal"
+echo ([1; 2; 3])
+
+echo "nested (expr) inside [...]: each element is its own expression"
+$computed := ([(1+1); (2*3); 10])
+echo $computed
+typeof $computed | echo
+
+echo "interaction between the two: a list literal nested inside another"
+$nested := ([([1; 2]); ([3; 4])])
+echo $nested
+typeof $nested | echo
+
+echo "a list literal element can be a full command substitution, not just a literal"
+$withcmd := ([$(seq 0 3 | count); 99])
+echo $withcmd
+
+# `[]` is not simply an empty list -- it desugars to `list:of` with zero arguments, and
+# list:of needs at least one argument to infer the list's element type from, so it
+# errors. This must be the last thing in the script: like the NaN-ordering-comparison
+# case in tests/comparisons.crush, this is a single job's argument-evaluation error
+# (evaluating `[]` as the value to assign), which aborts the rest of the script, unlike
+# an error inside a multi-stage pipeline's own execution.
+echo "empty [] errors rather than producing an empty list"
+$empty := ([])
