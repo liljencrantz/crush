@@ -120,7 +120,9 @@ fn source(
             global_state.clone(),
             job_type,
         ))?;
-        handle.map(|id| global_state.threads().join_one(id, &global_state.printer()));
+        if let Some(id) = handle {
+            global_state.threads().join_one(id)?;
+        }
 
         if global_env.is_stopped() {
             break;

@@ -45,8 +45,8 @@ pub fn time_run(it: &Command, context: &CommandContext) -> CrushResult<Duration>
     it.eval(context.clone().with_args(vec![], None).with_output(sender))?;
     context
         .global_state
-        .threads()
-        .join_one(c, context.global_state.printer());
+        .printer()
+        .handle_error(context.global_state.threads().join_one(c));
     let end_time = Local::now();
     Ok(end_time - start_time)
 }

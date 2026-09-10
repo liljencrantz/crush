@@ -119,21 +119,15 @@ impl CommandInvocation {
             Ok(Some(context.global_state.threads().spawn(
                 &local_command.to_string(),
                 &context.handle.current_command_handle(),
-                move || {
-                    match eval_command_definition(
-                        &local_command,
-                        &local_arguments,
-                        local_context.clone(),
-                        &local_source,
-                    ) {
-                        Ok(Some(id)) => local_context
-                            .global_state
-                            .threads()
-                            .join_one(id, &local_context.global_state.printer()),
-                        Err(e) => local_context.global_state.printer().crush_error(e),
-                        _ => {}
-                    }
-                    Ok(())
+                move || match eval_command_definition(
+                    &local_command,
+                    &local_arguments,
+                    local_context.clone(),
+                    &local_source,
+                ) {
+                    Ok(Some(id)) => local_context.global_state.threads().join_one(id),
+                    Ok(None) => Ok(()),
+                    Err(e) => Err(e),
                 },
             )?))
         }
@@ -270,11 +264,7 @@ fn eval_command(
         Ok(Some(context.global_state.threads().spawn(
             &name,
             &command_context.command_handle().clone(),
-            move || {
-                let printer = command_context.global_state.printer().clone();
-                printer.handle_error(command.eval(command_context));
-                Ok(())
-            },
+            move || command.eval(command_context),
         )?))
     }
 }

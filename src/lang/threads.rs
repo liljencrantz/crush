@@ -130,14 +130,16 @@ impl ThreadStore {
         }
         drop(data);
         for id in kill_list {
-            self.join_one(id, printer);
+            printer.handle_error(self.join_one(id));
         }
     }
 
     /**
-    Block calling thread until specified thread has exited
+    Block calling thread until specified thread has exited. Returns the command's own
+    result, so that a failing command actually propagates to the caller instead of only
+    ever being printed and discarded here.
     */
-    pub fn join_one(&self, id: ThreadId, printer: &Printer) {
+    pub fn join_one(&self, id: ThreadId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
         let mut thread_idx = None;
         for idx in 0..data.threads.len() {
@@ -151,7 +153,7 @@ impl ThreadStore {
             drop(data);
 
             match h.handle.join() {
-                Ok(Either::Left(_)) => {}
+                Ok(Either::Left(res)) => return res,
                 Ok(Either::Right(m)) => match m {
                     StreamControlMessage::Terminate => {}
                     StreamControlMessage::Pause => {
@@ -160,9 +162,10 @@ impl ThreadStore {
                     }
                     StreamControlMessage::Resume => {}
                 },
-                Err(err) => printer.crush_error(err),
+                Err(err) => return Err(err),
             }
         }
+        Ok(())
     }
 
     pub fn current_threads(&self) -> CrushResult<Vec<ThreadDescription>> {

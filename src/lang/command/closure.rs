@@ -647,9 +647,9 @@ impl Closure {
                     parent_job_id,
                 ))?;
 
-                let local_printer = context.global_state.printer().clone();
-                let local_threads = context.global_state.threads().clone();
-                job.map(|id| local_threads.join_one(id, &local_printer));
+                if let Some(id) = job {
+                    context.global_state.threads().join_one(id)?;
+                }
 
                 if env.is_stopped() {
                     let return_value = match env.take_return_value() {
