@@ -355,8 +355,11 @@ open in `todo.md`.
 - [x] `stream/uniq.rs` whole-row dedup (`field: None`, hashing an entire `Row` including
       floats) is now covered by `tests/uniq_whole_row.crush`. The "structs" half of this
       turned up a real, reachable panic — see the `Reachable panics` section below.
-- [ ] `types/re.rs` / `one_of.rs` — no dedicated test file at all despite regex
-      capture/replace and multi-pattern matching being nontrivial.
+- [x] `types/re.rs` / `one_of.rs` — now covered by `tests/regex.crush`:
+      match/not_match, replace vs replace_all (including capture group references in
+      the replacement text), filter's per-column and error behavior, `re:new`'s
+      invalid-pattern error, and `one_of` restricting a closure parameter's allowed
+      types. No bugs found.
 - [ ] `(expr)` -> synthetic `val` desugaring and `[...]` list-literal desugaring
       (`src/lang/ast/node.rs`) — this exact mechanism is what caused the real completion
       bug fixed earlier this session. `list_literal` uses a structurally similar
