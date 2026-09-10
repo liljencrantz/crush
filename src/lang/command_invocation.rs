@@ -255,10 +255,7 @@ fn eval_command(
     {
         let new_context =
             CommandInvocation::command_context(source, local_arguments, this, context.clone())?;
-        context
-            .global_state
-            .printer()
-            .handle_error(command.eval(new_context));
+        command.eval(new_context)?;
         Ok(None)
     } else {
         let name = command.name().to_string();
