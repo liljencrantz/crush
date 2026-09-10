@@ -35,9 +35,15 @@ open in `todo.md`.
       formula already used on the deserialize side. Covered by
       `tests/duration_via_pup.crush` (500ms through `users:me:do`, confirmed red before
       the fix, green after).
-- [ ] `stream/join.rs` — right-side rows with no left match are silently dropped, and
-      duplicate left keys fanning out, are both still unverified — nothing confirms
-      `join` behaves like a real inner join with correct multiplicity.
+- [x] `stream/join.rs` — right-side rows with no left match were silently dropped, and
+      duplicate left keys fanning out, were both unverified — nothing confirmed `join`
+      behaved like a real inner join with correct multiplicity. Covered by the second
+      case added to `tests/join.crush`: a key duplicated on the left, duplicated on the
+      right, present on only the left, present on only the right, and a plain 1:1 key as
+      a baseline. No bug found — `do_join` already buckets the left stream by key into
+      `Vec<Row>` (preserving left duplicates) and streams the right side row by row,
+      fanning out over all matching left rows per right row, exactly matching real
+      inner-join semantics. This was purely a coverage gap.
       Column-collision renaming (originally flagged here as unexercised, since
       `tests/join.crush`'s only shared column is the join key itself) is no longer a
       gap: `get_output_type` now calls the shared `ColumnVec::deduplicate_names()`
