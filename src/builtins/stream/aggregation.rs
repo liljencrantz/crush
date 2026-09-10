@@ -160,7 +160,7 @@ fn avg_any(mut s: Stream, column: usize) -> CrushResult<Value> {
         (false, true, false) => Ok(Value::Float(sum_float / count as f64)),
         (false, false, true) => Ok(Value::Duration(sum_duration / count as i32)),
         (false, false, false) => error("Can't calculate average of empty set"),
-        _ => error("Received multiple types in sum"),
+        _ => error("Received multiple types in average"),
     }
 }
 
