@@ -1,0 +1,52 @@
+# Regex literals are written `^(pattern)` -- the outer parens are the language's own
+# delimiter, not part of the pattern, so a pattern that itself contains top-level parens
+# (e.g. multiple capture groups) needs an extra wrapping pair, since the lexer just
+# counts balanced parens to find the end of the literal: `^((a)@(b))` for pattern
+# `(a)@(b)`, not `^((a)@(b)`.
+
+echo "match / not_match"
+$re := ^(a+b)
+$re:match "aaab" | echo
+$re:not_match "aaab" | echo
+$re:match "xyz" | echo
+
+echo "replace (first match only) vs replace_all"
+$digits := ^([0-9]+)
+$digits:replace "abc123def456" "X" | echo
+$digits:replace_all "abc123def456" "X" | echo
+
+echo "replace supports capture group references in the replacement"
+$email := ^(([a-z]+)@([a-z]+))
+$email:replace "user@host" "$2!$1" | echo
+
+echo "re:new compiles a string into the same kind of value as a ^(...) literal"
+$compiled := $(re:new "[0-9]+")
+$compiled:match "abc123" | echo
+typeof $compiled | echo
+
+echo "filter: default searches all textual columns"
+$t := $(csv:from "alice,eng,30\nbob,sales,25\ncarol,engineering,40\n" name=$string dept=$string age=$integer)
+$t | ^(eng):filter | materialize | echo
+echo "filter: restricted to a single named column"
+$t | ^(eng):filter name | materialize | echo
+echo "filter: no match at all"
+$t | ^(zzz):filter | materialize | echo
+
+# The remaining cases are all expected to error; each prints nothing on its own line
+# (errors during a command's own execution -- whether in a pipe or, as with re:new and
+# the closure call below, standalone -- are caught and printed by
+# command_invocation.rs's eval_command without aborting the job, the same leniency
+# documented in tests/aggregation_mixed_types.crush), and the final "done" marker
+# confirms the script ran to completion.
+echo "filter on a non-textual column errors"
+$t | ^(eng):filter age | echo
+echo "re:new on an invalid pattern errors"
+re:new "[" | echo
+
+echo "one_of restricts a closure parameter to a set of allowed types"
+$string_or_int := $(one_of $string $integer)
+$f := {|$x: $string_or_int| typeof $x | echo}
+$f "hello"
+$f 5
+$f 3.5
+echo "done"
