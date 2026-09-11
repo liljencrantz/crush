@@ -114,32 +114,17 @@ fn test_run_system_test_catches_extra_trailing_lines() {
 }
 
 
-// See tests/error_handling/last_command_error.crush for the full explanation. In short:
-// when the last command in a pipeline errors before ever sending output, job.rs still
-// unconditionally tries to receive from its (by-then sender-less) output channel,
-// producing a second, unrelated "receiving on an empty and disconnected channel" error
-// that leaks an implementation detail and drowns out the real one. This only checks
-// stderr content, not the exit status -- whether a failing last command should also
-// change the process's exit code is a separate, deliberately unresolved question.
+// See tests/error_handling/last_command_error.crush for the full explanation and the
+// fix. Now a pure crush try/catch that asserts on the caught message directly, so this
+// is just the shared harness (exit code 0, the default) rather than a bespoke stderr
+// assertion. Previously needed a custom Rust check because the real error was printed
+// via a fire-and-forget path (command_invocation.rs's old handle_error()) rather than
+// propagated as a catchable CrushResult::Err; that code path has since changed enough
+// that catching it directly turned out to work once a barrier statement (see the
+// script's own comment) sidesteps an unrelated race.
 #[test]
 fn test_last_command_error_does_not_leak_a_stray_channel_error() {
-    let output = Command::new("./target/debug/crush")
-        .args(&["tests/error_handling/last_command_error.crush"])
-        .output()
-        .expect("failed to execute process");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !stderr.is_empty(),
-        "expected the real conversion error to still be printed, got empty stderr"
-    );
-    assert!(
-        !stderr.contains("disconnected channel"),
-        "the real error (about the failed conversion) should be the only error printed; \
-         a second, unrelated channel-disconnection error should not leak through.\n\
-         Stderr was:\n{}",
-        stderr,
-    );
+    run_system_test(Path::new("tests/error_handling/last_command_error.crush"));
 }
 
 // See tests/error_handling/schedule_exhausted_input.crush for the full explanation. In
@@ -147,6 +132,14 @@ fn test_last_command_error_does_not_leak_a_stray_channel_error() {
 // disconnected channel, which is the *only* thing a disconnect on this pipe can mean) as
 // a hard error instead of treating it like every other stream consumer in the codebase
 // does. Once fixed, exhausting the input should be silent -- no error at all.
+//
+// Deliberately NOT a pure crush test: the error happens on schedule's own spawned
+// thread, which -- since schedule is a non-last pipeline stage here (piped to `echo`) --
+// is never joined by Job::eval (see test-gaps.md's `Job::eval()` thread-join-gap entry),
+// so it never becomes a catchable CrushResult::Err. Confirmed by hand: wrapping this
+// exact script in try/catch never entered the catch block, whether the bug was present
+// or fixed -- try/catch has no signal either way here, only the raw stderr text does,
+// and crush has no builtin that exposes a script's own stderr as inspectable data.
 #[test]
 fn test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input() {
     let output = Command::new("./target/debug/crush")
@@ -162,31 +155,17 @@ fn test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input() {
     );
 }
 
-// See tests/error_handling/uniq_unhashable_type.crush for the full explanation. In
-// short: deduplicating on an unhashable type (Struct) used to hit a panic guard inside
-// Value::hash() directly, because uniq.rs never checked is_hashable() first the way
-// sort.rs does for is_comparable(). Fixed to check per-value at runtime (a select
-// closure's output column is always statically $any, so the unhashable type only shows
-// up at runtime) and return a graceful error instead. A panicking worker thread and a
-// graceful CrushResult::Err both leave stdout empty, so this can only be distinguished
-// via stderr, not a plain stdout diff.
+// See tests/error_handling/uniq_unhashable_type.crush for the full explanation and the
+// fix. Now a pure crush try/catch, for the same reason as last_command_error.crush
+// above: uniq is the pipeline's *last* stage here, so its result -- panic or graceful
+// error -- is actually joined and surfaces as a catchable CrushResult::Err. Confirmed a
+// real, still-uncorrected panic elsewhere in the codebase (integer division by zero,
+// see test-gaps.md) is *not* silently swallowed by try/catch -- it still prints the raw
+// panic text and a leaked channel error, so a regression reintroducing uniq's panic
+// would still turn this test red, just via a different assertion failing.
 #[test]
 fn test_uniq_does_not_panic_on_unhashable_type() {
-    let output = Command::new("./target/debug/crush")
-        .args(&["tests/error_handling/uniq_unhashable_type.crush"])
-        .output()
-        .expect("failed to execute process");
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        !stderr.contains("panicked"),
-        "expected a graceful error, not a panic, got stderr:\n{}",
-        stderr,
-    );
-    assert!(
-        !stderr.is_empty(),
-        "expected a graceful error to still be printed, got empty stderr"
-    );
+    run_system_test(Path::new("tests/error_handling/uniq_unhashable_type.crush"));
 }
 
 #[test]

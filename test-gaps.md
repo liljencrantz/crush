@@ -437,6 +437,50 @@ open in `todo.md`.
       existing behavior. Covered by `tests/zip.crush` (updated), `tests/group.crush`
       (new collision case added) and `tests/select.crush` (new).
 
+- [x] Audited every custom-Rust-assertion test in `tests/system.rs` (as opposed to a
+      plain `.crush`/`.crush.output` golden pair) to see which could become pure crush
+      tests, per standing preference. Two of five converted:
+      `test_last_command_error_does_not_leak_a_stray_channel_error` and
+      `test_uniq_does_not_panic_on_unhashable_type` now wrap their repro in `try`/`catch`
+      and assert on the caught message directly inside the `.crush` file (see
+      `tests/error_handling/last_command_error.crush` and
+      `.../uniq_unhashable_type.crush`); their Rust side is now just a one-line
+      `run_system_test(...)` call, identical in spirit to what `test_finder!()` generates
+      automatically for top-level fixtures. Both were previously custom Rust tests
+      because the code path they exercised, at the time they were written, printed the
+      real error via a fire-and-forget path (`command_invocation.rs`'s old
+      `handle_error()`) rather than a catchable `CrushResult::Err` — that comment is now
+      stale, since `eval_command`'s non-blocking path no longer calls `handle_error()` at
+      all (a `?` propagates directly). Confirmed empirically, not just from reading the
+      diff: a genuine, still-uncorrected panic elsewhere in the codebase (integer
+      division by zero, see the Reachable-panics section above) is *not* silently
+      swallowed by `try`/`catch` — it still surfaces (as raw panic text plus a leaked
+      channel error), so a regression reintroducing either bug would still turn these
+      tests red.
+      `test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input` was **not**
+      convertible: its error happens on `schedule`'s own spawned thread, and since
+      `schedule` is a non-last pipeline stage in that repro (piped to `echo`), the
+      thread is never joined by `Job::eval` (the existing thread-join-gap entry above),
+      so it never becomes a catchable `Err` either way — confirmed by hand, wrapping the
+      exact script in `try`/`catch` never entered the `catch` block regardless of
+      whether the underlying bug was present. The only observable difference is raw
+      stderr text, and crush has no builtin exposing a script's own stderr as
+      inspectable data (checked: nothing outside `cmd`/`users.rs` even reads stderr, and
+      both of those only relay it via fire-and-forget `printer().error()`, not as a
+      value). `test_run_system_test_catches_missing_trailing_lines` and
+      `test_run_system_test_catches_extra_trailing_lines` were also left as-is for a
+      different reason: they test `run_system_test`'s own comparison logic (via
+      `std::panic::catch_unwind`), not crush language behavior — there's no crush-level
+      equivalent to "assert this Rust function panics."
+      **New evidence for the existing `Job::eval()` thread-join-gap entry, a fifth repro
+      shape:** touching a value assigned inside a `catch` block — a method call or
+      string concatenation — in the very next statement after the `try`/`catch` reliably
+      raced and surfaced the same leaked "disconnected channel" error, independent of
+      the tests' own subject matter. A single barrier statement (e.g. a plain `echo`)
+      between the `try`/`catch` and the first use of the caught value reliably avoided
+      it in every case tried. Not investigated further or fixed; both converted `.crush`
+      files include one deliberately, with a comment explaining why.
+
 ## Untested control-flow / stream ops (lower severity, still real gaps)
 
 - [x] `control/while.rs` — now covered by `tests/while.crush`, including its documented

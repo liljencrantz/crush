@@ -3,23 +3,38 @@
 # (`if !self.value_type().is_hashable() { panic!(...) }`) meant to be prevented by
 # callers checking is_hashable() first -- sort.rs does this via is_comparable(), but
 # uniq.rs had no such check before calling HashSet::contains/insert on a Row, so a
-# Struct-typed column reached the panic directly.
+# Struct-typed column reached the panic directly. Fixed by checking each actual value's
+# runtime type before hashing and returning a graceful command_error instead.
 #
 # A `select`-computed column is always statically declared as $any (a closure's output
 # type is never known ahead of time -- see Closure::output_type), so the unhashable
 # value only exists at runtime; this can't be caught by checking the column's declared
 # type the way sort.rs does, only by checking each actual value as it's processed.
 #
-# This is a custom Rust assertion (see tests/system.rs) rather than a plain stdout diff:
-# a panicking worker thread and a graceful CrushResult::Err both leave this line's stdout
-# empty, and whether the panic message itself makes it to stderr before the whole
-# process exits is a race in a longer script (confirmed by hand), so this is kept as its
-# own short, isolated script instead of being folded into a larger combined test.
+# uniq must be the *last* command in the pipe, not piped further to echo: Job::eval()
+# only tracks/joins the thread for the last command of a pipeline -- a non-last stage's
+# spawned thread is never joined at all, so its result (whether a panic or a properly
+# propagated graceful error) would never reach the try/catch below. See test-gaps.md's
+# `Job::eval()` thread-join-gap entry.
 #
-# uniq must be the *last* command in the pipe, not piped further to echo:
-# Job::eval() only tracks/joins the thread for the last command of a pipeline -- a
-# non-last stage's spawned thread is never joined at all, so its result (whether a
-# panic or, now, a properly-propagated graceful error) never reaches anywhere that
-# would report it. That's a separate, deeper gap than what this test is about.
-$t := $(csv:from "a,1\nb,2\n" key=$string val=$integer)
-$t | select s={struct:of val=$val} | uniq
+# The `echo "barrier"` below is deliberate, not decorative -- see the identical note in
+# last_command_error.crush: touching $msg in the very next statement after the catch
+# block races.
+$msg := ""
+$got := $false
+try {
+    $t := $(csv:from "a,1\nb,2\n" key=$string val=$integer)
+    $t | select s={struct:of val=$val} | uniq
+} catch { |$e|
+    $got = $true
+    $msg = $e
+}
+echo "barrier"
+
+assert $got "expected the unhashable-type error to be caught, not silently swallowed"
+
+$panicked := $($msg:like "*panicked*")
+assert ($panicked == $false) "expected a graceful error message, not a Rust panic"
+
+$len := $($msg:len)
+assert ($len > 0) "expected a non-empty caught error message"

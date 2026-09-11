@@ -1,18 +1,32 @@
 # Minimal reproduction for the "stray channel error" bug: when the *last* command in a
-# pipeline errors before ever sending output, Job::eval (src/lang/job.rs) still
-# unconditionally does `context.output.send(last_input.recv()?)?` after evaluating it.
-# The real error was already printed (it goes through printer().handle_error() inside
-# command_invocation.rs's eval_command, which swallows it rather than propagating it),
-# but by then the sender on the other end of that channel has been dropped, so
-# `last_input.recv()` immediately returns a RecvError -- a second, unrelated
-# "receiving on an empty and disconnected channel" message that leaks an implementation
-# detail and drowns out the real one.
+# pipeline errors before ever sending output, Job::eval (src/lang/job.rs) used to still
+# unconditionally do `context.output.send(last_input.recv()?)?` after evaluating it. By
+# then the sender on the other end of that channel had been dropped, so
+# `last_input.recv()` immediately returned a RecvError -- a second, unrelated
+# "receiving on an empty and disconnected channel" message that leaked an implementation
+# detail and drowned out (or, depending on the exact path, replaced) the real one.
+# Fixed by only forwarding recv()'s value if it actually arrives; see test-gaps.md.
 #
-# This is NOT a deadlock (crossbeam channels don't block once every sender is dropped) --
-# confirmed empirically with a timeout guard before writing this. See test-gaps.md.
-#
-# This script exercises the can_block=false path (convert's handler errors synchronously,
+# This exercises the can_block=false path (convert's handler errors synchronously,
 # without spawning a thread); the can_block=true path (e.g. a failing `select` call) was
 # also verified by hand to show the identical symptom, sharing the same root cause in
 # job.rs, so one repro covers both.
-seq 0 3 | convert $integer "notanumber"
+#
+# The `echo "barrier"` below is deliberate, not decorative: touching $msg with a method
+# call or string concatenation in the very next statement after the catch block races
+# and can itself surface the exact leaked-channel-error symptom this test guards
+# against, unrelated to whether job.rs's own bug is present. See test-gaps.md's
+# `Job::eval()` thread-join-gap entry for more repro shapes of that same race.
+$msg := ""
+try {
+    seq 0 3 | convert $integer "notanumber"
+} catch { |$e|
+    $msg = $e
+}
+echo "barrier"
+
+$leaked := $($msg:like "*disconnected*")
+assert ($leaked == $false) "the real error should be the only thing caught, no leaked channel error"
+
+$len := $($msg:len)
+assert ($len > 0) "expected a non-empty caught error message"
