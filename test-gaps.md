@@ -426,8 +426,12 @@ open in `todo.md`.
 - [x] `test_zip` (`tests/zip.crush`) had apparently been silently broken for a while,
       masked by a gap in `run_system_test` itself (its expected-vs-actual comparison
       used `expected_lines.iter().zip(actual_lines.iter())`, which silently stopped at
-      the shorter of the two — since fixed with an added length check, and covered by
-      two tests in `tests/system.rs` using fixtures under `tests/harness/`): `zip $(lines:from
+      the shorter of the two — since fixed with an added length check. Two dedicated
+      tests proving that fix worked, `test_run_system_test_catches_missing_trailing_lines`/
+      `..._extra_trailing_lines` and their `tests/harness/too_{few,many}_lines.crush{,.output}`
+      fixtures, were added at the time and later dropped — testing the test harness
+      itself was judged too meta to be worth the maintenance cost of two dedicated
+      tests, given `run_system_test` is small, foundational, and rarely touched.): `zip $(lines:from
       ./example_data/age.csv|...) $(lines:from ./example_data/home.csv|...)` errored with
       `global:stream:zip: Duplicate column name, column 0 and column 1 are both named
       'line'`, from the duplicate-column-name check in `src/lang/pipe.rs:334-343` —
@@ -474,10 +478,11 @@ open in `todo.md`.
       inspectable data (checked: nothing outside `cmd`/`users.rs` even reads stderr, and
       both of those only relay it via fire-and-forget `printer().error()`, not as a
       value). `test_run_system_test_catches_missing_trailing_lines` and
-      `test_run_system_test_catches_extra_trailing_lines` were also left as-is for a
-      different reason: they test `run_system_test`'s own comparison logic (via
+      `test_run_system_test_catches_extra_trailing_lines` were left for a different
+      reason: they test `run_system_test`'s own comparison logic (via
       `std::panic::catch_unwind`), not crush language behavior — there's no crush-level
-      equivalent to "assert this Rust function panics."
+      equivalent to "assert this Rust function panics." (Both since dropped entirely,
+      along with their `tests/harness/` fixtures — see the `test_zip` entry above.)
       **New evidence for the existing `Job::eval()` thread-join-gap entry, a fifth repro
       shape:** touching a value assigned inside a `catch` block — a method call or
       string concatenation — in the very next statement after the `try`/`catch` reliably
