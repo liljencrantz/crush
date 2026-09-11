@@ -114,19 +114,6 @@ fn test_run_system_test_catches_extra_trailing_lines() {
 }
 
 
-// See tests/error_handling/last_command_error.crush for the full explanation and the
-// fix. Now a pure crush try/catch that asserts on the caught message directly, so this
-// is just the shared harness (exit code 0, the default) rather than a bespoke stderr
-// assertion. Previously needed a custom Rust check because the real error was printed
-// via a fire-and-forget path (command_invocation.rs's old handle_error()) rather than
-// propagated as a catchable CrushResult::Err; that code path has since changed enough
-// that catching it directly turned out to work once a barrier statement (see the
-// script's own comment) sidesteps an unrelated race.
-#[test]
-fn test_last_command_error_does_not_leak_a_stray_channel_error() {
-    run_system_test(Path::new("tests/error_handling/last_command_error.crush"));
-}
-
 // See tests/error_handling/schedule_exhausted_input.crush for the full explanation. In
 // short: schedule's piped-input branch propagates ordinary stream exhaustion (a
 // disconnected channel, which is the *only* thing a disconnect on this pipe can mean) as
@@ -153,19 +140,6 @@ fn test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input() {
         "expected exhausting schedule's piped input to be silent, got stderr:\n{}",
         stderr,
     );
-}
-
-// See tests/error_handling/uniq_unhashable_type.crush for the full explanation and the
-// fix. Now a pure crush try/catch, for the same reason as last_command_error.crush
-// above: uniq is the pipeline's *last* stage here, so its result -- panic or graceful
-// error -- is actually joined and surfaces as a catchable CrushResult::Err. Confirmed a
-// real, still-uncorrected panic elsewhere in the codebase (integer division by zero,
-// see test-gaps.md) is *not* silently swallowed by try/catch -- it still prints the raw
-// panic text and a leaked channel error, so a regression reintroducing uniq's panic
-// would still turn this test red, just via a different assertion failing.
-#[test]
-fn test_uniq_does_not_panic_on_unhashable_type() {
-    run_system_test(Path::new("tests/error_handling/uniq_unhashable_type.crush"));
 }
 
 #[test]

@@ -91,7 +91,7 @@ open in `todo.md`.
       even after fixing every swallow point in the dispatch chain (`eval_command`,
       `CommandInvocation::eval()`, `join_one()`), because nothing ever called
       `join_one()` for that stage's thread at all. Not fixed — worked around in
-      `tests/error_handling/uniq_unhashable_type.crush` by making the failing command
+      `tests/uniq_does_not_panic_on_unhashable_type.crush` by making the failing command
       the pipeline's last stage instead. Fixing this properly needs `Job::eval()`
       restructured to track every stage's thread ID (not just discard non-last ones)
       and join each of them, converting a failure into the job's own failure — a bigger
@@ -243,12 +243,13 @@ open in `todo.md`.
       the column's declared type — a `select`-computed column is always statically
       declared as `$any` (a closure's output type is never known ahead of time), so the
       unhashable type only exists at runtime, the same reason `sum_any`/`avg_any` check
-      per-row. Covered by `tests/error_handling/uniq_unhashable_type.crush` — a custom
-      Rust assertion on stderr, since a panicking thread and a graceful error both leave
-      stdout empty, and whether the panic message reaches stderr before the whole
-      process exits turned out to be a race in a longer script (confirmed by hand),
-      hence keeping it as its own short, isolated script rather than folding it into a
-      larger combined test.
+      per-row. Covered by `tests/uniq_does_not_panic_on_unhashable_type.crush`, kept as
+      its own short, isolated script rather than folding it into a larger combined test
+      (originally because a panicking thread and a graceful error both leave stdout
+      empty and whether the panic message reaches stderr before the whole process exits
+      turned out to be a race in a longer script, confirmed by hand; now a pure crush
+      `try`/`catch` test — see the "Test infrastructure gaps" section below for how and
+      why that conversion became possible).
 - [x] `InterruptibleTableInputStream::read`, `src/lang/pipe.rs:284` — a `Resume` control
       message arriving while not paused hit a bare `panic!()`. No test drove job-control
       (pause/resume/terminate) signals through a stream at all.
@@ -341,11 +342,12 @@ open in `todo.md`.
       actually arrives; a disconnect is now treated as "the last command produced
       nothing" rather than a fresh error, and whatever `last_call_def.eval()` actually
       returned decides the job's own result. Reproduced in
-      `tests/error_handling/last_command_error.crush`, asserted by
-      `test_last_command_error_does_not_leak_a_stray_channel_error` in
-      `tests/system.rs` — now passing. Deliberately out of scope: whether a failing last
-      command should also make the process exit non-zero (currently exits 0) — punted as
-      a separate, unresolved design question, not asserted by the test.
+      `tests/last_command_error_does_not_leak_a_stray_channel_error.crush` (a pure crush
+      `try`/`catch` test, auto-discovered by `test_finder!()` — see the "Test
+      infrastructure gaps" section below) — now passing. Deliberately out of scope:
+      whether a failing last command should also make the process exit non-zero
+      (currently exits 0) — punted as a separate, unresolved design question, not
+      asserted by the test.
       This fix also turned up two further issues — see below.
 
 - [x] `execute.rs`'s `source()` never checked `Scope::is_stopped()` between top-level
@@ -442,12 +444,16 @@ open in `todo.md`.
       tests, per standing preference. Two of five converted:
       `test_last_command_error_does_not_leak_a_stray_channel_error` and
       `test_uniq_does_not_panic_on_unhashable_type` now wrap their repro in `try`/`catch`
-      and assert on the caught message directly inside the `.crush` file (see
-      `tests/error_handling/last_command_error.crush` and
-      `.../uniq_unhashable_type.crush`); their Rust side is now just a one-line
-      `run_system_test(...)` call, identical in spirit to what `test_finder!()` generates
-      automatically for top-level fixtures. Both were previously custom Rust tests
-      because the code path they exercised, at the time they were written, printed the
+      and assert on the caught message directly inside the `.crush` file. Once that
+      meant the Rust side only needed the default exit-code-0 check, there was no
+      remaining reason for either to be a bespoke `#[test]` fn at all — both moved from
+      `tests/error_handling/` (deliberately not auto-discovered) to the top level as
+      `tests/last_command_error_does_not_leak_a_stray_channel_error.crush` and
+      `tests/uniq_does_not_panic_on_unhashable_type.crush`, named to match their old
+      Rust function names exactly so `test_finder!()`'s auto-generated `test_<filename>`
+      preserves the same descriptive test names with zero custom Rust code left at all.
+      Both were previously custom Rust tests because the code path they exercised, at
+      the time they were written, printed the
       real error via a fire-and-forget path (`command_invocation.rs`'s old
       `handle_error()`) rather than a catchable `CrushResult::Err` — that comment is now
       stale, since `eval_command`'s non-blocking path no longer calls `handle_error()` at
