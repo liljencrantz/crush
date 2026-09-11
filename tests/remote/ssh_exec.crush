@@ -1,0 +1,23 @@
+# Happy-path remote:exec/remote:pexec against the local ssh-service test server (see
+# ssh-service/ and tests/system.rs's test_remote_ssh, which starts it fresh each run,
+# writes a known_hosts file matching that run's freshly generated host key, and passes
+# its path in via CRUSH_TEST_SSH_HOSTS -- the key differs every run, so there's nothing
+# to hardcode on either side). ssh-service spawns the real local `crush --pup` binary
+# for every exec channel, so this exercises a genuine pup wire round trip, not a
+# reimplementation of it.
+
+$host_file := $(crush:env["CRUSH_TEST_SSH_HOSTS"])
+$addr := "127.0.0.1:2849"
+$user := "crushtest"
+$pass := "crushtest-password"
+
+$r := $(remote:exec {(1 + 1)} $addr username=$user password=$pass host_file=$host_file)
+assert ($r == 2) "remote:exec should run the closure on the remote crush process and return its result"
+
+$rows := $(remote:pexec {(3 + 4)} $addr $addr username=$user password=$pass host_file=$host_file | materialize)
+$row_count := $($rows | count)
+assert ($row_count == 2) "remote:pexec should produce one result row per host given"
+
+$results := $($rows | select result | list:collect)
+assert ($($results[0]) == 7) "remote:pexec's per-host result should be the closure's return value"
+assert ($($results[1]) == 7) "remote:pexec's per-host result should be the closure's return value"

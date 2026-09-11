@@ -1,6 +1,7 @@
 use std::{fs, thread};
+use std::io::BufRead;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 use test_finder::test_finder;
 use assert_cmd::prelude::*;
@@ -223,6 +224,178 @@ fn test_grpc() {
         stdout,
         String::from_utf8_lossy(&output.stderr),
     );
+}
+
+#[test]
+fn test_remote_host_file() {
+    // remote:host:list/remote:host:remove (src/builtins/remote.rs) never connect
+    // anywhere -- they just read/rewrite a known_hosts file -- so a static fixture is
+    // enough; unlike test_remote_ssh below, no live server is involved. Three
+    // throwaway public keys, generated once with `ssh-keygen -t ed25519`/`-t rsa` and
+    // never used to authenticate anywhere; public keys carry no secret material.
+    const FIXTURE: &str = "\
+host-a.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHFWjNefhOjX7XiOQ7/66ALKB6ru8AaaMJCxQlpp9KuQ
+host-b.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDrlzEyFYijCFoXNf3SLmwDUT8DQwxEVtdb6dQ/ajL89
+host-c.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRSEVxK2sm2QXPbIzufX9EvwiQWZeduizmKDayFO2d02L7H5iKbcO8TjKz5zCoNfcdp1weEGdm0YQ+L85vTGjpv3CYbA8YtbLoFXslxi4TcCWBZ1qZHCeDsSY4jWmdXQMRlOwrtK19qLoCnDgqvtLQMU+/YWZpAWFVm3crWiRLgFCIet+MpDggmujlWMAeZ1HnmcI7suGQeYx7ufiuKsWsST4ks+O/n3dKzpi4WEK7Z/Bd3ZA8UpBWvmiezllKooA82QqzEb1VYCTkmnaHgaIsigHnQKVTUtiN196ot3n0waHGNrGYmka8/ukbtv9emAD2A5+pceWEt2/s36x9FrCr
+";
+
+    // A fresh copy every run -- host:remove mutates the file, so this must never point
+    // at the fixture text's own (nonexistent) source location.
+    let path = std::env::temp_dir().join("crush_test_host_list_remove_known_hosts");
+    fs::write(&path, FIXTURE).expect("failed to write known_hosts fixture");
+
+    let output = Command::new("./target/debug/crush")
+        .args(&["tests/remote/host_list_remove.crush"])
+        .env("CRUSH_TEST_HOST_FIXTURE", &path)
+        .output()
+        .expect("failed to execute process");
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "host_list_remove.crush failed.\nStdout:\n{}\nStderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+}
+
+#[test]
+fn test_remote_ssh() {
+    let run = escargot::CargoBuild::new()
+        .bin("ssh-service")
+        .package("ssh-service") // Name of the sub-crate
+        .run()
+        .expect("Failed to build ssh-service binary");
+
+    let mut server = Command::new(run.path())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start ssh test server");
+
+    // ssh-service generates a fresh host key every run and prints its known_hosts-
+    // format line on startup, so the two sides never need to agree on hardcoded key
+    // material -- read it back to build the known_hosts fixtures below.
+    let stdout = server.stdout.take().expect("piped stdout");
+    let mut reader = std::io::BufReader::new(stdout);
+    let mut line = String::new();
+    reader
+        .read_line(&mut line)
+        .expect("failed to read ssh-service startup line");
+    let known_hosts_line = line
+        .trim()
+        .strip_prefix("KNOWN_HOSTS_LINE:")
+        .expect("unexpected ssh-service startup output")
+        .to_string();
+
+    // Give it a moment to actually bind and start listening (which happens just after
+    // the print above).
+    thread::sleep(Duration::from_millis(300));
+
+    let tmp = std::env::temp_dir();
+    let good_hosts = tmp.join("crush_test_ssh_known_hosts_good");
+    let mismatch_hosts = tmp.join("crush_test_ssh_known_hosts_mismatch");
+    let empty_hosts = tmp.join("crush_test_ssh_known_hosts_empty");
+    let allow_hosts = tmp.join("crush_test_ssh_known_hosts_allow");
+
+    fs::write(&good_hosts, format!("{}\n", known_hosts_line)).unwrap();
+
+    // Corrupt the first few base64 characters right after "<host> <algo> " -- still
+    // valid base64 of the same length, so this is a real CheckResult::Mismatch rather
+    // than a key-parse failure.
+    let mismatched_line = {
+        let mut parts = known_hosts_line.splitn(3, ' ');
+        let host = parts.next().unwrap();
+        let algo = parts.next().unwrap();
+        let key = parts.next().unwrap();
+        format!("{} {} XXXXXX{}", host, algo, &key[6..])
+    };
+    fs::write(&mismatch_hosts, format!("{}\n", mismatched_line)).unwrap();
+    fs::write(&empty_hosts, "").unwrap();
+    fs::write(&allow_hosts, "").unwrap();
+
+    let run_crush = |script: &str, host_file: &Path| -> std::process::Output {
+        Command::new("./target/debug/crush")
+            .args(&[script])
+            .env("CRUSH_TEST_SSH_HOSTS", host_file)
+            .output()
+            .expect("failed to execute process")
+    };
+
+    // Happy path: remote:exec and remote:pexec against a host_file that matches the
+    // server's actual key.
+    let out = run_crush("tests/remote/ssh_exec.crush", &good_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "ssh_exec.crush failed.\nStdout:\n{}\nStderr:\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
+    // Host key mismatch must be a hard error naming the mismatch, not some other,
+    // coincidental failure.
+    let out = run_crush("tests/remote/ssh_exec_mismatch.crush", &mismatch_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "expected a host-key-mismatch error to abort the script"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
+    assert!(
+        stderr.contains("mismatch"),
+        "expected a host-key mismatch error, got:\n{}",
+        stderr
+    );
+
+    // A host missing from known_hosts, without allow_not_found, must also be a hard
+    // error.
+    let out = run_crush("tests/remote/ssh_exec_notfound.crush", &empty_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "expected a missing-known-host error to abort the script"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
+    assert!(
+        stderr.contains("known host"),
+        "expected a missing-from-known-hosts error, got:\n{}",
+        stderr
+    );
+
+    // Wrong password must also be a hard error.
+    let out = run_crush("tests/remote/ssh_exec_wrongpassword.crush", &good_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "expected an authentication error to abort the script"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
+    assert!(
+        stderr.contains("auth"),
+        "expected an authentication error, got:\n{}",
+        stderr
+    );
+
+    // allow_not_found=$true against an empty known_hosts file should succeed *and* pin
+    // the newly seen key into the file, rather than erroring.
+    let out = run_crush("tests/remote/ssh_exec_allow_not_found.crush", &allow_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "ssh_exec_allow_not_found.crush failed.\nStdout:\n{}\nStderr:\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    let pinned = fs::read_to_string(&allow_hosts).unwrap();
+    let real_key = known_hosts_line.split(' ').nth(2).unwrap();
+    assert!(
+        pinned.contains(real_key),
+        "allow_not_found should have pinned the server's actual key into the known_hosts file, got:\n{}",
+        pinned,
+    );
+
+    let _ = server.kill();
+    let _ = server.wait();
 }
 
 test_finder!();

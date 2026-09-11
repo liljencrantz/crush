@@ -1,0 +1,12 @@
+[package]
+name = "ssh-service"
+version = "0.1.0"
+edition = "2024"
+authors = ["Axel Liljencrantz <liljencranz@gmail.com>"]
+publish = false
+
+[dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "io-util"] }
+russh = "0.45"
+async-trait = "0.1"
+anyhow = "1"

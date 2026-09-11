@@ -1,0 +1,5 @@
+# A host missing from known_hosts, with allow_not_found left at its default false, must
+# be a hard error rather than silently trusting an unverified host key. See
+# tests/system.rs's test_remote_ssh, which points CRUSH_TEST_SSH_HOSTS at an empty
+# known_hosts file and checks stderr names the host as missing.
+remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$(crush:env["CRUSH_TEST_SSH_HOSTS"])

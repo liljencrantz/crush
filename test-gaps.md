@@ -520,3 +520,63 @@ open in `todo.md`.
       statement) deliberately, not just for readability. Not investigated further or
       fixed — same underlying class as the existing entry, just a second, easier
       repro shape.
+
+## `remote.rs` (SSH remote execution) — previously untested, now covered
+
+- [x] `src/builtins/remote.rs` had zero test coverage before this. Three layers added:
+      1. `parse()` (host/user/port splitting) is a pure function with no I/O — covered
+         by six `#[cfg(test)]` unit tests directly in `remote.rs` (`user@host`, explicit
+         port, default-username argument, falling back to `get_current_username()`,
+         an invalid port, and `user@host:port` together). No bugs found.
+      2. `remote:host:list`/`remote:host:remove` never open a connection at all
+         (`Session::new()` with no `.handshake()`) — they only read/rewrite a
+         known_hosts file — so they're covered by a plain golden test
+         (`tests/remote/host_list_remove.crush`) against a static fixture (three
+         throwaway public keys, generated once with `ssh-keygen` and never used to
+         authenticate anywhere — see `test_remote_host_file` in `tests/system.rs`,
+         which writes the fixture to a fresh temp file every run since `host:remove`
+         mutates its known_hosts file in place). One real footgun found, not a bug:
+         `remote.host.remove`'s `key` filter (a `Patterns` value) matches only against
+         the raw base64 key blob, not an "algo base64" pair, and needs a `**` glob (not
+         `*`) to match it, since `crate::util::glob::Glob`'s `*` doesn't cross `/`
+         boundaries and base64-encoded key blobs routinely contain `/`. A bare `key=*`
+         silently matches nothing. Not changed (matches the same `*`-vs-`**`
+         path-glob convention used for file globs elsewhere), just documented.
+      3. `remote:exec`/`remote:pexec`'s actual SSH wire behavior — the thing that
+         actually matters (host key checking, auth, exec/read/write) — needed a real
+         SSH server. Added `ssh-service/`, a new sibling crate to `grpc-service/`
+         following the exact same pattern (`escargot`-built, spawned as a subprocess by
+         `tests/system.rs`'s `test_remote_ssh`): a minimal `russh`-based server that,
+         on every accepted exec channel, spawns the real local `crush --pup` binary and
+         pipes the SSH channel's data straight to/from that child process's stdin/
+         stdout. This means the test exercises a genuine pup wire round trip through
+         crush's own client code (`ssh2`-based), not a reimplementation of the
+         protocol inside the test server. It generates a fresh Ed25519 host key every
+         run and prints its known_hosts-format line on startup, so `test_remote_ssh`
+         can build matching/mismatched/empty known_hosts fixtures without either side
+         hardcoding key material. Covers, via `tests/remote/ssh_exec*.crush`: the happy
+         path (`remote:exec` and `remote:pexec`, the latter against two hosts in
+         parallel), a host-key mismatch (`CheckResult::Mismatch`), a host missing from
+         known_hosts without `allow_not_found` (`CheckResult::NotFound`, must error),
+         the same case *with* `allow_not_found` (must succeed and pin the key into the
+         file — checked on the Rust side by re-reading the file afterward), and a wrong
+         password. No bugs found in `remote.rs` itself; host-key checking already
+         behaves exactly as documented in every branch tested.
+      **New evidence for the existing `Job::eval()` non-last-pipeline-stage
+      thread-join-gap entry above, a third repro shape:** capturing a `can_block`
+      command's result (`$n := $(remote:host:remove ...)`) and then immediately calling
+      a *method* on it (`$n:to_string`) in the very next statement reliably hit the same
+      masked "receiving on an empty and disconnected channel" error in place of the real
+      result — even though the capture itself succeeded (a plain `echo $n` right after,
+      with no method call, correctly printed the real value). Comparing the captured
+      value directly in a numeric `assert` (`assert ($n == 1) "..."`, no `:to_string`,
+      matching `tests/warnings.crush`'s existing style) reliably avoided it. Not
+      investigated further or fixed; all new `.crush` tests in `tests/remote/` were
+      written around this rather than tripping over it.
+      **Deliberately out of scope:** `remote:identity` (lists ssh-agent identities) was
+      not covered — it needs a real running `ssh-agent` with a loaded key, which is an
+      OS-level fixture outside what `ssh-service`'s test server can provide, in the same
+      category as the already-noted "can't easily automate job-control signals"
+      Reachable-panics entry above. Agent authentication (the `userauth_agent` branch of
+      `run_remote`, used when no `password` is given) is untested for the same reason —
+      only the `password`-set branch is exercised.

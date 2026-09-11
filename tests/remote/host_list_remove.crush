@@ -1,0 +1,38 @@
+# remote:host:list/remote:host:remove operate purely on a known_hosts FILE
+# (Session::new() with no connect/handshake involved) -- no live server needed, unlike
+# ssh_exec*.crush in this directory. See tests/system.rs's test_remote_host_file, which
+# writes a static fixture (three throwaway public keys, generated once with
+# `ssh-keygen` and never used to authenticate anywhere) to a temp file and passes its
+# path in via CRUSH_TEST_HOST_FIXTURE -- host:remove mutates its known_hosts file, so
+# this must not run against a git-tracked path directly.
+
+$host_file := $(crush:env["CRUSH_TEST_HOST_FIXTURE"])
+
+$before := $(remote:host:list host_file=$host_file | materialize)
+$before_count := $($before | count)
+assert ($before_count == 3) "the fixture should have three known_hosts entries"
+
+$hosts := $($before | select host | list:collect)
+assert ($($hosts[0]) == "host-a.example.com") "host:list should report entries in file order"
+assert ($($hosts[1]) == "host-b.example.com") "host:list should report entries in file order"
+assert ($($hosts[2]) == "host-c.example.com") "host:list should report entries in file order"
+
+# remote.host.remove's `key` filter matches against just the base64 key blob (not an
+# "algo base64" pair) -- confirmed via remote:host:list's own `public_key` column above.
+# `**` (not `*`) is needed to match it, since the blob routinely contains `/`.
+
+# Remove one entry by exact host name, regardless of its key.
+$removed_one := $(remote:host:remove host_file=$host_file host="host-c.example.com" key=**)
+assert ($removed_one == 1) "removing by exact host name should remove exactly that one entry"
+
+$after_one := $(remote:host:list host_file=$host_file | materialize)
+$after_one_count := $($after_one | count)
+assert ($after_one_count == 2) "the other two entries should be untouched"
+
+# Remove everything else by a host glob.
+$removed_rest := $(remote:host:remove host_file=$host_file host=host-* key=**)
+assert ($removed_rest == 2) "removing by host glob should match and remove both remaining entries"
+
+$final := $(remote:host:list host_file=$host_file | materialize)
+$final_count := $($final | count)
+assert ($final_count == 0) "the known_hosts file should now be empty"

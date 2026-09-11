@@ -61,6 +61,59 @@ fn parse(
     Ok((host, username, port))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_user_at_host_defaults_to_port_22() {
+        let (host, user, port) = parse("alice@example.com".to_string(), &None).unwrap();
+        assert_eq!(host, "example.com");
+        assert_eq!(user, "alice");
+        assert_eq!(port, 22);
+    }
+
+    #[test]
+    fn test_parse_user_at_host_with_explicit_port() {
+        let (host, user, port) = parse("alice@example.com:2222".to_string(), &None).unwrap();
+        assert_eq!(host, "example.com");
+        assert_eq!(user, "alice");
+        assert_eq!(port, 2222);
+    }
+
+    #[test]
+    fn test_parse_default_username_argument_used_when_host_has_no_at() {
+        let (host, user, port) =
+            parse("example.com".to_string(), &Some("bob".to_string())).unwrap();
+        assert_eq!(host, "example.com");
+        assert_eq!(user, "bob");
+        assert_eq!(port, 22);
+    }
+
+    #[test]
+    fn test_parse_falls_back_to_current_username_with_no_at_and_no_default() {
+        // No `@` in the host and no default_username given -- falls back to
+        // get_current_username(), which should succeed on any machine this runs on.
+        let (host, _user, port) = parse("example.com".to_string(), &None).unwrap();
+        assert_eq!(host, "example.com");
+        assert_eq!(port, 22);
+    }
+
+    #[test]
+    fn test_parse_invalid_port_errors() {
+        assert!(parse("example.com:notaport".to_string(), &None).is_err());
+    }
+
+    #[test]
+    fn test_parse_at_and_port_together() {
+        let (host, user, port) =
+            parse("root@10.0.0.1:2200".to_string(), &Some("ignored".to_string())).unwrap();
+        assert_eq!(host, "10.0.0.1");
+        assert_eq!(user, "root");
+        assert_eq!(port, 2200);
+    }
+}
+
 fn run_remote(
     cmd: &Vec<u8>,
     env: &Scope,
