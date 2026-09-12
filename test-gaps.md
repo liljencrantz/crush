@@ -146,36 +146,91 @@ open in `todo.md`.
       thread-join-gap notes under "Test infrastructure gaps" and the
       "`remote.rs`" section below). Not investigated further here.
 
-      **Unresolved:** a rare (roughly 1-in-15 to 1-in-20), non-reproducible-in-isolation
-      failure surfaced during testing: `tests/pipe2.crush`/`tests/pipe3.crush` (multiple
-      *concurrent* backgrounded readers and/or writers sharing one pipe) occasionally
-      fail with "receiving on an empty and disconnected channel" when run as part of the
-      full `cargo test` suite — never once in over 50 isolated stress-test runs of the
-      exact same scripts (tight loops, both shell redirection and Rust's
-      `Command::output()`), and never in ~25 baseline (pre-fix) full-suite runs, though a
-      larger baseline sample also never showed it. Two concrete hypotheses were checked
-      and ruled out with direct evidence, not just reasoning: `ThreadId` reuse (Rust's
-      std source, `library/std/src/thread/id.rs`, explicitly guarantees IDs are never
-      reused, via a monotonic atomic counter) and `Scope::is_stopped()` incorrectly
-      shared/tripped across concurrent background jobs (instrumented both of
-      `Job::eval()`'s early-return-without-sending paths unconditionally; ran until the
-      failure reproduced twice; neither ever fired).
+      **Root cause found** (after further digging prompted by the observation, below,
+      that running `tests/pipe3.crush` under real OS-level parallelism reproduces it far
+      more reliably than `cargo test` ever did): a genuine, confirmed race between
+      `pipe:close` and any `pipe:read`/`pipe:write` invocation that was issued (as a
+      background job, e.g. `pipe:read | sum &`) but whose resolution thread hadn't
+      actually started running yet when `pipe:close` executes.
 
-      An initial theory lumped this in with `test_grpc`'s own much-more-frequent
-      pre-existing flakiness as "the same general class of full-suite resource/timing
-      pressure." That theory is now specifically disproven for `test_grpc`, and by
-      extension weakened for pipe2/pipe3: `test_grpc`'s flake had a concrete, fixable
-      cause — it slept a fixed 500ms after spawning the `grpc-service` subprocess and
-      hoped that was enough time for it to bind and start listening, which is exactly
-      the kind of race that gets worse under full-suite CPU contention. Replacing the
-      fixed sleep with a busy-poll (`TcpStream::connect` to the server's port in a
-      5ms-backoff loop, 10s deadline) in `tests/system.rs::test_grpc` took it from
-      failing roughly 3 of every 4 full-suite runs to 8/8 passes across a fresh
-      stress-test batch — while `tests/pipe2.crush`/`tests/pipe3.crush` still failed in
-      3 of those same 8 runs. So `test_grpc`'s flakiness and the pipe2/pipe3 flakiness
-      were never actually the same bug — they only ever coincided because both are
-      timing-sensitive and both run in the same full-suite window. Root cause of the
-      pipe2/pipe3 flake itself is still not found; flagged here rather than closed out.
+      `pipe:read`/`pipe:write` are plain struct-member values (`$pipe`'s `read`/`output`
+      fields), not `Value::Command`s, so `CommandInvocation::can_block()`'s catch-all
+      (`_ => true` for anything that isn't a resolved `Value::Command`) makes *evaluating
+      them* — i.e. the `pipe.get("read")`/`pipe.get("output")` field lookup itself, not
+      just any actual streaming work — happen on a freshly spawned worker thread rather
+      than synchronously on the thread creating the job. `pipe:close` (`close()` in
+      `src/builtins/types/table_input_stream.rs`) clears `$pipe`'s `read`/`output` fields
+      to `Value::Empty` as soon as it runs, with no synchronization against any
+      already-dispatched-but-not-yet-running reader/writer thread. When a reader/writer's
+      worker thread happens to get scheduled by the OS *after* `pipe:close` already ran
+      (a real possibility any time `pipe:close` is the very next statement, as it is in
+      `tests/pipe3.crush` right after the 4th `pipe:read | sum &`), that thread reads
+      `Value::Empty` instead of the real stream handle, sends `Value::Empty` onward, and
+      the downstream command (`sum`) fails immediately trying to treat it as a stream —
+      which is exactly the observed "receiving on an empty and disconnected channel"
+      (the failed `sum` never reaches its own `context.output.send(...)`, so whoever
+      later does `fg` on that job sees its sender dropped) and, in the `pipe:write` case,
+      an undercounted sum (assertion failure) since that writer never wrote any of its
+      100,000 rows. The pipe docs' own claim that `pipe:close` "does not interrupt
+      currently existing read or write jobs" is true only if "currently existing" is
+      read as "already scheduled and running" rather than "already issued in program
+      order" — the latter is what a user would reasonably expect from the example in
+      `pipe:pipe`'s own docs, and what actually breaks here.
+
+      Confirmed, not just theorized: 30 parallel instances of `tests/pipe3.crush` against
+      the post-`Job::eval()`-fix binary reliably fail 50-60% of the time (12/30 and
+      17-18/30 hung or failed across two runs), and the failing `sum` invocation is
+      *always* one of the two last-created reader jobs (`job_id` 8 or 9 out of the four
+      reader jobs 6-9, i.e. `ThreadId` 24 or 26 specifically) in every one of 6 failing
+      instances sampled with tracing — exactly the readers closest in program order to
+      `pipe:close`. Disabling `pipe:close`'s two `pipe.set(..., Value::Empty)` calls
+      (an experiment, not a real fix — it would leak the pipe's channel clones forever)
+      took the same 30-parallel stress test from ~50-60% failures to 20/20 clean passes.
+      That is direct causal confirmation, not correlation.
+
+      This also explains why the earlier hangs (a hard deadlock at process exit, not
+      just a printed error) only ever showed up on the post-fix binary: a `sum` thread
+      that dies immediately on a bad input never blocks anything by itself, but the
+      *other*, unaffected reader/writer threads for the same run can still be genuinely
+      mid-flight when the top-level script's error already got printed, and
+      `main.rs`'s final `global_state.threads().join(printer)` (present unchanged since
+      before this session's `Job::eval()` work) blocks on all of them sequentially at
+      shutdown — so any of those still-running threads blocked on a shared, only
+      partially-drained pipe is enough to hang the whole process.
+
+      Why does this race only bite the *new* `is_background` code path and not the old
+      `& → trailing bg` desugaring, when the underlying vulnerability (deferred struct
+      field lookup on a worker thread, racing a later `pipe:close`) is identical in both
+      and doesn't depend on `Job::eval()`'s design at all? Confirmed empirically, not
+      just argued: 100 total parallel runs of `tests/pipe3.crush` against the pre-fix
+      binary (commit `a4a8189`, two batches of 30 and 40) came back 100/100 clean, at the
+      same or higher parallelism than the post-fix binary's ~50-60% failure rate. The
+      likely explanation is pure timing, not a different bug: the old `bg` builtin's own
+      dispatch (a full `CommandInvocation` invocation — argument-struct parsing via the
+      `#[signature]` machinery, a real command lookup — before it finally calls
+      `add_job`/sends its output) is measurably slower than the new `is_background`
+      branch's direct field access and `Vec` push, and that extra latency was
+      apparently enough of a head start for the OS scheduler to get a job's
+      `pipe:read`/`pipe:write` worker thread running before the *next* top-level
+      statement's (`pipe:close`'s) own thread got scheduled. The redesign didn't
+      introduce a new bug so much as shave away the accidental delay that had been
+      hiding a pre-existing one. This was NOT re-verified by re-introducing an artificial
+      delay into the new code path and confirming the failure rate drops back down —
+      that would be the next thing to try if this timing explanation itself needs
+      firming up.
+
+      **Not yet fixed.** Two candidate directions, each a real design decision rather
+      than a one-line patch:
+      (a) make `pipe:close` wait for any reader/writer job issued before it (in program
+      order) to actually resolve its field reference before clearing — needs some kind
+      of registration/barrier and a decision about what "before it" means precisely, or
+      (b) make the `$pipe`-struct-member field lookup for `pipe:read`/`pipe:write`
+      resolve *synchronously*, on the thread creating the job, rather than being
+      deferred into the spawned worker thread purely because `can_block()`'s conservative
+      fallback treats every non-`Value::Command` value as potentially blocking — this
+      looks like the more correct fix (it makes "currently existing" mean what the docs
+      imply, "already issued," instead of "won the OS scheduler race"), but touches the
+      general `CommandInvocation` dispatch path, not just `pipe.rs`.
 - [ ] `control/schedule.rs` has a genuine, pre-existing race in its own output-channel
       lifecycle: when its result is left as a bare, unconsumed top-level statement (no
       pipe, no assignment), the row it sends via `output.send(Row::new(vec![]))` (or the
