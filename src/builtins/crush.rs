@@ -669,6 +669,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             highlight.insert(Value::from("command"), Value::from(GREEN))?;
             highlight.insert(Value::from("keyword"), Value::from(MAGENTA))?;
             highlight.insert(Value::from("error"), Value::from(RED))?;
+            highlight.insert(Value::from("warning"), Value::from(YELLOW))?;
             highlight.insert(Value::from("comment"), Value::from(YELLOW))?;
             crush.declare("highlight", highlight.into())?;
 

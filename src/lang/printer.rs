@@ -17,7 +17,6 @@ use std::thread;
 use std::thread::JoinHandle;
 use termion::terminal_size;
 
-const WARNING_YELLOW: &str = "\x1b[33m";
 const COLOR_RESET: &str = "\x1b[0m";
 
 pub enum PrinterMessage {
@@ -98,17 +97,30 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
                             }
                         }
                         Warning(w) => {
+                            let colors = scope
+                                .as_ref()
+                                .map(|s| highlight_colors(s))
+                                .unwrap_or_else(|| HashMap::new());
                             let prefix = match w.command() {
                                 Some(cmd) => format!("warning ({})", cmd),
                                 None => "warning".to_string(),
                             };
-                            eprintln!(
-                                "{}{}{}: {}",
-                                WARNING_YELLOW,
-                                prefix,
-                                COLOR_RESET,
-                                w.message()
-                            );
+                            // No fallback color here on purpose: the default lives
+                            // solely in the `global:crush:highlight` dict's own
+                            // "warning" entry (see crush.rs's declare()). If a user
+                            // removes that entry (or no scope is available at all,
+                            // e.g. printer::init(None) in unit tests), warnings print
+                            // in the terminal's own default color, not a hardcoded one.
+                            match colors.get("warning") {
+                                Some(color) => eprintln!(
+                                    "{}{}{}: {}",
+                                    color,
+                                    prefix,
+                                    COLOR_RESET,
+                                    w.message()
+                                ),
+                                None => eprintln!("{}: {}", prefix, w.message()),
+                            }
                             if let Some(ctx) = w.source() {
                                 match ctx.show() {
                                     Ok(ctx) => eprintln!("{}", ctx),
