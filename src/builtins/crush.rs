@@ -380,8 +380,9 @@ mod title {
     }
 }
 
-static JOB_OUTPUT_TYPE: [ColumnType; 4] = [
+static JOB_OUTPUT_TYPE: [ColumnType; 5] = [
     ColumnType::new("id", ValueType::Integer),
+    ColumnType::new("parent", ValueType::Any),
     ColumnType::new("description", ValueType::String),
     ColumnType::new("type", ValueType::String),
     ColumnType::new("status", ValueType::String),
@@ -401,6 +402,7 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     for job in jobs {
         output.send(Row::new(vec![
             Value::from(job.id),
+            job.parent.map(Value::from).unwrap_or(Value::Empty),
             Value::from(job.description),
             Value::from(job.job_type.to_string()),
             Value::from(job.status.to_string()),

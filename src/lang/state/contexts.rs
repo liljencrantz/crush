@@ -19,40 +19,67 @@ The data needed to be passed around while calling eval on a ValueDefinition.
 pub struct EvalContext {
     pub env: Scope,
     pub global_state: GlobalState,
+    /// The job this expression is being evaluated as part of, if any -- e.g. a command
+    /// substitution (`$(...)`) evaluated while resolving an argument gets the enclosing
+    /// job as its parent, so a `crush:exit`/`crush:jobs` check run from *inside* the
+    /// substitution can recognize it as nested rather than a genuinely separate,
+    /// unrelated job. `None` for contexts with no enclosing job (e.g. compiling a
+    /// closure's parameter-list default values, which happens outside of running any
+    /// particular job).
+    parent: Option<JobId>,
 }
 
 impl EvalContext {
-    pub fn new(env: Scope, global_state: GlobalState) -> EvalContext {
-        EvalContext { env, global_state }
+    pub fn new(env: Scope, global_state: GlobalState, parent: Option<JobId>) -> EvalContext {
+        EvalContext {
+            env,
+            global_state,
+            parent,
+        }
     }
 
     pub fn job_context(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
-        JobContext::new(
-            input,
-            output,
-            self.env.clone(),
-            self.global_state.clone(),
-            Background,
-        )
+        match self.parent {
+            Some(parent) => JobContext::new_nested(
+                input,
+                output,
+                self.env.clone(),
+                self.global_state.clone(),
+                Background,
+                parent,
+            ),
+            None => JobContext::new(
+                input,
+                output,
+                self.env.clone(),
+                self.global_state.clone(),
+                Background,
+            ),
+        }
     }
 
     pub fn with_scope(&self, env: &Scope) -> EvalContext {
         EvalContext {
             env: env.clone(),
             global_state: self.global_state.clone(),
+            parent: self.parent,
         }
     }
 }
 
 impl From<&JobContext> for EvalContext {
     fn from(c: &JobContext) -> Self {
-        EvalContext::new(c.scope.clone(), c.global_state.clone())
+        EvalContext::new(c.scope.clone(), c.global_state.clone(), Some(c.handle.id()))
     }
 }
 
 impl From<&CommandContext> for EvalContext {
     fn from(c: &CommandContext) -> Self {
-        EvalContext::new(c.scope.clone(), c.global_state.clone())
+        EvalContext::new(
+            c.scope.clone(),
+            c.global_state.clone(),
+            Some(c.handle.job_handle.id()),
+        )
     }
 }
 

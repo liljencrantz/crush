@@ -426,12 +426,12 @@ fn compile_signature(
                     None => None,
                     Some(definition) => Some(
                         definition
-                            .eval(&mut EvalContext::new(env.clone(), state.clone()))?
+                            .eval(&mut EvalContext::new(env.clone(), state.clone(), None))?
                             .1,
                     ),
                 };
                 let value_type = match value_type
-                    .eval(&mut EvalContext::new(env.clone(), state.clone()))?
+                    .eval(&mut EvalContext::new(env.clone(), state.clone(), None))?
                     .1
                 {
                     Value::Type(vt) => vt,

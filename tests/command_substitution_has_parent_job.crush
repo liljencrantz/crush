@@ -1,0 +1,41 @@
+# Command substitutions ($(...)) used to be evaluated with no job-parent information at
+# all (EvalContext carried no job handle), so a substitution's own job always showed up
+# in crush:jobs as an unrelated top-level job with no parent -- the same class of bug
+# crush:exit's "are there other jobs running" check had for closures/blocks before it
+# was taught to recognize an ancestor job, except command substitutions went unfixed at
+# the time. Fixed by threading a parent job id through EvalContext (via
+# From<&JobContext>/From<&CommandContext>) into JobContext::new_nested whenever a
+# substitution is evaluated as part of some other job's own execution.
+#
+# A job-list substitution ($(A; B)) keeps its own enclosing job alive on the stack while
+# evaluating each of its statements in turn, so taking a crush:jobs snapshot as the
+# *last* statement reliably catches an earlier statement's still-running backgrounded
+# job (started via `&`, here `sleep`) alongside the snapshot's own enclosing job -- both
+# genuinely running at the same time, not a timing race.
+$snapshot := $(
+    $inner_id := $(sleep $(duration:of milliseconds=300) &);
+    crush:jobs | materialize
+)
+
+# The backgrounded sleep substitution should be visible -- matched by description
+# prefix rather than a substring search (crush has no working substring-search
+# operator on plain strings today: `:like` does exact equality despite its name, and
+# `=~`/regex would also match the *outer* job's own description, which also mentions
+# "sleep" as part of representing the whole nested job list it's evaluating).
+$sleep_rows := $($snapshot | where {$description:starts_with "\$sleep "} | materialize)
+$sleep_row_count := $($sleep_rows | count)
+assert ($sleep_row_count == 1) "the backgrounded sleep substitution should be visible in crush:jobs"
+
+# ...with a real parent job id recorded (not empty/none).
+$sleep_parent_id := $($($sleep_rows | select parent | list:collect)[0])
+
+# ...and that parent id should itself point at another job that's *also* visible in the
+# very same snapshot, not a dangling/empty reference. (If $sleep_parent_id were Empty,
+# comparing it against an Integer id column below would fail per-row and this filter
+# would simply come back empty, correctly failing the count check -- no separate
+# type check needed.)
+$parent_rows := $($snapshot | where {($id == $sleep_parent_id)} | materialize)
+$parent_row_count := $($parent_rows | count)
+assert ($parent_row_count == 1) "the sleep substitution's recorded parent should itself be a visible job in the same snapshot"
+
+fg $inner_id
