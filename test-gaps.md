@@ -563,11 +563,23 @@ open in `todo.md`.
 
 ## Security-relevant, untested
 
-- [ ] `remote.rs` SSH host-key verification (`exec`/`pexec`, ships a serialized closure
-      over SSH and deserializes the result) — `known_hosts.check_port` handling for
-      not-found/mismatch, the TOFU auto-add path (`allow_not_found`), and
-      `ignore_host_file` are all untested. A bug here is MITM-adjacent, not just a
-      correctness nit.
+- [x] `remote.rs` SSH host-key verification (`exec`/`pexec`, ships a serialized closure
+      over SSH and deserializes the result). This entry was stale — the SSH-server test
+      work elsewhere this session (`ssh-service/`, `tests/system.rs::test_remote_ssh`)
+      had already covered `known_hosts.check_port`'s `Match` (`ssh_exec.crush`),
+      `Mismatch` (`ssh_exec_mismatch.crush`, a corrupted-but-still-valid-base64 key),
+      `NotFound` with `allow_not_found=false`/default (`ssh_exec_notfound.crush`), and
+      `NotFound` with `allow_not_found=true`'s TOFU auto-add path
+      (`ssh_exec_allow_not_found.crush`, which also confirms the real key actually gets
+      written back to the known_hosts file). The one genuinely missing case,
+      `ignore_host_file=true` (skip verification entirely), is now covered by
+      `tests/remote/ssh_exec_ignore_host_file.crush`: it points at the *same corrupted*
+      known_hosts file used by the mismatch test and asserts the connection succeeds
+      anyway — since that file would otherwise cause a hard `Mismatch` error, success
+      here can only mean the check was actually skipped, not coincidentally passed.
+      `CheckResult::Failure` (a genuine libssh2-level validation failure, distinct from
+      `Mismatch`) remains untested — not obviously reachable without deeper key-format
+      manipulation than a test is worth here.
 - [ ] `dbus.rs` (843 lines) and `systemd.rs` — Linux-only, zero coverage on any platform
       (can't even be exercised in CI on macOS/most dev machines).
 - [ ] `dns.rs` — real UDP queries with response parsing against attacker-influenceable

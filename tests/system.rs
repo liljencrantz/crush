@@ -279,6 +279,18 @@ fn test_remote_ssh() {
         stderr
     );
 
+    // ignore_host_file=$true must skip verification entirely -- confirm by using the
+    // same mismatched known_hosts file that made the test above fail: the connection
+    // must succeed here, which can only happen if the check was actually skipped.
+    let out = run_crush("tests/remote/ssh_exec_ignore_host_file.crush", &mismatch_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "ssh_exec_ignore_host_file.crush failed.\nStdout:\n{}\nStderr:\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
     // A host missing from known_hosts, without allow_not_found, must also be a hard
     // error.
     let out = run_crush("tests/remote/ssh_exec_notfound.crush", &empty_hosts);
