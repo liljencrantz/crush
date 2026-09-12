@@ -126,7 +126,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
 
 #[signature(
     types.list.collect,
-    can_block = false,
+    can_block = true,
     output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Create a new list by reading a column from the input.",
     long = "Input must be a table stream (or table) piped in. `column` picks which column",
