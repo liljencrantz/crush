@@ -378,6 +378,11 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
     can_block = true,
     output = Known(ValueType::Dict(Box::from(ValueType::Any), Box::from(ValueType::Any))),
     short = "Create a new dict by reading the specified columns from the input.",
+    long = "Input must be a table stream (or table) piped in, with at least the two named",
+    long = "columns. Every row becomes one key/value pair: `key_column`'s value in that row",
+    long = "becomes the dict key, `value_column`'s value becomes the value mapped to it. If",
+    long = "the same key appears in more than one row, the last row wins.",
+    example = "seq 1 4 | select id={$value} name={\"item-{}\":format ($value)} | dict:collect key_column=id value_column=name",
 )]
 struct Collect {
     #[description("the name of the column to use as key")]

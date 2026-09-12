@@ -213,7 +213,14 @@ fn ssh_host_complete(
     remote.exec,
     can_block = true,
     short = "Execute a command on a remote host",
-    long = "    Execute the specified command on the soecified host"
+    long = "Serializes `command` (a closure), sends it over SSH to `host`, runs it there in a",
+    long = "fresh crush process, and returns its result. The remote host's key is checked",
+    long = "against `host_file` unless `ignore_host_file` is set. Security note: setting",
+    long = "`ignore_host_file` disables that check entirely (no protection against a",
+    long = "different host answering at that address); `allow_not_found` instead trusts an",
+    long = "unrecognized host's key on first use and saves it, rather than erroring -- both",
+    long = "weaken protection against a machine-in-the-middle impersonating the remote host.",
+    example = "remote:exec {host:name} \"my-server.example.com\" username=\"alice\"",
 )]
 struct Exec {
     #[description("the command to execute.")]
@@ -263,7 +270,11 @@ fn exec(mut context: CommandContext) -> CrushResult<()> {
     remote.pexec,
     can_block = true,
     short = "Execute a command on a set of hosts",
-    long = "    Execute the specified command all specified hosts",
+    long = "Like `exec`, but runs `command` on every host listed in `host` (up to `parallel`",
+    long = "of them at a time) and returns one row per host, with `host`/`result` columns.",
+    long = "The same host-key verification applies independently to each host -- see `exec`",
+    long = "for what `ignore_host_file`/`allow_not_found` mean for security.",
+    example = "remote:pexec {host:name} \"web1.example.com\" \"web2.example.com\" username=\"alice\"",
     output = Known(ValueType::table_input_stream(&PEXEC_OUTPUT_TYPE)),
 )]
 struct Pexec {
