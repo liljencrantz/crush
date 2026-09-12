@@ -571,7 +571,17 @@ open in `todo.md`.
 - [ ] `dbus.rs` (843 lines) and `systemd.rs` — Linux-only, zero coverage on any platform
       (can't even be exercised in CI on macOS/most dev machines).
 - [ ] `dns.rs` — real UDP queries with response parsing against attacker-influenceable
-      input (reverse-DNS lookups); no malformed/truncated-response handling is verified.
+      input (reverse-DNS lookups); response *parsing* itself is entirely delegated to
+      the `trust_dns_client` crate, so no malformed/truncated-response handling is
+      verified here (deliberately not adding tests for that -- it would just be
+      re-testing the third-party library, not crush's own code). Fixed in passing: a
+      concrete, crush-specific issue found while reading `perform_query` for this
+      entry -- CNAME-chasing had no depth limit or cycle detection, so a malicious,
+      compromised, or spoofed nameserver (plain UDP DNS has no cryptographic
+      integrity) returning a self-referencing CNAME chain would recurse forever, one
+      fresh network round trip per hop. Added a hard-coded `MAX_CNAME_DEPTH = 8` cap,
+      threaded through `query_internal`/`perform_query` as an explicit `depth`
+      parameter, erroring out past the limit instead of recursing further.
 
 ## Framework code everything else depends on
 

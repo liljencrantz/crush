@@ -51,6 +51,12 @@ static TXT_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("ttl", ValueType::Duration),
 ];
 
+/// How many CNAME hops `query_internal` will follow before giving up. A nameserver
+/// (malicious, compromised, or spoofed -- plain UDP DNS has no cryptographic
+/// integrity) could otherwise return a CNAME chain that cycles back on itself,
+/// causing unbounded recursion with a fresh network round trip at every hop.
+const MAX_CNAME_DEPTH: u32 = 8;
+
 #[signature(
     dns.query,
     can_block = true,
@@ -110,6 +116,7 @@ fn perform_query(
     query_record_type: RecordType,
     output_signature: &[ColumnType],
     process_record_callback: fn(&Record) -> CrushResult<Row>,
+    depth: u32,
 ) -> CrushResult<()> {
     let response = client.query(&Name::from_str(&cfg.name)?, DNSClass::IN, query_record_type)?;
 
@@ -122,7 +129,13 @@ fn perform_query(
                     Value::from(Duration::seconds(answer.ttl() as i64)),
                 ]));
             }
-            return query_internal(cfg.with_name(cname.to_string()), context, client);
+            if depth >= MAX_CNAME_DEPTH {
+                return data_error(format!(
+                    "CNAME chain for `{}` is too long (more than {} hops)",
+                    cfg.name, MAX_CNAME_DEPTH,
+                ));
+            }
+            return query_internal(cfg.with_name(cname.to_string()), context, client, depth + 1);
         }
     }
 
@@ -138,6 +151,7 @@ fn query_internal(
     cfg: Query,
     context: CommandContext,
     client: SyncClient<impl ClientConnection>,
+    depth: u32,
 ) -> CrushResult<()> {
     match cfg.record_type.as_ref() {
         "A" => perform_query(
@@ -157,6 +171,7 @@ fn query_internal(
                 )),
                 None => data_error("No A record found"),
             },
+            depth,
         ),
         "AAAA" => perform_query(
             cfg,
@@ -175,6 +190,7 @@ fn query_internal(
                 )),
                 None => data_error("No AAAA record found"),
             },
+            depth,
         ),
         "CNAME" => perform_query(
             cfg,
@@ -183,6 +199,7 @@ fn query_internal(
             RecordType::CNAME,
             &A_STREAM_OUTPUT_TYPE,
             |_| data_error("Received an unexpected record."),
+            depth,
         ),
         "NS" => perform_query(
             cfg,
@@ -201,6 +218,7 @@ fn query_internal(
                 )),
                 None => data_error("No NS record found"),
             },
+            depth,
         ),
         "MX" => perform_query(
             cfg,
@@ -220,6 +238,7 @@ fn query_internal(
                 )),
                 None => data_error("No MX record found"),
             },
+            depth,
         ),
         "PTR" => perform_query(
             cfg,
@@ -238,6 +257,7 @@ fn query_internal(
                 )),
                 None => data_error("No PTR record found"),
             },
+            depth,
         ),
         "SOA" => perform_query(
             cfg,
@@ -261,6 +281,7 @@ fn query_internal(
                 )),
                 None => data_error("No SOA record found"),
             },
+            depth,
         ),
         "SRV" => perform_query(
             cfg,
@@ -282,6 +303,7 @@ fn query_internal(
                 )),
                 None => data_error("No SRV record found"),
             },
+            depth,
         ),
         "TXT" => perform_query(
             cfg,
@@ -300,6 +322,7 @@ fn query_internal(
                 )),
                 None => data_error("No TXT record found"),
             },
+            depth,
         ),
         _ => command_error(format!("Unknown DNS record type {}", &cfg.record_type)),
     }
@@ -329,10 +352,10 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
         .ok_or("Out of bounds timeout")?;
     if cfg.tcp {
         let conn = TcpClientConnection::with_timeout(address, t)?;
-        query_internal(cfg, context, SyncClient::new(conn))
+        query_internal(cfg, context, SyncClient::new(conn), 0)
     } else {
         let conn = UdpClientConnection::with_timeout(address, t)?;
-        query_internal(cfg, context, SyncClient::new(conn))
+        query_internal(cfg, context, SyncClient::new(conn), 0)
     }
 }
 
