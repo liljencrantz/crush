@@ -71,7 +71,7 @@ fn like(mut context: CommandContext) -> CrushResult<()> {
     types.re.not_like,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if the io matches the pattern.",
+    short = "True if the io does not match the pattern.",
 )]
 struct NotLike {
     #[description("the string to match against.")]

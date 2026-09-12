@@ -144,7 +144,8 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     crush.exit,
     output = Known(ValueType::Empty),
     short = "Exit the shell",
-    long = "Crush will not actually exit until all jobs have finished.",
+    long = "If other jobs are still running, exit fails with an error unless `force` is",
+    long = "set, in which case those jobs are terminated first.",
 )]
 struct Exit {
     #[default(0)]
@@ -252,7 +253,7 @@ fn pause(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     crush.resume,
     output = Known(ValueType::Empty),
-    short = "Pause the given job.",
+    short = "Resume the given job.",
 )]
 struct Resume {
     #[description("The job id for the job to resume")]
