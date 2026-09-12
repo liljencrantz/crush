@@ -191,19 +191,33 @@ fn avg(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+/// Never NaN: used as the `$is_nan` check for `median_function` instantiations whose
+/// value type has no NaN concept (integers, durations).
+fn never_nan<T>(_: T) -> bool {
+    false
+}
+
 macro_rules! median_function {
-    ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident, $count_type:ident, $halver:expr) => {
+    ($name:ident, $var_type:ident, $var_initializer:expr, $value_type:ident, $count_type:ident, $halver:expr, $is_nan:expr) => {
         fn $name(mut s: Stream, column: usize) -> CrushResult<Value> {
             let mut res: Vec<$var_type> = Vec::new();
             loop {
                 match s.next_row()? {
                     Some(row) => match row.cells()[column] {
-                        Value::$value_type(i) => res.push(i),
+                        Value::$value_type(i) => {
+                            if $is_nan(i) {
+                                return command_error(
+                                    "Can't calculate median of a set containing NaN values.",
+                                );
+                            }
+                            res.push(i)
+                        }
                         _ => return error("Invalid cell value"),
                     },
                     None => break,
                 }
             }
+            // NaN values were rejected above, so partial_cmp is never None here.
             res.sort_by(|a, b| a.partial_cmp(b).unwrap());
             if (res.is_empty()) {
                 command_error("Can't calculate median of empty set")
@@ -218,15 +232,16 @@ macro_rules! median_function {
     };
 }
 
-median_function!(median_int, i128, 0, Integer, i128, 2);
-median_function!(median_float, f64, 0.0, Float, f64, 2.0);
+median_function!(median_int, i128, 0, Integer, i128, 2, never_nan);
+median_function!(median_float, f64, 0.0, Float, f64, 2.0, f64::is_nan);
 median_function!(
     median_duration,
     Duration,
     Duration::seconds(0),
     Duration,
     i32,
-    2
+    2,
+    never_nan
 );
 
 #[signature(
@@ -234,6 +249,8 @@ median_function!(
     short = "Calculate the median for the specific column across all rows.",
     long = "If the input only has one column, the column name is optional.",
     long = "The column type must be numeric or a duration.",
+    long = "If the column contains a NaN float value, `median` fails with an error rather \
+    than silently including it in (or excluding it from) the calculation.",
     example = "host:procs | median cpu")]
 pub struct Median {
     #[description("The name of the column to find the median of")]

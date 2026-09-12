@@ -1,16 +1,15 @@
-# Minimal reproduction for the panic in stream::sort (src/builtins/stream/sort.rs).
-# ValueType::Float.is_comparable() is true (nothing excludes it), so a Float column
-# passes sort's up-front "is this column comparable" check -- but f64::partial_cmp
-# returns None for NaN, and sort's comparator closure used to treat that as impossible
-# ("Unexpected sort failure") rather than as a normal, well-defined case.
-#
-# NaN should get a defined position instead: it always sorts as the greatest value
-# (last when ascending, first when descending), regardless of which side of the
-# comparison it's on.
-list:of 3.0 $(float:nan) 1.0 | sort | echo
+# sort used to give NaN a defined position (always sorting last), silently accepting it as
+# ordinary input. That was changed: NaN has no meaningful position relative to other floats,
+# so sort now fails with an error instead of picking an arbitrary place for it.
+$msg := ""
+try {
+    list:of 3.0 $(float:nan) 1.0 | sort | echo
+} catch { |$e| $msg = $e }
+echo "barrier"
+echo $msg
 
-# -infinity and +infinity are ordinary, well-ordered values (not NaN), so they sort at
-# the extremes as expected, still before NaN. +0.0 and -0.0 compare as equal (per
-# param_partial_cmp, which just delegates to f64's own partial_cmp), so sort (a stable
-# sort) leaves them in their original relative order rather than erroring or crashing.
-list:of 3.0 $(float:nan) 1.0 (0.0 - $(float:infinity)) $(float:infinity) 0.0 (-0.0) | sort | echo
+# -infinity and +infinity are ordinary, well-ordered values (not NaN), so they still sort at
+# the extremes as expected. +0.0 and -0.0 compare as equal (per param_partial_cmp, which just
+# delegates to f64's own partial_cmp), so sort (a stable sort) leaves them in their original
+# relative order rather than erroring or crashing.
+list:of 3.0 1.0 (0.0 - $(float:infinity)) $(float:infinity) 0.0 (-0.0) | sort | echo

@@ -9,26 +9,38 @@ use crate::lang::value::{ComparisonMode, Value};
 use signature::signature;
 use std::cmp::Ordering;
 
-/// Like `Value::param_partial_cmp`, but never returns `None`: the only comparable value
+/// Like `Value::param_partial_cmp`, but never returns `None`. The only comparable value
 /// that can make `param_partial_cmp` return `None` is a NaN `Float` (`is_comparable()`
-/// only excludes whole *types*, and NaN is a property of a *value*), so this gives NaN a
-/// defined position -- it always sorts as the greatest value, regardless of which side
-/// of the comparison it's on, matching `f64::total_cmp`'s convention.
+/// only excludes whole *types*, and NaN is a property of a *value*), so this relies on
+/// `check_no_nan` having already rejected any NaN in the sort columns before sorting
+/// begins.
 fn compare_for_sort(this: &Value, other: &Value, mode: ComparisonMode) -> Ordering {
-    match this.param_partial_cmp(other, mode) {
-        Some(ordering) => ordering,
-        None => match (this, other) {
-            (Value::Float(x), _) if x.is_nan() => Ordering::Greater,
-            (_, Value::Float(y)) if y.is_nan() => Ordering::Less,
-            _ => Ordering::Equal,
-        },
+    this.param_partial_cmp(other, mode)
+        .expect("NaN values should have been rejected by check_no_nan")
+}
+
+/// NaN has no defined position in a sort order, so crush treats it as invalid input
+/// rather than silently picking an arbitrary place for it.
+fn check_no_nan(rows: &[Row], indices: &[usize]) -> CrushResult<()> {
+    for row in rows {
+        for idx in indices {
+            if let Value::Float(f) = row.cells()[*idx] {
+                if f.is_nan() {
+                    return command_error("Can't sort a column containing NaN values.");
+                }
+            }
+        }
     }
+    Ok(())
 }
 
 #[signature(
     stream.sort,
     can_block = true,
     short = "Sort input stream based on one or more of it's columns",
+    long = "If any sort column contains a NaN float value, `sort` fails with an error rather \
+    than picking an arbitrary position for it, since NaN has no defined ordering relative to \
+    other floats.",
     example = "# Show the contents of the current directory, sorted first on type and then on filename",
     example = "files | sort type file",
     output = Passthrough)]
@@ -75,6 +87,8 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
     while let Some(row) = input.next_row()? {
         res.push(row);
     }
+
+    check_no_nan(&res, &indices)?;
 
     let comparison_mode = match cfg.case_insensitive {
         true => CaseInsensitive,

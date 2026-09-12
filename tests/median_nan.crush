@@ -1,0 +1,13 @@
+# median used to panic (`a.partial_cmp(b).unwrap()`) when its input column contained a NaN
+# float value, since f64::partial_cmp returns None for NaN. NaN has no meaningful position
+# in an ordered set, so median now fails with an error instead of sorting past it (matching
+# stream:sort's own NaN handling).
+$msg := ""
+try {
+    list:of 3.0 $(float:nan) 1.0 | median | echo
+} catch { |$e| $msg = $e }
+echo "barrier"
+echo $msg
+
+echo "still works fine without NaN"
+list:of 3.0 1.0 2.0 | median | echo

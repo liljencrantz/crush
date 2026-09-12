@@ -1,4 +1,4 @@
+barrier
+Can't sort a column containing NaN values.
 value
-1.0000 3.0000 NaN
-value
--inf 0.0000 -0.0000 1.0000 3.0000 inf NaN
+-inf 0.0000 -0.0000 1.0000 3.0000 inf
