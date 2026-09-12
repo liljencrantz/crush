@@ -204,6 +204,7 @@ message Attr {
 message Job {
   repeated CommandInvocation commands = 1;
   uint64 source = 2;
+  bool is_background = 3;
 }
 
 message JobList {

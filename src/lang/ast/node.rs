@@ -70,6 +70,7 @@ impl Node {
                     location: node.location,
                 }],
                 location: node.location,
+                is_background: false,
             }
             .into(),
         ))
@@ -182,6 +183,7 @@ impl Node {
             Node::GetItem(a, o) => ValueDefinition::JobDefinition(Job::new(
                 vec![self.compile_as_special_command(ctx)?.unwrap()],
                 ctx.source.substring(a.location().union(o.location())),
+                false,
             )),
 
             Node::Unary(op, r) => match op.string.as_str() {
@@ -465,6 +467,7 @@ impl Node {
                         location,
                     }],
                     location,
+                    is_background: false,
                 }
                 .into(),
             ),
@@ -487,6 +490,7 @@ impl Node {
                     location,
                 }],
                 location,
+                is_background: false,
             }
             .into(),
         ))
@@ -512,6 +516,7 @@ impl Node {
                                         location,
                                     }],
                                     location,
+                                    is_background: false,
                                 }],
                                 location,
                             },
@@ -522,6 +527,7 @@ impl Node {
                     location,
                 }],
                 location,
+                is_background: false,
             }
             .into(),
         ))
@@ -539,6 +545,7 @@ impl Node {
                     location,
                 }],
                 location,
+                is_background: false,
             }
             .into(),
         ))
@@ -567,6 +574,7 @@ impl Node {
                     location,
                 }],
                 location,
+                is_background: false,
             }
             .into(),
         ))
@@ -591,6 +599,7 @@ impl Node {
                     location,
                 }],
                 location,
+                is_background: false,
             }
             .into(),
         ))
@@ -642,6 +651,7 @@ impl From<CommandNode> for JobNode {
         JobNode {
             location: value.location,
             commands: vec![value],
+            is_background: false,
         }
     }
 }

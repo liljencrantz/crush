@@ -3,11 +3,9 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushResult, command_error};
-use crate::lang::pipe::ValueReceiver;
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::handles::JobType::Background;
-use crate::lang::state::id::JobId;
 use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, value::Value, value::ValueType};
 use crate::util::file::cwd;
@@ -16,7 +14,6 @@ use chrono::Duration;
 use os_pipe::PipeReader;
 use signature::signature;
 use std::io::Read;
-use std::sync::{Mutex, OnceLock};
 
 mod cmd;
 mod r#for;
@@ -134,68 +131,29 @@ fn sleep(mut context: CommandContext) -> CrushResult<()> {
 
 #[signature(
     control.bg,
-    short = "Run a pipeline in the background",
-    long = "Use the `bg` command as the last command in a pipeline to run it in the background.",
-    long = "",
-    long = "The `bg` command is usually used by appending the `&` operator to the end of a pipeline, for example `$handle := $(files --recursive . &)` is exactly equivalent to `$handle := $(files --recursive . | bg)`.",
-    long = "",
-    long = "The `bg` command returns the job id of the background job. This can be used to get the output of the pipeline at a later point via the `fg` command.", 
-    example = "# Create a pipe",
-    example = "$pipe := $($(table_input_stream value=$integer):pipe)",
-    example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
-    example = "seq 100_000 | pipe:write &",
-    example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
-    example = "$sum_job_handle := $(pipe:read | sum &)",
-    example = "# Close the pipe so that the second job can finish",
-    example = "pipe:close",
-    example = "# Put the sum job in the foreground",
-    example = "fg $sum_job_handle",
+    output = Known(ValueType::Empty),
+    short = "Resume a paused job, letting it continue running in the background.",
+    long = "Unlike a job started with a trailing `&` (which is in the background from the",
+    long = "moment it starts), `bg` acts on a job that already exists and is currently",
+    long = "paused (e.g. via `crush:pause`) -- it resumes it without putting it in the",
+    long = "foreground the way `fg` would.",
 )]
-struct Bg {}
-
-#[derive(Clone)]
-struct BackgroundJob {
-    job_id: JobId,
-    value: ValueReceiver,
+struct Bg {
+    #[description("the job id of the paused job to resume in the background.")]
+    job: usize,
 }
 
-fn background_jobs() -> &'static Mutex<Vec<BackgroundJob>> {
-    static CELL: OnceLock<Mutex<Vec<BackgroundJob>>> = OnceLock::new();
-    CELL.get_or_init(|| Mutex::new(Vec::new()))
-}
-
-fn remove_job(id: JobId) -> Option<ValueReceiver> {
-    let mut jobs = background_jobs().lock().unwrap();
-    let mut matching = jobs
-        .extract_if(.., |job| job.job_id == id)
-        .collect::<Vec<_>>();
-    matching.pop().map(|job| job.value)
-}
-
-fn remove_last_job() -> Option<ValueReceiver> {
-    let mut jobs = background_jobs().lock().unwrap();
-    jobs.pop().map(|job| job.value)
-}
-
-fn add_job(job_id: JobId, value: ValueReceiver) {
-    let mut jobs = background_jobs().lock().unwrap();
-    jobs.push(BackgroundJob { job_id, value });
-}
-
-fn bg(context: CommandContext) -> CrushResult<()> {
-    let job_id = context.command_handle().job_handle.id();
-    add_job(job_id, context.input.clone());
-    context.output.send(Value::from(job_id))
+fn bg(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Bg::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.resume(cfg.job.into())?;
+    context.output.send(Value::Empty)
 }
 
 #[signature(
     control.fg,
     short = "Return the output of a background pipeline",
-    long = "The `bg` builtin will read the result from a pipeline and insert it into a table output stream.",
-    long = "Because this stream is immediately returned, execution will continue and the pipeline will run",
-    long = "in the background.",
-    long = "",
-    long = "To get the result of the pipeline, use the `fg` builtin.",
+    long = "A job started with a trailing `&` runs in the background and registers its",
+    long = "eventual result for later retrieval; `fg` waits for and returns that result.",
     example = "# Create a pipe",
     example = "$pipe := $($(table_input_stream value=$integer):pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
@@ -215,12 +173,12 @@ struct Fg {
 fn fg(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Fg::parse(context.remove_arguments(), &context.global_state.printer())?;
     match cfg.job {
-        None => match remove_last_job() {
+        None => match context.global_state.take_last_background_job() {
             None => context.output.send(Value::Empty),
             Some(v) => context.output.send(v.recv()?),
         },
 
-        Some(id) => match remove_job(id.into()) {
+        Some(id) => match context.global_state.take_background_job(id.into()) {
             None => context.output.send(Value::Empty),
             Some(v) => context.output.send(v.recv()?),
         },

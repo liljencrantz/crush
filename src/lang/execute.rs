@@ -62,6 +62,7 @@ pub fn pup(env: Scope, buf: &Vec<u8>, global_state: &GlobalState) -> CrushResult
                     vec![],
                 )],
                 Source::new(Input, Arc::from("")),
+                false,
             );
 
             job.eval(JobContext::new(

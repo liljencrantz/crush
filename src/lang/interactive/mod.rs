@@ -62,7 +62,7 @@ fn execute_command(
                 vec![],
             );
             let (snd, recv) = pipe();
-            let job = Job::new(vec![cmd], Source::new(SourceType::Input, Arc::from("")));
+            let job = Job::new(vec![cmd], Source::new(SourceType::Input, Arc::from("")), false);
             job.eval(JobContext::new(
                 empty_channel(),
                 snd,

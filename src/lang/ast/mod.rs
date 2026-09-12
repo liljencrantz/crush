@@ -55,6 +55,10 @@ impl From<JobNode> for JobListNode {
 pub struct JobNode {
     pub commands: Vec<CommandNode>,
     pub location: Location,
+    /// True only for a job parsed with a trailing `&`. See `Job`'s own field of the
+    /// same name in `src/lang/job.rs` for why this needs to survive into the runtime
+    /// job at all, rather than being inferred from what the last command looks like.
+    pub is_background: bool,
 }
 
 impl JobNode {
@@ -65,6 +69,7 @@ impl JobNode {
                 .map(|c| c.compile(ctx))
                 .collect::<CrushResult<Vec<CommandInvocation>>>()?,
             ctx.source.substring(self.location),
+            self.is_background,
         ))
     }
 }
@@ -80,6 +85,7 @@ impl From<Node> for JobNode {
                     location,
                 }],
                 location,
+                is_background: false,
             },
             _ => {
                 let expressions = vec![Node::val(location), node];
@@ -89,6 +95,7 @@ impl From<Node> for JobNode {
                         location,
                     }],
                     location,
+                    is_background: false,
                 }
             }
         }
@@ -105,6 +112,7 @@ fn operator_function(op: &[&str], op_location: Location, l: Box<Node>, r: Box<No
                 location: location,
             }],
             location: location,
+            is_background: false,
         }
         .into(),
     ))
@@ -120,6 +128,7 @@ pub fn operator_method(op: &str, op_location: Location, l: Box<Node>, r: Box<Nod
                 location: location,
             }],
             location: location,
+            is_background: false,
         }
         .into(),
     ))
@@ -135,6 +144,7 @@ pub fn unary_operator_method(op: &str, op_location: Location, n: Box<Node>) -> B
                 location: location,
             }],
             location: location,
+            is_background: false,
         }
         .into(),
     ))
@@ -150,6 +160,7 @@ pub fn negate(n: Box<Node>) -> Box<Node> {
                 location,
             }],
             location,
+            is_background: false,
         }
         .into(),
     ))
@@ -183,13 +194,6 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
-    pub fn background_job(location: Location) -> CommandNode {
-        CommandNode {
-            location,
-            expressions: vec![attr(&["global", "control", "bg"], location)],
-        }
-    }
-
     pub fn compile(&self, ctx: &NodeContext) -> CrushResult<CommandInvocation> {
         if let Some(c) = self.expressions[0].compile_as_special_command(ctx)? {
             if self.expressions.len() == 1 {

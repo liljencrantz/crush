@@ -894,6 +894,7 @@ impl<'a> ClosureSerializer<'a> {
             s.commands.push(self.command(c)?);
         }
         s.source = job.source().serialize(self.elements, self.state)? as u64;
+        s.is_background = job.is_background();
         Ok(s)
     }
 
@@ -1207,6 +1208,7 @@ impl<'a> ClosureDeserializer<'a> {
                 .map(|c| self.command(c))
                 .collect::<CrushResult<Vec<_>>>()?,
             Source::deserialize(s.source as usize, self.elements, self.state)?,
+            s.is_background,
         ))
     }
 
@@ -1288,6 +1290,7 @@ impl<'a> ClosureDeserializer<'a> {
                             .map(|c| self.command(c))
                             .collect::<CrushResult<Vec<_>>>()?,
                         Source::deserialize(j.source as usize, self.elements, self.state)?,
+                        j.is_background,
                     ))
                 }
                 model::value_definition::ValueDefinition::JobList(jobs) => {
@@ -1299,6 +1302,7 @@ impl<'a> ClosureDeserializer<'a> {
                                 .map(|c| self.command(c))
                                 .collect::<CrushResult<Vec<_>>>()?,
                             Source::deserialize(j.source as usize, self.elements, self.state)?,
+                            j.is_background,
                         ));
                     }
                     ValueDefinition::JobListDefinition(res, Source::deserialize(

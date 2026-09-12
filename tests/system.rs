@@ -26,10 +26,12 @@ fn run_system_test(name: &Path) {
     assert_eq!(
         output.status.code(),
         Some(expected_status),
-        "Wrong exit status while running file {}. Expected {}, got {:?}.",
+        "Wrong exit status while running file {}. Expected {}, got {:?}.\nStdout:\n{}\nStderr:\n{}",
         name.to_str().unwrap(),
         expected_status,
         output.status.code(),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
     );
 
     // A test with no .crush.output file skips the output comparison entirely -- it's

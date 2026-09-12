@@ -91,6 +91,23 @@ impl CrushError {
         }
     }
 
+    /// True if this error is a `SendError` -- i.e. sending on a channel failed because
+    /// every receiver on the other end has been dropped. Crossbeam's `SendError` has no
+    /// other failure mode: it always specifically means "nobody is listening anymore",
+    /// a normal, expected condition (e.g. a downstream `head`/`take` stopping early),
+    /// not a genuine command failure.
+    ///
+    /// Deliberately a separate check from `is_disconnected()` above, not folded into
+    /// it: that one treats a `RecvError` as benign too, for a different reason (an
+    /// upstream read hitting end-of-stream via a raw `.recv()`/`.read()` rather than
+    /// `TableStreamReader::next_row()`). Reusing it here would also silently swallow
+    /// exactly the class of bug `next_row()` exists to eliminate -- a command that
+    /// should treat its own input's exhaustion as `Ok(None)` but instead propagates
+    /// the raw `RecvError` as a real failure.
+    pub fn is_send_disconnected(&self) -> bool {
+        matches!(&self.error_type, SendError(_))
+    }
+
     pub fn error_type(&self) -> &CrushErrorType {
         &self.error_type
     }

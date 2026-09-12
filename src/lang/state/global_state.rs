@@ -3,6 +3,7 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushError, CrushResult, command_error};
 use crate::lang::parser::Parser;
+use crate::lang::pipe::ValueReceiver;
 use crate::lang::printer::Printer;
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, JobType};
@@ -100,6 +101,14 @@ pub struct GlobalState {
     editor: Arc<Mutex<Option<Editor<RustylineHelper, DefaultHistory>>>>,
 }
 
+/// A job started in the background: `Job::eval()` registers one of these instead of
+/// waiting on the pipeline's actual last stage, so `fg` can retrieve its eventual
+/// result later.
+struct BackgroundJob {
+    job_id: JobId,
+    value: ValueReceiver,
+}
+
 struct StateData {
     format_data: FormatData,
     prompt: Option<Command>,
@@ -110,6 +119,7 @@ struct StateData {
     run_mode: RunMode,
     warnings: VecDeque<Warning>,
     warning_limit: usize,
+    background_jobs: Vec<BackgroundJob>,
 }
 
 impl GlobalState {
@@ -133,6 +143,7 @@ impl GlobalState {
                 run_mode,
                 warnings: VecDeque::new(),
                 warning_limit: DEFAULT_WARNING_LIMIT,
+                background_jobs: Vec::new(),
             })),
             threads: ThreadStore::new(),
             printer,
@@ -323,6 +334,31 @@ impl GlobalState {
     pub fn resume(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
         get_job(&mut data, jid, true)?.lock()?.resume()
+    }
+
+    /// Register a job started in the background (i.e. `Job::eval()` saw its
+    /// `is_background` flag set): `value` is the receiver for whatever the pipeline's
+    /// actual last stage eventually sends, to be retrieved later via `fg`.
+    pub fn add_background_job(&self, job_id: JobId, value: ValueReceiver) {
+        let mut data = self.data.lock().unwrap();
+        data.background_jobs.push(BackgroundJob { job_id, value });
+    }
+
+    /// Remove and return the named background job's receiver, if one is registered.
+    pub fn take_background_job(&self, job_id: JobId) -> Option<ValueReceiver> {
+        let mut data = self.data.lock().unwrap();
+        let mut matching = data
+            .background_jobs
+            .extract_if(.., |job| job.job_id == job_id)
+            .collect::<Vec<_>>();
+        matching.pop().map(|job| job.value)
+    }
+
+    /// Remove and return the most recently backgrounded job's receiver, if any is
+    /// registered.
+    pub fn take_last_background_job(&self) -> Option<ValueReceiver> {
+        let mut data = self.data.lock().unwrap();
+        data.background_jobs.pop().map(|job| job.value)
     }
 
     pub fn set_editor(&self, editor: Option<Editor<RustylineHelper, DefaultHistory>>) {

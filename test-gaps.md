@@ -81,21 +81,90 @@ open in `todo.md`.
 
 ## Reachable bugs found while fixing other items on this list
 
-- [ ] `Job::eval()` (`src/lang/job.rs`) only tracks and joins the thread for a
+- [x] `Job::eval()` (`src/lang/job.rs`) only tracked and joined the thread for a
       pipeline's *last* command. Non-last stages' `call_def.eval(context.with_io(input,
-      output))?;` return value (an `Option<ThreadId>`) is discarded outright, so if that
-      stage is dispatched to a thread (can_block=true, the default for most builtins),
-      nobody ever joins it — its result, success or failure, never reaches anywhere that
+      output))?;` return value (an `Option<ThreadId>`) was discarded outright, so if that
+      stage was dispatched to a thread (can_block=true, the default for most builtins),
+      nobody ever joined it — its result, success or failure, never reached anywhere that
       would report it. Found while making pipeline-step failures halt the script: a
       non-last `uniq` failing (in a `... | uniq | echo` pipe) still silently vanished
       even after fixing every swallow point in the dispatch chain (`eval_command`,
       `CommandInvocation::eval()`, `join_one()`), because nothing ever called
-      `join_one()` for that stage's thread at all. Not fixed — worked around in
-      `tests/uniq_does_not_panic_on_unhashable_type.crush` by making the failing command
-      the pipeline's last stage instead. Fixing this properly needs `Job::eval()`
-      restructured to track every stage's thread ID (not just discard non-last ones)
-      and join each of them, converting a failure into the job's own failure — a bigger
-      change than the dispatch-chain fixes already made.
+      `join_one()` for that stage's thread at all.
+
+      **Fixed**, in two parts:
+      1. `CrushError` gained `is_send_disconnected()` (`src/lang/errors.rs`), matching
+         only `SendError` — crossbeam's `SendError` has exactly one meaning ("every
+         receiver was dropped"), unlike the existing `is_disconnected()` (which also
+         treats `RecvError` as benign, for the unrelated reason that `next_row()` uses
+         it to mean ordinary end-of-stream — reusing that for this purpose would have
+         also swallowed the exact class of bug `next_row()` exists to catch).
+      2. `Job::eval()` now collects the `ThreadId`s it used to discard and, once the
+         pipeline's last stage finishes, joins each one — propagating a genuine failure
+         as the job's own, but ignoring one where `is_send_disconnected()` (e.g. a
+         `head`/`take` truncating a stream early, which makes an upstream stage's next
+         `output.send(row)?` fail exactly this way; every streaming command's existing
+         `?`-propagation on that call was already correct, it just needed something to
+         actually look at the result).
+
+      This alone deadlocked `&`-backgrounded pipelines (`seq 100 | pipe:write &`):
+      `&` desugared to a literal trailing `bg` pipeline stage whose entire purpose is to
+      *not* wait for upstream to drain, and the new join now waited anyway. Rather than
+      detecting "is the last stage `bg`" at runtime (tried and rejected: name matching
+      breaks under `$bg := {}` shadowing; a `bg`-identity check via `Arc::ptr_eq` handles
+      shadowing/aliasing correctly but needs the command position resolved twice, which
+      is unsound if it ever has a side effect) — `background: bool` became a real,
+      first-class field on `Job`/`JobNode`, set only by the grammar's existing
+      `OptBackground` production (the same place that recognizes `&` today), and `bg` was
+      split into two unrelated things: a job-level `is_background` flag that
+      `Job::eval()` itself acts on directly (dispatch the real last stage, register its
+      output receiver in `GlobalState`'s new `background_jobs` table for `fg`, return
+      immediately — none of the new joining logic runs at all for a background job,
+      matching "a background job is its own independent context, its intermediate
+      commands' exit status is never checked, and nothing waits for its threads"), and a
+      narrower `control:bg` builtin repurposed to resume an already-paused job into the
+      background (parallel to `crush:resume`, not related to job creation at all
+      anymore). `tests/bg_fg.crush`'s old `seq 0 3 | sum | bg` (the previously-documented
+      "exactly equivalent to `&`" spelling) no longer works by design and was updated to
+      use `&`; `pup` (de)serialization of a `Job` (`src/lang/command/closure.rs`, the
+      `crush.proto` `Job` message) gained the same `is_background` field so this survives
+      a serialization round trip (e.g. `remote:exec` of a closure containing a
+      backgrounded job) instead of silently defaulting to `false`.
+      Also fixed in passing: `control:bg`'s own doc example (`seq 100_000 | pipe:write
+      &`) was itself wrong — `seq`'s first positional argument is `from`, not a count, so
+      that example actually meant "count forever from 100,000," an infinite producer.
+      Verified against the real repro (`tests/pipe.crush`, previously deadlocking) and
+      against `head`/`take`-style early termination and genuine non-last-stage failures
+      (`uniq` as a non-last stage now correctly aborts the script instead of vanishing)
+      by hand.
+
+      **New evidence for a related, still-open concern:** confirmed by hand that
+      `try`/`catch` does *not* reliably see a value assigned or returned from a
+      *previous* statement if the very next statement immediately does something with it
+      (a method call, string concatenation) with no intervening statement — a fifth
+      repro shape of a class already noted elsewhere in this file (see the
+      thread-join-gap notes under "Test infrastructure gaps" and the
+      "`remote.rs`" section below). Not investigated further here.
+
+      **Unresolved:** a rare (roughly 1-in-15 to 1-in-20), non-reproducible-in-isolation
+      failure surfaced during testing: `tests/pipe2.crush`/`tests/pipe3.crush` (multiple
+      *concurrent* backgrounded readers and/or writers sharing one pipe) occasionally
+      fail with "receiving on an empty and disconnected channel" when run as part of the
+      full `cargo test` suite — never once in over 50 isolated stress-test runs of the
+      exact same scripts (tight loops, both shell redirection and Rust's
+      `Command::output()`), and never in ~25 baseline (pre-fix) full-suite runs, though a
+      larger baseline sample also never showed it. Two concrete hypotheses were checked
+      and ruled out with direct evidence, not just reasoning: `ThreadId` reuse (Rust's
+      std source, `library/std/src/thread/id.rs`, explicitly guarantees IDs are never
+      reused, via a monotonic atomic counter) and `Scope::is_stopped()` incorrectly
+      shared/tripped across concurrent background jobs (instrumented both of
+      `Job::eval()`'s early-return-without-sending paths unconditionally; ran until the
+      failure reproduced twice; neither ever fired). The failure's rarity and total
+      absence in isolation, paired with `test_grpc`'s already-much-more-frequent
+      pre-existing flakiness showing up in the exact same comparison runs, suggests this
+      belongs to the same general class of "full-suite resource/timing pressure" rather
+      than a deterministic logic bug reachable in isolation, but this is not confirmed —
+      flagged here rather than closed out.
 - [ ] `control/schedule.rs` has a genuine, pre-existing race in its own output-channel
       lifecycle: when its result is left as a bare, unconsumed top-level statement (no
       pipe, no assignment), the row it sends via `output.send(Row::new(vec![]))` (or the
