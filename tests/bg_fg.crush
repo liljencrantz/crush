@@ -4,8 +4,7 @@ assert (($(fg $h)) == 3)
 
 # fg with no argument defaults to the most recently backgrounded job. Only a trailing
 # `&` creates a job in the background from the start -- `bg` itself is a separate,
-# unrelated builtin now (it resumes an already-paused job into the background; see
-# test-gaps.md's Job::eval() thread-join-gap entry for why the two used to be
-# conflated), not another spelling for this.
+# unrelated builtin now (it resumes an already-paused job into the background), not
+# another spelling for this.
 seq 0 3 | sum &
 assert (($(fg)) == 3)

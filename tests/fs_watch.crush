@@ -4,24 +4,24 @@
 # * `fs:watch` never returns on its own -- it blocks forever waiting for the next OS event
 #   -- so it has to be run backgrounded (`&`) and picked up with `fg`, the same pattern
 #   tests/bg_fg.crush uses. `fg` waits for the *last* stage of a backgrounded pipeline to
-#   finish, not every stage (see the Job::eval() entry in test-gaps.md), which is exactly
-#   what makes both checks below work: `members` only needs the stream's column types, not
-#   an actual event, so `fg` returns as soon as it and `materialize` are done, even though
-#   `fs:watch` itself is still running, unjoined, in the background.
+#   finish, not every stage, which is exactly what makes both checks below work: `members`
+#   only needs the stream's column types, not an actual event, so `fg` returns as soon as
+#   it and `materialize` are done, even though `fs:watch` itself is still running,
+#   unjoined, in the background.
 # * For the second check, it can only discover that `head 1` has stopped reading on its
 #   *next* attempted send -- there is no way to notice a closed pipe while merely waiting
 #   for the next event. A second file change, after the first, exists purely to give it
 #   that next attempt so the backgrounded job actually finishes instead of lingering
 #   forever. This is a known, shared limitation with control/schedule.rs's own
-#   interval-bounded design (see test-gaps.md), not something specific to fs:watch.
+#   interval-bounded design, not something specific to fs:watch.
 # * Exactly which event fires first (a create on the directory itself vs. the file inside
 #   it) is OS/timing dependent -- see fs:watch's own long-form help -- so this only checks
 #   that real events were captured and shaped correctly, not which one.
 #
 # Row values are checked via `select`/`list:collect` rather than by materializing a row and
-# reading a field directly (`$row:path`): that currently hits a separate, unrelated bug
-# where struct field access breaks when the field holds a File value (also logged in
-# test-gaps.md).
+# reading a field directly (`$row:path`) -- not required anymore (a since-fixed bug used to
+# make direct File-valued field access on a struct behave incorrectly), just not reverted
+# since it's unrelated to what this test is actually meant to cover.
 
 ./.fs_watch_test_dir:mkdir
 

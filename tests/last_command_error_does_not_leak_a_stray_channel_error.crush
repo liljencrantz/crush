@@ -5,7 +5,7 @@
 # `last_input.recv()` immediately returned a RecvError -- a second, unrelated
 # "receiving on an empty and disconnected channel" message that leaked an implementation
 # detail and drowned out (or, depending on the exact path, replaced) the real one.
-# Fixed by only forwarding recv()'s value if it actually arrives; see test-gaps.md.
+# Fixed by only forwarding recv()'s value if it actually arrives.
 #
 # This exercises the can_block=false path (convert's handler errors synchronously,
 # without spawning a thread); the can_block=true path (e.g. a failing `select` call) was
@@ -15,8 +15,8 @@
 # The `echo "barrier"` below is deliberate, not decorative: touching $msg with a method
 # call or string concatenation in the very next statement after the catch block races
 # and can itself surface the exact leaked-channel-error symptom this test guards
-# against, unrelated to whether job.rs's own bug is present. See test-gaps.md's
-# `Job::eval()` thread-join-gap entry for more repro shapes of that same race.
+# against, unrelated to whether job.rs's own bug is present. Root cause not found;
+# this is one of several repro shapes of the same still-open race.
 $msg := ""
 try {
     seq 0 3 | convert $integer "notanumber"

@@ -14,9 +14,11 @@ $sum_job_id2 := $(pipe:read | sum &)
 $sum_job_id3 := $(pipe:read | sum &)
 $sum_job_id4 := $(pipe:read | sum &)
 
-# Wait for the writer job to fully finish writing before closing the pipe -- see
-# tests/pipe3.crush and test-gaps.md's pipe2/pipe3 entry for why this is required,
-# not just tidy.
+# Wait for the writer job to fully finish writing before closing the pipe: pipe:write
+# reads $pipe's own fields on its own worker thread whenever it happens to get
+# scheduled, with no synchronization against pipe:close clearing those same fields --
+# fg-ing the writer first guarantees it has already finished using them. See
+# tests/pipe3.crush for the same pattern with multiple writers.
 fg $input1
 
 # Close the output and input, so that the input can actually

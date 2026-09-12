@@ -11,12 +11,6 @@
 # value only exists at runtime; this can't be caught by checking the column's declared
 # type the way sort.rs does, only by checking each actual value as it's processed.
 #
-# uniq must be the *last* command in the pipe, not piped further to echo: Job::eval()
-# only tracks/joins the thread for the last command of a pipeline -- a non-last stage's
-# spawned thread is never joined at all, so its result (whether a panic or a properly
-# propagated graceful error) would never reach the try/catch below. See test-gaps.md's
-# `Job::eval()` thread-join-gap entry.
-#
 # The `echo "barrier"` below is deliberate, not decorative -- see the identical note in
 # last_command_error.crush: touching $msg in the very next statement after the catch
 # block races.

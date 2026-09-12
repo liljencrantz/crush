@@ -22,9 +22,9 @@ $sum_job_id4 := $(pipe:read | sum &)
 # "output" field on its own worker thread whenever the OS happens to schedule it,
 # with no synchronization against pipe:close clearing that same field. Racing
 # pipe:close against a writer job that hasn't gotten a chance to run yet has been
-# observed to silently drop that writer's entire contribution (see test-gaps.md's
-# pipe2/pipe3 entry). fg-ing each writer first guarantees it has completely
-# finished -- including reading $pipe's fields -- before pipe:close can run.
+# observed to silently drop that writer's entire contribution. fg-ing each writer
+# first guarantees it has completely finished -- including reading $pipe's fields --
+# before pipe:close can run.
 fg $input1
 fg $input2
 fg $input3

@@ -85,14 +85,15 @@ fn test_grpc() {
         .spawn()
         .expect("Failed to start gRPC service");
 
-    // Busy-poll the server's port instead of sleeping a fixed amount of time: a
-    // fixed sleep is either a wasted delay (server was ready sooner) or a race
-    // (server is slower to bind than the sleep, e.g. under full-suite load) --
-    // this is one of two hypotheses for test_grpc's known pre-existing flakiness
-    // under `cargo test --workspace` (see test-gaps.md). Exponential backoff starting
-    // at 1ms (instead of a fixed poll interval) so a fast-starting server isn't
-    // penalized with wasted sleeps, up to a 60s total budget; each sleep is clamped to
-    // the remaining budget so the loop can't overshoot it.
+    // Busy-poll the server's port instead of sleeping a fixed amount of time: a fixed
+    // sleep is either a wasted delay (server was ready sooner) or a race (server is
+    // slower to bind than the sleep, e.g. under full-suite load) -- confirmed as the
+    // actual cause of this test's own pre-existing flakiness under `cargo test
+    // --workspace` (it went from failing roughly 3 of every 4 full-suite runs to 8/8
+    // passes once this replaced the old fixed 500ms sleep). Exponential backoff
+    // starting at 1ms (instead of a fixed poll interval) so a fast-starting server
+    // isn't penalized with wasted sleeps, up to a 60s total budget; each sleep is
+    // clamped to the remaining budget so the loop can't overshoot it.
     let start = std::time::Instant::now();
     let max_wait = Duration::from_secs(60);
     let mut backoff = Duration::from_millis(1);

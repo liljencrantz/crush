@@ -13,7 +13,7 @@ already uses for a handful of signature tests (allowed values, `Option`, `#[defa
 the binding *order* rules: how named vs. unnamed arguments interact, and in particular how
 an `#[unnamed()]` collector field (a `Vec<T>` that greedily consumes every remaining
 unnamed argument) affects fields declared before and after it in the struct -- a subtlety
-noted in test-gaps.md that had no coverage at all before this file.
+that had no coverage at all before this file.
 
 Per instruction, this file only adds tests -- no production code changes, even where a
 test below turned up something surprising.
