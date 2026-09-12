@@ -242,6 +242,40 @@ impl Help for ValueType {
 
     fn long_help(&self) -> Option<String> {
         let mut lines = vec![match self {
+            ValueType::String =>
+                    "A string literal is written between double quotes, e.g. `\"hello world\"`.
+
+Strings are immutable -- every method that looks like it modifies a string (`upper`,
+`replace`, `trim`, ...) returns a new string rather than changing the receiver.
+
+The most similar types are `file`, which also wraps text but represents a specific kind
+of text (a filesystem path) with its own path-manipulation methods, and `glob`/`re`,
+which look like strings syntactically but hold a pattern to match against text rather
+than being literal text themselves.",
+
+            ValueType::Integer =>
+                    formatcp!("An integer literal is a bare number, e.g. `5` or `-3`. Underscores may
+be used as digit separators to make large numbers easier to read, e.g. `1_000_000`.
+
+A Crush integer uses signed 128 bit precision. This means that the highest number that
+can be represented is {}, and the lowest is {}.
+
+Integers are immutable values. The most similar type is `float`, used for numbers that
+need a fractional part; mixing an integer and a float in an arithmetic expression
+promotes the result to a float.", i128::MAX, i128::MIN),
+
+            ValueType::Float =>
+                    "A float literal is a bare number containing a decimal point, e.g. `5.0` or
+`-3.25`.
+
+A Crush float is a IEEE 754 64-bit (double precision) floating point number. Floats are
+immutable values. The most similar type is `integer`; mixing the two in an arithmetic
+expression promotes the result to a float.",
+
+            ValueType::Bool => "A boolean value is one of the two literals `$true` or `$false` --
+there is no other way to construct one. Booleans are immutable, and are the result type
+of every comparison (`==`, `<`, ...) and logical (`and`, `or`) operator.",
+
             ValueType::Duration =>
                     "To create your own duration objects, use the `duration:of` method, for example
 
@@ -250,34 +284,164 @@ impl Help for ValueType {
 A duration instance has nanosecond precision. It is represented internally as two 64 bit numbers,
 one for the number of seconds, and one for the nanosecond remainder.
 
-durations are signed, i.e. they can be used to denote a negative span of time.",
+durations are signed, i.e. they can be used to denote a negative span of time. Durations
+are immutable values. The most similar type is `time`: subtracting one `time` from
+another produces a `duration`, and a `duration` can be added to or subtracted from a
+`time`.",
 
             ValueType::Time =>
-                    "All time instances use the local time zone.
+                    "To get the current time, use `time:now`. To parse a time from text, use
+`time:parse`.
+
+All time instances use the local time zone.
 
 A time instance has nanosecond precision. It is represented internally as two 64 bit numbers, one
-for the number of seconds since the Unix epoc, and one for the nanosecond remainder",
+for the number of seconds since the Unix epoc, and one for the nanosecond remainder.
 
-            ValueType::Integer =>
-                    formatcp!("A Crush integer uses signed 128 bit precision. This means that the
-highest number that can be represented is {}, and the lowest is {}.", i128::MAX, i128::MIN),
-            ValueType::Float =>
-                    "A Crush float is a IEEE 754 64-bit (double precision) floating point number.",
-            ValueType::Bool => "A boolean value is one of `$true` or `$false`.",
-            ValueType::Struct => "To create a simple immutable struct, use the `struct:of` command.
-To create a mutable struct that supports inheritance, use the `class` command.",
-            ValueType::Empty => "The instance of the empty type is returned by commands that don't return any value.",
+Times are immutable values -- arithmetic methods like adding a `duration` return a new
+time rather than changing the receiver. The most similar type is `duration`, used to
+represent the difference between two times.",
+
             ValueType::Glob => "Globs are usually created by writing an unescaped string containing
 a wildcard character (`*` or `?`), like `files *.toml`.
 
 If you want to construct a new glob from a string, use the `glob:new` command, e.g.
-`glob:new \"*.txt\"`",
+`glob:new \"*.txt\"`.
+
+Globs are immutable. The most similar types are `re`, which supports much richer
+patterns at the cost of more complex syntax, and `string`, which globs otherwise
+resemble but never match by wildcard -- only a real glob value does.",
+
             ValueType::Regex => "Regular expressions are usually created by writing using regexp
 literal syntax, e.g. `files ^(^...$)`.
 
 If you want to construct a new glob from a string, use the `re:new` command, e.g.
-`re:new \"[a-z]*\\.txt\"`",
-            _ => "",
+`re:new \"[a-z]*\\.txt\"`.
+
+Regular expressions are immutable. The most similar type is `glob`, which supports only
+simple wildcard patterns but with much simpler syntax.",
+
+            ValueType::Command =>
+                    "The most common way to create a command is a closure literal, e.g. `{echo hello}`,
+or with named parameters, `{|$x| echo $x}`. Builtin commands are themselves command
+values and can be captured into a variable the same way, e.g. `$e := $echo`.
+
+A command value is immutable -- calling it runs its body, but that doesn't change the
+value itself. Reassigning the variable that holds a command is a separate operation from
+mutating the command.",
+
+            ValueType::File =>
+                    "A file value is usually written as a bareword or single-quoted path, e.g.
+`./Cargo.toml` or `'my file.txt'` -- crush recognizes these as files rather than plain
+strings based on their syntax. You can also convert an existing string explicitly, e.g.
+`convert $file \"./Cargo.toml\"`.
+
+A file value simply names a path; the value itself is immutable, though of course the
+file it points at on disk can change, be created, or be removed out from under it via
+methods like `remove` or commands like `fs:mkdir`. The most similar types are `string`
+(a file is textual data with path semantics layered on top) and `glob`, which matches a
+whole set of paths rather than naming a single one.",
+
+            ValueType::TableInputStream(_) =>
+                    "A table_input_stream is produced by any streaming command -- for example, the
+output of `files` or `seq` -- or by reading the `read` member of a pipe object (see
+`(table_input_stream ...):pipe`, under `help pipe`).
+
+It can only be traversed once: each row is consumed as it's read, so a second pass over
+the same stream sees nothing. If you need to read the same rows more than once, pipe the
+stream through `materialize` to turn it into a reusable `table`. `table_output_stream` is
+the writable counterpart of the same rows.",
+
+            ValueType::TableOutputStream(_) =>
+                    "A table_output_stream is obtained from the `output` member of a pipe object,
+created by calling `:pipe` on a `table_input_stream` type, e.g.
+`$p := $($(table_input_stream value=$integer):pipe)`; `$p:output` is then a
+table_output_stream that rows can be written to, and `$p:read` is the matching
+table_input_stream those same rows can be read back from.
+
+Rows are written with the `write` method (see `help pipe:write`). The most similar type
+is `table_input_stream`, its read-side counterpart.",
+
+            ValueType::Table(_) =>
+                    "A table is created by piping a table_input_stream through `materialize`, e.g.
+`files | materialize`.
+
+Unlike a table_input_stream, a table is a fixed snapshot: it can be read more than once,
+indexed by row number (`$t[0]`), and asked for its length (`$t:len`) -- but it has no
+methods for adding, removing, or replacing rows. The most similar type is
+`table_input_stream`, the one-shot, streaming form it's materialized from.",
+
+            ValueType::Struct => "To create a simple immutable struct, use the `struct:of` command,
+e.g. `struct:of x=1 y=2`; its fields can be read (`$s:x`) but not reassigned.
+
+To create a mutable struct that supports inheritance and methods, use the `class`
+command; instances created from a class (`$MyClass:new ...`) do support field
+reassignment (`$instance:x = 5`) from outside the class as well as from within its own
+methods.
+
+The most similar type is `dict`, which is also a mapping from keys to values, but with
+keys chosen at runtime rather than fixed named fields, and no support for methods or
+inheritance.",
+
+            ValueType::List(_) => "Create a list with the `list:of` command, e.g. `list:of 1 2 3`,
+or by collecting a column out of piped table input with `list:collect`.
+
+Lists are mutable: elements can be appended, removed, or replaced in place. The most
+similar type is `table`, which is also an ordered sequence of items but where each item
+is a row of several named, differently-typed columns rather than a single value.",
+
+            ValueType::Dict(_, _) => "Create a dict with the `dict:of` command, e.g.
+`dict:of a=1 b=2`, or by collecting key/value columns out of piped table input with
+`dict:collect`.
+
+Dicts are mutable: entries can be inserted, removed, or have their value replaced in
+place. The most similar type is `struct`, which is also a mapping from keys to values,
+but with a fixed set of keys chosen when the struct is created rather than a dynamic,
+mutable set of keys.",
+
+            ValueType::Scope => "A scope is normally not constructed directly -- crush creates one
+implicitly for the root namespace (`$global`) and for every closure or block invocation.
+The scope currently executing can be obtained by calling `__current_scope__` on any
+existing scope value, e.g. `$global:__current_scope__`.
+
+Scopes are mutable: declaring a new variable (`:=`) or assignment (`=`) modifies the
+scope it's declared or resolved in.",
+
+            ValueType::Empty => "The instance of the empty type is returned by commands that don't
+return any value, e.g. `echo`. There is no way to construct it directly -- it only ever
+shows up as the natural result of a command that produces no output.",
+
+            ValueType::Any => "This is a wildcard type, matching a value of any other type. It
+shows up as the declared type of a column or argument that intentionally imposes no type
+restriction -- it is not a type user code constructs values of directly.",
+
+            ValueType::BinaryInputStream =>
+                    "A binary_stream is obtained by reading binary data without fully loading it into
+memory first, e.g. `bin:from ./Cargo.toml`, or the `body` of an HTTP response from
+`io:http`.
+
+Like `table_input_stream`, it can only be read once. Pipe it through `materialize` to
+get a reusable `binary` value instead.",
+
+            ValueType::Binary =>
+                    "A binary value can be created by converting another value, e.g.
+`convert $binary \"hi\"`, or by reading a `binary_stream` to completion with
+`materialize`, e.g. `bin:from ./Cargo.toml | materialize`.
+
+Binary data is immutable once created. The most similar types are `binary_stream`, its
+one-shot streaming form, and `string`, which also holds a sequence of data but
+specifically unicode text rather than arbitrary bytes.",
+
+            ValueType::Type => "A type value names one of crush's own types, e.g. `$string` or
+`$integer` -- `typeof` returns a value of this kind. Types are mostly used to declare
+what kind of value a signature parameter or table column accepts, e.g. via `convert` or
+a class field declaration, rather than being manipulated directly by everyday scripts.",
+
+            ValueType::OneOf(_) => "A one_of value is constructed with the `one_of:of` command,
+e.g. `one_of:of $file $string $regex`, and names a set of acceptable types rather than a
+single one. It's used the same way an ordinary type is -- most commonly to declare that a
+signature parameter accepts any one of several types -- rather than being a type user
+code creates values of.",
         }.to_string()
             ];
 
