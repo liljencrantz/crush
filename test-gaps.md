@@ -314,13 +314,22 @@ open in `todo.md`.
       "stop"). Fixed by generalizing: added `TableStreamReader::next_row()`, a default
       method mapping `CrushError::is_disconnected()` to `Ok(None)` and propagating
       everything else as a real `Err`, and migrated every read-loop call site (~20 files)
-      to `while let Some(row) = ... .next_row()? { }`. Covered by
-      `tests/error_handling/schedule_exhausted_input.crush` (a custom Rust assertion on
-      stderr, not a plain stdout diff — the error happens on the pipeline's own
-      background thread and is caught/printed by `command_invocation.rs`'s
-      `eval_command` per-stage, not propagated as a hard job failure, so there's no
-      synchronous point for a stdout marker, unlike the `Command::deserialize` case
-      above). Confirmed red before the fix, green after.
+      to `while let Some(row) = ... .next_row()? { }`. Originally covered only by a
+      custom Rust assertion on stderr (`schedule` is a non-last pipeline stage here,
+      piped to `echo`, and at the time `Job::eval()` never joined a non-last stage's
+      thread, so its error could never become a catchable/observable `CrushResult::Err`
+      and there was no synchronous point to hang a stdout marker on). Converted to a
+      plain stdout-diff test, `tests/schedule_does_not_leak_a_stray_channel_error_on_exhausted_input.crush`,
+      once the `Job::eval()` thread-join-gap entry below was fixed: a regression now
+      genuinely aborts the script (confirmed by hand by temporarily reintroducing the
+      old bug), so an `echo "reached"` marker after the pipeline has a real failure
+      mode again. The pipeline's own row output is captured into a variable via `count`
+      rather than left to print to the terminal — printing a stream goes through
+      crush's asynchronous background pretty-printer, which isn't ordered against the
+      next statement's own output, so leaving it printing directly made the marker's
+      position in stdout racy against unrelated printer-thread timing, observed
+      directly (one stray reordered run out of several dozen) before switching to
+      `count`. Confirmed red before the original fix, green after.
       **Follow-up, not done as part of this fix:** the generalization is deliberately
       scoped to fixing ordinary stream exhaustion, which was the one thing actually
       broken. It does *not* add test coverage proving that the other two things
@@ -664,16 +673,16 @@ open in `todo.md`.
       channel error), so a regression reintroducing either bug would still turn these
       tests red.
       `test_schedule_does_not_leak_a_stray_channel_error_on_exhausted_input` was **not**
-      convertible: its error happens on `schedule`'s own spawned thread, and since
-      `schedule` is a non-last pipeline stage in that repro (piped to `echo`), the
-      thread is never joined by `Job::eval` (the existing thread-join-gap entry above),
-      so it never becomes a catchable `Err` either way — confirmed by hand, wrapping the
-      exact script in `try`/`catch` never entered the `catch` block regardless of
-      whether the underlying bug was present. The only observable difference is raw
-      stderr text, and crush has no builtin exposing a script's own stderr as
-      inspectable data (checked: nothing outside `cmd`/`users.rs` even reads stderr, and
-      both of those only relay it via fire-and-forget `printer().error()`, not as a
-      value). `test_run_system_test_catches_missing_trailing_lines` and
+      convertible at the time this audit was done: its error happens on `schedule`'s own
+      spawned thread, and since `schedule` is a non-last pipeline stage in that repro
+      (piped to `echo`), the thread was never joined by `Job::eval` (the thread-join-gap
+      entry above, unfixed at the time), so it could never become a catchable `Err`
+      either way — confirmed by hand, wrapping the exact script in `try`/`catch` never
+      entered the `catch` block regardless of whether the underlying bug was present.
+      **This is now stale**: once the thread-join-gap entry above was fixed, this test
+      *was* converted — see that entry for the details (it ended up using a plain
+      stdout marker, not `try`/`catch`, since the goal was proving the script doesn't
+      abort at all, not inspecting an error's content). `test_run_system_test_catches_missing_trailing_lines` and
       `test_run_system_test_catches_extra_trailing_lines` were left for a different
       reason: they test `run_system_test`'s own comparison logic (via
       `std::panic::catch_unwind`), not crush language behavior — there's no crush-level

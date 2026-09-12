@@ -1,0 +1,25 @@
+# schedule's piped-input branch used to propagate ordinary stream exhaustion (a
+# disconnected channel, which is the *only* thing a disconnect on this pipe can mean)
+# as a hard error instead of treating it like every other stream consumer in the
+# codebase does (`while let Some(row) = ... .next_row()? { }`). Fixed by switching to
+# `TableStreamReader::next_row()`; see test-gaps.md.
+#
+# This used to require a custom Rust assertion on stderr instead of a plain crush
+# test: `schedule` is a *non-last* pipeline stage here (piped to `echo`), and at the
+# time, Job::eval only ever tracked/joined the pipeline's *last* stage -- a non-last
+# stage's spawned thread, and any error it produced, was simply never joined, so it
+# could never become a catchable/observable CrushResult::Err and the script never
+# aborted either way. Now that Job::eval joins every non-last stage's thread (see
+# test-gaps.md's `Job::eval()` thread-join-gap entry), a genuine error from `schedule`
+# here *does* abort the script before reaching the `echo "reached"` marker below --
+# confirmed by hand by temporarily reintroducing the old bug (raw `.read()` instead of
+# `.next_row()`), which reliably prevented the marker from printing. So this plain
+# stdout diff has a real failure mode again.
+#
+# Captured into a variable (via `count`) rather than left to print to the terminal:
+# printing a streamed table goes through crush's asynchronous background pretty-printer,
+# which isn't ordered against the next top-level statement's own output, so leaving it
+# printing directly here would make the "reached" marker's position in stdout racy
+# against unrelated printer-thread timing, not just against the bug this test guards.
+$row_count := $(seq 0 2 | schedule $(duration:of milliseconds=1) | count)
+echo "reached"
