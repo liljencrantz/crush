@@ -119,8 +119,22 @@ fn test_grpc() {
         .spawn()
         .expect("Failed to start gRPC service");
 
-    // Give the server a moment to bind and listen
-    thread::sleep(Duration::from_millis(500));
+    // Busy-poll the server's port instead of sleeping a fixed amount of time: a
+    // fixed sleep is either a wasted delay (server was ready sooner) or a race
+    // (server is slower to bind than the sleep, e.g. under full-suite load) --
+    // this is one of two hypotheses for test_grpc's known pre-existing flakiness
+    // under `cargo test --workspace` (see test-gaps.md).
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        if std::net::TcpStream::connect("[::1]:50051").is_ok() {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "gRPC service never started listening on [::1]:50051 within 10s"
+        );
+        thread::sleep(Duration::from_millis(5));
+    }
 
     // Run the crush gRPC client against the server: send a fully populated `Blob` message
     // to the streaming `Mirror` RPC and verify every field comes back unchanged. See

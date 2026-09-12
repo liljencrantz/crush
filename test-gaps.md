@@ -159,12 +159,23 @@ open in `todo.md`.
       reused, via a monotonic atomic counter) and `Scope::is_stopped()` incorrectly
       shared/tripped across concurrent background jobs (instrumented both of
       `Job::eval()`'s early-return-without-sending paths unconditionally; ran until the
-      failure reproduced twice; neither ever fired). The failure's rarity and total
-      absence in isolation, paired with `test_grpc`'s already-much-more-frequent
-      pre-existing flakiness showing up in the exact same comparison runs, suggests this
-      belongs to the same general class of "full-suite resource/timing pressure" rather
-      than a deterministic logic bug reachable in isolation, but this is not confirmed —
-      flagged here rather than closed out.
+      failure reproduced twice; neither ever fired).
+
+      An initial theory lumped this in with `test_grpc`'s own much-more-frequent
+      pre-existing flakiness as "the same general class of full-suite resource/timing
+      pressure." That theory is now specifically disproven for `test_grpc`, and by
+      extension weakened for pipe2/pipe3: `test_grpc`'s flake had a concrete, fixable
+      cause — it slept a fixed 500ms after spawning the `grpc-service` subprocess and
+      hoped that was enough time for it to bind and start listening, which is exactly
+      the kind of race that gets worse under full-suite CPU contention. Replacing the
+      fixed sleep with a busy-poll (`TcpStream::connect` to the server's port in a
+      5ms-backoff loop, 10s deadline) in `tests/system.rs::test_grpc` took it from
+      failing roughly 3 of every 4 full-suite runs to 8/8 passes across a fresh
+      stress-test batch — while `tests/pipe2.crush`/`tests/pipe3.crush` still failed in
+      3 of those same 8 runs. So `test_grpc`'s flakiness and the pipe2/pipe3 flakiness
+      were never actually the same bug — they only ever coincided because both are
+      timing-sensitive and both run in the same full-suite window. Root cause of the
+      pipe2/pipe3 flake itself is still not found; flagged here rather than closed out.
 - [ ] `control/schedule.rs` has a genuine, pre-existing race in its own output-channel
       lifecycle: when its result is left as a bare, unconsumed top-level statement (no
       pipe, no assignment), the row it sends via `output.send(Row::new(vec![]))` (or the
