@@ -219,18 +219,57 @@ open in `todo.md`.
       that would be the next thing to try if this timing explanation itself needs
       firming up.
 
-      **Not yet fixed.** Two candidate directions, each a real design decision rather
-      than a one-line patch:
-      (a) make `pipe:close` wait for any reader/writer job issued before it (in program
-      order) to actually resolve its field reference before clearing — needs some kind
-      of registration/barrier and a decision about what "before it" means precisely, or
-      (b) make the `$pipe`-struct-member field lookup for `pipe:read`/`pipe:write`
-      resolve *synchronously*, on the thread creating the job, rather than being
-      deferred into the spawned worker thread purely because `can_block()`'s conservative
-      fallback treats every non-`Value::Command` value as potentially blocking — this
-      looks like the more correct fix (it makes "currently existing" mean what the docs
-      imply, "already issued," instead of "won the OS scheduler race"), but touches the
-      general `CommandInvocation` dispatch path, not just `pipe.rs`.
+      **Fixed — but not the way first attempted.** Two runtime-level candidate
+      directions were considered: (a) make `pipe:close` wait for any reader/writer job
+      issued before it to actually resolve its field reference before clearing, or (b)
+      make the `$pipe`-struct-member field lookup for `pipe:read`/`pipe:write` resolve
+      *synchronously* at dispatch time instead of being deferred into a worker thread,
+      by fixing `ValueDefinition::can_block()`'s `GetAttr` case (previously unconditional
+      `true`, regardless of what the parent expression resolves to) to instead delegate
+      to `inner.can_block(context)`.
+
+      (b) was actually implemented and tried. It fully fixed the *read* side — 30
+      parallel `tests/pipe3.crush` runs went from ~50-60% hangs/failures to 0/30 hangs
+      and 0/30 "disconnected channel" errors. But it made the *write* side measurably
+      worse (26/30 wrong-sum failures, each short by an exact multiple of one writer's
+      full 100,000-row contribution — never a partial amount). Root cause of that new
+      failure: `pipe:write`'s own function body (`table_input_stream.rs`'s `write()`)
+      does a *second*, independent field lookup (`pipe.get("output")`) on its own
+      worker thread — a separate instance of the identical race, but inside the
+      command's own implementation rather than in `CommandInvocation`'s dispatch logic,
+      so the `GetAttr` fix can't reach it. Worse, making command *resolution*
+      synchronous sped up everything else in the script, shrinking the writer threads'
+      remaining head start over `pipe:close` even further, so they lost their own race
+      *more* often, not less. This `GetAttr::can_block()` change was not landed, since
+      the actual fix (below) needs no runtime change at all.
+
+      **Actual fix: `fg` every writer job before calling `pipe:close`, on the
+      unmodified pre-existing runtime.** `fg`'s recv() only returns once a job's last
+      stage has *entirely finished* and sent its own output value — for a writer job
+      (`seq ... | pipe:write &`), that only happens after `write()`'s body has
+      completely drained its input and returned, meaning it has already safely used
+      `$pipe`'s "output" field. `fg`-ing every writer job before `pipe:close` therefore
+      *deterministically* eliminates the write-side race (not just makes it unlikely):
+      by the time `pipe:close` runs, every writer has provably already finished reading
+      that field. This doesn't equally deterministically protect the read side (a
+      reader's field-lookup thread getting scheduled isn't logically caused by waiting
+      on writers) — but a field lookup is astronomically cheaper than draining
+      hundreds of thousands of rows, so in practice the reader threads get scheduled
+      long before the last writer finishes. Confirmed empirically on the completely
+      unmodified binary (no source changes): 70/70 parallel `tests/pipe3.crush` runs
+      clean across two batches (30 and 40), and 25/25 each for both `tests/pipe2.crush`
+      and `tests/pipe3.crush` run concurrently (50 total), plus three full
+      `cargo test --workspace -- --test-threads=1` runs with zero failures.
+
+      Applied to `tests/pipe2.crush` and `tests/pipe3.crush` (each writer job now
+      explicitly captured and `fg`-ed before `pipe:close`; `pipe2.crush`'s single
+      writer, previously a bare unnamed `&` statement, had to be assigned to a variable
+      first so it could be `fg`-ed at all) and to `pipe:pipe`'s own doc example in
+      `table_input_stream.rs` (which had the identical racy shape — create writer,
+      create reader, close immediately — meaning a user following the documented
+      idiom verbatim would have hit this). Also fixed the doc example's `seq 100_000`
+      (an infinite producer, not "100,000 integers" — see the `Job::eval()` entry
+      above for the same incidental bug found elsewhere) to `seq 0 100_000`.
 - [ ] `control/schedule.rs` has a genuine, pre-existing race in its own output-channel
       lifecycle: when its result is left as a bare, unconsumed top-level statement (no
       pipe, no assignment), the row it sends via `output.send(Row::new(vec![]))` (or the

@@ -6,13 +6,18 @@ crush:locale:set "en_US.UTF-8"
 $pipe := $($(table_input_stream value=$integer):pipe)
 
 # Attach the input end to a bunch of seq commands
-seq 0 10_000 | pipe:write &
+$input1 := $(seq 0 10_000 | pipe:write &)
 
 # Attach the output end to the sum command and
 $sum_job_id1 := $(pipe:read | sum &)
 $sum_job_id2 := $(pipe:read | sum &)
 $sum_job_id3 := $(pipe:read | sum &)
 $sum_job_id4 := $(pipe:read | sum &)
+
+# Wait for the writer job to fully finish writing before closing the pipe -- see
+# tests/pipe3.crush and test-gaps.md's pipe2/pipe3 entry for why this is required,
+# not just tidy.
+fg $input1
 
 # Close the output and input, so that the input can actually
 # reach EOF once the above 4 invocation exit
