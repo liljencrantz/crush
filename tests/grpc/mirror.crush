@@ -149,10 +149,16 @@ $check "oneof_enum (unset sibling)" "STATUS_UNSPECIFIED" $received:oneof_enum
 $check "oneof_child_message (unset sibling)" $(struct:of child_id="" display_name="") $received:oneof_child_message
 
 if $($mismatches:empty) {
-    echo "MIRROR_TEST_RESULT: PASS"
+    crush:exit status=0 force=$true
 } else {
-    echo "MIRROR_TEST_RESULT: FAIL"
+    echo "Mismatches found:"
     for m=$mismatches {
         echo $("  {}":format $m)
     }
+    # force=$true: without it, crush:exit refuses to run at all ("There are running
+    # jobs") if the gRPC client's streaming Mirror call left any of its own internal
+    # jobs still registered even after $conn:close -- force terminates them so the
+    # process actually exits with the requested status instead of erroring out with a
+    # different, unrelated message.
+    crush:exit status=1 force=$true
 }

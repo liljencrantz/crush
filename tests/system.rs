@@ -95,24 +95,32 @@ fn test_grpc() {
     // fixed sleep is either a wasted delay (server was ready sooner) or a race
     // (server is slower to bind than the sleep, e.g. under full-suite load) --
     // this is one of two hypotheses for test_grpc's known pre-existing flakiness
-    // under `cargo test --workspace` (see test-gaps.md).
-    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    // under `cargo test --workspace` (see test-gaps.md). Exponential backoff starting
+    // at 1ms (instead of a fixed poll interval) so a fast-starting server isn't
+    // penalized with wasted sleeps, up to a 60s total budget; each sleep is clamped to
+    // the remaining budget so the loop can't overshoot it.
+    let start = std::time::Instant::now();
+    let max_wait = Duration::from_secs(60);
+    let mut backoff = Duration::from_millis(1);
     loop {
         if std::net::TcpStream::connect("[::1]:50051").is_ok() {
             break;
         }
+        let elapsed = start.elapsed();
         assert!(
-            std::time::Instant::now() < deadline,
-            "gRPC service never started listening on [::1]:50051 within 10s"
+            elapsed < max_wait,
+            "gRPC service never started listening on [::1]:50051 within 60s"
         );
-        thread::sleep(Duration::from_millis(5));
+        thread::sleep(backoff.min(max_wait - elapsed));
+        backoff = (backoff * 2).min(max_wait);
     }
 
     // Run the crush gRPC client against the server: send a fully populated `Blob` message
     // to the streaming `Mirror` RPC and verify every field comes back unchanged. See
-    // tests/grpc/mirror.crush for the actual test logic; it prints a MIRROR_TEST_RESULT
-    // marker rather than relying on the process exit code, since `crush:exit` can't
-    // reliably terminate a script that still has an open gRPC connection in flight.
+    // tests/grpc/mirror.crush for the actual test logic; it signals pass/fail via
+    // crush:exit's own status (force=$true, since the gRPC client's streaming call can
+    // leave its own internal jobs registered even after closing the connection, which
+    // would otherwise make crush:exit refuse to run at all).
     let output = Command::new("./target/debug/crush")
         .args(&["tests/grpc/mirror.crush"])
         .output()
@@ -121,11 +129,11 @@ fn test_grpc() {
     let _ = server.kill();
     let _ = server.wait();
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("MIRROR_TEST_RESULT: PASS"),
+    assert_eq!(
+        output.status.code(),
+        Some(0),
         "gRPC Mirror round-trip test did not pass.\nStdout:\n{}\nStderr:\n{}",
-        stdout,
+        String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
     );
 }
