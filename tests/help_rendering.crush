@@ -1,0 +1,63 @@
+# Every builtin command declares its own help text via #[signature(...)]'s short/long/
+# example fields, and `help` renders it through crate::util::md::render for terminal
+# display. This test crawls the entire builtin namespace (the same approach
+# generate_docs.crush uses) and calls `help` on every single command it finds, purely
+# to prove that rendering completes without crashing for all of them -- a help string
+# containing unusual markdown (backticks, long lines, code blocks) is exactly the kind
+# of thing that can trip up a renderer that a hand-picked handful of manual checks would
+# never happen to exercise.
+
+$scope_path := {
+    |$s|
+    if ($s == $global) {
+        $s:__name__
+    } else {
+        "{}:{}":format $(scope_path $($s:__super__)) $($s:__name__)
+    }
+}
+
+$checked := $($(list $string):new)
+$skipped := $($(list $string):new)
+$seen := $($(dict $string $bool):new)
+
+# Wrapped in try/catch per member, same as generate_docs.crush: a few builtins (e.g.
+# crush:env:list, users:list) touch real OS/environment state and can fail to even look
+# up in this context -- one bad member should not abort checking everything else.
+$crawl := {
+    |$s|
+    $path := $(scope_path $s)
+    if ($seen:contains($path)) {
+        return
+    }
+    $seen[$path] = $true
+
+    for name=$(dir $s) {
+        if ($name:starts_with("__")) {
+        } else {
+            try {
+                $val := $($s[$name])
+                $t := $(typeof $val)
+                if ($t == $scope) {
+                    crawl $val
+                } else {
+                    if ($t == $command) {
+                        $full_name := $("{}:{}":format $path $name)
+                        try {
+                            help $val
+                            $checked:push $full_name
+                        } catch {|$e|
+                            $skipped:push $("{} (help rendering failed)":format $full_name)
+                        }
+                    }
+                }
+            } catch {|$e|
+                $skipped:push $("{}:{} (lookup failed)":format $path $name)
+            }
+        }
+    }
+}
+
+crawl $global
+$_barrier := "x"
+
+echo --raw $("\n=== checked {} commands, {} skipped ===":format $($checked:len) $($skipped:len))
