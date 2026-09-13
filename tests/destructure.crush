@@ -1,9 +1,9 @@
-# [$a, $b, ...] := value / [$a, $b, ...] = value destructure a list, struct, or dict into
+# [$a $b ...] := value / [$a $b ...] = value destructure a list, struct, or dict into
 # several variables at once. Struct and dict are both backed by an order-preserving map,
 # so "positional" destructuring of either one means "in insertion order".
 
 # List, via :=
-[$a, $b] := $(list:of 1 2)
+[$a $b] := $(list:of 1 2)
 assert ($a == 1) "list destructuring should assign the first element to the first name"
 assert ($b == 2) "list destructuring should assign the second element to the second name"
 
@@ -13,7 +13,7 @@ assert ($only == 42) "single-target destructuring should work too"
 
 # Struct, via :=
 $point := $(struct:of x=10 y=20)
-[$px, $py] := $point
+[$px $py] := $point
 assert ($px == 10) "struct destructuring should assign fields in declaration order"
 assert ($py == 20) "struct destructuring should assign fields in declaration order"
 
@@ -21,17 +21,17 @@ assert ($py == 20) "struct destructuring should assign fields in declaration ord
 $d := $($(dict $string $integer):new)
 $d["z"] = 1
 $d["a"] = 2
-[$first, $second] := $d
+[$first $second] := $d
 assert ($first == 1) "dict destructuring should use insertion order, not key order"
 assert ($second == 2) "dict destructuring should use insertion order, not key order"
 
 # Reassignment via =, on already-declared variables
-[$a, $b] = $(list:of 100 200)
+[$a $b] = $(list:of 100 200)
 assert ($a == 100) "= destructuring should reassign existing variables"
 assert ($b == 200) "= destructuring should reassign existing variables"
 
 # Three-way destructuring, to make sure this isn't hardcoded to exactly two names
-[$one, $two, $three] := $(list:of "x" "y" "z")
+[$one $two $three] := $(list:of "x" "y" "z")
 assert ($one == "x") "three-way destructuring should work, not just two"
 assert ($two == "y") "three-way destructuring should work, not just two"
 assert ($three == "z") "three-way destructuring should work, not just two"
@@ -39,7 +39,7 @@ assert ($three == "z") "three-way destructuring should work, not just two"
 # Wrong element count: too few
 $errored := $false
 try {
-    [$m1, $m2, $m3] := $(list:of 1 2)
+    [$m1 $m2 $m3] := $(list:of 1 2)
 } catch {|$e|
     $errored = $true
 }
@@ -48,7 +48,7 @@ assert $errored "destructuring with more names than elements should error"
 # Wrong element count: too many
 $errored2 := $false
 try {
-    [$m1, $m2] := $(list:of 1 2 3)
+    [$m1 $m2] := $(list:of 1 2 3)
 } catch {|$e|
     $errored2 = $true
 }
@@ -57,7 +57,7 @@ assert $errored2 "destructuring with more elements than names should error"
 # Only list/struct/dict can be destructured
 $errored3 := $false
 try {
-    [$m1, $m2] := 5
+    [$m1 $m2] := 5
 } catch {|$e|
     $errored3 = $true
 }
@@ -66,7 +66,7 @@ assert $errored3 "destructuring a value that isn't a list, struct, or dict shoul
 # = requires every name to already exist, exactly like plain set does
 $errored4 := $false
 try {
-    [$never_declared_1, $never_declared_2] = $(list:of 1 2)
+    [$never_declared_1 $never_declared_2] = $(list:of 1 2)
 } catch {|$e|
     $errored4 = $true
 }
@@ -80,7 +80,7 @@ assert $errored4 "= destructuring on undeclared variables should error, like set
 $errored5 := $false
 try {
     $already := 1
-    [$already, $new_one] := $(list:of 1 2)
+    [$already $new_one] := $(list:of 1 2)
 } catch {|$e|
     $errored5 = $true
 }

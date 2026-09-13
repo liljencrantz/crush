@@ -250,7 +250,7 @@ Assignment: Box<Node> = {
 
 DestructureTargetList: Vec<Node> = {
     <i: Item> => vec![*i],
-    <mut l: DestructureTargetList> Separators <i: Item> => {l.push(*i); l},
+    <mut l: DestructureTargetList> <i: Item> => {l.push(*i); l},
 }
 
 Unary: Box<Node> = {

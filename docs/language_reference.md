@@ -176,16 +176,16 @@ struct and insertion order for a dict -- key order is never involved. The number
 names must exactly match the number of elements, or the assignment errors:
 
 ```shell script
-crush# [$a, $b] := $(list:of 1 2)
+crush# [$a $b] := $(list:of 1 2)
 crush# $a
 1
 crush# $point := $(struct:of x=10 y=20)
-crush# [$x, $y] := $point
+crush# [$x $y] := $point
 crush# $y
 20
 
 # = destructures into already-declared variables, exactly like plain = does for one
-[$a, $b] = $(list:of 3 4)
+[$a $b] = $(list:of 3 4)
 ```
 
 `:=` still requires that none of the names already exist in the local scope, and `=`

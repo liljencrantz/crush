@@ -74,7 +74,6 @@ impl<'input> Lexer<'input> {
                 Some((i, ']')) => return Some(Token::GetItemEnd(Location::from(i)).into()),
                 Some((i, '|')) => return Some(Token::Pipe(Location::from(i)).into()),
                 Some((i, ';')) => return Some(Token::Separator(";", Location::from(i)).into()),
-                Some((i, ',')) => return Some(Token::Separator(",", Location::from(i)).into()),
                 Some((i, '\n')) => return Some(Token::Separator("\n", Location::from(i)).into()),
                 Some((_, '\\')) => match self.chars.peek() {
                     Some((_, '\n')) => {
