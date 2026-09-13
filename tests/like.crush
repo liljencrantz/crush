@@ -32,3 +32,24 @@ assert (!$(like "foo.txt" ^(zzz) "nope"))
 # The dunder methods are still real, callable methods -- just not the intended surface.
 assert $($re:__is__ "aaab")
 assert (!$($re:__is_not__ "aaab"))
+
+# string/glob/regex's __is__ accept a `file` value as the thing being tested, not just a
+# `string` -- the needle argument is typed `Text` (file-or-string), so this has always
+# worked, it just had no test coverage before.
+assert $(like foo.txt *.txt)
+assert $(*.txt:__is__ foo.txt)
+assert $(like foo.txt ^(.*\.txt))
+assert $(^(.*\.txt):__is__ foo.txt)
+assert $(like foo.txt "foo.txt")
+assert $("foo.txt":__is__ foo.txt)
+
+# =~/!~ work with a file value too, as long as it's not a bare unquoted file literal
+# written directly as the operand -- that specific form doesn't parse in expression mode
+# today (a separate, pre-existing limitation: the lexer only combines a dotted bareword
+# into one `file` token in command mode, not inside expression mode). Storing the file
+# in a variable first works fine.
+$f := foo.txt
+$txt_glob := *.txt
+echo "barrier"
+assert ($f =~ $txt_glob)
+assert (!($f !~ $txt_glob))

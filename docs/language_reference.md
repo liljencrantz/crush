@@ -196,6 +196,9 @@ search), or a **type** (checks the value's own type, e.g. `like 5 $integer`). Gl
 aren't automatically expanded against the filesystem -- a glob is a value in its own
 right, passed to whatever command receives it, which decides what to match it against.
 
+The value being tested against a glob, regex, or string pattern can itself be either a
+`string` or a `file` -- `like foo.txt *.txt` works the same as `like "foo.txt" *.txt`.
+
 In expression mode, a single pattern can be checked with the **`=~`**/**`!~`**
 operators instead, which read more naturally there:
 
