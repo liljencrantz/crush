@@ -4,13 +4,13 @@ use std::fmt::{Display, Formatter, Write};
 use std::iter::Peekable;
 use std::str::CharIndices;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum LanguageMode {
     Command,
     Expression,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TokenizerMode {
     SkipComments,
     IncludeComments,
