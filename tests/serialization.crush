@@ -15,18 +15,44 @@ var:unset a b fff
 # Deserialize the closure and check that the variables still exists.
 $(pup:from ./.test_file) c=3 {echo 1}
 
-# Round-trip a bare list value through pup. This was previously untested despite the
-# type system claiming (see docs) that every crush value, list and dict included, can be
-# losslessly serialized -- the list/dict pup serializers had zero test coverage.
-$list := $(list:of 1 2 3)
-val $list | pup:to ./.test_file
-$restored_list := $(pup:from ./.test_file)
-assert ($restored_list == $list) "a list should round-trip through pup unchanged"
+# Round-trip one example of every serializable internal type. This is a completeness
+# check as much as a correctness one -- see src/lang/value/mod.rs's own
+# value_serializer_covers_every_variant Rust test, an exhaustive match with no wildcard
+# over ValueType that will fail to *compile* if a new variant is ever added without a
+# matching case added here too.
+$check := {|$name $v|
+    val $v | pup:to ./.test_file
+    $restored := $(pup:from ./.test_file)
+    assert ($restored == $v) ("{} should round-trip through pup unchanged":format($name))
+}
 
-# Round-trip a bare dict value through pup, same rationale as the list above.
-$dict := $(dict:of a=1 b=2)
-val $dict | pup:to ./.test_file
-$restored_dict := $(pup:from ./.test_file)
-assert ($restored_dict == $dict) "a dict should round-trip through pup unchanged"
+$check "empty" $(echo "x")
+$check "string" "hello"
+$check "integer" 42
+$check "time" $(time:now)
+$check "duration" $(duration:of seconds=10)
+$check "glob" *.txt
+$check "regex" ^(a+)
+$check "file" './Cargo.toml'
+$check "table" $(csv:from "a,1\nb,2\n" key=$string val=$integer | materialize)
+$check "struct" $(struct:of x=1 y=2)
+$check "list" $(list:of 1 2 3)
+$check "dict" $(dict:of a=1 b=2)
+$check "bool" $true
+$check "float" 5.5
+$check "binary" $(convert $binary "hi")
+$check "type" $string
+
+# Command and Scope can't be checked with == (Value's PartialEq has no meaningful notion
+# of command/closure equality, and falls through to false; Scope compares by id, which a
+# freshly deserialized scope won't share). Verify behavior instead of identity.
+$add_one := {|$x| ($x + 1)}
+val $add_one | pup:to ./.test_file
+$restored_add_one := $(pup:from ./.test_file)
+assert ($($restored_add_one 5) == 6) "a restored closure should still behave the same way"
+
+val $global | pup:to ./.test_file
+$restored_scope := $(pup:from ./.test_file)
+assert ($(typeof $restored_scope) == $scope) "a restored scope should still be a scope"
 
 echo "pup round trip ok"

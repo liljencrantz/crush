@@ -926,6 +926,54 @@ mod tests {
     use super::*;
 
     #[test]
+    fn value_variants_are_all_accounted_for_in_serialization_crush() {
+        // An exhaustive match with no wildcard arm: this function fails to *compile* the
+        // moment a new Value variant is added, until a decision is made here about
+        // whether/how tests/serialization.crush's `$check` closure needs to cover it
+        // too. The match is what matters -- the compiler checks its exhaustiveness
+        // regardless of how many variants are actually passed through it at runtime, so
+        // this doesn't need real instances of every hard-to-construct type.
+        fn assert_accounted_for(v: &Value) {
+            match v {
+                Value::Empty
+                | Value::String(_)
+                | Value::Integer(_)
+                | Value::Time(_)
+                | Value::Duration(_)
+                | Value::Glob(_)
+                | Value::Regex(_, _)
+                | Value::File(_)
+                | Value::Table(_)
+                | Value::Struct(_)
+                | Value::List(_)
+                | Value::Dict(_)
+                | Value::Bool(_)
+                | Value::Float(_)
+                | Value::Binary(_)
+                | Value::Type(_) => {
+                    // Round-tripped and checked with == in tests/serialization.crush.
+                }
+                Value::Command(_) | Value::Scope(_) => {
+                    // Also round-tripped in tests/serialization.crush, but checked by
+                    // behavior (calling the restored closure; typeof on the restored
+                    // scope) rather than == -- see the comment there for why.
+                }
+                Value::TableInputStream(_)
+                | Value::TableOutputStream(_)
+                | Value::BinaryInputStream(_) => {
+                    // Deliberately not serializable at all: materialize() converts a
+                    // TableInputStream/BinaryInputStream to Table/Binary before
+                    // Serializable<Value>::serialize ever sees them, and a
+                    // TableOutputStream can't be materialized in the first place --
+                    // value_serializer.rs's own serialize() errors on all three
+                    // explicitly rather than attempting it.
+                }
+            }
+        }
+        assert_accounted_for(&Value::Empty);
+    }
+
+    #[test]
     fn text_casts() {
         assert_eq!(
             Value::from("112432").convert(ValueType::Integer).is_err(),
