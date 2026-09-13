@@ -1,0 +1,13 @@
+# any_match/all_match check a predicate closure against every row, the same way where
+# does (row columns exported to the closure by name), short-circuiting as soon as the
+# answer is known rather than always consuming the whole stream.
+assert $(seq 1 6 | any_match {($value > 4)}) "any_match should find a value > 4"
+assert (!$(seq 1 6 | any_match {($value > 100)})) "any_match should not find a value > 100"
+
+assert $(seq 1 6 | all_match {($value > 0)}) "all_match values should be > 0"
+assert (!$(seq 1 6 | all_match {($value > 4)})) "not all_match values are > 4"
+
+# Empty input: all_match is vacuously true (like an empty `and` chain), any_match is
+# false (like an empty `or` chain).
+assert $($(seq 0 0) | all_match {($value > 100)}) "all_match over an empty stream should be true"
+assert (!$($(seq 0 0) | any_match {($value > 100)})) "any_match over an empty stream should be false"

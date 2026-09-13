@@ -12,6 +12,7 @@ mod fold;
 mod group;
 mod head;
 mod join;
+mod predicate;
 mod rename;
 mod reverse;
 mod select;
@@ -42,6 +43,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             group::Group::declare(env)?;
             uniq::Uniq::declare(env)?;
             join::Join::declare(env)?;
+            predicate::AnyMatch::declare(env)?;
+            predicate::AllMatch::declare(env)?;
             aggregation::Sum::declare(env)?;
             aggregation::Avg::declare(env)?;
             aggregation::Median::declare(env)?;
