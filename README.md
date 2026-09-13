@@ -5,10 +5,10 @@ modern programming language. It has the features one would expect from a modern
 programming language like a type system, closures and lexical scoping, but with
 a syntax geared toward both batch and interactive shell usage.
 
-- [The overview](docs/overview.md) gives a detailed overview of the
-  features of Crush. 
-- [The syntax documentation](docs/syntax.md) contains more a detailed description
-  of the Crush syntax than what fits into the overview document. 
+- [The overview](docs/overview.md) is a narrative tour of the features of Crush.
+- [The language reference](docs/language_reference.md) documents the syntax and
+  core language features (error handling, background jobs, warnings, pattern
+  matching, and more) in depth.
 - [The configuration documentation](docs/config.md) describes how to configure Crush.
 - [The hacking documentation](docs/hacking.md) will eventually give you enough
   information about the inner workings of Crush to start hacking yourself.

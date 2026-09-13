@@ -46,9 +46,9 @@ fn named(name: &str, value: Value) -> Argument {
 
 // ---------------------------------------------------------------------------
 // Baseline: positional binding order and named/unnamed interaction, matching what
-// docs/syntax.md documents: "First, all named arguments are assigned. Then, each
-// unnamed argument is assigned to the first argument that is currently not assigned
-// a value."
+// docs/language_reference.md documents: "First, all named arguments are assigned.
+// Then, each unnamed argument is assigned to the first parameter that doesn't
+// already have a value."
 // ---------------------------------------------------------------------------
 
 #[signature(dummy)]
