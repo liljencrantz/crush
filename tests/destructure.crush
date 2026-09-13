@@ -1,6 +1,11 @@
 # [$a $b ...] := value / [$a $b ...] = value destructure a list, struct, or dict into
 # several variables at once. Struct and dict are both backed by an order-preserving map,
-# so "positional" destructuring of either one means "in insertion order".
+# so "positional" destructuring of either one means "in insertion order". Supported in
+# both Command mode (plain statements, tested first below) and Expression mode (inside
+# `(...)`, tested in the second half of this file) -- both for := (declaration) and =
+# (reassignment).
+
+## Command mode
 
 # List, via :=
 [$a $b] := $(list:of 1 2)
@@ -85,3 +90,79 @@ try {
     $errored5 = $true
 }
 assert $errored5 ":= destructuring should error when a name already exists in the local scope, like let does"
+
+## Expression mode
+
+# In expression mode, [$a, $b] reuses the same bracket syntax as an ordinary list
+# literal -- but unlike Command mode, expression mode's own list-literal syntax is
+# comma/newline-separated (`([1, 2, 3])` works, `([1 2 3])` does not), so destructuring
+# targets follow that same convention here instead of Command mode's bare whitespace.
+
+([$ea, $eb] := $(list:of 1 2))
+assert ($ea == 1) "expression mode: list destructuring via :=, first name"
+assert ($eb == 2) "expression mode: list destructuring via :=, second name"
+
+$epoint := $(struct:of x=10 y=20)
+([$epx, $epy] := $epoint)
+assert ($epx == 10) "expression mode: struct destructuring via := should use declaration order"
+assert ($epy == 20) "expression mode: struct destructuring via := should use declaration order"
+
+$ed := $($(dict $string $integer):new)
+$ed["z"] = 1
+$ed["a"] = 2
+([$efirst, $esecond] := $ed)
+assert ($efirst == 1) "expression mode: dict destructuring via := should use insertion order, not key order"
+assert ($esecond == 2) "expression mode: dict destructuring via := should use insertion order, not key order"
+
+([$ea, $eb] = $(list:of 100 200))
+assert ($ea == 100) "expression mode: = destructuring should reassign existing variables"
+assert ($eb == 200) "expression mode: = destructuring should reassign existing variables"
+
+# A plain list literal must still work exactly as before -- destructuring assignment
+# and list literals now share one AST node internally, so this is the regression check
+# that the sharing didn't change ordinary list-literal behavior.
+$plain_list := ([1, 2, 3])
+assert ($($plain_list:len) == 3) "expression mode: an ordinary list literal should be unaffected by sharing an AST node with destructuring"
+$plain_list_sum := $($plain_list | sum)
+assert ($plain_list_sum == 6) "expression mode: an ordinary list literal's values should be unaffected"
+
+$eerrored := $false
+try {
+    ([$em1, $em2, $em3] := $(list:of 1 2))
+} catch {|$e|
+    $eerrored = $true
+}
+assert $eerrored "expression mode: destructuring with more names than elements should error"
+
+$eerrored2 := $false
+try {
+    ([$em1, $em2] := $(list:of 1 2 3))
+} catch {|$e|
+    $eerrored2 = $true
+}
+assert $eerrored2 "expression mode: destructuring with more elements than names should error"
+
+$eerrored3 := $false
+try {
+    ([$em1, $em2] := 5)
+} catch {|$e|
+    $eerrored3 = $true
+}
+assert $eerrored3 "expression mode: destructuring a value that isn't a list, struct, or dict should error"
+
+$eerrored4 := $false
+try {
+    ([$never_declared_e1, $never_declared_e2] = $(list:of 1 2))
+} catch {|$e|
+    $eerrored4 = $true
+}
+assert $eerrored4 "expression mode: = destructuring on undeclared variables should error, like set does"
+
+$eerrored5 := $false
+try {
+    $ealready := 1
+    ([$ealready, $enew_one] := $(list:of 1 2))
+} catch {|$e|
+    $eerrored5 = $true
+}
+assert $eerrored5 "expression mode: := destructuring should error when a name already exists in the local scope, like let does"

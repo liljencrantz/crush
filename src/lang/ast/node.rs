@@ -59,26 +59,54 @@ impl Node {
         )
     }
 
-    pub fn list_literal(node: JobListNode) -> Box<Node> {
-        let mut cmd = vec![Self::get_attr(
-            &["global", "types", "list", "of"],
-            node.location,
-        )];
-        for it in node.jobs {
-            cmd.push(Node::Substitution(it.into()))
+    /// True for the synthetic `global:io:val` reference that `Node::val` builds -- see
+    /// `unwrap_val` below.
+    fn is_val_ref(node: &Node) -> bool {
+        match node {
+            Node::GetAttr(parent, field) if field.string == "val" => match parent.as_ref() {
+                Node::GetAttr(grandparent, field2) if field2.string == "io" => {
+                    matches!(grandparent.as_ref(), Node::Identifier(id) if id.string == "global")
+                }
+                _ => false,
+            },
+            _ => false,
         }
+    }
 
-        Box::from(Node::Substitution(
-            JobNode {
-                commands: vec![CommandNode {
-                    expressions: cmd,
-                    location: node.location,
-                }],
-                location: node.location,
-                is_background: false,
+    /// Expression mode desugars a bare value used as one "job" in a list (e.g. `$a` in
+    /// `[$a, $b]`) into a synthetic two-expression command invoking the hidden
+    /// `global:io:val` builtin on it (see `Node::val`), so that e.g. `(1 + 1)` evaluates
+    /// the expression and returns its value. That's invisible for an ordinary list
+    /// literal, but it means a simple identifier list element normalizes to a
+    /// `Node::Substitution` instead of a bare `Node::Identifier` -- which matters for
+    /// destructuring assignment, which needs to see the identifier directly. This
+    /// strips the wrapper back off when present, leaving anything else unchanged.
+    fn unwrap_val(node: Node) -> Node {
+        if let Node::Substitution(jl) = &node {
+            if jl.jobs.len() == 1 && jl.jobs[0].commands.len() == 1 {
+                let exprs = &jl.jobs[0].commands[0].expressions;
+                if exprs.len() == 2 && Self::is_val_ref(&exprs[0]) {
+                    return exprs[1].clone();
+                }
             }
-            .into(),
-        ))
+        }
+        node
+    }
+
+    /// A `[a, b, c]` literal in expression mode. Deliberately deferred rather than
+    /// compiled to a `list:of` call right away: the exact same bracketed-and-separated
+    /// shape is also how a destructuring assignment target looks (`[$a, $b] := ...`),
+    /// and `compile_standalone_assignment` needs to see the raw identifiers to build
+    /// that, not an already-compiled call. `compile()`'s own `Node::Destructure` arm is
+    /// what turns this into the `list:of` invocation when it's used as an ordinary
+    /// value instead.
+    pub fn list_literal(node: JobListNode) -> Box<Node> {
+        let items = node
+            .jobs
+            .into_iter()
+            .map(|j| Self::unwrap_val(*Box::<Node>::from(j)))
+            .collect();
+        Box::from(Node::Destructure(items, node.location))
     }
 
     fn id(s: &str, l: Location) -> Box<Node> {
@@ -281,11 +309,24 @@ impl Node {
                 }),
                 ctx.source.subtrackedstring(s),
             ),
-            Node::Destructure(_, l) => {
-                return compile_error(
-                    "A destructuring pattern can only be used on the left side of `:=` or `=`.",
-                    &ctx.source.substring(*l),
-                );
+            Node::Destructure(items, location) => {
+                let mut cmd = vec![Self::get_attr(&["global", "types", "list", "of"], *location)];
+                cmd.extend(items.iter().cloned());
+                let job_list = JobListNode {
+                    jobs: vec![JobNode {
+                        commands: vec![CommandNode {
+                            expressions: cmd,
+                            location: *location,
+                        }],
+                        location: *location,
+                        is_background: false,
+                    }],
+                    location: *location,
+                };
+                ValueDefinition::JobListDefinition(
+                    job_list.compile(ctx)?,
+                    ctx.source.substring(*location),
+                )
             }
         }))
     }
