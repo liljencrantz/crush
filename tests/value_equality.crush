@@ -1,0 +1,14 @@
+# Value's PartialEq impl had no (File, File) or (Empty, Empty) match arms, both silently
+# falling through to the catch-all `_ => false` -- so two identical file values, or two
+# Empty values (e.g. what a void command like echo returns), compared as unequal. Found
+# while writing a pup round-trip test that needed assert_eq! to actually work for every
+# type. (File, String) comparison already existed and canonicalizes both paths, so it
+# requires the file to actually exist on disk to compare true; (File, File) now does the
+# same for consistency.
+$a := './Cargo.toml'
+$b := './Cargo.toml'
+assert ($a == $b) "two equal file values should compare equal"
+
+$c := $(echo "x")
+$d := $(echo "y")
+assert ($c == $d) "two Empty values should compare equal"

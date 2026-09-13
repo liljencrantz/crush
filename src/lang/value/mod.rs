@@ -857,6 +857,8 @@ impl PartialEq for Value {
             (Value::File(val1), Value::String(val2)) => {
                 file_result_compare(&Path::new(&val2.to_string()), val1.as_ref())
             }
+            (Value::File(val1), Value::File(val2)) => file_result_compare(val1, val2),
+            (Value::Empty, Value::Empty) => true,
             (Value::Table(val1), Value::Table(val2)) => match val1.partial_cmp(val2) {
                 None => false,
                 Some(o) => o == Ordering::Equal,
