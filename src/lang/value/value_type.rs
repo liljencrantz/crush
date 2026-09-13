@@ -243,15 +243,33 @@ impl Help for ValueType {
     fn long_help(&self) -> Option<String> {
         let mut lines = vec![match self {
             ValueType::String =>
-                    "A string literal is written between double quotes, e.g. `\"hello world\"`.
+                    "A string literal is written between double quotes, e.g. `\"hello world\"`. A
+string is a sequence of legal unicode characters -- nothing else can be represented, and
+every crush string is guaranteed to be valid text.
 
 Strings are immutable -- every method that looks like it modifies a string (`upper`,
 `replace`, `trim`, ...) returns a new string rather than changing the receiver.
 
-The most similar types are `file`, which also wraps text but represents a specific kind
-of text (a filesystem path) with its own path-manipulation methods, and `glob`/`re`,
-which look like strings syntactically but hold a pattern to match against text rather
-than being literal text themselves.",
+`file` and `binary` are the two other types that hold sequences of data rather than a
+single scalar value, and it's worth being precise about how they differ from `string`
+and from each other. A `file` represents an operating system path: a sequence of bytes
+that is a legal file name, a system-dependent notion of legality that usually allows byte
+sequences that aren't legal unicode (for example, a Latin-1-encoded name on a
+system whose text encoding is UTF-8). A `binary` is simply a sequence of bytes with no
+legality constraint at all -- the type to reach for when the data isn't necessarily text
+or a path. Because \"legal file name\" and \"legal unicode text\" are overlapping but
+different constraints, `string` and `file` have to be separate types: some strings can't
+be legal file names (most commonly one containing a zero byte -- many operating systems
+represent a path internally as a zero-terminated byte sequence, so a zero byte can never
+be part of one), and some legal file names can't be represented as a string at all.
+
+For convenience, builtin commands that expect a `file` argument also accept a `string`,
+which crush converts automatically. That conversion doesn't validate the result up
+front, though -- passing a string containing a zero byte is accepted silently, and only
+fails once the resulting file value is actually used against the filesystem. Going the
+other way, a `file` whose bytes aren't valid unicode can't be losslessly converted to a
+`string` either; rather than erroring, crush falls back to displaying it as the
+placeholder text `<invalid filename>`.",
 
             ValueType::Integer =>
                     formatcp!("An integer literal is a bare number, e.g. `5` or `-3`. Underscores may
@@ -338,9 +356,10 @@ strings based on their syntax. You can also convert an existing string explicitl
 
 A file value simply names a path; the value itself is immutable, though of course the
 file it points at on disk can change, be created, or be removed out from under it via
-methods like `remove` or commands like `fs:mkdir`. The most similar types are `string`
-(a file is textual data with path semantics layered on top) and `glob`, which matches a
-whole set of paths rather than naming a single one.",
+methods like `remove` or commands like `fs:mkdir`. See `help string` for exactly how
+`file` differs from `string` and `binary`, the other two types that represent a sequence
+of data rather than a single scalar value; `glob` is also related, matching a whole set
+of paths rather than naming a single one.",
 
             ValueType::TableInputStream(_) =>
                     "A table_input_stream is produced by any streaming command -- for example, the
@@ -428,9 +447,11 @@ get a reusable `binary` value instead.",
 `convert $binary \"hi\"`, or by reading a `binary_stream` to completion with
 `materialize`, e.g. `bin:from ./Cargo.toml | materialize`.
 
-Binary data is immutable once created. The most similar types are `binary_stream`, its
-one-shot streaming form, and `string`, which also holds a sequence of data but
-specifically unicode text rather than arbitrary bytes.",
+Binary data is immutable once created, and unlike `string` or `file` it has no legality
+constraint at all -- it's simply an arbitrary sequence of bytes, the type to reach for
+when data isn't necessarily text or a path. See `help string` for how the three
+sequence-of-data types (`string`, `file`, `binary`) differ. The most similar type is
+`binary_stream`, its one-shot streaming form.",
 
             ValueType::Type => "A type value names one of crush's own types, e.g. `$string` or
 `$integer` -- `typeof` returns a value of this kind. Types are mostly used to declare
