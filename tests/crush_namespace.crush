@@ -39,6 +39,19 @@ for col=$(list:of job_id command_id created name) {
 # interactive prompt to have populated it.
 assert ($(crush:history | count) == 0) "crush:history should be empty in a fresh test run"
 
+## warn
+
+# crush:warn reports directly into the same bounded log crush:warnings reads --
+# checked by count (relative to before/after, since other tests earlier in this file
+# may have left warnings of their own) and by finding the message among the most
+# recent entries.
+$warnings_before := $(crush:warnings | count)
+crush:warn "test warning message from tests/crush_namespace.crush"
+assert ($(crush:warnings | count) == ($warnings_before + 1)) "crush:warn should add exactly one entry to crush:warnings"
+$latest_messages := $(crush:warnings | select message | list:collect message)
+$found_warning := $($latest_messages | any_match {($value == "test warning message from tests/crush_namespace.crush")})
+assert $found_warning "crush:warn's message should appear in crush:warnings"
+
 ## run_mode/language_mode
 
 # Both are genuinely deterministic here: a script run non-interactively is always

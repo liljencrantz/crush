@@ -655,6 +655,23 @@ This command accepts the following arguments:
  * [32mtitle[0m The new command to invoke in order to produce a title
 
 
+[32mcrush[0m[36m:[0m[32mwarn[0m [36mmessage[0m[36m=[0m[36mstring[0m
+Report a warning to the bounded log crush:warnings keeps.
+
+[4mOutput[0m
+[32mempty[0m
+Every builtin that presses on past a partial failure (each/where/group/files, 
+and others) reports it through this exact same mechanism instead of aborting; 
+this is that mechanism made directly callable, for a script or closure that 
+wants to flag something without stopping.
+
+This command accepts the following arguments:
+
+ * [32mmessage[0m the warning message to report.
+
+[4mExamples[0m
+[32mcrush[0m[36m:[0m[32mwarn[0m [36m"something looked off, continuing anyway"[0m
+
 [32mcrush[0m[36m:[0m[32mwarning_limit[0m[36m:[0m[32mget[0m
 Get how many warnings crush:warnings keeps before evicting the oldest.
 
@@ -2290,4 +2307,4 @@ This command accepts the following arguments:
 [32mvar[0m[36m:[0m[32muse[0m [36m$math[0m
 [32msqrt[0m [36m2[0m
 
-=== checked 174 commands, 6 skipped ===
+=== checked 175 commands, 6 skipped ===

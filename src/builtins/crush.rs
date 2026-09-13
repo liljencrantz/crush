@@ -6,7 +6,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{command_error, CrushResult};
+use crate::lang::errors::{command_error, error, CrushResult};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::global_state::RunMode;
 use crate::lang::state::scope::Scope;
@@ -485,6 +485,30 @@ fn warnings(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+#[signature(
+    crush.warn,
+    can_block = false,
+    output = Known(ValueType::Empty),
+    short = "Report a warning to the bounded log crush:warnings keeps.",
+    long = "Every builtin that presses on past a partial failure (each/where/group/files,",
+    long = "and others) reports it through this exact same mechanism instead of aborting;",
+    long = "this is that mechanism made directly callable, for a script or closure that",
+    long = "wants to flag something without stopping.",
+    example = "crush:warn \"something looked off, continuing anyway\"",
+)]
+struct Warn {
+    #[description("the warning message to report.")]
+    message: String,
+}
+
+fn warn(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Warn = Warn::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context
+        .global_state
+        .warn(&error::<()>(cfg.message).unwrap_err());
+    context.output.send(Value::Empty)
+}
+
 mod locale {
     use super::*;
     use crate::lang::completion::Completion;
@@ -710,6 +734,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Jobs::declare(crush)?;
             HistoryCommand::declare(crush)?;
             Warnings::declare(crush)?;
+            Warn::declare(crush)?;
 
             crush.create_namespace(
                 "locale",
