@@ -400,6 +400,23 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32msource[0m [36m*.crush[0m
 
+[32mcontrol[0m[36m:[0m[32mthrow[0m [36merror_type[0m[36m=[0m[36mstring[0m [36mmessage[0m[36m=[0m[36mstring[0m
+Raise a custom error, catchable and discriminable by its own error type.
+
+[4mOutput[0m
+[32mempty[0m
+Unlike every other error in Crush, a thrown error's [32mtype[0m (as seen via [32m
+catch {|$e| ...}[0m's [32m$e:type[0m) is [32merror_type[0m itself, not a fixed name tied to whatever went wrong internally -- so a 
+script or library can define and catch its own error categories.
+
+This command accepts the following arguments:
+
+ * [32merror_type[0m the error's type, e.g. "NotFound". Visible to a catch block as [32m$e:type[0m.
+ * [32mmessage[0m    the error's message. Visible to a catch block as [32m$e:message[0m.
+
+[4mExamples[0m
+[32mtry[0m [36m{[0m [32mthrow[0m [36m"NotFound"[0m [36m"no such user"[0m [36m}[0m [36mcatch[0m [36m{[0m[36m|[0m[36m$e[0m[36m|[0m [32massert[0m [36m([0m[36m$e[0m[36m:[0m[36mtype[0m [36m==[0m [36m"NotFound"[0m[36m)[0m[36m}[0m
+
 [32mcontrol[0m[36m:[0m[32mtimeit[0m [36mit[0m[36m=[0m[36mcommand[0m [36m[[0m[36mnumber[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m[36mrepeat[0m[36m=[0m[36minteger[0m[36m][0m
 Execute a command many times and estimate the execution time.
 
@@ -2307,4 +2324,4 @@ This command accepts the following arguments:
 [32mvar[0m[36m:[0m[32muse[0m [36m$math[0m
 [32msqrt[0m [36m2[0m
 
-=== checked 175 commands, 6 skipped ===
+=== checked 176 commands, 6 skipped ===

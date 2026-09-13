@@ -1,0 +1,27 @@
+# throw raises a custom error whose type is the caller's own string, not a fixed name
+# tied to whatever went wrong internally -- unlike every other error in Crush, where
+# $e:type reflects a Rust error variant name (RecvError, InvalidArgument, ...), a
+# thrown error's $e:type is exactly whatever error_type was passed to throw. That lets
+# a script or library define and discriminate its own error categories.
+
+$caught_type := "unset"
+$caught_message := "unset"
+try {
+    throw "NotFound" "no such user"
+} catch {|$e|
+    $caught_type = $e:type
+    $caught_message = $e:message
+}
+assert ($caught_type == "NotFound") "a caught thrown error's type should be exactly the string passed to throw"
+assert ($caught_message == "no such user") "a caught thrown error's message should be exactly the string passed to throw"
+
+# Different throw calls can use different types, and catch can discriminate on them.
+$last_type := "unset"
+for error_type=$(list:of "TypeA" "TypeB" "TypeC") {
+    try {
+        throw $error_type "some message"
+    } catch {|$e|
+        $last_type = $e:type
+    }
+    assert ($last_type == $error_type) "throw's type should round-trip exactly for any given string"
+}

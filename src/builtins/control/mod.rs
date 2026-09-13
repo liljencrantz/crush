@@ -2,7 +2,7 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
-use crate::lang::errors::{CrushResult, command_error, terminate};
+use crate::lang::errors::{CrushResult, command_error, terminate, throw_error};
 use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
@@ -105,6 +105,29 @@ fn assert(mut context: CommandContext) -> CrushResult<()> {
     } else {
         command_error(cfg.message)
     }
+}
+
+#[signature(
+    control.throw,
+    can_block = false,
+    short = "Raise a custom error, catchable and discriminable by its own error type.",
+    long = "Unlike every other error in Crush, a thrown error's `type` (as seen via",
+    long = "`catch {|$e| ...}`'s `$e:type`) is `error_type` itself, not a fixed name tied",
+    long = "to whatever went wrong internally -- so a script or library can define and",
+    long = "catch its own error categories.",
+    output = Known(ValueType::Empty),
+    example = "try { throw \"NotFound\" \"no such user\" } catch {|$e| assert ($e:type == \"NotFound\")}",
+)]
+struct Throw {
+    #[description("the error's type, e.g. \"NotFound\". Visible to a catch block as `$e:type`.")]
+    error_type: String,
+    #[description("the error's message. Visible to a catch block as `$e:message`.")]
+    message: String,
+}
+
+fn throw(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Throw = Throw::parse(context.remove_arguments(), &context.global_state.printer())?;
+    throw_error(cfg.error_type, cfg.message)
 }
 
 impl BinaryReader for PipeReader {
@@ -337,6 +360,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             schedule::Schedule::declare(env)?;
             Continue::declare(env)?;
             Assert::declare(env)?;
+            Throw::declare(env)?;
             Sleep::declare(env)?;
             Bg::declare(env)?;
             Fg::declare(env)?;

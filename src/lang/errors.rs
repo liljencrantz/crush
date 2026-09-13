@@ -18,6 +18,11 @@ pub enum CrushErrorType {
     InvalidArgument(String),
     InvalidData(String),
     GenericError(String),
+    /// A user-raised error from the `throw` builtin: `(error_type, message)`. Unlike
+    /// every other variant, its `type_name()` is the caller's own string rather than
+    /// the Rust variant name -- see `type_name()`'s special case below -- so a script
+    /// can `catch` and discriminate on a custom error type of its own choosing.
+    Thrown(String, String),
     SendError(String),
     RecvError(crossbeam::channel::RecvError),
     RecvTimeoutError(crossbeam::channel::RecvTimeoutError),
@@ -80,6 +85,9 @@ impl CrushErrorType {
     /// name whether or not it carries fields) rather than a hand-maintained match, so it
     /// can't drift out of sync as variants are added, removed or renamed.
     pub fn type_name(&self) -> String {
+        if let Thrown(error_type, _) = self {
+            return error_type.clone();
+        }
         format!("{:?}", self)
             .chars()
             .take_while(|c| c.is_alphanumeric() || *c == '_')
@@ -129,6 +137,7 @@ impl CrushError {
     pub fn message(&self) -> String {
         match &self.error_type {
             InvalidArgument(s) | InvalidData(s) | GenericError(s) => s.clone(),
+            Thrown(_, message) => message.clone(),
             SendError(e) => e.to_string(),
             EOFError => "EOF error".to_string(),
             Terminate => "Job termination requested".to_string(),
@@ -620,6 +629,12 @@ pub fn byte_unit_error<T>(s: &str) -> CrushResult<T> {
 
 pub fn error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(GenericError(message.into()).into())
+}
+
+/// Backs the `throw` builtin: a user-chosen error type name paired with a message,
+/// catchable and discriminable on that same type name (see `CrushErrorType::Thrown`).
+pub fn throw_error<T>(error_type: impl Into<String>, message: impl Into<String>) -> CrushResult<T> {
+    Err(Thrown(error_type.into(), message.into()).into())
 }
 
 pub fn compile_error<T>(message: impl Into<String>, source: &Source) -> CrushResult<T> {
