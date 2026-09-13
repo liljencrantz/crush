@@ -7,7 +7,7 @@ use test_finder::test_finder;
 use assert_cmd::prelude::*;
 
 fn run_system_test(name: &Path) {
-    let output = Command::new("./target/debug/crush")
+    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
         .args(&[name.to_str().unwrap()])
         .output()
         .expect("failed to execute process");
@@ -116,7 +116,7 @@ fn test_grpc() {
     // crush:exit's own status (force=$true, since the gRPC client's streaming call can
     // leave its own internal jobs registered even after closing the connection, which
     // would otherwise make crush:exit refuse to run at all).
-    let output = Command::new("./target/debug/crush")
+    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
         .args(&["tests/grpc/mirror.crush"])
         .output()
         .expect("failed to execute process");
@@ -151,7 +151,7 @@ host-c.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRSEVxK2sm2QXPbIzufX9Ev
     let path = std::env::temp_dir().join("crush_test_host_list_remove_known_hosts");
     fs::write(&path, FIXTURE).expect("failed to write known_hosts fixture");
 
-    let output = Command::new("./target/debug/crush")
+    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
         .args(&["tests/remote/host_list_remove.crush"])
         .env("CRUSH_TEST_HOST_FIXTURE", &path)
         .output()
@@ -221,7 +221,7 @@ fn test_remote_ssh() {
     fs::write(&allow_hosts, "").unwrap();
 
     let run_crush = |script: &str, host_file: &Path| -> std::process::Output {
-        Command::new("./target/debug/crush")
+        Command::new(env!("CARGO_BIN_EXE_crush"))
             .args(&[script])
             .env("CRUSH_TEST_SSH_HOSTS", host_file)
             .output()
