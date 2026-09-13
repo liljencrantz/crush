@@ -2,12 +2,15 @@
 # float value, since f64::partial_cmp returns None for NaN. NaN has no meaningful position
 # in an ordered set, so median now fails with an error instead of sorting past it (matching
 # stream:sort's own NaN handling).
-$msg := ""
+# $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
+# hands back a struct describing the error (message/type/command) and `=` reassignment
+# requires the new value to be the same type as the variable's first value.
+$msg := $(struct:of message="")
 try {
     list:of 3.0 $(float:nan) 1.0 | median | echo
 } catch { |$e| $msg = $e }
 echo "barrier"
-echo $msg
+echo $msg:message
 
 echo "still works fine without NaN"
 list:of 3.0 1.0 2.0 | median | echo

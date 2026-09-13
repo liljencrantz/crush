@@ -1,12 +1,15 @@
 # sort used to give NaN a defined position (always sorting last), silently accepting it as
 # ordinary input. That was changed: NaN has no meaningful position relative to other floats,
 # so sort now fails with an error instead of picking an arbitrary place for it.
-$msg := ""
+# $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
+# hands back a struct describing the error (message/type/command) and `=` reassignment
+# requires the new value to be the same type as the variable's first value.
+$msg := $(struct:of message="")
 try {
     list:of 3.0 $(float:nan) 1.0 | sort | echo
 } catch { |$e| $msg = $e }
 echo "barrier"
-echo $msg
+echo $msg:message
 
 # -infinity and +infinity are ordinary, well-ordered values (not NaN), so they still sort at
 # the extremes as expected. +0.0 and -0.0 compare as equal (per param_partial_cmp, which just

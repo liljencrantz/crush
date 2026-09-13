@@ -14,7 +14,11 @@
 # The `echo "barrier"` below is deliberate, not decorative -- see the identical note in
 # last_command_error.crush: touching $msg in the very next statement after the catch
 # block races.
-$msg := ""
+#
+# $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
+# hands back a struct describing the error (message/type/command) and `=` reassignment
+# requires the new value to be the same type as the variable's first value.
+$msg := $(struct:of message="")
 $got := $false
 try {
     $t := $(csv:from "a,1\nb,2\n" key=$string val=$integer)
@@ -27,8 +31,8 @@ echo "barrier"
 
 assert $got "expected the unhashable-type error to be caught, not silently swallowed"
 
-$panicked := $($msg:like "*panicked*")
+$panicked := $($msg:message:like "*panicked*")
 assert ($panicked == $false) "expected a graceful error message, not a Rust panic"
 
-$len := $($msg:len)
+$len := $($msg:message:len)
 assert ($len > 0) "expected a non-empty caught error message"

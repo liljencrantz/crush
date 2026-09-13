@@ -10,14 +10,14 @@ try {
     assert (1 + 1 == 3)
     echo "should not run"
 } catch {
-    |$error| echo "caught:" $error
+    |$error| echo "caught:" $error:message
 }
 
 echo "a custom message can be given"
 try {
     assert (1 > 2) "custom message here"
 } catch {
-    |$error| echo "caught:" $error
+    |$error| echo "caught:" $error:message
 }
 
 echo "done"

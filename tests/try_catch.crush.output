@@ -2,7 +2,9 @@ body succeeds: catch is not invoked, output flows through normally
 body ran
 body succeeds: a variable assignment inside body takes effect normally
 success
-body fails: catch is invoked with the error message as its unnamed argument
+body fails: catch is invoked with a struct describing the error as its unnamed argument
 reached inside body
-caught:
+caught message:
 invalid digit found in string
+caught type:
+ParseIntError

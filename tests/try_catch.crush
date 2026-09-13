@@ -19,11 +19,16 @@ try {
 }
 echo $result
 
-echo "body fails: catch is invoked with the error message as its unnamed argument"
+echo "body fails: catch is invoked with a struct describing the error as its unnamed argument"
 try {
     echo "reached inside body"
     convert $integer "notanumber"
     echo "should not run: body stops at the failing statement"
 } catch {
-    |$error| echo "caught:" $error
+    |$error| echo "caught message:" $error:message
+    echo "caught type:" $error:type
+    # command is a plain string when known -- not asserting a specific value here since
+    # exactly what ends up attached to a given error is an implementation detail, but the
+    # field should always be present and typed, never missing or erroring to access.
+    assert ($(typeof $error:command) == $string) "error:command should always be a string"
 }

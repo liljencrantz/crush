@@ -73,6 +73,19 @@ pub enum CrushErrorType {
     NotifyError(notify::Error),
 }
 
+impl CrushErrorType {
+    /// A short, stable name for this variant, e.g. `"IOError"` or `"InvalidArgument"`.
+    /// Derived from the variant's own `Debug` output (which starts with the bare variant
+    /// name whether or not it carries fields) rather than a hand-maintained match, so it
+    /// can't drift out of sync as variants are added, removed or renamed.
+    pub fn type_name(&self) -> String {
+        format!("{:?}", self)
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect()
+    }
+}
+
 #[derive(Debug)]
 pub struct CrushError {
     error_type: CrushErrorType,

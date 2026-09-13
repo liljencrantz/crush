@@ -11,14 +11,16 @@ use signature::signature;
     condition = true,
     short = "Execute a command, recovering from any error it produces.",
     long = "If `body` fails, execution of `body` stops at the failing statement, and",
-    long = "`catch` (if given) is invoked instead, receiving the error message (a",
-    long = "string) as its single unnamed argument. Either way, the error does not",
-    long = "propagate past `try` -- execution continues normally with whatever comes",
+    long = "`catch` (if given) is invoked instead, receiving a struct describing the",
+    long = "error as its single unnamed argument: `message` (the error text), `type` (the",
+    long = "internal error variant's name, e.g. `IOError`), and `command` (the name of the",
+    long = "command that failed, if known -- empty otherwise). Either way, the error does",
+    long = "not propagate past `try` -- execution continues normally with whatever comes",
     long = "after it, the same as if `catch` had been given but was empty.",
     example = "try {",
     example = "  risky:command",
     example = "} catch {",
-    example = "  |$error| echo (\"Recovered: {}\":format($error))",
+    example = "  |$error| echo (\"Recovered: {}\":format($error:message))",
     example = "}",
 )]
 pub struct Try {
@@ -27,7 +29,7 @@ pub struct Try {
     #[default("catch")]
     r#catch: String,
     #[description(
-        "the command to invoke if `body` fails, receiving the error message as its unnamed argument."
+        "the command to invoke if `body` fails, receiving a struct describing the error (message/type/command) as its unnamed argument."
     )]
     catch_clause: Option<Command>,
 }
@@ -62,10 +64,7 @@ fn r#try(mut context: CommandContext) -> CrushResult<()> {
                 let catch_env = context
                     .scope
                     .create_child(&context.scope, ScopeType::Conditional);
-                let arguments = vec![Argument::unnamed(
-                    Value::from(e.message().as_str()),
-                    &context.source,
-                )];
+                let arguments = vec![Argument::unnamed(Value::from(&e), &context.source)];
                 catch_clause.eval(
                     context
                         .empty()

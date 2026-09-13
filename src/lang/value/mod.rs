@@ -19,7 +19,7 @@ use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, table::ColumnType,
     table::TableReader,
 };
-use crate::lang::errors::{CrushResult, command_error, data_error};
+use crate::lang::errors::{CrushError, CrushResult, command_error, data_error};
 use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
 use crate::lang::state::scope::Scope;
 use crate::util::time::duration_format;
@@ -180,6 +180,25 @@ fn add_keys<T>(map: &OrderedMap<String, T>, res: &mut Vec<String>) {
 impl From<&str> for Value {
     fn from(s: &str) -> Value {
         Value::String(Arc::from(s))
+    }
+}
+
+impl From<&CrushError> for Value {
+    fn from(err: &CrushError) -> Value {
+        Value::Struct(Struct::new(
+            vec![
+                ("message", Value::from(err.message())),
+                ("type", Value::from(err.error_type().type_name())),
+                (
+                    "command",
+                    err.command()
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Empty),
+                ),
+            ],
+            None,
+        ))
     }
 }
 
