@@ -1,0 +1,88 @@
+# Pattern matching and try/catch, used from inside expression mode (...). Neither match
+# nor try/catch is a grammar-level keyword like if/while/for -- both are plain commands
+# that take a value and one or more blocks, using Command mode's own space-separated
+# calling convention -- so using them *from* expression mode generally means wrapping
+# the call in $(...) (which always switches back to Command mode internally), exactly
+# like any other command. =~/!~ are the one exception: real expression-mode operators,
+# usable directly with no wrapping at all.
+
+## =~/!~ operators, native to expression mode
+
+assert ("foo.txt" =~ ^(.*\.txt$)) "regex =~ should match directly in expression mode"
+assert (!("foo.txt" =~ ^(.*\.csv$))) "regex =~ should not match a non-matching pattern"
+assert ("foo.csv" !~ ^(.*\.txt$)) "!~ should be true when the pattern doesn't match"
+
+$g := *.txt
+assert ("foo.txt" =~ $g) "=~ should work against a glob stored in a variable"
+
+## like, via $(...) from within expression mode
+
+assert $(like "foo.txt" *.txt) "like should match a glob"
+assert (!$(like "foo.txt" *.csv)) "like should not match a non-matching glob"
+
+## match, via $(...) with variable capture (match is a plain command, not a grammar
+## keyword, so like `if` it communicates a result via assignment inside each arm rather
+## than an implicit return value)
+
+$describe := {
+    |$n|
+    $result := "unset"
+    match $n {
+        case 2 {$result = "two"}
+        any $(seq 5 10) {$result = "between 5 and 10"}
+        is $string {$result = "a string"}
+        default {$result = "something else"}
+    }
+    $result
+}
+
+assert ($($describe 2) == "two") "match's case arm should fire for an exact value"
+assert ($($describe 7) == "between 5 and 10") "match's any arm should fire for stream membership"
+assert ($($describe "hi") == "a string") "match's is arm should fire for a type pattern"
+assert ($($describe 100) == "something else") "match's default arm should fire when nothing else matches"
+
+## Custom __is__ patterns, used from like/=~ inside expression mode
+
+$Even := $(class)
+$Even:__is__ = {|$needle| ($needle:mod(2) == 0)}
+$even := $(Even:new)
+assert $(like 4 $even) "like should accept a custom type implementing __is__"
+assert (!$(like 5 $even)) "like should correctly reject via a custom __is__ implementation"
+
+## try/catch, wrapping expression-mode bodies and destructuring assignment
+
+$ok := $false
+try {
+    $x := (1 + 1)
+    assert ($x == 2) "expression mode inside a try block should evaluate normally"
+    $ok = $true
+} catch {|$e|
+    $ok = $false
+}
+assert $ok "try should not swallow a successful expression-mode body"
+
+$caught_message := "unset"
+try {
+    convert $integer "notanumber"
+} catch {|$e|
+    $caught_message = $e:message
+}
+assert ($caught_message == "invalid digit found in string") "catch should capture the real error message for a clean (non-operator) failure"
+
+$destructure_ok := $false
+try {
+    $v := $(list:of 1 2 3)
+    [$va $vb $vc] := $v
+    $destructure_ok = (($va == 1) and (($vb == 2) and ($vc == 3)))
+} catch {|$e|
+    $destructure_ok = $false
+}
+assert $destructure_ok "try/catch should not interfere with destructuring assignment inside its body"
+
+$destructure_errored := $false
+try {
+    [$too $many $names] := $(list:of 1 2)
+} catch {|$e|
+    $destructure_errored = $true
+}
+assert $destructure_errored "try/catch should still catch a destructuring count-mismatch error"

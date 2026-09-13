@@ -49,6 +49,7 @@ pub enum CrushErrorType {
     Utf8Error(std::str::Utf8Error),
     SerdeJsonError(serde_json::Error),
     SerdeTomlError(toml::de::Error),
+    SerdeTomlSerError(toml::ser::Error),
     SerdeYamlError(serde_yaml::Error),
     SSH2Error(ssh2::Error),
     ChronoParseError(chrono::ParseError),
@@ -159,6 +160,7 @@ impl CrushError {
             Utf8Error(e) => e.to_string(),
             SerdeJsonError(e) => e.to_string(),
             SerdeTomlError(e) => e.to_string(),
+            SerdeTomlSerError(e) => e.to_string(),
             SerdeYamlError(e) => e.to_string(),
             SSH2Error(e) => e.to_string(),
             ChronoParseError(e) => e.to_string(),
@@ -470,6 +472,12 @@ impl From<serde_json::Error> for CrushError {
 impl From<toml::de::Error> for CrushError {
     fn from(e: toml::de::Error) -> Self {
         SerdeTomlError(e).into()
+    }
+}
+
+impl From<toml::ser::Error> for CrushError {
+    fn from(e: toml::ser::Error) -> Self {
+        SerdeTomlSerError(e).into()
     }
 }
 

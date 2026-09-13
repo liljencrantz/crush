@@ -182,7 +182,13 @@ fn to(mut context: CommandContext) -> CrushResult<()> {
     let mut writer = files::writer(cfg.file, context.output)?;
     let serde_value = context.input.recv()?;
     let toml_value = to_toml(serde_value)?;
-    writer.write(toml_value.to_string().as_bytes())?;
+    // toml::Value's own Display renders as a value literal (an inline table for
+    // Value::Table, e.g. `{ a = 1, b = 2 }`), which isn't valid as a *document* --
+    // toml::to_string is the document-level serializer, emitting `key = value` lines
+    // (and `[section]` headers for nested tables) the way a parseable top-level TOML
+    // file actually needs to look.
+    let serialized = toml::to_string(&toml_value)?;
+    writer.write(serialized.as_bytes())?;
     Ok(())
 }
 

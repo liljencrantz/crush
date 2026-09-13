@@ -1,0 +1,81 @@
+rm ./.toml_test_file
+
+# A struct round-trips through toml:to/toml:from cleanly, since a struct is the one
+# crush shape that maps directly onto TOML's own required document root (a table).
+$s := $(struct:of a=1 b="hello" c=$true d=1.5)
+$s_toml := $(val $s | toml:to)
+assert ($(typeof $s_toml) == $binary_stream) "toml:to with no file argument should return a binary stream"
+$s_back := $(toml:from $s_toml)
+assert ($(typeof $s_back) == $struct) "toml:from should parse a struct document back into a struct"
+assert ($s_back:a == 1) "toml round trip should preserve an integer field"
+assert ($s_back:b == "hello") "toml round trip should preserve a string field"
+assert ($s_back:c == $true) "toml round trip should preserve a bool field"
+assert ($s_back:d == 1.5) "toml round trip should preserve a float field"
+
+# Nested structs, lists, and lists-of-structs are all fine *inside* a struct field --
+# only the document root has TOML's table-only restriction.
+$nested := $(struct:of name="outer" inner=$(struct:of x=1 y=2))
+$nested_back := $(toml:from $(val $nested | toml:to))
+assert ($nested_back:name == "outer") "a nested struct's sibling field should round-trip"
+assert ($nested_back:inner:x == 1) "a nested struct field should round-trip"
+assert ($nested_back:inner:y == 2) "a nested struct field should round-trip"
+
+$with_list := $(struct:of name="mylist" items=$(list:of 1 2 3))
+$with_list_back := $(toml:from $(val $with_list | toml:to))
+assert ($($with_list_back:items:len) == 3) "a nested list field should round-trip with the right length"
+
+# A list of structs that all share the same fields becomes a *table* on the way back,
+# per toml:from's own documented behavior -- checked here nested inside a struct field,
+# since a bare list can't be a TOML document root at all (see the error checks below).
+$with_rows := $(struct:of name="rows" items=$(list:of $(struct:of a=1 b=2) $(struct:of a=3 b=4)))
+$with_rows_back := $(toml:from $(val $with_rows | toml:to))
+$row_columns := $($with_rows_back:items | members | select name | list:collect name)
+assert (($($row_columns:len)) == 2) "a nested list of same-shaped structs should come back as a table with the original columns, not a plain list"
+$found_a := $($row_columns | any_match {($value == "a")})
+$found_b := $($row_columns | any_match {($value == "b")})
+assert $found_a "the reconstructed table should have the original column a"
+assert $found_b "the reconstructed table should have the original column b"
+assert ($($with_rows_back:items | count) == 2) "the reconstructed table should have one row per original struct"
+
+# TOML documents can only have a table (map) at the root -- a bare list, scalar, or
+# crush's own Table type (which serializes to a bare array, same restriction) can't be
+# serialized as a complete, self-contained document, and should error rather than
+# silently writing something unparseable. (This was a real, confirmed bug: toml:to used
+# to call toml::Value's own Display, which renders a value literal -- e.g. an inline
+# table `{ a = 1 }` -- instead of toml::to_string's proper document-level `key = value`
+# format, so it would "succeed" at writing a file that then failed to parse back. Now
+# it fails at write time instead, with a real error.)
+$list_errored := $false
+try {
+    val $(list:of 1 2 3) | toml:to
+} catch {|$e|
+    $list_errored = $true
+}
+assert $list_errored "a bare list can't be a TOML document root and should error"
+
+$scalar_errored := $false
+try {
+    val 5 | toml:to
+} catch {|$e|
+    $scalar_errored = $true
+}
+assert $scalar_errored "a bare scalar can't be a TOML document root and should error"
+
+$table_errored := $false
+try {
+    $t := $(host:procs | head 2 | materialize)
+    val $t | toml:to
+} catch {|$e|
+    $table_errored = $true
+}
+assert $table_errored "a crush Table can't be a TOML document root and should error"
+
+# File-based round trip, matching the documented `toml:from Cargo.toml` calling
+# convention -- toml:to with a file argument writes there directly instead of
+# returning a binary stream.
+val $s | toml:to ./.toml_test_file
+$file_back := $(toml:from ./.toml_test_file)
+assert ($file_back:a == 1) "a file-based toml round trip should preserve an integer field"
+assert ($file_back:b == "hello") "a file-based toml round trip should preserve a string field"
+
+rm ./.toml_test_file
