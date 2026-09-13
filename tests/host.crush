@@ -1,0 +1,65 @@
+# host:* commands report real, machine-dependent facts about the system crush is
+# running on, so these check structural properties (types, non-emptiness, sane bounds)
+# rather than exact values, which would differ on every machine and CI runner.
+
+assert ($(typeof $(host:name)) == $string) "host:name should return a string"
+assert (($(host:name):len()) > 0) "host:name should return a non-empty string"
+
+assert ($(typeof $(host:uptime)) == $duration) "host:uptime should return a duration"
+assert ($(host:uptime) >= $(duration:of seconds=0)) "host:uptime should be non-negative"
+
+$mem := $(host:memory)
+assert ($(typeof $mem) == $struct) "host:memory should return a struct"
+assert ($mem:total > 0) "host:memory total should be positive"
+assert ($mem:free >= 0) "host:memory free should be non-negative"
+assert ($mem:avail >= 0) "host:memory avail should be non-negative"
+assert ($mem:swap_total >= 0) "host:memory swap_total should be non-negative"
+assert ($mem:swap_free >= 0) "host:memory swap_free should be non-negative"
+
+assert ($(typeof $(host:os:name)) == $string) "host:os:name should return a string"
+assert (($(host:os:name):len()) > 0) "host:os:name should return a non-empty string"
+assert ($(typeof $(host:os:version)) == $string) "host:os:version should return a string"
+assert (($(host:os:version):len()) > 0) "host:os:version should return a non-empty string"
+
+assert ($(typeof $(host:cpu:count)) == $integer) "host:cpu:count should return an integer"
+assert ($(host:cpu:count) > 0) "host:cpu:count should be positive -- every host has at least one core"
+assert ($(typeof $(host:cpu:arch)) == $string) "host:cpu:arch should return a string"
+assert (($(host:cpu:arch):len()) > 0) "host:cpu:arch should return a non-empty string"
+
+$load := $(host:cpu:load)
+assert ($(typeof $load) == $struct) "host:cpu:load should return a struct"
+assert ($load:one >= 0.0) "host:cpu:load one-minute average should be non-negative"
+assert ($load:five >= 0.0) "host:cpu:load five-minute average should be non-negative"
+assert ($load:fifteen >= 0.0) "host:cpu:load fifteen-minute average should be non-negative"
+
+# There's always at least one process running (this crush process itself, if nothing
+# else), and every row should have the columns host:procs documents.
+assert ($(host:procs | count) > 0) "host:procs should list at least one process"
+$proc_columns := $(host:procs | members | select name | list:collect name)
+for col=$(list:of pid ppid user rss vms cpu name) {
+    $found := $($proc_columns | any_match {($value == $col)})
+    assert $found $("host:procs should have a column called {}":format $col)
+}
+
+# host:battery is legitimately empty on hosts with no battery (desktops, most CI
+# runners) -- only check that it doesn't error and reports the right column shape when
+# it does return rows.
+$battery_columns := $(host:battery | members | select name | list:collect name)
+for col=$(list:of vendor model technology cycle_count temperature voltage health state charge time_to_full time_to_empty) {
+    $found := $($battery_columns | any_match {($value == $col)})
+    assert $found $("host:battery should have a column called {}":format $col)
+}
+
+# host:signal: a real SIGCONT to crush's own process is a safe no-op (SIGCONT on an
+# already-running process does nothing), so this exercises the successful send path
+# without actually disrupting anything.
+host:signal $(crush:pid) signal=SIGCONT
+
+# An unrecognized signal name should error rather than silently doing nothing.
+$signal_errored := $false
+try {
+    host:signal $(crush:pid) signal=NOT_A_REAL_SIGNAL
+} catch {|$e|
+    $signal_errored = $true
+}
+assert $signal_errored "host:signal with an unrecognized signal name should error"
