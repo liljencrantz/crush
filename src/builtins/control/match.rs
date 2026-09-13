@@ -133,20 +133,14 @@ fn r#match(mut context: CommandContext) -> CrushResult<()> {
             }
             "is" => {
                 if args.len() != 2 {
-                    return command_error("`is` takes a type and a block argument.");
+                    return command_error("`is` takes a pattern and a block argument.");
                 }
-                match &args[0].value {
-                    Value::Type(t) => {
-                        if &cfg.subject.value_type() == t {
-                            return eval_body(&args[1].value, &context);
-                        }
-                    }
-                    v => {
-                        return command_error(format!(
-                            "`is` expects a type argument, got a value of type `{}`.",
-                            v.value_type()
-                        ));
-                    }
+                // Dispatches through the arm's own `__is__` method, the same mechanism
+                // `like` and the `=~` operator use -- so `is $string {...}` (a type
+                // check) and `is *.txt {...}` (a glob match) both work, as would any
+                // other value implementing `__is__`.
+                if args[0].value.is(&cfg.subject, &context)? {
+                    return eval_body(&args[1].value, &context);
                 }
             }
             other => {

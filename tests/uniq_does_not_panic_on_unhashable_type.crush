@@ -31,7 +31,7 @@ echo "barrier"
 
 assert $got "expected the unhashable-type error to be caught, not silently swallowed"
 
-$panicked := $($msg:message:like "*panicked*")
+$panicked := $(like $msg:message *panicked*)
 assert ($panicked == $false) "expected a graceful error message, not a Rust panic"
 
 $len := $($msg:message:len)

@@ -1,8 +1,11 @@
 # match branches on a value against a sequence of arms in a block body:
-#   case <value> {...}  -- matches on exact equality
-#   any <stream> {...}  -- matches if the subject equals any value the stream produces
-#   is <type> {...}     -- matches if the subject's type is <type>
-#   default {...}       -- always matches
+#   case <value> {...}    -- matches on exact equality
+#   any <stream> {...}    -- matches if the subject equals any value the stream produces
+#   is <pattern> {...}    -- matches if <pattern>:__is__ subject is true; a type checks
+#                            the subject's type, but a glob/regex/string/any other value
+#                            implementing __is__ works too (the same mechanism as `like`
+#                            and the `=~`/`!~` operators)
+#   default {...}         -- always matches
 # Arms are tried in order; the first match wins and the rest are skipped. Unlike `if`,
 # match's body isn't evaluated as an ordinary sequence of jobs -- each arm's own
 # command (`case`/`any`/`is`/`default`) is read directly off the closure's raw,
@@ -42,6 +45,31 @@ $r5 := $(match 10 {
     default {"correct: an integer is not a string"}
 })
 assert ($r5 == "correct: an integer is not a string")
+
+# `is` isn't limited to type checks -- any value with an __is__ method works as its
+# pattern, so a glob or regex arm works exactly like `like`/`=~` would.
+$r_glob := $(match "hello.txt" {
+    is *.md {"wrong"}
+    is *.txt {"glob match"}
+    default {"wrong default"}
+})
+assert ($r_glob == "glob match")
+
+$r_regex := $(match "abbbbbc" {
+    is ^(zzz) {"wrong"}
+    is ^(ab+c) {"regex match"}
+    default {"wrong default"}
+})
+assert ($r_regex == "regex match")
+
+# an `is` pattern with no __is__ method errors clearly, rather than silently not matching
+$is_no_method_errored := $false
+try {
+    match 5 {
+        is $(list:of 1 2 3) {"wrong"}
+    }
+} catch { |$e| $is_no_method_errored = $true }
+assert $is_no_method_errored "an `is` pattern with no __is__ method should error"
 
 # a case pattern is always compared by whole-value equality, never treated as a
 # membership set, even when the subject is itself a list -- that ambiguity is why

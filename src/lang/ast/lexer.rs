@@ -481,6 +481,12 @@ impl<'input> Lexer<'input> {
                             Token::ComparisonOperator("!=", Location::new(i, i + 2)).into(),
                         );
                     }
+                    Some((_, '~')) => {
+                        self.chars.next();
+                        return Some(
+                            Token::ComparisonOperator("!~", Location::new(i, i + 2)).into(),
+                        );
+                    }
                     _ => return Some(Token::Bang(Location::from(i)).into()),
                 },
                 Some((i, '@')) => {

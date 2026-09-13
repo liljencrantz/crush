@@ -136,7 +136,7 @@ better as symbols than as commands. Grouped roughly by precedence, highest first
 | `:=` `=`                    | `$foo := 7`           | Declare a new variable, or reassign an existing one                |
 | `and` `or`                  | `$a and $b`           | Logical operators. Also work as ordinary commands: `or $a $b`      |
 | `==` `!=` `>` `>=` `<` `<=` | `$foo > 5`            | Compare two values                                                 |
-| `=~`                        | `abbbbbc =~ ^(ab+c)`  | True if the left value matches the right-hand pattern              |
+| `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`  | True/false if the left value matches the right-hand pattern        |
 | `+` `-`                     | `1 + 1`, `-5`         | Addition, subtraction, and unary negation                          |
 | `*` `/`                     | `5 * 5`, `7 / 2`      | Multiplication and division (truncating for two integers)          |
 | `typeof`                    | `typeof $foo`         | The type of a value                                                |
@@ -146,11 +146,9 @@ better as symbols than as commands. Grouped roughly by precedence, highest first
 There's no modulo/remainder *operator* -- use the `mod` (least positive residue) or
 `rem` (ordinary remainder) methods on a number instead, e.g. `7:mod 2`.
 
-`=~` currently has no negated form -- there is no working `!~` yet. Use `not (... =~ ...)`
-instead. A glob *literal* (e.g. `*.txt`) doesn't parse directly on the right of `=~`
-inside expression mode; assign it to a variable first (`$g := *.txt`) and match against
-that, or use `like`/`not_like` in command mode instead (see
-[Pattern matching](#pattern-matching)).
+A glob *literal* (e.g. `*.txt`) doesn't parse directly on the right of `=~`/`!~` inside
+expression mode; assign it to a variable first (`$g := *.txt`) and match against that,
+or use `like` in command mode instead (see [Pattern matching](#pattern-matching)).
 
 ### The `@` and `@@` operators
 
@@ -171,55 +169,57 @@ $ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs | select file}
 
 ## Pattern matching
 
-Crush has three ways to match a value against a pattern, depending on how much power
-you need.
+Pattern matching in Crush is built on one mechanism: any value can act as a *pattern*
+by implementing an `__is__` method (and, for negation, `__is_not__`), which takes a
+value to test and returns a bool. Strings, globs, regular expressions, and types all
+implement it, and so can your own custom types -- see the end of this section. These
+methods are named with dunders specifically because they're not meant to be called
+directly; the interfaces below all just call them for you.
 
-**Globs** support simple wildcards -- `*` for any run of characters, `?` for a single
-character, `**` to recurse into subdirectories -- and are the type most shell users
-already know from filename expansion:
-
-```shell script
-crush# files *.md
-crush# files ????????
-# Count the lines of rust code in this tree
-crush# lines:from **.rs | count
-```
-
-A glob is a value in its own right, not automatically expanded -- it's passed to
-whatever command receives it, which chooses what to match it against. The `like`/
-`not_like` methods match an explicit string against a glob:
+The **`like`** command checks a value against one or more patterns, returning true as
+soon as one matches:
 
 ```shell script
 crush# like "foo.txt" *.txt
 true
-crush# not_like "foo.txt" *.md
+crush# like "foo.txt" *.md
+false
+crush# like abbbbbc ^(ab+c)
 true
 ```
 
-Note that these do an *exact* match against the pattern (respecting the wildcards) --
-they're not a substring search.
+A pattern can be a **glob** (shell-style wildcards -- `*` for any run of characters,
+`?` for a single character, `**` to recurse into subdirectories; the type most shell
+users already know from filename expansion), a **regular expression** (usual regex
+syntax, constructed with `^(...)`), a plain **string** (exact match -- not a substring
+search), or a **type** (checks the value's own type, e.g. `like 5 $integer`). Globs
+aren't automatically expanded against the filesystem -- a glob is a value in its own
+right, passed to whatever command receives it, which decides what to match it against.
 
-**Regular expressions** support the usual regex syntax and are constructed with
-`^(...)`:
+In expression mode, a single pattern can be checked with the **`=~`**/**`!~`**
+operators instead, which read more naturally there:
 
 ```shell script
-crush# like abbbbbc ^(ab+c)
+crush# (abbbbbc =~ ^(ab+c))
 true
+crush# (abbbbbc !~ ^(zzz))
+true
+```
+
+(`=~ y` and `!~ y` desugar to calling `y`'s own `__is__`/`__is_not__` method, which is
+why the pattern goes on the right.)
+
+Regular expressions also support replacement via `replace` (first match) and
+`replace_all`:
+
+```shell script
 crush# ^(a+):replace baalaa a
 balaa
 crush# ^(a+):replace_all baalaa a
 bala
 ```
 
-The `=~` operator (see [Operators](#operators) above) matches a value against a
-glob or regex the same way `like` does, but reads naturally in expression mode:
-
-```shell script
-crush# (abbbbbc =~ ^(ab+c))
-true
-```
-
-**`match`** branches on a value against a sequence of typed cases -- useful when you'd
+**`match`** branches on a value against a sequence of arms -- useful when you'd
 otherwise write a chain of `if`/`else if`:
 
 ```shell script
@@ -227,6 +227,7 @@ match $x {
     case 2 {echo "$x is 2"}
     any $(seq 5 10) {echo "$x is between 5 and 10"}
     is $string {echo "$x is a string"}
+    is *.txt {echo "$x looks like a text file"}
     default {echo "I don't know what $x is"}
 }
 ```
@@ -236,10 +237,25 @@ Each arm is tried in order; the first that matches runs and the rest are skipped
 * `case <value> {...}` matches if the subject equals `<value>`.
 * `any <stream> {...}` matches if the subject equals any value produced by `<stream>`
   (e.g. a list or `$(seq 5 10)`).
-* `is <type> {...}` matches if the subject's type is `<type>`.
+* `is <pattern> {...}` matches if `<pattern>` (a type, glob, regex, or anything else
+  with an `__is__` method) matches the subject -- the same mechanism `like` uses.
 * `default {...}` always matches.
 
 If nothing matches and there's no `default` arm, `match` fails with an error.
+
+### Custom patterns
+
+Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any type can
+be used as a pattern by implementing it:
+
+```shell script
+$Even := $(class)
+$Even:__is__ = {|$needle| ($needle:mod(2) == 0)}
+$even := $(Even:new)
+
+like 4 $even   # true
+like 5 $even   # false
+```
 
 ## Command substitutions
 

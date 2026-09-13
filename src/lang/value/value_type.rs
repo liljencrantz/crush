@@ -85,6 +85,7 @@ impl ValueType {
             ValueType::Scope => &types::scope::methods(),
             ValueType::Struct => &types::r#struct::methods(),
             ValueType::OneOf(_) => &types::one_of::methods(),
+            ValueType::Type => &types::r#type::methods(),
             _ => empty_methods(),
         }
     }

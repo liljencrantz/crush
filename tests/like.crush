@@ -1,30 +1,34 @@
-# The value-against-pattern command used to be named `match`, and its underlying
-# per-type methods (string/regex/glob) used to be `:match`/`:not_match`. Both were
-# renamed to `like`/`:like`/`:not_like` (and `not_match` to `not_like`) to free up the
-# name `match` for the pattern-matching control-flow construct (see tests/match.crush).
-# The `=~`/`!~` expression-mode operators desugar to `:like`/`:not_like` under the hood
-# and should be unaffected by the rename.
-
-$l1 := $(like fooo ^(ooo))
-assert $l1
-$l2 := $(like fooo ^(zzz))
-assert (!$l2)
-
+# Pattern matching (string/regex/glob/type/...) is unified under one mechanism: any
+# value can act as a pattern by implementing an `__is__` method (and, for negation,
+# `__is_not__`). These are named with dunders specifically because they aren't meant to
+# be called directly -- the public interface is the `like` command (which just calls
+# `pattern:__is__ value`) and, in expression mode, the `=~`/`!~` operators (which desugar
+# to the same methods, receiver-reversed since the method lives on the pattern).
+assert $(like fooo ^(ooo))
+assert (!$(like fooo ^(zzz)))
 assert (fooo =~ ^(ooo))
+assert (fooo !~ ^(zzz))
 
+# A pattern can be a regex, a glob, a plain string (exact match), or a type (checks the
+# value's own type) -- `like` doesn't care which, as long as it has `__is__`.
 $re := ^(a+b)
-$r1 := $($re:like "aaab")
-assert $r1
-$r2 := $($re:not_like "aaab")
-assert (!$r2)
+assert $(like "aaab" $re)
+assert (!$(like "xyz" $re))
 
 $g := $(glob:new "*.txt")
-$g1 := $($g:like "foo.txt")
-assert $g1
-$g2 := $($g:not_like "foo.txt")
-assert (!$g2)
+assert $(like "foo.txt" $g)
+assert (!$(like "notatextfile" $g))
 
-$s1 := $($("abc"):like "abc")
-assert $s1
-$s2 := $($("abc"):not_like "abc")
-assert (!$s2)
+assert $(like "abc" "abc")
+assert (!$(like "abc" "abd"))
+
+assert $(like 5 $integer)
+assert (!$(like "hello" $integer))
+
+# Multiple patterns: true as soon as any one of them matches.
+assert $(like "foo.txt" ^(zzz) $g "nope")
+assert (!$(like "foo.txt" ^(zzz) "nope"))
+
+# The dunder methods are still real, callable methods -- just not the intended surface.
+assert $($re:__is__ "aaab")
+assert (!$($re:__is_not__ "aaab"))

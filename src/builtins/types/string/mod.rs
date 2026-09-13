@@ -41,8 +41,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         IsDigit::declare_method(&mut res);
         Substr::declare_method(&mut res);
         GetItem::declare_method(&mut res);
-        Like::declare_method(&mut res);
-        NotLike::declare_method(&mut res);
+        Is::declare_method(&mut res);
+        IsNot::declare_method(&mut res);
 
         res
     })
@@ -452,39 +452,38 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.string.like,
+    types.string.__is__,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if the needle matches the pattern",
+    short = "True if the needle equals this string. Not meant to be called directly -- use the `like` command or the `=~` operator.",
 )]
-struct Like {
+struct Is {
     #[description("the text to match this string against.")]
     needle: Text,
 }
 
-fn like(mut context: CommandContext) -> CrushResult<()> {
+fn __is__(mut context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
-    let cfg: Like = Like::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: Is = Is::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(s.eq(&cfg.needle.as_string())))
 }
 
 #[signature(
-    types.string.not_like,
+    types.string.__is_not__,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "False if the needle matches the pattern",
+    short = "False if the needle equals this string. Not meant to be called directly -- use the `like` command or the `!~` operator.",
 )]
-struct NotLike {
-    #[description("the text to match this glob against.")]
+struct IsNot {
+    #[description("the text to match this string against.")]
     needle: Text,
 }
 
-fn not_like(mut context: CommandContext) -> CrushResult<()> {
+fn __is_not__(mut context: CommandContext) -> CrushResult<()> {
     let s = context.this.string()?;
-    let cfg: NotLike =
-        NotLike::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let cfg: IsNot = IsNot::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
         .send(Value::Bool(!s.eq(&cfg.needle.as_string())))

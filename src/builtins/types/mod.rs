@@ -1,10 +1,9 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::data::table::ColumnType;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::pipe::black_hole;
-use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::lang::state::this::This;
@@ -29,6 +28,7 @@ pub mod table;
 pub mod table_input_stream;
 pub mod table_output_stream;
 pub mod time;
+pub mod r#type;
 
 #[signature(
     types.materialize,
@@ -257,29 +257,40 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     types.like,
     can_block = true,
     output = Known(ValueType::Bool),
-    short = "Check if the specified value matches the pattern.",
-    long = "The pattern can be another string, a glob or a regular expression. If multiple patterns are specified, they are checked in order and if any of them match, then true is returned.",
+    short = "Check if the specified value matches one or more patterns.",
+    long = "A pattern can be a string (exact match), a glob, a regular expression, a type",
+    long = "(checks `value`'s type), or any other value that implements an `__is__`",
+    long = "method -- `like` simply calls it. If multiple patterns are given, they're",
+    long = "checked in order and `like` returns true as soon as one of them matches.",
     long = "",
-    long = "Under the hood, matching is performed by calling the `match` method on the value. `$string`, `$regex` and `$glob` all implement this method. You can create custom matching objects that are compatible with the like command by implementing this method yourself.",
-    long = "",
-    long = "In expression mode, this method can be used via the the `=~` operator.",
-    example = "# Match the string \"foo\" against the regex ooo",
+    long = "In expression mode, a single pattern can also be checked via the `=~`",
+    long = "operator (or `!~` for the negation).",
+    example = "# Match the string \"fooo\" against the regex ^(ooo)",
     example = "like fooo ^(ooo)",
-    example = "# Match the string \"foo\" against the regex ooo using the expression mode",
+    example = "# Same, in expression mode",
     example = "(fooo =~ ^(ooo))",
+    example = "# A value matches if it equals any of several patterns",
+    example = "like fooo ^(ooo) *.txt \"fooo\"",
 )]
 struct Like {
-    #[description("the value.")]
-    value: String,
-    #[description("the pattern.")]
-    pattern: Patterns,
+    #[description("the value to test.")]
+    value: Value,
+    #[description("the pattern(s) to test the value against.")]
+    #[unnamed()]
+    pattern: Vec<Value>,
 }
 
 fn like(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Like::parse(context.remove_arguments(), context.global_state.printer())?;
-    context
-        .output
-        .send(Value::from(cfg.pattern.test(&cfg.value)))
+    if cfg.pattern.is_empty() {
+        return command_error("Expected at least one pattern.");
+    }
+    for pattern in &cfg.pattern {
+        if pattern.is(&cfg.value, &context)? {
+            return context.output.send(Value::from(true));
+        }
+    }
+    context.output.send(Value::from(false))
 }
 
 pub fn declare(root: &Scope) -> CrushResult<()> {

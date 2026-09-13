@@ -19,8 +19,10 @@ use crate::lang::data::{
     binary::BinaryReader, dict::Dict, dict::DictReader, list::List, table::ColumnType,
     table::TableReader,
 };
+use crate::lang::argument::Argument;
 use crate::lang::errors::{CrushError, CrushResult, command_error, data_error};
-use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream};
+use crate::lang::pipe::{Stream, TableInputStream, TableOutputStream, pipe};
+use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
 use crate::util::time::duration_format;
 use crate::{lang::data::table::Table, lang::errors::error, util::file::cwd, util::glob::Glob};
@@ -402,7 +404,17 @@ impl Value {
                     .get(name)
                     .map(|m| Value::Command(m.clone()))
             }),
-            Value::Type(t) => t.fields().get(name).map(|m| Value::Command(m.clone())),
+            // Check ValueType::Type's own methods (e.g. `__is__`, a type-level operation)
+            // before falling back to the wrapped type's own instance methods (e.g. `$list:of`,
+            // a constructor) -- otherwise a name both define, like `__is__`, would silently
+            // resolve to the wrong one (an instance method expecting a real instance as
+            // `this`, not a bare type value).
+            Value::Type(t) => self
+                .value_type()
+                .fields()
+                .get(name)
+                .or_else(|| t.fields().get(name))
+                .map(|m| Value::Command(m.clone())),
             _ => self
                 .value_type()
                 .fields()
@@ -516,6 +528,35 @@ impl Value {
             Value::Glob(pattern) => Ok(pattern.matches(value)),
             Value::Regex(_, re) => Ok(re.is_match(value)),
             _ => return command_error("Invalid value for match"),
+        }
+    }
+
+    /// Check whether `subject` matches this value, used as a pattern -- the shared
+    /// mechanism behind `like`, the `=~`/`!~` operators (which desugar to calling
+    /// `__is__`/`__is_not__` on the pattern), and `match`'s `is` arm. Dispatches to this
+    /// value's own `__is__` method rather than hardcoding a fixed set of matchable types,
+    /// so any type (string, glob, regex, `type`, or a user's own class) can be used as a
+    /// pattern simply by implementing `__is__` itself.
+    pub fn is(&self, subject: &Value, context: &CommandContext) -> CrushResult<bool> {
+        match self.field("__is__")? {
+            Some(Value::Command(cmd)) => {
+                let (output, input) = pipe();
+                cmd.eval(context.empty().with_output(output).with_args(
+                    vec![Argument::unnamed(subject.clone(), &context.source)],
+                    Some(self.clone()),
+                ))?;
+                match input.recv()? {
+                    Value::Bool(b) => Ok(b),
+                    v => command_error(format!(
+                        "`__is__` should return a bool, got a value of type `{}`.",
+                        v.value_type()
+                    )),
+                }
+            }
+            _ => command_error(format!(
+                "Value of type `{}` has no `__is__` method and can't be used as a pattern.",
+                self.value_type()
+            )),
         }
     }
 

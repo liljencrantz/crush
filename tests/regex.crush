@@ -4,16 +4,11 @@
 # counts balanced parens to find the end of the literal: `^((a)@(b))` for pattern
 # `(a)@(b)`, not `^((a)@(b)`.
 
-# like / not_like. Note: a method call like `$my_re:like "aaab"` doesn't parse when
-# nested directly inside another (...), so each result is computed via a separate
-# $(...) substitution first (a pre-existing parser quirk, unrelated to this change).
+# Matching against a regex: the `like` command (see tests/like.crush for the full
+# picture, including glob/type/custom patterns and the `=~`/`!~` operators).
 $my_re := ^(a+b)
-$m1 := $($my_re:like "aaab")
-assert $m1
-$m2 := $($my_re:not_like "aaab")
-assert (!$m2)
-$m3 := $($my_re:like "xyz")
-assert (!$m3)
+assert $(like "aaab" $my_re)
+assert (!$(like "xyz" $my_re))
 
 # replace (first match only) vs replace_all
 $digits := ^([0-9]+)
@@ -29,8 +24,7 @@ assert ($r3 == "host!user")
 
 # re:new compiles a string into the same kind of value as a ^(...) literal
 $compiled := $(re:new "[0-9]+")
-$m4 := $($compiled:like "abc123")
-assert $m4
+assert $(like "abc123" $compiled)
 $compiled_type := $(typeof $compiled)
 assert ($compiled_type == $re)
 

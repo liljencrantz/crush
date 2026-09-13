@@ -19,9 +19,10 @@ $snapshot := $(
 
 # The backgrounded sleep substitution should be visible -- matched by description
 # prefix rather than a substring search (crush has no working substring-search
-# operator on plain strings today: `:like` does exact equality despite its name, and
-# `=~`/regex would also match the *outer* job's own description, which also mentions
-# "sleep" as part of representing the whole nested job list it's evaluating).
+# operator on plain strings today: `like`/`=~` do exact equality against a string
+# pattern despite the name, and `=~`/regex would also match the *outer* job's own
+# description, which also mentions "sleep" as part of representing the whole nested
+# job list it's evaluating).
 $sleep_rows := $($snapshot | where {$description:starts_with "\$sleep "} | materialize)
 $sleep_row_count := $($sleep_rows | count)
 assert ($sleep_row_count == 1) "the backgrounded sleep substitution should be visible in crush:jobs"

@@ -29,7 +29,7 @@ try {
 }
 echo "barrier"
 
-$leaked := $($msg:message:like "*disconnected*")
+$leaked := $(like $msg:message *disconnected*)
 assert ($leaked == $false) "the real error should be the only thing caught, no leaked channel error"
 
 $len := $($msg:message:len)
