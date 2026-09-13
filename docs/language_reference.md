@@ -167,6 +167,30 @@ $print_everything 1 2 x=3 y=4
 $ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs | select file}
 ```
 
+### Destructuring assignment
+
+A bracketed list of names on the left of `:=`/`=` splits a list, struct, or dict on the
+right into one variable per name, positionally. Struct fields and dict entries are both
+backed by an order-preserving map, so "positionally" means declaration order for a
+struct and insertion order for a dict -- key order is never involved. The number of
+names must exactly match the number of elements, or the assignment errors:
+
+```shell script
+crush# [$a, $b] := $(list:of 1 2)
+crush# $a
+1
+crush# $point := $(struct:of x=10 y=20)
+crush# [$x, $y] := $point
+crush# $y
+20
+
+# = destructures into already-declared variables, exactly like plain = does for one
+[$a, $b] = $(list:of 3 4)
+```
+
+`:=` still requires that none of the names already exist in the local scope, and `=`
+still requires that all of them do -- both exactly as for a single-target `:=`/`=`.
+
 ## Pattern matching
 
 Pattern matching in Crush is built on one mechanism: any value can act as a *pattern*

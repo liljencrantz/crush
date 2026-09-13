@@ -44,6 +44,11 @@ pub enum Node {
     GetAttr(Box<Node>, TrackedString),
     Substitution(JobListNode),
     Closure(Option<Vec<ParameterNode>>, JobListNode, Location),
+    /// A `[a, b, c]` pattern on the left side of `:=`/`=`, e.g. `[$a, $b] := $pair`. Only
+    /// ever produced by the grammar in assignment-target position, and only ever
+    /// consumed by `compile_standalone_assignment` -- never compiled as an ordinary
+    /// value.
+    Destructure(Vec<Node>, Location),
 }
 
 impl Node {
@@ -114,6 +119,7 @@ impl Node {
                 // Fixme: Can't tab complete or error report on parameters because they're not currently tracked
                 *l
             }
+            Destructure(_, l) => *l,
         }
     }
 
@@ -140,6 +146,7 @@ impl Node {
             Node::GetAttr(_, _) => "member access",
             Node::Substitution(_) => "command substitution",
             Node::Closure(_, _, _) => "closure",
+            Node::Destructure(_, _) => "destructuring pattern",
         }
     }
 
@@ -274,6 +281,12 @@ impl Node {
                 }),
                 ctx.source.subtrackedstring(s),
             ),
+            Node::Destructure(_, l) => {
+                return compile_error(
+                    "A destructuring pattern can only be used on the left side of `:=` or `=`.",
+                    &ctx.source.substring(*l),
+                );
+            }
         }))
     }
 
@@ -321,6 +334,10 @@ impl Node {
                     true,
                 ),
 
+                Node::Destructure(targets, location) => Node::compile_destructuring_assignment(
+                    targets, "set_destructure", value, ctx, *location,
+                ),
+
                 n => compile_error(
                     format!(
                         "Invalid left side in assignment. Expected `identifier`, got `{}`.  Try `$foo = 1`.",
@@ -339,6 +356,11 @@ impl Node {
                     )],
                     ctx,
                 ),
+
+                Node::Destructure(targets, location) => Node::compile_destructuring_assignment(
+                    targets, "let_destructure", value, ctx, *location,
+                ),
+
                 n => compile_error(
                     format!(
                         "Invalid left side in declaration. Expected `identifier`, got `{}`. Try `$foo := 1`",
@@ -352,6 +374,58 @@ impl Node {
                 &ctx.source.substring(target.location()),
             ),
         }
+    }
+
+    /// Compiles `[a, b, ...] := value` / `[a, b, ...] = value` into a call to
+    /// `var:let_destructure`/`var:set_destructure`: each target name becomes an unnamed
+    /// string argument, and the compiled right-hand side becomes the `value` named
+    /// argument. The builtin itself is what actually splits `value` (a list, struct, or
+    /// dict) into one value per name at runtime -- the number of elements can't be
+    /// known until then.
+    fn compile_destructuring_assignment(
+        targets: &Vec<Node>,
+        builtin: &str,
+        value: &Node,
+        ctx: &NodeContext,
+        location: Location,
+    ) -> CrushResult<Option<CommandInvocation>> {
+        let mut names = Vec::with_capacity(targets.len());
+        for target in targets {
+            match target {
+                Node::Identifier(t) => names.push(t.clone()),
+                n => {
+                    return compile_error(
+                        format!(
+                            "Invalid destructuring target. Expected `identifier`, got `{}`.",
+                            n.type_name()
+                        ),
+                        &ctx.source.substring(n.location()),
+                    );
+                }
+            }
+        }
+
+        let mut arguments: Vec<ArgumentDefinition> = names
+            .iter()
+            .map(|t| {
+                ArgumentDefinition::unnamed(ValueDefinition::Value(
+                    Value::from(t.string.clone()),
+                    ctx.source.subtrackedstring(t),
+                ))
+            })
+            .collect();
+
+        arguments.push(ArgumentDefinition::named(
+            &ctx.source.subtrackedstring(&TrackedString::new("value", location)),
+            value.compile_argument(ctx)?.unnamed_value()?,
+        ));
+
+        Node::function_invocation(
+            ctx.env.global_static_cmd(vec!["global", "var", builtin])?,
+            location,
+            arguments,
+            ctx,
+        )
     }
 
     pub fn compile_as_special_command(
@@ -387,6 +461,7 @@ impl Node {
             | Node::GetAttr(_, _)
             | Node::Substitution(_)
             | Node::Closure(_, _, _)
+            | Node::Destructure(_, _)
             | Node::File(_, _) => Ok(None),
         }
     }

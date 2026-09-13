@@ -65,6 +65,106 @@ pub fn set(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
+/// Splits `value` into exactly `expected` values, in order: a list's elements, or a
+/// struct's/dict's values in insertion order (both are backed by an order-preserving
+/// map, so "insertion order" is well defined). Used by `let_destructure`/`set_destructure`.
+fn destructure(value: Value, expected: usize) -> CrushResult<Vec<Value>> {
+    let values = match value {
+        Value::List(l) => {
+            let mut values = Vec::new();
+            l.dump_value(&mut values)?;
+            values
+        }
+        Value::Struct(s) => s
+            .local_elements()
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>(),
+        Value::Dict(d) => d
+            .elements()
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect::<Vec<_>>(),
+        v => {
+            return command_error(format!(
+                "Can't destructure a value of type `{}`. Expected `list`, `struct`, or `dict`.",
+                v.value_type()
+            ));
+        }
+    };
+    if values.len() != expected {
+        return command_error(format!(
+            "Wrong number of elements to destructure: expected {}, got {}.",
+            expected,
+            values.len()
+        ));
+    }
+    Ok(values)
+}
+
+#[signature(
+    var.let_destructure,
+    can_block = false,
+    output = Unknown,
+    short = "Declare new variables in the current scope by destructuring a list, struct, or dict.",
+    long = "Not normally called directly, but via the syntactic sugar of the := operator applied",
+    long = "to a bracketed list of names, e.g. `[$a, $b] := $pair`. `value`'s elements -- a",
+    long = "list's elements, or a struct's/dict's values in insertion order -- are declared",
+    long = "positionally into `names`, in order. The number of elements must exactly match the",
+    long = "number of names, or an error results.",
+    example = "# These two lines are equivalent",
+    example = "[$a, $b] := [1, 2]",
+    example = "var:let_destructure a b value=[1, 2]",
+)]
+struct LetDestructure {
+    #[description("the names of the variables to declare, in order.")]
+    #[unnamed()]
+    names: Vec<String>,
+    #[description("the list, struct, or dict to destructure.")]
+    value: Value,
+}
+
+pub fn let_destructure(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = LetDestructure::parse(context.remove_arguments(), context.global_state.printer())?;
+    let values = destructure(cfg.value, cfg.names.len())?;
+    for (name, value) in cfg.names.iter().zip(values) {
+        context.scope.declare(name, value)?;
+    }
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    var.set_destructure,
+    can_block = false,
+    output = Unknown,
+    short = "Reassign existing variables by destructuring a list, struct, or dict.",
+    long = "Not normally called directly, but via the syntactic sugar of the = operator applied",
+    long = "to a bracketed list of names, e.g. `[$a, $b] = $pair`. Every name must already exist",
+    long = "in some visible scope, exactly like `set`. `value`'s elements -- a list's elements,",
+    long = "or a struct's/dict's values in insertion order -- are assigned positionally into",
+    long = "`names`, in order. The number of elements must exactly match the number of names,",
+    long = "or an error results.",
+    example = "# These two lines are equivalent",
+    example = "[$a, $b] = [1, 2]",
+    example = "var:set_destructure a b value=[1, 2]",
+)]
+struct SetDestructure {
+    #[description("the names of the variables to reassign, in order.")]
+    #[unnamed()]
+    names: Vec<String>,
+    #[description("the list, struct, or dict to destructure.")]
+    value: Value,
+}
+
+pub fn set_destructure(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = SetDestructure::parse(context.remove_arguments(), context.global_state.printer())?;
+    let values = destructure(cfg.value, cfg.names.len())?;
+    for (name, value) in cfg.names.iter().zip(values) {
+        context.scope.set(name, value)?;
+    }
+    context.output.send(Value::Empty)
+}
+
 #[signature(
     var.get,
     can_block = false,
@@ -216,6 +316,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |ns| {
             Let::declare(ns)?;
             Set::declare(ns)?;
+            LetDestructure::declare(ns)?;
+            SetDestructure::declare(ns)?;
             Get::declare(ns)?;
             Unset::declare(ns)?;
             Use::declare(ns)?;

@@ -222,13 +222,35 @@ Command: CommandNode = {
         {c.expressions.push(*a);
         c.location = c.location.union(Location::new(start, end));
         c
-    }
+    },
+    // A destructuring assignment is always a whole statement in its own right, never one
+    // argument among several -- so this is its own top-level Command alternative rather
+    // than an Assignment alternative. Making it an Assignment alternative instead would
+    // make a bare `[` ambiguous with the existing `Item GetItemStart ... GetItemEnd`
+    // subscript-access rule as soon as a Command has more than one argument (LALRPOP
+    // can't tell "start a new destructuring statement" from "subscript the previous
+    // argument" with one token of lookahead).
+    <start: @L> GetItemStart <targets: DestructureTargetList> GetItemEnd <mid: @R> <op: AssignmentOperator> <e: Assignment> <end: @R> =>
+        CommandNode{
+            expressions: vec![*Box::from(Node::Assignment{
+                target: Box::from(Node::Destructure(targets, Location::new(start, mid))),
+                style: SwitchStyle::None,
+                operation: String::from(op),
+                value: e,
+            })],
+            location: Location::new(start, end),
+        },
 }
 
 Assignment: Box<Node> = {
     Unary,
     <i: Item> <op: AssignmentOperator> <e: Assignment> =>
         Box::from(Node::Assignment{target: i, style: SwitchStyle::None, operation: String::from(op), value: e}),
+}
+
+DestructureTargetList: Vec<Node> = {
+    <i: Item> => vec![*i],
+    <mut l: DestructureTargetList> Separators <i: Item> => {l.push(*i); l},
 }
 
 Unary: Box<Node> = {
