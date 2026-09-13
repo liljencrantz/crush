@@ -15,6 +15,7 @@ mod join;
 mod predicate;
 mod rename;
 mod reverse;
+mod sample;
 mod select;
 mod seq;
 mod skip;
@@ -45,6 +46,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             join::Join::declare(env)?;
             predicate::AnyMatch::declare(env)?;
             predicate::AllMatch::declare(env)?;
+            sample::Sample::declare(env)?;
             aggregation::Sum::declare(env)?;
             aggregation::Avg::declare(env)?;
             aggregation::Median::declare(env)?;
