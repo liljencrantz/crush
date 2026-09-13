@@ -1,8 +1,8 @@
+use crate::lang::command::Command;
 use crate::lang::command::OutputType::Passthrough;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::pipe::{black_hole, pipe};
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::Value;
 use signature::signature;
 
 #[signature(
@@ -22,7 +22,7 @@ use signature::signature;
 pub struct Tee {
     #[description("one or more pipelines to send an independent copy of the stream through.")]
     #[unnamed()]
-    branches: Vec<Value>,
+    branches: Vec<Command>,
 }
 
 fn tee(mut context: CommandContext) -> CrushResult<()> {
@@ -30,17 +30,7 @@ fn tee(mut context: CommandContext) -> CrushResult<()> {
     if cfg.branches.is_empty() {
         return command_error("tee needs at least one branch.");
     }
-    let branches = cfg
-        .branches
-        .into_iter()
-        .map(|v| match v {
-            Value::Command(c) => Ok(c),
-            v => command_error(format!(
-                "Expected every branch to be a command, was of type `{}`",
-                v.value_type()
-            )),
-        })
-        .collect::<CrushResult<Vec<_>>>()?;
+    let branches = cfg.branches;
 
     let mut input = context.input_stream()?;
     let types = input.types().to_vec();

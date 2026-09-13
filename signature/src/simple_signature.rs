@@ -285,6 +285,7 @@ impl SimpleSignature {
             SimpleSignature::Scope => "dump_scope",
             SimpleSignature::BinaryInput => "dump_binary_input",
             SimpleSignature::Files => "dump_files",
+            SimpleSignature::Command => "dump_command",
             _ => panic!("Unknown type"),
         }
     }
