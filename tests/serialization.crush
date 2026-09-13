@@ -14,3 +14,19 @@ val $fff | pup:to ./.test_file
 var:unset a b fff
 # Deserialize the closure and check that the variables still exists.
 $(pup:from ./.test_file) c=3 {echo 1}
+
+# Round-trip a bare list value through pup. This was previously untested despite the
+# type system claiming (see docs) that every crush value, list and dict included, can be
+# losslessly serialized -- the list/dict pup serializers had zero test coverage.
+$list := $(list:of 1 2 3)
+val $list | pup:to ./.test_file
+$restored_list := $(pup:from ./.test_file)
+assert ($restored_list == $list) "a list should round-trip through pup unchanged"
+
+# Round-trip a bare dict value through pup, same rationale as the list above.
+$dict := $(dict:of a=1 b=2)
+val $dict | pup:to ./.test_file
+$restored_dict := $(pup:from ./.test_file)
+assert ($restored_dict == $dict) "a dict should round-trip through pup unchanged"
+
+echo "pup round trip ok"

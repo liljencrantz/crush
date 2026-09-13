@@ -130,10 +130,10 @@ impl Dict {
     }
 
     pub fn materialize(self) -> CrushResult<Dict> {
-        let mut entries = self.entries.lock().unwrap();
+        let entries = self.entries.lock().unwrap();
         let mut map = OrderedMap::with_capacity(entries.len());
-        for (k, v) in entries.drain() {
-            map.insert(k.materialize()?, v.materialize()?);
+        for (k, v) in entries.iter() {
+            map.insert(k.clone().materialize()?, v.clone().materialize()?);
         }
         Ok(Dict {
             key_type: self.key_type.materialize()?,

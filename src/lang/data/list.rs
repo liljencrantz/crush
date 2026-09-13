@@ -212,10 +212,10 @@ impl List {
     }
 
     pub fn materialize(self) -> CrushResult<List> {
-        let mut cells = self.cells.lock().unwrap();
+        let cells = self.cells.lock().unwrap();
         let vec: Vec<Value> = cells
-            .drain(..)
-            .map(|c| c.materialize())
+            .iter()
+            .map(|c| c.clone().materialize())
             .collect::<CrushResult<Vec<_>>>()?;
         Ok(List {
             cell_type: self.cell_type.materialize()?,
