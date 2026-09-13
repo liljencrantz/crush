@@ -1,0 +1,34 @@
+# crush:terminate/crush:pause reach a running command only by sending a
+# StreamControlMessage through a channel that command registered for itself --
+# sleep used to never register one at all (a plain std::thread::sleep(), completely
+# uninterruptible), so crush:terminate had no observable effect on the kind of job a
+# user would actually reach for it to stop: backgrounding a multi-second sleep and
+# terminating it right away still took the full duration and returned nothing early.
+# Confirmed and fixed this session. These checks use real elapsed wall-clock time
+# (with a generous margin below the sleep's own duration) since sleep's internal
+# state isn't otherwise observable from a script.
+
+$start := $(time:now)
+$job_id := $(sleep $(duration:of seconds=5) &)
+crush:terminate $job_id
+try {
+    $(fg $job_id)
+} catch {|$e|
+}
+$end := $(time:now)
+assert (($end - $start) < $(duration:of seconds=2)) "crush:terminate should interrupt a running sleep almost immediately, not wait out its full duration"
+
+# crush:pause should actually stop a running sleep's countdown, not just fail to error.
+$start2 := $(time:now)
+$job_id2 := $(sleep $(duration:of seconds=5) &)
+crush:pause $job_id2
+$mid := $(time:now)
+assert (($mid - $start2) < $(duration:of seconds=2)) "crush:pause should stop a running sleep from completing at its original deadline"
+
+# Resuming a paused sleep ends the wait immediately rather than counting down the
+# remaining time -- the same semantics control:schedule's own internal sleep helper
+# already established for pause/resume, matched here for consistency.
+crush:resume $job_id2
+$(fg $job_id2)
+$end2 := $(time:now)
+assert (($end2 - $mid) < $(duration:of seconds=2)) "crush:resume should let a paused sleep finish right away, not wait out the rest of its original duration"

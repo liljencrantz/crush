@@ -2,7 +2,8 @@ use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
-use crate::lang::errors::{CrushResult, command_error};
+use crate::lang::errors::{CrushResult, command_error, terminate};
+use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::handles::JobType::Background;
@@ -11,6 +12,7 @@ use crate::lang::{data::binary::BinaryReader, value::Value, value::ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;
 use chrono::Duration;
+use crossbeam::channel::bounded;
 use os_pipe::PipeReader;
 use signature::signature;
 use std::io::Read;
@@ -124,7 +126,32 @@ struct Sleep {
 
 fn sleep(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Sleep::parse(context.remove_arguments(), &context.global_state.printer())?;
-    std::thread::sleep(cfg.duration.to_std()?);
+
+    // A plain std::thread::sleep() here would be uninterruptible: crush:terminate/
+    // crush:pause reach a running command only by sending a StreamControlMessage
+    // through a channel it registered for itself, so a sleep that never registers one
+    // and never checks it just runs to completion regardless -- this was a real,
+    // confirmed bug (see the audit). Registering a controller and polling it via
+    // recv_timeout -- and, on Pause, blocking for Resume/Terminate rather than
+    // continuing to count down -- exactly matches control::schedule's own internal
+    // sleep helper, which already does this correctly.
+    let (control_sender, control_receiver) = bounded(1);
+    context
+        .command_handle()
+        .register(Box::from(ChannelBasedController::new(control_sender)));
+
+    match control_receiver.recv_timeout(cfg.duration.to_std()?) {
+        Ok(StreamControlMessage::Terminate) => return terminate(),
+        Ok(StreamControlMessage::Pause) => loop {
+            match control_receiver.recv() {
+                Ok(StreamControlMessage::Terminate) => return terminate(),
+                Ok(StreamControlMessage::Resume) => break,
+                Ok(StreamControlMessage::Pause) => {}
+                Err(_) => return terminate(),
+            }
+        },
+        Ok(StreamControlMessage::Resume) | Err(_) => {}
+    }
     context.output.send(Value::Empty)?;
     Ok(())
 }
