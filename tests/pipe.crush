@@ -6,13 +6,26 @@ crush:locale:set "en_US.UTF-8"
 $pipe := $($(table_input_stream value=$integer):pipe)
 
 # Attach the input end to a bunch of seq commands
-seq 0 100_000 | pipe:write &
-seq 0 100_000 | pipe:write &
-seq 0 100_000 | pipe:write &
-seq 0 100_000 | pipe:write &
+$input1 := $(seq 0 100_000 | pipe:write &)
+$input2 := $(seq 0 100_000 | pipe:write &)
+$input3 := $(seq 0 100_000 | pipe:write &)
+$input4 := $(seq 0 100_000 | pipe:write &)
 
 # Attach the output end to the sum command
 $sum_job_id := $(pipe:read | sum &)
+
+# Wait for every writer job to fully finish writing before closing the pipe. This
+# isn't just tidy -- it's required: pipe:write's own implementation reads $pipe's
+# "output" field on its own worker thread whenever the OS happens to schedule it,
+# with no synchronization against pipe:close clearing that same field. Racing
+# pipe:close against a writer job that hasn't gotten a chance to run yet has been
+# observed to silently drop that writer's entire contribution. fg-ing each writer
+# first guarantees it has completely finished -- including reading $pipe's fields --
+# before pipe:close can run. See tests/pipe2.crush/pipe3.crush for the same pattern.
+fg $input1
+fg $input2
+fg $input3
+fg $input4
 
 # Close the output and input, so that the input can actually
 # reach EOF once the above 4 invocation exit
