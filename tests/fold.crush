@@ -1,0 +1,16 @@
+# fold calls its body once per row, with the accumulator (`acc`) and the row's own
+# columns available as named arguments -- exactly like where/each -- and its return
+# value becomes the next accumulator. It's the general escape hatch for one-off
+# aggregations that don't have (or don't need) their own dedicated command.
+$sum := $(seq 1 6 | fold {($acc + $value)} initial=0)
+assert ($sum == 15) "fold should sum 1..5 to 15"
+
+$product := $(seq 1 5 | fold {($acc * $value)} initial=1)
+assert ($product == 24) "fold should be able to compute a product too, not just a sum"
+
+$count := $(seq 0 10 | fold {($acc + 1)} initial=0)
+assert ($count == 10) "fold's accumulator can ignore the row entirely and just count"
+
+# fold over an already-empty stream just returns the initial value unchanged.
+$empty_result := $($(seq 0 0) | fold {($acc + $value)} initial=42)
+assert ($empty_result == 42) "fold over an empty stream should return the initial value unchanged"
