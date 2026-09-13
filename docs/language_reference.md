@@ -410,14 +410,17 @@ to survive one failing needs to handle that explicitly.
 try {
   risky:command
 } catch {
-  |$error| echo ("Recovered: {}":format($error))
+  |$error| echo ("Recovered: {}":format($error:message))
 }
 ```
 
 If `body` fails, execution of `body` stops at the failing statement and `catch` (if
-given) runs instead, receiving the error message as a plain string. Either way, the
-error does not propagate past `try` -- with no `catch` at all, `try` just recovers
-silently, equivalent to an empty `catch`.
+given) runs instead, receiving a struct describing the error as its argument:
+`message` (the error text), `type` (the internal error variant's name, e.g.
+`IOError` or `InvalidArgument`), and `command` (the failing command's name, as a
+string, when known -- empty otherwise). Either way, the error does not propagate
+past `try` -- with no `catch` at all, `try` just recovers silently, equivalent to
+an empty `catch`.
 
 **`assert`** is the simplest way to raise an error deliberately, e.g. inside a script or
 a closure's own validation:
@@ -428,7 +431,7 @@ Error: custom failure message
 ```
 
 Unlike some languages, there's no separate "exception object" hierarchy to catch by
-type -- `catch`'s argument is always just the error's message as a string.
+type -- there's just the one struct shape above, regardless of what failed.
 
 ## Background jobs
 
