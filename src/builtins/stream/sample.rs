@@ -13,7 +13,7 @@ use signature::signature;
     long = "whole stream never has to be materialized to pick them -- only `rows` rows are",
     long = "ever held in memory at once. Output order is not the input order.",
     example = "# Pick 5 pseudo-random lines out of a huge file, without reading it all into memory",
-    example = "lines big_log_file.txt | sample 5",
+    example = "lines:from big_log_file.txt | sample 5",
 )]
 pub struct Sample {
     #[description("the number of rows to sample.")]
