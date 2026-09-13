@@ -43,11 +43,9 @@ assert $(^(.*\.txt):__is__ foo.txt)
 assert $(like foo.txt "foo.txt")
 assert $("foo.txt":__is__ foo.txt)
 
-# =~/!~ work with a file value too, as long as it's not a bare unquoted file literal
-# written directly as the operand -- that specific form doesn't parse in expression mode
-# today (a separate, pre-existing limitation: the lexer only combines a dotted bareword
-# into one `file` token in command mode, not inside expression mode). Storing the file
-# in a variable first works fine.
+# =~/!~ work with a file value too. Files must always be quoted in expression mode --
+# a bare unquoted file literal is only recognized as such in command mode, by design --
+# so store it in a variable first (or quote it, 'foo.txt') rather than writing it bare.
 $f := foo.txt
 $txt_glob := *.txt
 echo "barrier"
