@@ -18,7 +18,7 @@ use signature::signature;
     example = "try {",
     example = "  risky:command",
     example = "} catch {",
-    example = "  |$error| echo (\"Recovered: {}\":format $error)",
+    example = "  |$error| echo (\"Recovered: {}\":format($error))",
     example = "}",
 )]
 pub struct Try {
