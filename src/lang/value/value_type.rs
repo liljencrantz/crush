@@ -266,10 +266,19 @@ be part of one), and some legal file names can't be represented as a string at a
 For convenience, builtin commands that expect a `file` argument also accept a `string`,
 which crush converts automatically. That conversion doesn't validate the result up
 front, though -- passing a string containing a zero byte is accepted silently, and only
-fails once the resulting file value is actually used against the filesystem. Going the
-other way, a `file` whose bytes aren't valid unicode can't be losslessly converted to a
-`string` either; rather than erroring, crush falls back to displaying it as the
-placeholder text `<invalid filename>`.",
+fails once the resulting file value is actually used against the filesystem. This isn't
+just an implementation shortcut: neither crush nor the computer it's running on can
+actually know what does and doesn't constitute a legal file name ahead of time, because
+that's up to whatever filesystem the path eventually resolves into, and that can change
+from one path component to the next -- a network mount, for instance, can enforce
+completely different naming rules than the local filesystem it's mounted under, and
+crush has no general way to know a path crosses into one before it's used. Some
+obviously-illegal names could be rejected early (a zero byte, for example, is illegal
+everywhere), but the only way to be certain a given name is legal is to actually hand it
+to the operating system in a real syscall. Going the other way, a `file` whose bytes
+aren't valid unicode can't be losslessly converted to a `string` either; rather than
+erroring, crush falls back to displaying it as the placeholder text
+`<invalid filename>`.",
 
             ValueType::Integer =>
                     formatcp!("An integer literal is a bare number, e.g. `5` or `-3`. Underscores may
