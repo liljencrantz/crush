@@ -1,0 +1,23 @@
+# Integer division/rem/mod by zero used to panic (Rust panics on integer division by
+# zero, unlike float division, which produces inf/-inf/NaN) instead of returning a
+# proper, catchable error. __div__/rem/mod were pulled out of the shared binary_op!
+# macro (which has no way to return an error from its $operation closure) and rewritten
+# to check for a zero divisor explicitly.
+$div_errored := $false
+try { 5:__div__ 0 } catch { |$e| $div_errored = $true }
+assert $div_errored "integer division by zero should error, not panic"
+
+$rem_errored := $false
+try { 5:rem 0 } catch { |$e| $rem_errored = $true }
+assert $rem_errored "integer rem by zero should error, not panic"
+
+$mod_errored := $false
+try { 5:mod 0 } catch { |$e| $mod_errored = $true }
+assert $mod_errored "integer mod by zero should error, not panic"
+
+# Ordinary division/mod/rem, and the `/` operator (which desugars to __div__), still
+# work normally.
+assert ($(6:__div__ 2) == 3) "ordinary integer division should still work"
+assert ($(5:rem 2) == 1) "ordinary integer rem should still work"
+assert ($(5:mod 2) == 1) "ordinary integer mod should still work"
+assert ($((6 / 2)) == 3) "the / operator should still work for ordinary division"
