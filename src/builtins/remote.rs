@@ -3,7 +3,8 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{LastArgument, PartialCommandResult};
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, error};
+use crate::lang::errors::{CrushError, CrushResult, CrushResultExtra, error};
+use crate::lang::state::global_state::GlobalState;
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
@@ -171,6 +172,23 @@ fn run_remote(
     Ok(res)
 }
 
+/// Report a single host's `run_remote` failure into the warning log rather than
+/// aborting `pexec`. `err`'s own message usually says nothing about which host it came
+/// from (e.g. a raw `TcpStream::connect` I/O error), so the host is folded into the
+/// message text explicitly, the same way `fs:files`' own per-entry warnings do.
+fn warn_connect_failure(global_state: &GlobalState, host: &str, err: CrushError) {
+    global_state.warn(
+        &error::<()>(format!(
+            "Failed to run command on host {}. Reason: {}",
+            host,
+            err.message()
+        ))
+        .with_command("remote:pexec")
+        .err()
+        .unwrap(),
+    );
+}
+
 fn ssh_host_complete(
     cmd: &PartialCommandResult,
     _cursor: usize,
@@ -271,7 +289,15 @@ fn exec(mut context: CommandContext) -> CrushResult<()> {
     can_block = true,
     short = "Execute a command on a set of hosts",
     long = "Like `exec`, but runs `command` on every host listed in `host` (up to `parallel`",
-    long = "of them at a time) and returns one row per host, with `host`/`result` columns.",
+    long = "of them at a time). pexec always attempts every host in the list, regardless of",
+    long = "whether earlier hosts failed to connect or authenticate -- it never fails outright",
+    long = "just because some, or even all, of the hosts couldn't be reached.",
+    long = "A host that succeeds contributes one row (`host`/`result` columns) to the output;",
+    long = "a host that fails contributes no row at all. Instead, the failure is logged as a",
+    long = "warning (see `crush:warnings`) naming the host and the underlying error. pexec's",
+    long = "own exit status stays 0 either way, so the only way to tell whether every host",
+    long = "succeeded is to compare the length of the output to the length of the `host` list",
+    long = "you passed in -- fewer output rows than hosts means some connections failed.",
     long = "The same host-key verification applies independently to each host -- see `exec`",
     long = "for what `ignore_host_file`/`allow_not_found` mean for security.",
     example = "remote:pexec {host:name} \"web1.example.com\" \"web2.example.com\" username=\"alice\"",
@@ -340,13 +366,19 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
         let my_host_file = host_file.clone();
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
+        let my_global_state = context.global_state.clone();
 
         context.global_state.threads().spawn(
             "remote:pexec",
             &context.next_command_handle(),
             move || {
                 while let Ok(host) = my_recv.recv() {
-                    let res = run_remote(
+                    // A failure here must not propagate via `?`: that would unwind this
+                    // whole worker thread out of its loop, permanently pulling it out of
+                    // the shared pool -- any host still queued that no other worker
+                    // happens to claim first would then never be attempted at all, not
+                    // just never reported. Report it as a warning and keep going instead.
+                    match run_remote(
                         &my_buf,
                         &my_env,
                         host.clone(),
@@ -355,8 +387,10 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
                         &my_host_file,
                         my_ignore_host_file,
                         my_allow_not_found,
-                    )?;
-                    my_send.send((host, res))?;
+                    ) {
+                        Ok(res) => my_send.send((host, res))?,
+                        Err(err) => warn_connect_failure(&my_global_state, &host, err),
+                    }
                 }
                 Ok(())
             },

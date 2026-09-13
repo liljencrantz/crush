@@ -239,6 +239,17 @@ fn test_remote_ssh() {
         String::from_utf8_lossy(&out.stderr),
     );
 
+    // remote:pexec must keep attempting the rest of the host list after one host fails
+    // to connect, rather than silently dropping every host still queued behind it.
+    let out = run_crush("tests/remote/ssh_pexec_partial_failure.crush", &good_hosts);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "ssh_pexec_partial_failure.crush failed.\nStdout:\n{}\nStderr:\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
     // Host key mismatch must be a hard error naming the mismatch, not some other,
     // coincidental failure.
     let out = run_crush("tests/remote/ssh_exec_mismatch.crush", &mismatch_hosts);
