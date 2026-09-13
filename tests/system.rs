@@ -174,7 +174,15 @@ fn test_remote_ssh() {
         .run()
         .expect("Failed to build ssh-service binary");
 
+    // ssh-service defaults to spawning "./target/debug/crush" for each exec channel's
+    // `crush --pup` if not told otherwise -- the same stale-path problem CARGO_BIN_EXE_crush
+    // fixed for this test binary itself, just one process further out. Left as the
+    // default, this silently runs whatever plain debug binary happens to already exist
+    // under `cargo llvm-cov test` (a separate, uninstrumented build lives there too),
+    // so the pup wire round trip this test is meant to exercise never shows up in
+    // coverage at all. Pass the real one explicitly.
     let mut server = Command::new(run.path())
+        .arg(env!("CARGO_BIN_EXE_crush"))
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to start ssh test server");
