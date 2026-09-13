@@ -66,20 +66,25 @@ $(seq 0 3) | select m={($value):mod 3} | each {if ($m == 0) {convert $integer "n
 $w2 := $($(crush:warnings | materialize) | count)
 assert ($w2 == 4) "a failing each body should add a fourth warning"
 
-# A failing class constructor (__init__) is reported too, instead of the object
-# silently ending up partially initialized with no indication anything went wrong.
+# A failing class constructor (__init__) aborts `new` entirely, propagating the real
+# error, rather than reporting a warning and returning a half-initialized object (with
+# whatever fields __init__ managed to set before failing) -- so unlike where/each above,
+# this does *not* add a new warning to the log.
 $Point := $(class)
 $Point:__init__ = { |$x:$float| convert $integer "notanumber"; this:x = $x }
-$p := $(Point:new x=1.0)
+$init_errored := $false
+try {
+    $p := $(Point:new x=1.0)
+} catch { |$e| $init_errored = $true }
+assert $init_errored "a failing __init__ should abort `new` with a real error, not silently return an object"
 $w3 := $($(crush:warnings | materialize) | count)
-assert ($w3 == 5) "a failing __init__ should record a fifth warning"
+assert ($w3 == 4) "a failing __init__ should not add a warning -- it errors instead"
 
 # where/each report the anonymous block they were given, since their body isn't a
-# named command; the class constructor's warning identifies it as __init__.
+# named command.
 $commands := $($(crush:warnings | materialize) | select command | list:collect)
 assert ($($commands[2]) == "<block>") "the where warning's command should identify the anonymous predicate block"
 assert ($($commands[3]) == "<block>") "the each warning's command should identify the anonymous body block"
-assert ($($commands[4]) == "__init__") "the class-init warning's command should identify the __init__ method"
 
 # The warning log's size is runtime-configurable, defaulting to 100.
 $default_limit := $(crush:warning_limit:get)

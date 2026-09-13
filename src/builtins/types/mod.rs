@@ -77,14 +77,15 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     let res = Struct::empty(Some(parent));
     let o = context.output;
 
-    // Call constructor if one exists
+    // Call constructor if one exists. Propagate a failure rather than warning and
+    // returning the struct anyway -- a half-initialized instance (with whatever fields
+    // __init__ managed to set before failing) is worse than no instance at all, and
+    // every other command's failure already halts the calling script, so `new` should
+    // behave the same way instead of being the one place a failure is fully absorbed.
     if let Some(Value::Command(c)) = res.get("__init__") {
-        let global_state = context.global_state.clone();
         context.output = black_hole();
         context.this = Some(Value::Struct(res.clone()));
-        if let Err(e) = c.eval(context) {
-            global_state.warn(&e);
-        }
+        c.eval(context)?;
     }
     o.send(Value::Struct(res))
 }
