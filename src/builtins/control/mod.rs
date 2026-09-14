@@ -1,9 +1,11 @@
 use crate::lang::ast::lexer::LanguageMode;
+use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushResult, command_error, terminate, throw_error};
 use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
+use crate::lang::pipe::pipe;
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::handles::JobType::Background;
@@ -177,6 +179,117 @@ fn sleep(mut context: CommandContext) -> CrushResult<()> {
     }
     context.output.send(Value::Empty)?;
     Ok(())
+}
+
+#[signature(
+    control.timeout,
+    can_block = true,
+    output = Unknown,
+    short = "Run a command, terminating it if it hasn't finished within the given duration.",
+    long = "If `command` finishes before `duration` elapses, `timeout` returns its result",
+    long = "normally. Otherwise, a termination signal is sent to it -- the same cooperative",
+    long = "mechanism `crush:terminate` uses, which only a command that actually checks for",
+    long = "it (like `sleep`) will actually stop for; most builtins don't, and will keep",
+    long = "running in the background regardless -- and `timeout` itself fails with a",
+    long = "timeout error.",
+    long = "",
+    long = "A command left running this way isn't just background noise: crush waits for",
+    long = "every spawned thread to finish before the whole session exits, so a `command`",
+    long = "that never cooperates and never finishes on its own (an infinite loop, for",
+    long = "example) will keep the script -- or the whole interactive session -- from",
+    long = "exiting cleanly, even though `timeout` itself already returned its error.",
+    example = "timeout $(duration:of seconds=5) {sleep $(duration:of seconds=30)}",
+)]
+struct Timeout {
+    #[description("how long to let the command run before terminating it.")]
+    duration: Duration,
+    #[description("the command to run.")]
+    command: Command,
+}
+
+fn timeout(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Timeout = Timeout::parse(context.remove_arguments(), &context.global_state.printer())?;
+
+    let (child_output, child_input) = pipe();
+    let child_context = context.empty().with_output(child_output);
+    let job_id = context.command_handle().job_handle.id();
+
+    let thread_id = context.global_state.threads().spawn(
+        "timeout",
+        &context.next_command_handle(),
+        move || cfg.command.eval(child_context),
+    )?;
+
+    match child_input.recv_timeout(cfg.duration.to_std()?) {
+        Ok(v) => {
+            context.global_state.threads().join_one(thread_id)?;
+            context.output.send(v)
+        }
+        Err(e) if e.is_disconnected() => {
+            // The command finished without ever sending a value (e.g. it errored) --
+            // join it to surface that real error instead of this generic one.
+            context.global_state.threads().join_one(thread_id)?;
+            Ok(())
+        }
+        Err(_) => {
+            // `command` almost always runs its own body as one or more freshly nested
+            // jobs with their own distinct ids (e.g. a closure's `eval_inner` does this
+            // for every statement in its body) -- that's where a cooperating command
+            // like `sleep` actually registers its controller, not under this job's own
+            // id, so terminating just this job would silently do nothing. Reach every
+            // job descended from this one too. Also resent periodically for a grace
+            // window: a single attempt can race a command that hasn't finished
+            // registering yet (e.g. one still spinning up on its spawned thread), which
+            // would otherwise lose the signal and let a cooperating command run to
+            // completion anyway. A command that never registers a controller at all
+            // (most builtins, which aren't interruptible the way `sleep` is) never
+            // receives any of these regardless, and just keeps running in the
+            // background.
+            let grace = std::time::Duration::from_secs(2);
+            let poll = std::time::Duration::from_millis(20);
+            let grace_start = std::time::Instant::now();
+            loop {
+                let jobs = context.global_state.jobs();
+                let _ = context.global_state.terminate(job_id);
+                for j in &jobs {
+                    if j.id != job_id && is_descendant_job(&jobs, job_id, j.id) {
+                        let _ = context.global_state.terminate(j.id);
+                    }
+                }
+                match child_input.recv_timeout(poll) {
+                    Ok(_) => {
+                        let _ = context.global_state.threads().join_one(thread_id);
+                        break;
+                    }
+                    Err(e) if e.is_disconnected() => {
+                        let _ = context.global_state.threads().join_one(thread_id);
+                        break;
+                    }
+                    Err(_) if grace_start.elapsed() < grace => {}
+                    Err(_) => break,
+                }
+            }
+            command_error("Command timed out")
+        }
+    }
+}
+
+/// True if `of` is a job running as part of `ancestor`, directly or transitively (e.g.
+/// a closure/block body evaluated as part of an enclosing job) -- mirrors
+/// `crush.rs`'s own `is_ancestor` helper, checked the other way around.
+fn is_descendant_job(
+    jobs: &[crate::lang::state::handles::JobInfo],
+    ancestor: crate::lang::state::id::JobId,
+    of: crate::lang::state::id::JobId,
+) -> bool {
+    let mut current = of;
+    while let Some(parent) = jobs.iter().find(|j| j.id == current).and_then(|j| j.parent) {
+        if parent == ancestor {
+            return true;
+        }
+        current = parent;
+    }
+    false
 }
 
 #[signature(
@@ -362,6 +475,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Assert::declare(env)?;
             Throw::declare(env)?;
             Sleep::declare(env)?;
+            Timeout::declare(env)?;
             Bg::declare(env)?;
             Fg::declare(env)?;
             help::HelpSignature::declare(env)?;

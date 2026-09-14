@@ -68,6 +68,10 @@ impl ValueReceiver {
         Ok(self.receiver.recv()?)
     }
 
+    pub fn recv_timeout(&self, timeout: std::time::Duration) -> CrushResult<Value> {
+        Ok(self.receiver.recv_timeout(timeout)?)
+    }
+
     pub fn is_pipeline(&self) -> bool {
         self.is_pipeline
     }

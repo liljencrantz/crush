@@ -431,6 +431,29 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mtimeit[0m [36m{[0m[32mfiles[0m[36m|[0m[32msort[0m [36msize[0m[36m}[0m
 
+[32mcontrol[0m[36m:[0m[32mtimeout[0m [36mduration[0m[36m=[0m[36mduration[0m [36mcommand[0m[36m=[0m[36mcommand[0m
+Run a command, terminating it if it hasn't finished within the given duration.
+
+If [32mcommand[0m finishes before [32mduration[0m elapses, [32mtimeout[0m returns its result normally. Otherwise, a 
+termination signal is sent to it -- the same cooperative mechanism [32m
+crush:terminate[0m uses, which only a command that actually checks for it (like [32msleep[0m) will actually 
+stop for; most builtins don't, and will keep running in the background 
+regardless -- and [32mtimeout[0m itself fails with a timeout error.
+
+A command left running this way isn't just background noise: crush waits for 
+every spawned thread to finish before the whole session exits, so a [32mcommand[0m that never 
+cooperates and never finishes on its own (an infinite loop, for example) will 
+keep the script -- or the whole interactive session -- from exiting cleanly, 
+even though [32mtimeout[0m itself already returned its error.
+
+This command accepts the following arguments:
+
+ * [32mduration[0m how long to let the command run before terminating it.
+ * [32mcommand[0m  the command to run.
+
+[4mExamples[0m
+[32mtimeout[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m5[0m[36m)[0m [36m{[0m[32msleep[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m30[0m[36m)[0m[36m}[0m
+
 [32mcontrol[0m[36m:[0m[32mtimer[0m [36mit[0m[36m=[0m[36mcommand[0m
 Execute a command once and return the execution time.
 
@@ -2803,6 +2826,6 @@ creates values of.
  * [32m__call__[0m Construct a one_of value type with the specified allowed types
 
 
-=== checked 176 commands, 6 skipped ===
+=== checked 177 commands, 6 skipped ===
 
 === checked 23 types, 0 skipped ===

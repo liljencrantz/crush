@@ -1,0 +1,37 @@
+# timeout runs a command and terminates it if it hasn't finished within a given
+# duration. Uses real elapsed wall-clock time (with a generous margin) to prove the
+# timeout is actually enforced, not just that no error happened to occur -- same
+# technique as tests/terminate.crush.
+
+# A command that finishes well within the duration returns its result normally.
+$r := $(timeout $(duration:of seconds=5) {(1 + 1)})
+assert ($r == 2) "a command that finishes in time should return its result normally"
+
+# A command that runs past the duration, but cooperates with termination (sleep does,
+# since crush:terminate/crush:pause fixed it this session), should be interrupted
+# almost immediately rather than running out its full duration.
+$start := $(time:now)
+$timed_out := $false
+$msg := ""
+try {
+    timeout $(duration:of milliseconds=200) {sleep $(duration:of seconds=30)}
+} catch {
+    |$e| $timed_out = $true
+    $msg = $e:message
+}
+$elapsed := $(($(time:now) - $start))
+assert $timed_out "a command exceeding the duration should be caught as an error, not silently succeed"
+assert ($msg == "Command timed out") "the error should say the command timed out"
+assert ($elapsed < $(duration:of seconds=5)) "the cooperating command should be interrupted almost immediately, not wait out its own full duration"
+
+# A command that errors on its own, before the duration elapses, should propagate its
+# real error rather than being reported as a timeout.
+$real_error := ""
+try {
+    timeout $(duration:of seconds=5) {convert $integer "notanumber"}
+} catch {
+    |$e| $real_error = $e:message
+}
+assert ($real_error == "invalid digit found in string") "a command that fails on its own should surface its real error, not a timeout"
+
+echo "timeout tests ok"
