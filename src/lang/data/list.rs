@@ -201,7 +201,10 @@ impl List {
 
     pub fn peek(&self) -> Option<Value> {
         let cells = self.cells.lock().unwrap();
-        cells.get(cells.len() - 1).map(|v| v.clone())
+        // Not `cells.get(cells.len() - 1)`: on an empty list, `cells.len() - 1`
+        // underflows and panics instead of returning the `None` this function's own
+        // signature already promises. `last()` handles the empty case correctly.
+        cells.last().cloned()
     }
 
     pub fn element_type(&self) -> ValueType {

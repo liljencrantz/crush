@@ -1,0 +1,20 @@
+# peek() (src/lang/data/list.rs) used to do `cells.get(cells.len() - 1)` as plain
+# usize arithmetic. On an empty list, `cells.len()` is 0, so `0 - 1` underflowed and
+# panicked in a debug build instead of returning the `None` its own `Option<Value>`
+# return type promises. Fixed with `cells.last()`.
+#
+# Peeking on an empty list is used here as a bare statement, not `$(...)`-substituted:
+# it legitimately sends no output at all (same as `pop` on an empty list, a separate,
+# pre-existing, already-consistent characteristic of both -- not something this test is
+# about), and substituting a value that's never sent looks like a generic disconnected-
+# channel error unrelated to whether the underlying panic is fixed. What this test
+# checks is that the script doesn't abort -- if the panic were still there, the
+# "reached" marker below would never print.
+
+$l := $(list:of 1)
+assert ($($l:peek) == 1) "peek on a non-empty list should return its last element without removing it"
+assert ($($l:len) == 1) "peek should not remove the element it returns"
+
+$l:clear
+$l:peek
+echo "reached"
