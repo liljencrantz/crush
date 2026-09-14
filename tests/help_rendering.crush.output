@@ -2642,7 +2642,8 @@ The most similar type is [32mdict[0m, which is also a mapping from keys to val
 keys chosen at runtime rather than fixed named fields, and no support for 
 methods or inheritance.
 
- * [32mof[0m Construct a struct with the specified members
+ * [32mjoin[0m Combine any number of structs into one containing all of their members
+ * [32mof[0m   Construct a struct with the specified members
 
 
 [32mtype[0m [36mlist[0m [36m$string[0m

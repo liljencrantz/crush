@@ -2,6 +2,7 @@ use crate::lang::argument::column_names;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::data::table::{ColumnType, ColumnVec};
 use crate::lang::errors::CrushResult;
 use crate::lang::ordered_string_map::OrderedStringMap;
 use crate::lang::state::contexts::CommandContext;
@@ -16,6 +17,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
 
         Of::declare_method(&mut res);
+        Join::declare_method(&mut res);
         res
     })
 }
@@ -48,4 +50,48 @@ fn of(context: CommandContext) -> CrushResult<()> {
         .map(|(name, arg)| (name, arg.value))
         .collect::<Vec<_>>();
     context.output.send(Value::Struct(Struct::new(arr, None)))
+}
+
+#[signature(
+    types.struct.join,
+    can_block = false,
+    output = Known(ValueType::Struct),
+    short = "Combine any number of structs into one containing all of their members",
+    long = "On a name collision between two of the given structs, the later one's member is",
+    long = "renamed by appending `_2`, `_3`, and so on (repeating until the generated name is",
+    long = "unique) -- the same renaming `join`, `zip` and `group` already use when combining",
+    long = "columns from more than one source, applied here to struct members instead.",
+    long = "",
+    long = "Only each struct's own local members are used, not any inherited from a parent",
+    long = "(e.g. via `class`) -- the same \"data struct\" semantics `struct:of` itself uses.",
+    example = "struct:join (struct:of a=1 b=2) (struct:of b=3 c=4)",
+)]
+#[allow(unused)]
+struct Join {
+    #[description("the structs to combine.")]
+    #[unnamed]
+    structs: Vec<Struct>,
+}
+
+fn join(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Join = Join::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let elements: Vec<(String, Value)> = cfg
+        .structs
+        .iter()
+        .flat_map(|s| s.local_elements())
+        .collect();
+    let columns: Vec<ColumnType> = elements
+        .iter()
+        .map(|(name, value)| ColumnType::new_from_string(name.clone(), value.value_type()))
+        .collect();
+    let deduped = columns
+        .as_slice()
+        .deduplicate_names()
+        .into_iter()
+        .zip(elements)
+        .map(|(column, (_, value))| (column.name().to_string(), value))
+        .collect::<Vec<_>>();
+    context
+        .output
+        .send(Value::Struct(Struct::new(deduped, None)))
 }

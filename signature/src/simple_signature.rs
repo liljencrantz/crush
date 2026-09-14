@@ -286,6 +286,7 @@ impl SimpleSignature {
             SimpleSignature::BinaryInput => "dump_binary_input",
             SimpleSignature::Files => "dump_files",
             SimpleSignature::Command => "dump_command",
+            SimpleSignature::Struct => "dump_struct",
             _ => panic!("Unknown type"),
         }
     }

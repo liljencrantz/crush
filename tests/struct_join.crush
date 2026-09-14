@@ -1,0 +1,43 @@
+# struct:join combines any number of structs into one with all their members. On a
+# name collision, the later struct's member is renamed by appending `_2`, `_3`, etc --
+# the same algorithm ColumnVec::deduplicate_names() (src/lang/data/table.rs) already
+# uses for `join`/`zip`/`group`, reused here directly rather than reimplemented.
+
+$a := $(struct:of a=1 b=2)
+$b := $(struct:of b=3 c=4)
+$j := $(struct:join $a $b)
+assert ($j:a == 1) "a non-colliding member from the first struct should be unchanged"
+assert ($j:b == 2) "a colliding member's first occurrence should keep its original name"
+assert ($j:b_2 == 3) "a colliding member's later occurrence should be renamed _2"
+assert ($j:c == 4) "a non-colliding member from the second struct should be unchanged"
+
+# A collision repeated across three structs should number sequentially.
+$x := $(struct:of n=1)
+$y := $(struct:of n=2)
+$z := $(struct:of n=3)
+$j2 := $(struct:join $x $y $z)
+assert ($j2:n == 1) "the first struct's colliding member should keep its original name"
+assert ($j2:n_2 == 2) "the second struct's colliding member should be renamed _2"
+assert ($j2:n_3 == 3) "the third struct's colliding member should be renamed _3"
+
+# A single struct should pass through unchanged.
+$j3 := $(struct:join $(struct:of only=1))
+assert ($j3:only == 1) "joining a single struct should just return its own members"
+
+# Joining zero structs should produce an empty struct, not an error.
+$j4 := $(struct:join)
+assert ($(typeof $j4) == $struct) "joining zero structs should still produce a struct"
+assert ($($(dir $j4):len) == 0) "joining zero structs should produce an empty struct"
+
+# A struct created via `class` (which has a parent and other machinery struct:of data
+# structs don't) should still work -- only its own local members are combined, the same
+# "data struct" semantics struct:of itself uses, not anything inherited.
+$Point := $(class)
+$Point:__init__ = {|$x $y| this:x = $x; this:y = $y}
+$p := $(Point:new x=5 y=6)
+$j5 := $(struct:join $p $(struct:of z=7))
+assert ($j5:x == 5) "a class instance's own local members should be included"
+assert ($j5:y == 6) "a class instance's own local members should be included"
+assert ($j5:z == 7) "members from the other struct should still be included"
+
+echo "struct join tests ok"

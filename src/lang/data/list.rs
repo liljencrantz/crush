@@ -1,6 +1,7 @@
 use crate::data::dict::Dict;
 /// The crush type used for storing lists of data
 use crate::lang::command::Command;
+use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error, error};
 use crate::lang::pipe::Stream;
 use crate::lang::signature::binary_input::BinaryInput;
@@ -309,6 +310,7 @@ impl List {
     dump_to!(dump_type, ValueType, Type, |v: &ValueType| v.clone());
     dump_to!(dump_float, f64, Float, |v: &f64| *v);
     dump_to!(dump_command, Command, Command, |c: &Command| c.clone());
+    dump_to!(dump_struct, Struct, Struct, |s: &Struct| s.clone());
 
     pub fn param_partial_cmp(&self, other: &List, mode: ComparisonMode) -> Option<Ordering> {
         let us = self.cells.lock().unwrap().clone();
