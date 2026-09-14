@@ -61,7 +61,32 @@ const MAX_CNAME_DEPTH: u32 = 8;
     dns.query,
     can_block = true,
     short = "Look up a DNS record",
+    long = "The columns of the returned table depend on `record_type`:",
+    long = "",
+    long = " * `A`, `AAAA`, `NS`, `PTR`, and `CNAME`: `target` (string) and `ttl` (duration)",
+    long = " * `MX`: `target`, `preference` (integer), and `ttl`",
+    long = " * `SRV`: `target`, `priority`, `weight`, `port` (all integer), and `ttl`",
+    long = " * `TXT`: `text` (binary) and `ttl`",
+    long = " * `SOA`: `mname`, `rname` (strings), `serial` (integer), and `refresh`,",
+    long = "   `retry`, `expire`, and `ttl` (all durations)",
+    long = "",
+    long = "If a response's first answer is a `CNAME` record, it's followed",
+    long = "transparently and the query is retried against the alias's target -- up to 8",
+    long = "hops, after which a chain that still hasn't resolved is a hard error rather",
+    long = "than being followed forever (a spoofed or compromised nameserver could",
+    long = "otherwise cause unbounded recursion, since plain UDP DNS has no cryptographic",
+    long = "integrity). Set `no_follow_cname=$true`, or query for the `CNAME` record type",
+    long = "directly, to see the alias itself instead of following it.",
+    long = "",
+    long = "If `nameserver` isn't given, the first nameserver listed in",
+    long = "`/etc/resolv.conf` is used (see `dns:nameserver`). `name` is always looked up",
+    long = "exactly as given -- unlike most system resolvers, this does not consult",
+    long = "`/etc/resolv.conf`'s search domains (see `dns:search_paths`) to expand an",
+    long = "unqualified name.",
     example = "dns:query \"www.google.com\" AAAA",
+    example = "dns:query \"example.com\" MX",
+    example = "# See the alias itself instead of transparently following it",
+    example = "dns:query \"www.example.com\" CNAME",
 )]
 struct Query {
     #[description("DNS record to look up.")]
@@ -363,6 +388,13 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
     dns.query_reverse,
     can_block = true,
     short = "Perform a reverse DNS lookup on a given IP address",
+    long = "Looks up the hostname associated with `address` via a `PTR` record,",
+    long = "automatically building the reverse-lookup name DNS uses for this (e.g. under",
+    long = "`in-addr.arpa` for IPv4, `ip6.arpa` for IPv6) -- `address` should be given as",
+    long = "a plain, forward IP address, not already reversed. Returns the hostname as a",
+    long = "plain string, or nothing if no `PTR` record exists for that address. Unlike",
+    long = "`dns:query`, this never follows a `CNAME`; a reverse zone is not expected to",
+    long = "contain one.",
     example = "dns:query_reverse \"127.0.0.1\"",
 )]
 struct QueryReverse {
@@ -436,6 +468,10 @@ fn query_reverse_internal(
     dns.nameserver,
     can_block = true,
     short = "List of default nameservers",
+    long = "Reads the nameservers configured in `/etc/resolv.conf` -- no network query",
+    long = "is made. This is exactly what `dns:query`/`dns:query_reverse` themselves fall",
+    long = "back to when their own `nameserver` argument is left unset (specifically, the",
+    long = "first one listed).",
 )]
 struct Nameserver {}
 
@@ -457,6 +493,11 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
     dns.search_paths,
     can_block = true,
     short = "List of DNS search paths",
+    long = "Reads the DNS search domains configured in `/etc/resolv.conf` -- no network",
+    long = "query is made. A system resolver normally appends these, in order, to an",
+    long = "unqualified hostname before giving up (e.g. trying `host.example.com` when",
+    long = "asked to resolve plain `host`); `dns:query` does not apply this itself --",
+    long = "`name` is always looked up exactly as given.",
 )]
 struct SearchPaths {}
 
@@ -477,6 +518,8 @@ fn search_paths(context: CommandContext) -> CrushResult<()> {
     dns.domain,
     can_block = true,
     short = "DNS domain, if any",
+    long = "Reads the local domain configured in `/etc/resolv.conf`'s `domain` line, if",
+    long = "any -- no network query is made. Returns `$empty` if none is configured.",
     output = Known(ValueType::Any),
 )]
 struct Domain {}

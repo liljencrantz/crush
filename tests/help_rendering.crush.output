@@ -744,13 +744,39 @@ DNS domain, if any
 
 [4mOutput[0m
 [32many[0m
+Reads the local domain configured in [32m/etc/resolv.conf[0m's [32mdomain[0m line, if any -- no network query is 
+made. Returns [32m$empty[0m if none is configured.
+
 
 [32mdns[0m[36m:[0m[32mnameserver[0m
 List of default nameservers
 
+Reads the nameservers configured in [32m/etc/resolv.conf[0m -- no network query is made. This is 
+exactly what [32mdns:query[0m/[32mdns:query_reverse[0m themselves fall back to when their own [32mnameserver[0m argument is left unset 
+(specifically, the first one listed).
+
 
 [32mdns[0m[36m:[0m[32mquery[0m [36mname[0m[36m=[0m[36mstring[0m [36m[[0m[36mrecord_type[0m[36m=[0m[36mstring[0m[36m][0m [36m[[0m--tcp[36m][0m [36m[[0m[36mnameserver[0m[36m=[0m[36mstring[0m[36m][0m [36m[[0m[36mport[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m--no_follow_cname[36m][0m [36m[[0m[36mtimeout[0m[36m=[0m[36mduration[0m[36m][0m
 Look up a DNS record
+
+The columns of the returned table depend on [32mrecord_type[0m:
+
+ * [32mA[0m  , [32mAAAA[0m, [32mNS[0m, [32mPTR[0m, and [32mCNAME[0m: [32mtarget[0m (string) and [32mttl[0m (duration)
+ * [32mMX[0m : [32mtarget[0m, [32mpreference[0m (integer), and [32mttl[0m
+ * [32mSRV[0m: [32mtarget[0m, [32mpriority[0m, [32mweight[0m, [32mport[0m (all integer), and [32mttl[0m
+ * [32mTXT[0m: [32mtext[0m (binary) and [32mttl[0m
+ * [32mSOA[0m: [32mmname[0m, [32mrname[0m (strings), [32mserial[0m (integer), and [32mrefresh[0m, [32mretry[0m, [32mexpire[0m, and [32mttl[0m (all durations)
+
+If a response's first answer is a [32mCNAME[0m record, it's followed transparently and the 
+query is retried against the alias's target -- up to 8 hops, after which a chain 
+that still hasn't resolved is a hard error rather than being followed forever (a 
+spoofed or compromised nameserver could otherwise cause unbounded recursion, 
+since plain UDP DNS has no cryptographic integrity). Set [32mno_follow_cname=$true[0m, or query for the [32m
+CNAME[0m record type directly, to see the alias itself instead of following it.
+
+If [32mnameserver[0m isn't given, the first nameserver listed in [32m/etc/resolv.conf[0m is used (see [32mdns:nameserver[0m). [32mname[0m is always 
+looked up exactly as given -- unlike most system resolvers, this does not 
+consult [32m/etc/resolv.conf[0m's search domains (see [32mdns:search_paths[0m) to expand an unqualified name.
 
 This command accepts the following arguments:
 
@@ -766,9 +792,19 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [32mdns[0m[36m:[0m[32mquery[0m [36m"www.google.com"[0m [36mAAAA[0m
+[32mdns[0m[36m:[0m[32mquery[0m [36m"example.com"[0m [36mMX[0m
+[33m# See the alias itself instead of transparently following it[0m
+[32mdns[0m[36m:[0m[32mquery[0m [36m"www.example.com"[0m [36mCNAME[0m
 
 [32mdns[0m[36m:[0m[32mquery_reverse[0m [36maddress[0m[36m=[0m[36mstring[0m [36m[[0m--tcp[36m][0m [36m[[0m[36mnameserver[0m[36m=[0m[36mstring[0m[36m][0m [36m[[0m[36mport[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m[36mtimeout[0m[36m=[0m[36mduration[0m[36m][0m
 Perform a reverse DNS lookup on a given IP address
+
+Looks up the hostname associated with [32maddress[0m via a [32mPTR[0m record, automatically building the 
+reverse-lookup name DNS uses for this (e.g. under [32min-addr.arpa[0m for IPv4, [32mip6.arpa[0m for IPv6) -- [32m
+address[0m should be given as a plain, forward IP address, not already reversed. Returns 
+the hostname as a plain string, or nothing if no [32mPTR[0m record exists for that 
+address. Unlike [32mdns:query[0m, this never follows a [32mCNAME[0m; a reverse zone is not expected to 
+contain one.
 
 This command accepts the following arguments:
 
@@ -783,6 +819,11 @@ This command accepts the following arguments:
 
 [32mdns[0m[36m:[0m[32msearch_paths[0m
 List of DNS search paths
+
+Reads the DNS search domains configured in [32m/etc/resolv.conf[0m -- no network query is made. A 
+system resolver normally appends these, in order, to an unqualified hostname 
+before giving up (e.g. trying [32mhost.example.com[0m when asked to resolve plain [32mhost[0m); [32mdns:query[0m does not apply 
+this itself -- [32mname[0m is always looked up exactly as given.
 
 
 [32mfs[0m[36m:[0m[32mcd[0m [36mdestination[0m[36m=[0m[36mone_of[0m [36m$string[0m [36m$file[0m [36m$glob[0m [36m$re[0m
