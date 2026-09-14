@@ -621,9 +621,12 @@ struct DBusObject {
 
 #[signature(service_call, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus session-level services")]
 struct ServiceCall {
+    #[description("filter (a file path, glob, or regex) matched against object paths. If unspecified along with `method`, lists every object in this service instead.")]
     object: Option<Value>,
+    #[description("filter (a file path, glob, or regex) matched against `Interface.MethodName`. Requires `object`; if unspecified, lists the object's methods instead of calling one.")]
     method: Option<Value>,
     #[unnamed()]
+    #[description("arguments to pass to the method call. Only used when `object` and `method` together select a single method to invoke.")]
     arguments: Vec<Value>,
 }
 
