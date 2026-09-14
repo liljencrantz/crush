@@ -974,6 +974,55 @@ mod tests {
     }
 
     #[test]
+    fn value_type_variants_are_all_accounted_for_in_serialization_crush() {
+        // Same idea as value_variants_are_all_accounted_for_in_serialization_crush
+        // above, but for ValueType itself -- Value::Type(_) being round-tripped there
+        // only exercises ValueType::String (via the plain $string type value); the
+        // variants that actually carry subtypes (List, Dict, Table*, OneOf) have their
+        // own recursive serialization logic in value_type_serializer.rs that a single
+        // simple-type round trip never touches. This match fails to *compile* the
+        // moment a new ValueType variant is added, until tests/serialization.crush's
+        // $check_type closure is updated to cover it too.
+        fn assert_accounted_for(t: &ValueType) {
+            match t {
+                ValueType::String
+                | ValueType::Integer
+                | ValueType::Time
+                | ValueType::Duration
+                | ValueType::Glob
+                | ValueType::Regex
+                | ValueType::Command
+                | ValueType::File
+                | ValueType::Struct
+                | ValueType::Scope
+                | ValueType::Bool
+                | ValueType::Float
+                | ValueType::Empty
+                | ValueType::Any
+                | ValueType::BinaryInputStream
+                | ValueType::Binary
+                | ValueType::Type => {
+                    // A "simple" type with no subtypes of its own -- $string alone
+                    // already exercises this whole family of match arms in
+                    // value_type_serializer.rs, so tests/serialization.crush's
+                    // existing single simple-type check covers it.
+                }
+                ValueType::TableInputStream(_)
+                | ValueType::TableOutputStream(_)
+                | ValueType::Table(_)
+                | ValueType::List(_)
+                | ValueType::Dict(_, _)
+                | ValueType::OneOf(_) => {
+                    // Carries a subtype (or a whole column schema), exercising
+                    // value_type_serializer.rs's recursive cases -- round-tripped and
+                    // checked with == in tests/serialization.crush's $check_type calls.
+                }
+            }
+        }
+        assert_accounted_for(&ValueType::Empty);
+    }
+
+    #[test]
     fn text_casts() {
         assert_eq!(
             Value::from("112432").convert(ValueType::Integer).is_err(),

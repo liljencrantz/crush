@@ -17,9 +17,9 @@ $(pup:from ./.test_file) c=3 {echo 1}
 
 # Round-trip one example of every serializable internal type. This is a completeness
 # check as much as a correctness one -- see src/lang/value/mod.rs's own
-# value_serializer_covers_every_variant Rust test, an exhaustive match with no wildcard
-# over ValueType that will fail to *compile* if a new variant is ever added without a
-# matching case added here too.
+# value_variants_are_all_accounted_for_in_serialization_crush Rust test, an exhaustive
+# match with no wildcard over Value that will fail to *compile* if a new variant is
+# ever added without a matching case added here too.
 $check := {|$name $v|
     val $v | pup:to ./.test_file
     $restored := $(pup:from ./.test_file)
@@ -42,6 +42,30 @@ $check "bool" $true
 $check "float" 5.5
 $check "binary" $(convert $binary "hi")
 $check "type" $string
+
+# $check above only ever passes a *value*, so its one "type" case above only exercises
+# ValueType::String -- one of the "simple" (no-subtype) type variants. The variants
+# that actually carry a subtype (List, Dict, Table/TableInputStream/
+# TableOutputStream's column schema, OneOf) have their own recursive logic in
+# value_type_serializer.rs that a simple type never touches. See
+# value_type_variants_are_all_accounted_for_in_serialization_crush in
+# src/lang/value/mod.rs for the matching exhaustiveness tripwire.
+$check_type := {|$name $t|
+    val $t | pup:to ./.test_file
+    $restored := $(pup:from ./.test_file)
+    assert ($restored == $t) ("{} type should round-trip through pup unchanged":format($name))
+}
+
+$check_type "list of string" $(list $string)
+$check_type "list of list of integer" $(list $(list $integer))
+$check_type "dict string->integer" $(dict $string $integer)
+$check_type "dict string->list of integer" $(dict $string $(list $integer))
+$check_type "table, one column" $(table value=$integer)
+$check_type "table, multiple columns including a list column" $(table a=$string b=$integer c=$(list $float))
+$check_type "table_input_stream" $(table_input_stream value=$integer)
+$check_type "table_output_stream" $(table_output_stream value=$integer)
+$check_type "one_of" $(one_of $string $integer)
+$check_type "one_of, with a nested list and dict" $(one_of $string $(list $integer) $(dict $string $bool))
 
 # Command and Scope can't be checked with == (Value's PartialEq has no meaningful notion
 # of command/closure equality, and falls through to false; Scope compares by id, which a
