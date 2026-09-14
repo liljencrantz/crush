@@ -21,6 +21,7 @@ mod hex;
 mod http;
 pub mod json;
 mod lines;
+mod percent;
 mod pup;
 mod split;
 mod toml;
@@ -230,6 +231,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             yaml::declare(env)?;
             hex::declare(env)?;
             base64::declare(env)?;
+            percent::declare(env)?;
 
             http::Http::declare(env)?;
             Echo::declare(env)?;

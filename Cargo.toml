@@ -68,6 +68,7 @@ mountpoints = "0.2.1"
 markdown = "1.0.0"
 hex = "0.4.3"
 base64 = "0.23.1"
+percent-encoding = "2.3.2"
 signal-hook = "0.3.18"
 tonic = { version = "0.14.6", features = ["tls-ring", "tls-native-roots"] }
 tonic-reflection = "0.14.6"

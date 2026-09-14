@@ -1,0 +1,31 @@
+# percent:to/percent:from (src/builtins/io/percent.rs) implement RFC 3986 percent-encoding:
+# every byte outside the `unreserved` set (ASCII letters, digits, and `-_.~`) is escaped as
+# `%XX`, everything else is left untouched.
+
+# Basic round trip, invoked with an explicit positional argument.
+assert ($(percent:to "a b/c") == "a%20b%2Fc")
+assert ($(percent:from "a%20b%2Fc") == "a b/c")
+
+# Same, invoked via piped input instead of a positional argument.
+assert ($("a b/c" | percent:to) == "a%20b%2Fc")
+assert ($("a%20b%2Fc" | percent:from) == "a b/c")
+
+# The unreserved set (letters, digits, and -._~) is left completely untouched.
+assert ($(percent:to "abc-._~XYZ019") == "abc-._~XYZ019")
+
+# Multi-byte UTF-8 is percent-encoded byte-by-byte and decodes back losslessly.
+assert ($(percent:to "héllo") == "h%C3%A9llo")
+assert ($(percent:from $(percent:to "héllo")) == "héllo")
+
+# Decoding bytes that aren't valid UTF-8 errors instead of producing garbage. The
+# deliberate assert-false inside the try body is a safety net: if percent:from ever
+# stopped erroring on this input, it would trip instead, and the message check below
+# would then fail (since "Assertion failed..." doesn't start with "invalid utf-8"),
+# so this test can't silently pass without actually exercising the error path.
+try {
+    percent:from "%FF%FE"
+    assert false "percent:from should have errored on invalid UTF-8 but didn't"
+} catch {
+    |$e| assert ($e:message:starts_with("invalid utf-8")) $("unexpected error: {}":format $e:message)
+}
+echo "reached"

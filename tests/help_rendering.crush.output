@@ -1315,6 +1315,41 @@ of its actual rows.
 [4mExamples[0m
 [36m$my_dict[0m [36m|[0m [32mmembers[0m
 
+[32mio[0m[36m:[0m[32mpercent[0m[36m:[0m[32mfrom[0m [36m[[0m[36minput[0m[36m=[0m[36mstring[0m[36m][0m
+Decode a percent-encoded string.
+
+[4mOutput[0m
+[32mstring[0m
+Replaces every [32m%XX[0m escape with the byte it represents. Errors if the decoded bytes 
+aren't valid UTF-8.
+
+This command accepts the following arguments:
+
+ * [32minput[0m the percent-encoded string to decode. Reads a string from input if 
+         unspecified.
+
+[4mExamples[0m
+[33m# Returns "a b/c"[0m
+[32mpercent[0m[36m:[0m[32mfrom[0m [36m"a%20b%2Fc"[0m
+
+[32mio[0m[36m:[0m[32mpercent[0m[36m:[0m[32mto[0m [36m[[0m[36minput[0m[36m=[0m[36mstring[0m[36m][0m
+Percent-encode a string for safe use in a URL.
+
+[4mOutput[0m
+[32mstring[0m
+Escapes every byte except the RFC 3986 [32munreserved[0m set -- ASCII letters, digits, and [32m-_.~[0m -- as [32m
+%XX[0m. This is the strictest common encoding, safe to use for a single path segment, 
+query key, or query value. It does escape [32m/[0m and [32m&[0m, so don't apply it to an 
+already-assembled path or query string, only to one component of one.
+
+This command accepts the following arguments:
+
+ * [32minput[0m the string to percent-encode. Reads a string from input if unspecified.
+
+[4mExamples[0m
+[33m# Returns "a%20b%2Fc"[0m
+[32mpercent[0m[36m:[0m[32mto[0m [36m"a b/c"[0m
+
 [32mio[0m[36m:[0m[32mpup[0m[36m:[0m[32mfrom[0m [36m[[0m[36mfiles[0m[36m=[0m[36mone_of[0m [36m$file[0m [36m$string[0m [36m$binary[0m [36m$binary_input_stream[0m [36m$glob[0m [36m$re[0m[36m...[0m[36m][0m
 Parse pup format
 
@@ -3006,6 +3041,6 @@ creates values of.
  * [32m__call__[0m Construct a one_of value type with the specified allowed types
 
 
-=== checked 177 commands, 6 skipped ===
+=== checked 179 commands, 6 skipped ===
 
 === checked 23 types, 0 skipped ===

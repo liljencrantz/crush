@@ -712,6 +712,7 @@ dependencies = [
  "ordered_map",
  "os_pipe",
  "parking_lot",
+ "percent-encoding",
  "prost 0.14.4",
  "prost-build 0.14.4",
  "prost-reflect",
