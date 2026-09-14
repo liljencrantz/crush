@@ -532,17 +532,17 @@ log:
 
 ```shell script
 crush# list:of 1 2 3 | each {assert ($value != 2) "value was 2"}
-crush# crush:warnings
+crush# crush:warn:list
 timestamp                 command message     file  location
 2024-01-01 00:00:00 +0000 <block> value was 2 ...    ...
 ```
 
 `each`, `where`, `group`, `files`, a class's `__init__`, and `remote:pexec` (a failed
 host produces no row, not an error) all report into this log instead of failing
-outright. `crush:warnings` lists the most recent entries; `crush:warning_limit:get`/
+outright. `crush:warn:list` lists the most recent entries; `crush:warn:limit:get`/
 `:set` control how many are kept (100 by default) before the oldest is evicted. In
 interactive mode, a warning is also printed immediately as it happens; in a script, the
-only way to notice one happened is to check `crush:warnings` (or, for commands that
+only way to notice one happened is to check `crush:warn:list` (or, for commands that
 report per-item this way, to compare how much output you got against how much you
 expected -- see e.g. `remote:pexec`'s own documentation).
 

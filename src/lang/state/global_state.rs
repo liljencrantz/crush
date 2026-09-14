@@ -20,8 +20,8 @@ use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 /// The default value for how many warnings GlobalState keeps around for later
-/// inspection (e.g. via `crush:warnings`) before evicting the oldest -- adjustable at
-/// runtime via `crush:warning_limit:set`.
+/// inspection (e.g. via `crush:warn:list`) before evicting the oldest -- adjustable at
+/// runtime via `crush:warn:limit:set`.
 const DEFAULT_WARNING_LIMIT: usize = 100;
 
 /**
@@ -119,6 +119,7 @@ struct StateData {
     run_mode: RunMode,
     warnings: VecDeque<Warning>,
     warning_limit: usize,
+    warn_print: bool,
     background_jobs: Vec<BackgroundJob>,
 }
 
@@ -143,6 +144,7 @@ impl GlobalState {
                 run_mode,
                 warnings: VecDeque::new(),
                 warning_limit: DEFAULT_WARNING_LIMIT,
+                warn_print: true,
                 background_jobs: Vec::new(),
             })),
             threads: ThreadStore::new(),
@@ -236,19 +238,22 @@ impl GlobalState {
 
     /// Report a non-fatal, partial failure. Stores it in the bounded warning log
     /// (evicting the oldest entry past the current warning_limit) and, in interactive
-    /// mode, also prints it immediately via the printer.
+    /// mode, also prints it immediately via the printer -- unless printing has been
+    /// disabled via `set_warn_print`.
     pub fn warn(&self, err: &CrushError) {
         let warning = Warning::from_error(err);
-        let run_mode = {
+        let (run_mode, warn_print) = {
             let mut data = self.data.lock().unwrap();
             data.warnings.push_back(warning.clone());
             while data.warnings.len() > data.warning_limit {
                 data.warnings.pop_front();
             }
-            data.run_mode
+            (data.run_mode, data.warn_print)
         };
         if let RunMode::Interactive = run_mode {
-            self.printer.warning(warning);
+            if warn_print {
+                self.printer.warning(warning);
+            }
         }
     }
 
@@ -262,6 +267,20 @@ impl GlobalState {
     pub fn warning_limit(&self) -> usize {
         let data = self.data.lock().unwrap();
         data.warning_limit
+    }
+
+    /// Whether a warning is also printed immediately (in interactive mode) as soon as
+    /// it's reported, rather than only being visible later via `crush:warn:list`.
+    pub fn warn_print(&self) -> bool {
+        let data = self.data.lock().unwrap();
+        data.warn_print
+    }
+
+    /// Change whether a warning is also printed immediately (in interactive mode) as
+    /// soon as it's reported.
+    pub fn set_warn_print(&self, value: bool) {
+        let mut data = self.data.lock().unwrap();
+        data.warn_print = value;
     }
 
     /// Change how many warnings are kept before the oldest gets evicted. If the log

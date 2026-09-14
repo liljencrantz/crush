@@ -19,7 +19,7 @@ $rows := $(remote:pexec {(1 + 1)} $bad_addr $addr $addr username=$user password=
 $row_count := $($rows | count)
 assert ($row_count == 2) "the two reachable hosts should both still be attempted and succeed, even though the first host in the list failed"
 
-$warnings := $(crush:warnings | materialize)
+$warnings := $(crush:warn:list | materialize)
 $warning_count := $($warnings | count)
 assert ($warning_count == 1) "the unreachable host's failure should be reported as exactly one warning"
 

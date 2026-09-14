@@ -41,16 +41,16 @@ assert ($(crush:history | count) == 0) "crush:history should be empty in a fresh
 
 ## warn
 
-# crush:warn reports directly into the same bounded log crush:warnings reads --
+# crush:warn:new reports directly into the same bounded log crush:warn:list reads --
 # checked by count (relative to before/after, since other tests earlier in this file
 # may have left warnings of their own) and by finding the message among the most
 # recent entries.
-$warnings_before := $(crush:warnings | count)
-crush:warn "test warning message from tests/crush_namespace.crush"
-assert ($(crush:warnings | count) == ($warnings_before + 1)) "crush:warn should add exactly one entry to crush:warnings"
-$latest_messages := $(crush:warnings | select message | list:collect message)
+$warnings_before := $(crush:warn:list | count)
+crush:warn:new "test warning message from tests/crush_namespace.crush"
+assert ($(crush:warn:list | count) == ($warnings_before + 1)) "crush:warn:new should add exactly one entry to crush:warn:list"
+$latest_messages := $(crush:warn:list | select message | list:collect message)
 $found_warning := $($latest_messages | any_match {($value == "test warning message from tests/crush_namespace.crush")})
-assert $found_warning "crush:warn's message should appear in crush:warnings"
+assert $found_warning "crush:warn:new's message should appear in crush:warn:list"
 
 ## run_mode/language_mode
 
@@ -92,12 +92,25 @@ assert (($($original_locale:len)) > 0) "crush:locale:get should return a non-emp
 crush:locale:set $original_locale
 assert ($(crush:locale:get) == $original_locale) "crush:locale:set should round-trip back to the same locale"
 
-## warning_limit / prompt / title -- simple get/set config scopes
+## warn:limit / warn:print / prompt / title -- simple get/set config scopes
 
-$original_warning_limit := $(crush:warning_limit:get)
-crush:warning_limit:set 50
-assert ($(crush:warning_limit:get) == 50) "crush:warning_limit:set should change what :get reports"
-crush:warning_limit:set $original_warning_limit
+$original_warning_limit := $(crush:warn:limit:get)
+crush:warn:limit:set 50
+assert ($(crush:warn:limit:get) == 50) "crush:warn:limit:set should change what :get reports"
+crush:warn:limit:set $original_warning_limit
+
+# crush:warn:print only affects whether a warning is *also* printed immediately in
+# interactive mode -- not exercisable here, since this test runs non-interactively and
+# warn() never prints in that mode regardless of this flag (see global_state.rs's own
+# warn()). What's checked here is just the setting itself. Note $true/$false (the bool
+# globals), not bareword true/false -- a bareword parses as a plain string in command
+# mode, which :set would then reject as the wrong type; the same gotcha is called out
+# in warn:print:set's own example=.
+assert ($(crush:warn:print:get) == $true) "crush:warn:print should default to true"
+crush:warn:print:set $false
+assert ($(crush:warn:print:get) == $false) "crush:warn:print:set should change what :get reports"
+crush:warn:print:set $true
+assert ($(crush:warn:print:get) == $true) "crush:warn:print:set should round-trip back to true"
 
 crush:prompt:set {echo "test> "}
 assert ($(typeof $(crush:prompt:get)) == $command) "crush:prompt:get should return the command set via :set"

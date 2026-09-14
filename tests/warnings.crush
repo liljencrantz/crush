@@ -1,6 +1,6 @@
 # When a command experiences a partial failure -- e.g. one group out of many failing to
 # aggregate -- it can report a warning rather than just silently continuing. Warnings
-# are kept in a bounded log, queryable via crush:warnings, and (only in interactive
+# are kept in a bounded log, queryable via crush:warn:list, and (only in interactive
 # mode, not exercised here) also printed immediately as they happen.
 #
 # group's per-group aggregator failure is the motivating case this was built for: group
@@ -12,15 +12,15 @@ $result := $(seq 0 6 | select m={($value):mod 3} | select key={if ($m == 0) {"a"
 $row_count := $($result | count)
 assert ($row_count == 2) "group b's aggregator should have failed, dropping its row from the output"
 
-$warning_count := $($(crush:warnings | materialize) | count)
+$warning_count := $($(crush:warn:list | materialize) | count)
 assert ($warning_count == 1) "the failed aggregator should have recorded exactly one warning"
 
-$messages := $($(crush:warnings | materialize) | select message | list:collect)
+$messages := $($(crush:warn:list | materialize) | select message | list:collect)
 $message := $($messages[0])
 $message_len := $($message:len)
 assert ($message_len > 0) "the warning should have a non-empty message"
 
-$timestamps := $($(crush:warnings | materialize) | select timestamp | list:collect)
+$timestamps := $($(crush:warn:list | materialize) | select timestamp | list:collect)
 $timestamp := $($timestamps[0])
 $timestamp_type := $(typeof $timestamp)
 assert ($timestamp_type == $time) "the warning should carry a real timestamp"
@@ -28,7 +28,7 @@ assert ($timestamp_type == $time) "the warning should carry a real timestamp"
 # Note: this variable deliberately isn't named $files -- that would shadow the global
 # `files` command for the rest of the script, since a bareword command lookup and a
 # $-prefixed variable lookup share the same scope namespace.
-$warning_source_files := $($(crush:warnings | materialize) | select file | list:collect)
+$warning_source_files := $($(crush:warn:list | materialize) | select file | list:collect)
 $source_file := $($warning_source_files[0])
 assert ($source_file == "tests/warnings.crush") "the warning's source should point at this script"
 
@@ -36,10 +36,10 @@ assert ($source_file == "tests/warnings.crush") "the warning's source should poi
 # a nonexistent path given directly. The command itself still succeeds (with no output
 # for the unstatable entry), it just no longer fails silently.
 files ./this_path_does_not_exist_1234
-$warning_count2 := $($(crush:warnings | materialize) | count)
+$warning_count2 := $($(crush:warn:list | materialize) | count)
 assert ($warning_count2 == 2) "a file files can't stat should add a second warning"
 
-$last_message := $($($(crush:warnings | materialize) | select message | list:collect)[1])
+$last_message := $($($(crush:warn:list | materialize) | select message | list:collect)[1])
 $last_message_len := $($last_message:len)
 assert ($last_message_len > 0) "the fs:files warning should have a non-empty message"
 
@@ -47,9 +47,9 @@ assert ($last_message_len > 0) "the fs:files warning should have a non-empty mes
 # only get attached by the normal script-dispatch chain, which this internal, directly
 # reported error never goes through. fs:files attaches them itself
 # (.with_command()/.with_source_fallback()) specifically so this isn't empty.
-$last_command := $($($(crush:warnings | materialize) | select command | list:collect)[1])
+$last_command := $($($(crush:warn:list | materialize) | select command | list:collect)[1])
 assert ($last_command == "files") "the fs:files warning should record which command reported it"
-$last_source_file := $($($(crush:warnings | materialize) | select file | list:collect)[1])
+$last_source_file := $($($(crush:warn:list | materialize) | select file | list:collect)[1])
 assert ($last_source_file == "tests/warnings.crush") "the fs:files warning's source should point at this script, not be empty"
 
 # where's per-row predicate failure is reported the same way -- the offending row is
@@ -57,13 +57,13 @@ assert ($last_source_file == "tests/warnings.crush") "the fs:files warning's sou
 # the rest, rather than aborting the whole pipeline.
 $where_row_count := $($(seq 0 3) | select m={($value):mod 3} | where {if ($m == 0) {convert $integer "notanumber"} else {$true}} | materialize | count)
 assert ($where_row_count == 2) "where should drop just the row whose predicate failed, not abort the pipeline"
-$w1 := $($(crush:warnings | materialize) | count)
+$w1 := $($(crush:warn:list | materialize) | count)
 assert ($w1 == 3) "a failing where predicate should add a third warning"
 
 # each's per-row command failure is reported too, rather than aborting the pipeline
 # after the first bad row.
 $(seq 0 3) | select m={($value):mod 3} | each {if ($m == 0) {convert $integer "notanumber"} else {}}
-$w2 := $($(crush:warnings | materialize) | count)
+$w2 := $($(crush:warn:list | materialize) | count)
 assert ($w2 == 4) "a failing each body should add a fourth warning"
 
 # A failing class constructor (__init__) aborts `new` entirely, propagating the real
@@ -77,21 +77,21 @@ try {
     $p := $(Point:new x=1.0)
 } catch { |$e| $init_errored = $true }
 assert $init_errored "a failing __init__ should abort `new` with a real error, not silently return an object"
-$w3 := $($(crush:warnings | materialize) | count)
+$w3 := $($(crush:warn:list | materialize) | count)
 assert ($w3 == 4) "a failing __init__ should not add a warning -- it errors instead"
 
 # where/each report the anonymous block they were given, since their body isn't a
 # named command.
-$commands := $($(crush:warnings | materialize) | select command | list:collect)
+$commands := $($(crush:warn:list | materialize) | select command | list:collect)
 assert ($($commands[2]) == "<block>") "the where warning's command should identify the anonymous predicate block"
 assert ($($commands[3]) == "<block>") "the each warning's command should identify the anonymous body block"
 
 # The warning log's size is runtime-configurable, defaulting to 100.
-$default_limit := $(crush:warning_limit:get)
+$default_limit := $(crush:warn:limit:get)
 assert ($default_limit == 100) "the default warning limit should be 100"
 
-crush:warning_limit:set 3
-$after_set := $(crush:warning_limit:get)
+crush:warn:limit:set 3
+$after_set := $(crush:warn:limit:get)
 assert ($after_set == 3)
 
 # there are 2 warnings already logged above; adding 3 more should push the total past
@@ -99,14 +99,14 @@ assert ($after_set == 3)
 files ./this_path_does_not_exist_5678
 files ./this_path_does_not_exist_9012
 files ./this_path_does_not_exist_3456
-$count_at_limit := $($(crush:warnings | materialize) | count)
+$count_at_limit := $($(crush:warn:list | materialize) | count)
 assert ($count_at_limit == 3) "the log should be capped at the current limit, not grow past it"
 
 # lowering the limit trims the existing log immediately, not just on the next warning.
-crush:warning_limit:set 1
-$count_after_shrink := $($(crush:warnings | materialize) | count)
+crush:warn:limit:set 1
+$count_after_shrink := $($(crush:warn:list | materialize) | count)
 assert ($count_after_shrink == 1) "shrinking the limit should immediately trim the existing log"
 
 $negative_limit_errored := $false
-try { crush:warning_limit:set (0 - 1) } catch { |$e| $negative_limit_errored = $true }
+try { crush:warn:limit:set (0 - 1) } catch { |$e| $negative_limit_errored = $true }
 assert $negative_limit_errored "a negative warning limit should error"

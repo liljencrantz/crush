@@ -442,71 +442,151 @@ fn history(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-static WARNINGS_OUTPUT_TYPE: [ColumnType; 5] = [
-    ColumnType::new("timestamp", ValueType::Time),
-    ColumnType::new("command", ValueType::String),
-    ColumnType::new("message", ValueType::String),
-    ColumnType::new("file", ValueType::String),
-    ColumnType::new("location", ValueType::String),
-];
+mod warn {
+    use super::*;
 
-#[signature(
-    crush.warnings,
-    can_block = false,
-    short = "List recent warnings reported by commands that experienced a partial failure.",
-    output = Known(ValueType::table_input_stream(&WARNINGS_OUTPUT_TYPE)),
-    long = "Commands that continue past a partial failure (e.g. one bad row out of a",
-    long = "stream) report it as a warning rather than aborting. A bounded number of the",
-    long = "most recent warnings are kept here; in interactive mode, they are also",
-    long = "printed as soon as they happen.",
-)]
-struct Warnings {}
+    static LIST_OUTPUT_TYPE: [ColumnType; 5] = [
+        ColumnType::new("timestamp", ValueType::Time),
+        ColumnType::new("command", ValueType::String),
+        ColumnType::new("message", ValueType::String),
+        ColumnType::new("file", ValueType::String),
+        ColumnType::new("location", ValueType::String),
+    ];
 
-fn warnings(context: CommandContext) -> CrushResult<()> {
-    let output = context.initialize_output(&WARNINGS_OUTPUT_TYPE)?;
-    for w in context.global_state.warnings() {
-        let (file, location) = match w.source() {
-            Some(s) => (
-                s.file()
-                    .map(|f| f.to_string_lossy().to_string())
-                    .unwrap_or_default(),
-                format!("{}-{}", s.location().start, s.location().end),
-            ),
-            None => (String::new(), String::new()),
-        };
-        output.send(Row::new(vec![
-            Value::Time(w.timestamp()),
-            Value::from(w.command().clone().unwrap_or_default()),
-            Value::from(w.message()),
-            Value::from(file),
-            Value::from(location),
-        ]))?;
+    #[signature(
+        crush.warn.list,
+        can_block = false,
+        short = "List recent warnings reported by commands that experienced a partial failure.",
+        output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
+        long = "Commands that continue past a partial failure (e.g. one bad row out of a",
+        long = "stream) report it as a warning rather than aborting. A bounded number of the",
+        long = "most recent warnings are kept here (see `crush:warn:limit`); in interactive",
+        long = "mode, they are also printed as soon as they happen, unless disabled (see",
+        long = "`crush:warn:print`).",
+    )]
+    pub struct List {}
+
+    fn list(context: CommandContext) -> CrushResult<()> {
+        let output = context.initialize_output(&LIST_OUTPUT_TYPE)?;
+        for w in context.global_state.warnings() {
+            let (file, location) = match w.source() {
+                Some(s) => (
+                    s.file()
+                        .map(|f| f.to_string_lossy().to_string())
+                        .unwrap_or_default(),
+                    format!("{}-{}", s.location().start, s.location().end),
+                ),
+                None => (String::new(), String::new()),
+            };
+            output.send(Row::new(vec![
+                Value::Time(w.timestamp()),
+                Value::from(w.command().clone().unwrap_or_default()),
+                Value::from(w.message()),
+                Value::from(file),
+                Value::from(location),
+            ]))?;
+        }
+        Ok(())
     }
-    Ok(())
-}
 
-#[signature(
-    crush.warn,
-    can_block = false,
-    output = Known(ValueType::Empty),
-    short = "Report a warning to the bounded log crush:warnings keeps.",
-    long = "Every builtin that presses on past a partial failure (each/where/group/files,",
-    long = "and others) reports it through this exact same mechanism instead of aborting;",
-    long = "this is that mechanism made directly callable, for a script or closure that",
-    long = "wants to flag something without stopping.",
-    example = "crush:warn \"something looked off, continuing anyway\"",
-)]
-struct Warn {
-    #[description("the warning message to report.")]
-    message: String,
-}
+    #[signature(
+        crush.warn.new,
+        can_block = false,
+        output = Known(ValueType::Empty),
+        short = "Report a warning to the bounded log crush:warn:list keeps.",
+        long = "Every builtin that presses on past a partial failure (each/where/group/files,",
+        long = "and others) reports it through this exact same mechanism instead of aborting;",
+        long = "this is that mechanism made directly callable, for a script or closure that",
+        long = "wants to flag something without stopping.",
+        example = "crush:warn:new \"something looked off, continuing anyway\"",
+    )]
+    pub struct New {
+        #[description("the warning message to report.")]
+        message: String,
+    }
 
-fn warn(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Warn = Warn::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context
-        .global_state
-        .warn(&error::<()>(cfg.message).unwrap_err());
-    context.output.send(Value::Empty)
+    fn new(mut context: CommandContext) -> CrushResult<()> {
+        let cfg: New = New::parse(context.remove_arguments(), &context.global_state.printer())?;
+        context
+            .global_state
+            .warn(&error::<()>(cfg.message).unwrap_err());
+        context.output.send(Value::Empty)
+    }
+
+    pub mod limit {
+        use super::*;
+
+        #[signature(
+            crush.warn.limit.set,
+            output = Known(ValueType::Empty),
+            short = "Set how many warnings crush:warn:list keeps before evicting the oldest."
+        )]
+        pub struct Set {
+            #[description("the new warning limit.")]
+            limit: i128,
+        }
+
+        fn set(mut context: CommandContext) -> CrushResult<()> {
+            let config: Set =
+                Set::parse(context.remove_arguments(), &context.global_state.printer())?;
+            if config.limit < 0 {
+                return command_error("The warning limit can't be negative.");
+            }
+            context.global_state.set_warning_limit(config.limit as usize);
+            context.output.send(Value::Empty)
+        }
+
+        #[signature(
+            crush.warn.limit.get,
+            output = Known(ValueType::Integer),
+            short = "Get how many warnings crush:warn:list keeps before evicting the oldest."
+        )]
+        pub struct Get {}
+
+        fn get(context: CommandContext) -> CrushResult<()> {
+            context
+                .output
+                .send(Value::from(context.global_state.warning_limit() as i128))
+        }
+    }
+
+    pub mod print {
+        use super::*;
+
+        #[signature(
+            crush.warn.print.set,
+            output = Known(ValueType::Empty),
+            short = "Set whether warnings are printed to the screen as they happen.",
+            long = "Only takes effect in interactive mode -- a warning is always recorded in",
+            long = "`crush:warn:list` either way, this only controls whether it's also printed",
+            long = "immediately. Defaults to `true`.",
+            example = "crush:warn:print:set $false",
+        )]
+        pub struct Set {
+            #[description("whether to print warnings to the screen as they happen.")]
+            print: bool,
+        }
+
+        fn set(mut context: CommandContext) -> CrushResult<()> {
+            let config: Set =
+                Set::parse(context.remove_arguments(), &context.global_state.printer())?;
+            context.global_state.set_warn_print(config.print);
+            context.output.send(Value::Empty)
+        }
+
+        #[signature(
+            crush.warn.print.get,
+            output = Known(ValueType::Bool),
+            short = "Get whether warnings are printed to the screen as they happen."
+        )]
+        pub struct Get {}
+
+        fn get(context: CommandContext) -> CrushResult<()> {
+            context
+                .output
+                .send(Value::Bool(context.global_state.warn_print()))
+        }
+    }
 }
 
 mod locale {
@@ -589,42 +669,6 @@ mod locale {
         context.output.send(Value::from(
             context.global_state.format_data().locale().name(),
         ))
-    }
-}
-
-mod warning_limit {
-    use super::*;
-
-    #[signature(
-        crush.warning_limit.set,
-        output = Known(ValueType::Empty),
-        short = "Set how many warnings crush:warnings keeps before evicting the oldest."
-    )]
-    pub struct Set {
-        #[description("the new warning limit.")]
-        limit: i128,
-    }
-
-    fn set(mut context: CommandContext) -> CrushResult<()> {
-        let config: Set = Set::parse(context.remove_arguments(), &context.global_state.printer())?;
-        if config.limit < 0 {
-            return command_error("The warning limit can't be negative.");
-        }
-        context.global_state.set_warning_limit(config.limit as usize);
-        context.output.send(Value::Empty)
-    }
-
-    #[signature(
-        crush.warning_limit.get,
-        output = Known(ValueType::Integer),
-        short = "Get how many warnings crush:warnings keeps before evicting the oldest."
-    )]
-    pub struct Get {}
-
-    fn get(context: CommandContext) -> CrushResult<()> {
-        context
-            .output
-            .send(Value::from(context.global_state.warning_limit() as i128))
     }
 }
 
@@ -733,8 +777,34 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Exit::declare(crush)?;
             Jobs::declare(crush)?;
             HistoryCommand::declare(crush)?;
-            Warnings::declare(crush)?;
-            Warn::declare(crush)?;
+
+            crush.create_namespace(
+                "warn",
+                "Warnings reported by commands that experienced a partial failure",
+                Box::new(move |env| {
+                    warn::New::declare(env)?;
+                    warn::List::declare(env)?;
+                    env.create_namespace(
+                        "limit",
+                        "How many warnings crush:warn:list keeps before evicting the oldest",
+                        Box::new(move |env| {
+                            warn::limit::Get::declare(env)?;
+                            warn::limit::Set::declare(env)?;
+                            Ok(())
+                        }),
+                    )?;
+                    env.create_namespace(
+                        "print",
+                        "Whether warnings are printed to the screen as they happen",
+                        Box::new(move |env| {
+                            warn::print::Get::declare(env)?;
+                            warn::print::Set::declare(env)?;
+                            Ok(())
+                        }),
+                    )?;
+                    Ok(())
+                }),
+            )?;
 
             crush.create_namespace(
                 "locale",
@@ -766,15 +836,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     byte_unit::List::declare(env)?;
                     byte_unit::Get::declare(env)?;
                     byte_unit::Set::declare(env)?;
-                    Ok(())
-                }),
-            )?;
-            crush.create_namespace(
-                "warning_limit",
-                "How many warnings crush:warnings keeps before evicting the oldest.",
-                Box::new(move |env| {
-                    warning_limit::Get::declare(env)?;
-                    warning_limit::Set::declare(env)?;
                     Ok(())
                 }),
             )?;

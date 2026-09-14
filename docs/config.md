@@ -118,15 +118,28 @@ The `crush:byte_unit` namespace controls how table columns containing byte sizes
 crush:byte_unit:set decimal
 ```
 
-### Warning limit
+### Warnings
 
 Commands that continue past a partial failure instead of aborting (e.g. one bad row
-out of a stream — see `each`/`where`/`group`/`files`) report it as a warning;
-`crush:warnings` lists the most recent ones. `crush:warning_limit` controls how many
-are kept before the oldest is evicted:
+out of a stream — see `each`/`where`/`group`/`files`) report it as a warning via
+`crush:warn:new`; `crush:warn:list` lists the most recent ones.
 
-- `crush:warning_limit:set` changes the limit. The default is 100.
-- `crush:warning_limit:get` returns the current limit.
+`crush:warn:limit` controls how many are kept before the oldest is evicted:
+
+- `crush:warn:limit:set` changes the limit. The default is 100.
+- `crush:warn:limit:get` returns the current limit.
+
+`crush:warn:print` controls whether a warning is also printed to the screen
+immediately as it happens, in interactive mode (it's always recorded in
+`crush:warn:list` either way):
+
+- `crush:warn:print:set` changes it. The default is `true`.
+- `crush:warn:print:get` returns the current setting.
+
+```shell script
+# Keep recording warnings, but stop printing them as they happen.
+crush:warn:print:set $false
+```
 
 ### Environment variables
 

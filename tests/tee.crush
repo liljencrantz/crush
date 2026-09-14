@@ -16,11 +16,11 @@ assert ($sum2 == 15) "tee's passthrough should be unaffected by a branch that wr
 $restored := $(json:from ./.tee_test.json | fold {($acc + $value)} initial=0)
 assert ($restored == 15) "the branch's own file should contain a full, correct copy of the stream"
 
-# A failing branch is reported to crush:warnings rather than aborting tee or the
+# A failing branch is reported to crush:warn:list rather than aborting tee or the
 # other branches.
 $sum3 := $(seq 1 6 | tee {this_command_does_not_exist} | fold {($acc + $value)} initial=0)
 assert ($sum3 == 15) "a failing branch should not affect tee's own passthrough output"
-assert ($(crush:warnings | count) > 0) "a failing branch should be reported via crush:warnings"
+assert ($(crush:warn:list | count) > 0) "a failing branch should be reported via crush:warn:list"
 
 # tee over an empty stream runs each branch with no rows and passes nothing through.
 $empty_sum := $($(seq 0 0) | tee {count} | fold {($acc + $value)} initial=0)

@@ -15,7 +15,7 @@ use signature::signature;
     long = "is discarded, so a branch is only useful for its side effects (writing to a",
     long = "file, counting, etc). `tee`'s own output is the untouched original stream, so",
     long = "it composes directly into a larger pipeline. If a branch fails, the failure is",
-    long = "reported via `crush:warnings` rather than aborting `tee` or the other branches.",
+    long = "reported via `crush:warn:list` rather than aborting `tee` or the other branches.",
     example = "# Write a snapshot to disk while continuing to filter the live stream",
     example = "host:procs | tee {json:to snapshot.json} | where {($cpu > 50)}",
 )]

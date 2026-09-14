@@ -364,7 +364,7 @@ fn exec(mut context: CommandContext) -> CrushResult<()> {
     long = "just because some, or even all, of the hosts couldn't be reached.",
     long = "A host that succeeds contributes one row (`host`/`result` columns) to the output;",
     long = "a host that fails contributes no row at all. Instead, the failure is logged as a",
-    long = "warning (see `crush:warnings`) naming the host and the underlying error. pexec's",
+    long = "warning (see `crush:warn:list`) naming the host and the underlying error. pexec's",
     long = "own exit status stays 0 either way, so the only way to tell whether every host",
     long = "succeeded is to compare the length of the output to the length of the `host` list",
     long = "you passed in -- fewer output rows than hosts means some connections failed.",

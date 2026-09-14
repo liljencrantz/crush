@@ -701,8 +701,35 @@ This command accepts the following arguments:
  * [32mtitle[0m The new command to invoke in order to produce a title
 
 
-[32mcrush[0m[36m:[0m[32mwarn[0m [36mmessage[0m[36m=[0m[36mstring[0m
-Report a warning to the bounded log crush:warnings keeps.
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mlimit[0m[36m:[0m[32mget[0m
+Get how many warnings crush:warn:list keeps before evicting the oldest.
+
+[4mOutput[0m
+[32minteger[0m
+
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mlimit[0m[36m:[0m[32mset[0m [36mlimit[0m[36m=[0m[36minteger[0m
+Set how many warnings crush:warn:list keeps before evicting the oldest.
+
+[4mOutput[0m
+[32mempty[0m
+This command accepts the following arguments:
+
+ * [32mlimit[0m the new warning limit.
+
+
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mlist[0m
+List recent warnings reported by commands that experienced a partial failure.
+
+[4mOutput[0m
+[32mtable_input_stream[0m [36mtimestamp[0m[36m=[0m[36m$time[0m [36mcommand[0m[36m=[0m[36m$string[0m [36mmessage[0m[36m=[0m[36m$string[0m [36mfile[0m[36m=[0m[36m$string[0m [36mlocation[0m[36m=[0m[36m$string[0m
+Commands that continue past a partial failure (e.g. one bad row out of a stream) 
+report it as a warning rather than aborting. A bounded number of the most recent 
+warnings are kept here (see [32mcrush:warn:limit[0m); in interactive mode, they are also printed as 
+soon as they happen, unless disabled (see [32mcrush:warn:print[0m).
+
+
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mnew[0m [36mmessage[0m[36m=[0m[36mstring[0m
+Report a warning to the bounded log crush:warn:list keeps.
 
 [4mOutput[0m
 [32mempty[0m
@@ -716,34 +743,29 @@ This command accepts the following arguments:
  * [32mmessage[0m the warning message to report.
 
 [4mExamples[0m
-[32mcrush[0m[36m:[0m[32mwarn[0m [36m"something looked off, continuing anyway"[0m
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mnew[0m [36m"something looked off, continuing anyway"[0m
 
-[32mcrush[0m[36m:[0m[32mwarning_limit[0m[36m:[0m[32mget[0m
-Get how many warnings crush:warnings keeps before evicting the oldest.
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mprint[0m[36m:[0m[32mget[0m
+Get whether warnings are printed to the screen as they happen.
 
 [4mOutput[0m
-[32minteger[0m
+[32mbool[0m
 
-[32mcrush[0m[36m:[0m[32mwarning_limit[0m[36m:[0m[32mset[0m [36mlimit[0m[36m=[0m[36minteger[0m
-Set how many warnings crush:warnings keeps before evicting the oldest.
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mprint[0m[36m:[0m[32mset[0m [36mprint[0m[36m=[0m[36mbool[0m
+Set whether warnings are printed to the screen as they happen.
 
 [4mOutput[0m
 [32mempty[0m
+Only takes effect in interactive mode -- a warning is always recorded in [32m
+crush:warn:list[0m either way, this only controls whether it's also printed immediately. Defaults 
+to [32mtrue[0m.
+
 This command accepts the following arguments:
 
- * [32mlimit[0m the new warning limit.
+ * [32mprint[0m whether to print warnings to the screen as they happen.
 
-
-[32mcrush[0m[36m:[0m[32mwarnings[0m
-List recent warnings reported by commands that experienced a partial failure.
-
-[4mOutput[0m
-[32mtable_input_stream[0m [36mtimestamp[0m[36m=[0m[36m$time[0m [36mcommand[0m[36m=[0m[36m$string[0m [36mmessage[0m[36m=[0m[36m$string[0m [36mfile[0m[36m=[0m[36m$string[0m [36mlocation[0m[36m=[0m[36m$string[0m
-Commands that continue past a partial failure (e.g. one bad row out of a stream) 
-report it as a warning rather than aborting. A bounded number of the most recent 
-warnings are kept here; in interactive mode, they are also printed as soon as 
-they happen.
-
+[4mExamples[0m
+[32mcrush[0m[36m:[0m[32mwarn[0m[36m:[0m[32mprint[0m[36m:[0m[32mset[0m [36m$false[0m
 
 [32mdns[0m[36m:[0m[32mdomain[0m
 DNS domain, if any
@@ -1792,7 +1814,7 @@ always attempts every host in the list, regardless of whether earlier hosts
 failed to connect or authenticate -- it never fails outright just because some, 
 or even all, of the hosts couldn't be reached. A host that succeeds contributes 
 one row ([32mhost[0m/[32mresult[0m columns) to the output; a host that fails contributes no row at all. 
-Instead, the failure is logged as a warning (see [32mcrush:warnings[0m) naming the host and the 
+Instead, the failure is logged as a warning (see [32mcrush:warn:list[0m) naming the host and the 
 underlying error. pexec's own exit status stays 0 either way, so the only way to 
 tell whether every host succeeded is to compare the length of the output to the 
 length of the [32mhost[0m list you passed in -- fewer output rows than hosts means some 
@@ -2195,7 +2217,7 @@ completion as its own pipeline, in parallel with the others; its own output is
 discarded, so a branch is only useful for its side effects (writing to a file, 
 counting, etc). [32mtee[0m's own output is the untouched original stream, so it composes 
 directly into a larger pipeline. If a branch fails, the failure is reported via [32m
-crush:warnings[0m rather than aborting [32mtee[0m or the other branches.
+crush:warn:list[0m rather than aborting [32mtee[0m or the other branches.
 
 This command accepts the following arguments:
 
@@ -3041,6 +3063,6 @@ creates values of.
  * [32m__call__[0m Construct a one_of value type with the specified allowed types
 
 
-=== checked 179 commands, 6 skipped ===
+=== checked 181 commands, 6 skipped ===
 
 === checked 23 types, 0 skipped ===
