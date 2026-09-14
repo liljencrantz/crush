@@ -48,6 +48,5 @@ assert $("foo.txt":__is__ foo.txt)
 # so store it in a variable first (or quote it, 'foo.txt') rather than writing it bare.
 $f := foo.txt
 $txt_glob := *.txt
-echo "barrier"
 assert ($f =~ $txt_glob)
 assert (!($f !~ $txt_glob))

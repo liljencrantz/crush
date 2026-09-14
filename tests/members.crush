@@ -5,7 +5,7 @@
 $d := $($(dict $string $duration):new)
 $d["key"] = $(duration:of seconds=1)
 $m := $($d | members | materialize)
-$expected := $($(csv:from "key,value\n" key=$string value=$duration) | members | materialize)
+$expected := $($(csv:from "key,value\n" head=1 key=$string value=$duration) | members | materialize)
 assert ($m == $expected) "members on a dict should report key/value columns with their real types"
 
 $row0 := $($m[0])
@@ -17,5 +17,5 @@ assert ($first_type == $string)
 # works on a list too, not just tables/dicts
 $l := $(list:of 1 2 3)
 $lm := $($l | members | materialize)
-$expected_lm := $($(csv:from "value\n" value=$integer) | members | materialize)
+$expected_lm := $($(csv:from "value\n" head=1 value=$integer) | members | materialize)
 assert ($lm == $expected_lm) "members on a list should report a single value:integer column"

@@ -9,7 +9,6 @@ $msg := $(struct:of message="")
 try {
     list:of 3.0 $(float:nan) 1.0 | median | echo
 } catch { |$e| $msg = $e }
-echo "barrier"
 echo $msg:message
 
 echo "still works fine without NaN"

@@ -8,7 +8,6 @@ $msg := $(struct:of message="")
 try {
     list:of 3.0 $(float:nan) 1.0 | sort | echo
 } catch { |$e| $msg = $e }
-echo "barrier"
 echo $msg:message
 
 # -infinity and +infinity are ordinary, well-ordered values (not NaN), so they still sort at

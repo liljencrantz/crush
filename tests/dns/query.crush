@@ -63,17 +63,13 @@ $a_tcp_row := $($a_tcp[0])
 assert ($a_tcp_row:target == "1.2.3.4") "A query over TCP should return the same answer as over UDP"
 
 # loop.test is a CNAME pointing at itself; following it must hit MAX_CNAME_DEPTH and
-# error out instead of looping forever. Deliberately not piped to materialize: when
-# dns:query isn't the pipeline's last stage, its error is swallowed by a real,
-# separately-documented bug (see test-gaps.md's Job::eval() thread-join-gap entry)
-# instead of reaching this catch.
+# error out instead of looping forever.
 $loop_error := ""
 try {
-    dns:query "loop.test" A nameserver=$ns port=$port
+    dns:query "loop.test" A nameserver=$ns port=$port | materialize
 } catch {
     |$e| $loop_error = $e:message
 }
-echo "barrier"
 assert ($loop_error == "CNAME chain for `loop.test.` is too long (more than 8 hops)") \
     "a self-referencing CNAME should error out once MAX_CNAME_DEPTH is hit"
 

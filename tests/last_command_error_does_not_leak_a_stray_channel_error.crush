@@ -12,12 +12,6 @@
 # also verified by hand to show the identical symptom, sharing the same root cause in
 # job.rs, so one repro covers both.
 #
-# The `echo "barrier"` below is deliberate, not decorative: touching $msg with a method
-# call or string concatenation in the very next statement after the catch block races
-# and can itself surface the exact leaked-channel-error symptom this test guards
-# against, unrelated to whether job.rs's own bug is present. Root cause not found;
-# this is one of several repro shapes of the same still-open race.
-#
 # $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
 # hands back a struct describing the error (message/type/command) and `=` reassignment
 # requires the new value to be the same type as the variable's first value.
@@ -27,7 +21,6 @@ try {
 } catch { |$e|
     $msg = $e
 }
-echo "barrier"
 
 $leaked := $(like $msg:message *disconnected*)
 assert ($leaked == $false) "the real error should be the only thing caught, no leaked channel error"

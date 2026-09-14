@@ -1,4 +1,3 @@
-barrier
 Can't calculate median of a set containing NaN values.
 still works fine without NaN
 2

@@ -27,7 +27,7 @@
 
 $schema_job := $(fs:watch ./.fs_watch_test_dir | members | materialize &)
 $schema := $(fg $schema_job)
-$expected_schema := $($(csv:from "path,kind,timestamp\n" path=$file kind=$string timestamp=$time) | members | materialize)
+$expected_schema := $($(csv:from "path,kind,timestamp\n" head=1 path=$file kind=$string timestamp=$time) | members | materialize)
 assert ($schema == $expected_schema) "fs:watch's row shape should be path:file, kind:string, timestamp:time"
 
 $event_job := $(fs:watch ./.fs_watch_test_dir | head 1 | materialize &)

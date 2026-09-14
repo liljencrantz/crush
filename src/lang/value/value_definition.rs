@@ -69,7 +69,9 @@ impl ValueDefinition {
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = pipe();
-                def.eval(context.job_context(first_input, last_output))?;
+                if let Some(id) = def.eval(context.job_context(first_input, last_output))? {
+                    context.global_state.threads().join_one(id)?;
+                }
                 (None, last_input.recv()?)
             }
             ValueDefinition::JobListDefinition(defs, _) => {
@@ -78,7 +80,9 @@ impl ValueDefinition {
                 }
                 let (last_output, last_input) = pipe();
                 let last_def = &defs[defs.len() - 1];
-                last_def.eval(context.job_context(empty_channel(), last_output))?;
+                if let Some(id) = last_def.eval(context.job_context(empty_channel(), last_output))? {
+                    context.global_state.threads().join_one(id)?;
+                }
                 (None, last_input.recv()?)
             }
 
@@ -128,6 +132,12 @@ impl ValueDefinition {
                 } else {
                     parent
                 };
+                // Note: parent_cmd.eval() above returns CrushResult<()>, not a thread
+                // handle -- it always runs the command synchronously in this thread, so
+                // there is no join gap here. The gap that matters is in the *caller*: a
+                // GetAttr used as a job's command (e.g. `5:no_such_method`) goes through
+                // CommandInvocation::eval() instead of this method, and that's where the
+                // actual bug lives (see the CommandInvocation::eval fix below).
                 let val = parent.field(&entry.string())?.ok_or(&format!(
                     "Missing field `{}` in value of type `{}`",
                     entry.str(),

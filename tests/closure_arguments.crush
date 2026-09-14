@@ -25,7 +25,6 @@ try {
 } catch {
     |$e| $stray_named = $e:message
 }
-echo "barrier"
 assert ($stray_named == "`unnamed_only`: Unknown named argument `x`.") \
     "a closure with no named collector should reject any named argument"
 
@@ -52,7 +51,6 @@ try {
 } catch {
     |$e| $stray_after_default = $e:message
 }
-echo "barrier"
 assert ($stray_after_default == "`def`: Stray unnamed argument.") \
     "a positional argument must never silently fill a defaulted parameter"
 
@@ -62,19 +60,16 @@ $f := {|$a $b| ($a + $b)}
 
 $missing := ""
 try { $f 1 } catch { |$e| $missing = $e:message }
-echo "barrier"
 assert ($missing == "`f`: No argument supplied for parameter `b`.") \
     "calling with too few arguments and no default should name the missing parameter"
 
 $stray := ""
 try { $f 1 2 3 } catch { |$e| $stray = $e:message }
-echo "barrier"
 assert ($stray == "`f`: Stray unnamed argument.") \
     "calling with too many positional arguments and no unnamed collector should error"
 
 $unknown_named := ""
 try { $f 1 2 z=9 } catch { |$e| $unknown_named = $e:message }
-echo "barrier"
 assert ($unknown_named == "`f`: Unknown named argument `z`.") \
     "an unrecognized named argument with no named collector should error"
 
