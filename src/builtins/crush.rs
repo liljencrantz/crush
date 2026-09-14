@@ -46,7 +46,7 @@ mod env {
     #[signature(
     __setitem__,
     output = Known(ValueType::Empty),
-    short = "Gets the variable with the given name",
+    short = "Sets the variable with the given name",
     )]
     pub(crate) struct SetItem {
         #[description("The name of the environment variable to set")]
@@ -637,7 +637,7 @@ mod byte_unit {
     #[signature(
         crush.byte_unit.list,
         output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-        short = "List all available locales."
+        short = "List all available byte units."
     )]
     pub struct List {}
 

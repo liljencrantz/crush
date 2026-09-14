@@ -535,7 +535,7 @@ Get the current byte unit.
 [32mstring[0m
 
 [32mcrush[0m[36m:[0m[32mbyte_unit[0m[36m:[0m[32mlist[0m
-List all available locales.
+List all available byte units.
 
 [4mOutput[0m
 [32mtable_input_stream[0m [36mname[0m[36m=[0m[36m$string[0m
@@ -2663,8 +2663,8 @@ another produces a [32mduration[0m, and a [32mduration[0m can be added to or
  * [32m__mul__[0m          Multiply this duration by the specified factor.
  * [32m__neg__[0m          Negate this duration.
  * [32m__sub__[0m          Remove the specified delta from this duration.
- * [32mdays[0m             Returns the number of minutes in this duration, rounded towards zero.
- * [32mhours[0m            Returns the number of minutes in this duration, rounded towards zero.
+ * [32mdays[0m             Returns the number of days in this duration, rounded towards zero.
+ * [32mhours[0m            Returns the number of hours in this duration, rounded towards zero.
  * [32mmilliseconds[0m     Returns the number of milliseconds in this duration, rounded towards zero.
  * [32mminutes[0m          Returns the number of minutes in this duration, rounded towards zero.
  * [32mnanoseconds_part[0m Returns the nanosecond part of this duration.
@@ -2875,7 +2875,8 @@ than a dynamic, mutable set of keys.
  * [32mcollect[0m     Create a new dict by reading the specified columns from the input.
  * [32mcontains[0m    Returns whether the given key is in the dict
  * [32mempty[0m       True if there are no mappings in the dict.
- * [32mjoin[0m        Create a new dict with the same set of mappings as this one.
+ * [32mjoin[0m        Create a new dict by merging this dict with the given dicts, keeping the 
+               first value seen for any duplicate key.
  * [32mkey_type[0m    the type of the keys in this dict.
  * [32mlen[0m         The number of mappings in the dict.
  * [32mnew[0m         Create an empty new dict.

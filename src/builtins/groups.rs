@@ -37,7 +37,7 @@ fn list(context: CommandContext) -> CrushResult<()> {
 #[signature(
     groups.__getitem__,
     can_block = false,
-    short = "find a user by name",
+    short = "find a group by name",
     example = "# Find the group staff",
     example = "groups[staff]",
 )]

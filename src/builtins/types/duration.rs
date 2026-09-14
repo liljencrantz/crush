@@ -171,7 +171,7 @@ fn minutes(mut context: CommandContext) -> CrushResult<()> {
     types.duration.hours,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Returns the number of minutes in this duration, rounded towards zero.",
+    short = "Returns the number of hours in this duration, rounded towards zero.",
 )]
 struct Hours {}
 
@@ -187,7 +187,7 @@ fn hours(mut context: CommandContext) -> CrushResult<()> {
     types.duration.days,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Returns the number of minutes in this duration, rounded towards zero.",
+    short = "Returns the number of days in this duration, rounded towards zero.",
 )]
 struct Days {}
 

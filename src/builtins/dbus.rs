@@ -619,7 +619,7 @@ struct DBusObject {
     interfaces: Vec<DBusInterface>,
 }
 
-#[signature(service_call, can_block = false, output = Known(ValueType::Struct), short = "A struct containing all dbus session-level services")]
+#[signature(service_call, can_block = false, output = Known(ValueType::Struct), short = "List a service's objects or methods, or call one of its methods")]
 struct ServiceCall {
     #[description("filter (a file path, glob, or regex) matched against object paths. If unspecified along with `method`, lists every object in this service instead.")]
     object: Option<Value>,

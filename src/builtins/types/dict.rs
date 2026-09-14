@@ -427,7 +427,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
     types.dict.join,
     can_block = false,
     output = Unknown,
-    short = "Create a new dict with the same set of mappings as this one.",
+    short = "Create a new dict by merging this dict with the given dicts, keeping the first value seen for any duplicate key.",
 )]
 struct Join {
     #[description("the dict instances to join.")]
