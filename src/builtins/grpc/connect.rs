@@ -162,6 +162,7 @@ fn generate_parameters(signature: &MethodDescriptor) -> Vec<Parameter> {
             complete: None,
             named: false,
             unnamed: false,
+            dirs_only: false,
         })
         .collect()
 }

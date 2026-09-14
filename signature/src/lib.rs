@@ -390,6 +390,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 let mut allowed_values = None;
                 let mut description = None;
                 let mut completion_command = quote! {None};
+                let mut is_dirs_only = false;
 
                 if !field.attrs.is_empty() {
                     for attr in &field.attrs {
@@ -420,6 +421,8 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             completion_command = quote! {Some(#name)};
                         } else if call_is_named(attr, "description") {
                             description = Some(unescape(&(call_literal(attr)?.to_string())));
+                        } else if call_is_named(attr, "directories_only") {
+                            is_dirs_only = true;
                         }
                     }
                 }
@@ -507,6 +510,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         named: #is_named_target,
                         unnamed: #is_unnamed_target,
                         default: #default_value_node,
+                        dirs_only: #is_dirs_only,
                     },
                 };
             }

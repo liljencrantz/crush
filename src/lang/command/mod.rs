@@ -458,6 +458,12 @@ pub struct Parameter {
     >,
     pub named: bool,
     pub unnamed: bool,
+    /// If true, tab completion for this parameter only offers directories, never plain
+    /// files -- set via `#[directories_only]` in a `#[signature(...)]` struct. This is
+    /// a completion-time hint only; it doesn't restrict what value the parameter
+    /// actually accepts at runtime, the same way `#[values(...)]` guides completion
+    /// without validating against it.
+    pub dirs_only: bool,
 }
 
 impl Display for Parameter {

@@ -452,6 +452,7 @@ fn compile_signature(
                     named: false,
                     unnamed: false,
                     default,
+                    dirs_only: false,
                 })
             }
             ParameterDefinition::Named { name, description } => result.push(Parameter {
@@ -463,6 +464,7 @@ fn compile_signature(
                 named: true,
                 unnamed: false,
                 default: None,
+                dirs_only: false,
             }),
             ParameterDefinition::Unnamed { name, description } => result.push(Parameter {
                 name: name.string.clone(),
@@ -473,6 +475,7 @@ fn compile_signature(
                 named: false,
                 unnamed: true,
                 default: None,
+                dirs_only: false,
             }),
             ParameterDefinition::Meta(_, _) => {}
         }
@@ -1112,6 +1115,10 @@ impl<'a> ClosureDeserializer<'a> {
             complete: None,
             named: parameter.named,
             unnamed: parameter.unnamed,
+            // Not part of the pup wire format (see the serializer side): this is a
+            // completion-time-only hint, never serialized, same treatment as `complete`
+            // just above.
+            dirs_only: false,
         })
     }
 

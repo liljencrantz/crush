@@ -25,6 +25,7 @@ mod watch;
 )]
 struct Cd {
     #[description("the new working directory.")]
+    #[directories_only]
     destination: Files,
 }
 

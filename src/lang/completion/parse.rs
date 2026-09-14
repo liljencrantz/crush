@@ -115,6 +115,13 @@ impl PartialCommandResult {
             Some(d) => d.value_type.clone(),
         }
     }
+
+    pub fn last_argument_dirs_only(&self) -> bool {
+        match self.last_argument_description() {
+            None => false,
+            Some(d) => d.dirs_only,
+        }
+    }
 }
 
 #[derive(Clone)]

@@ -156,6 +156,7 @@ fn complete_file(
     prefix: impl Into<PathBuf>,
     quoted: TextLiteralStyle,
     value_type: &ValueType,
+    dirs_only: bool,
     cursor: usize,
     out: &mut Vec<Completion>,
 ) -> CrushResult<()> {
@@ -185,6 +186,7 @@ fn complete_file(
         out.append(
             &mut dirs
                 .filter(|k| k.name.to_str().unwrap().starts_with(prefix_str))
+                .filter(|k| !dirs_only || k.is_directory)
                 .map(|k| Completion {
                     completion: format!(
                         "{}{}",
@@ -280,6 +282,7 @@ fn complete_partial_argument(
     }
 
     let argument_type = parse_result.last_argument_type();
+    let dirs_only = parse_result.last_argument_dirs_only();
     match parse_result.last_argument {
         LastArgument::Switch(name) => {
             if let CompletionCommand::Known(cmd) = parse_result.command {
@@ -289,7 +292,7 @@ fn complete_partial_argument(
 
         LastArgument::Unknown => {
             complete_label(Value::Scope(scope.clone()), "", &argument_type, cursor, res)?;
-            complete_file(lister, "", Unquoted, &argument_type, cursor, res)?;
+            complete_file(lister, "", Unquoted, &argument_type, dirs_only, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.completion_data(), "", cursor, res, false)?;
@@ -309,7 +312,7 @@ fn complete_partial_argument(
 
         LastArgument::Field(label) => {
             if parse_result.last_argument_name.is_none() {
-                complete_file(lister, &label, Unquoted, &argument_type, cursor, res)?;
+                complete_file(lister, &label, Unquoted, &argument_type, dirs_only, cursor, res)?;
                 if let CompletionCommand::Known(cmd) = parse_result.command {
                     complete_argument_name(cmd.completion_data(), &label, cursor, res, false)?;
                 }
@@ -321,7 +324,7 @@ fn complete_partial_argument(
         }
 
         LastArgument::File(l, quoted) => {
-            complete_file(lister, &l, quoted, &argument_type, cursor, res)?;
+            complete_file(lister, &l, quoted, &argument_type, dirs_only, cursor, res)?;
         }
 
         LastArgument::QuotedString(_) => {}
@@ -355,7 +358,7 @@ pub fn complete(
                 cursor,
                 &mut res,
             )?;
-            complete_file(lister, "", Unquoted, &ValueType::Any, cursor, &mut res)?;
+            complete_file(lister, "", Unquoted, &ValueType::Any, false, cursor, &mut res)?;
         }
 
         ParseResult::PartialLabel(label) => {
@@ -383,7 +386,7 @@ pub fn complete(
         }
 
         ParseResult::PartialFile(cmd, quoted) => {
-            complete_file(lister, &cmd, quoted, &ValueType::Any, cursor, &mut res)?
+            complete_file(lister, &cmd, quoted, &ValueType::Any, false, cursor, &mut res)?
         }
 
         ParseResult::PartialArgument(parse_result) => {
@@ -433,6 +436,10 @@ mod tests {
         Ok(())
     }
 
+    fn dirs_only_cmd(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
     #[signature(my_cmd)]
     struct MyCmdSignature {
         super_fancy_argument: ValueType,
@@ -454,6 +461,12 @@ mod tests {
         argument3: String,
     }
 
+    #[signature(dirs_only_cmd)]
+    struct DirsOnlyCmdSignature {
+        #[directories_only]
+        destination: PathBuf,
+    }
+
     fn scope_with_function() -> Scope {
         let root = Scope::create_root();
         let chld = root
@@ -473,6 +486,7 @@ mod tests {
                 Box::new(|env| {
                     AllowedCmdSignature::declare(env)?;
                     MultiArgumentCmdSignature::declare(env)?;
+                    DirsOnlyCmdSignature::declare(env)?;
                     Ok(())
                 }),
             )
@@ -717,6 +731,24 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "'burrow/carrot' ");
+    }
+
+    #[test]
+    fn complete_directories_only_excludes_plain_files() {
+        // Same "./burrow/" listing complete_file_with_cursor_after_slash above uses
+        // (carrot, lettuce, and subdirectory table) -- that test shows all 3 get
+        // offered normally; #[directories_only] on this fixture command's own
+        // parameter should narrow that down to just table.
+        let line = "other_namespace:dirs_only_cmd destination=./burrow/";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(
+            &completions[0].complete(line),
+            "other_namespace:dirs_only_cmd destination=./burrow/table/"
+        );
     }
 
     #[test]
