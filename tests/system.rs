@@ -134,6 +134,51 @@ fn test_grpc() {
 }
 
 #[test]
+fn test_dns() {
+    let run = escargot::CargoBuild::new()
+        .bin("dns-service")
+        .package("dns-service") // Name of the sub-crate
+        .run()
+        .expect("Failed to build dns-service binary");
+
+    let mut server = Command::new(run.path())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start dns test server");
+
+    // dns-service binds a random loopback UDP+TCP port and prints it on startup (see
+    // dns-service/src/main.rs) so the two sides never need to agree on a fixed port.
+    let stdout = server.stdout.take().expect("piped stdout");
+    let mut reader = std::io::BufReader::new(stdout);
+    let mut line = String::new();
+    reader
+        .read_line(&mut line)
+        .expect("failed to read dns-service startup line");
+    let port = line
+        .trim()
+        .strip_prefix("PORT:")
+        .expect("unexpected dns-service startup output")
+        .to_string();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
+        .args(&["tests/dns/query.crush"])
+        .env("CRUSH_TEST_DNS_PORT", &port)
+        .output()
+        .expect("failed to execute process");
+
+    let _ = server.kill();
+    let _ = server.wait();
+
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "dns query test did not pass.\nStdout:\n{}\nStderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+}
+
+#[test]
 fn test_remote_host_file() {
     // remote:host:list/remote:host:remove (src/builtins/remote.rs) never connect
     // anywhere -- they just read/rewrite a known_hosts file -- so a static fixture is

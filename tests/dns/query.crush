@@ -1,0 +1,80 @@
+# Exercises dns:query/dns:query_reverse against the dns-service test server (see
+# dns-service/ and tests/system.rs's test_dns, which starts it fresh each run on a
+# random loopback port and passes it in via CRUSH_TEST_DNS_PORT) across every record
+# type the builtin supports, both transports, and the CNAME-follow/CNAME-loop paths.
+
+$port := $(convert $integer $(crush:env["CRUSH_TEST_DNS_PORT"]))
+$ns := "127.0.0.1"
+
+$a := $(dns:query "a.test" A nameserver=$ns port=$port | materialize)
+assert ($($a | count) == 1) "A query should return one answer"
+$a_row := $($a[0])
+assert ($a_row:target == "1.2.3.4") "A record should resolve to the canned address"
+
+$aaaa := $(dns:query "aaaa.test" AAAA nameserver=$ns port=$port | materialize)
+$aaaa_row := $($aaaa[0])
+assert ($aaaa_row:target == "::1") "AAAA record should resolve to the canned address"
+
+# cname.test is a CNAME to a.test; a non-CNAME query should transparently follow it.
+$followed := $(dns:query "cname.test" A nameserver=$ns port=$port | materialize)
+$followed_row := $($followed[0])
+assert ($followed_row:target == "1.2.3.4") "A CNAME should be followed to its target's A record"
+
+# Asking for the CNAME record itself, or passing no_follow_cname, must return the
+# alias unfollowed instead.
+$raw_cname := $(dns:query "cname.test" CNAME nameserver=$ns port=$port | materialize)
+$raw_cname_row := $($raw_cname[0])
+assert ($raw_cname_row:target == "a.test.") "Querying CNAME type directly should return the alias, not follow it"
+
+$no_follow := $(dns:query "cname.test" A nameserver=$ns port=$port no_follow_cname=$true | materialize)
+$no_follow_row := $($no_follow[0])
+assert ($no_follow_row:target == "a.test.") "no_follow_cname should return the alias, not follow it"
+
+$mx := $(dns:query "mx.test" MX nameserver=$ns port=$port | materialize)
+$mx_row := $($mx[0])
+assert ($mx_row:target == "mail.test.") "MX record should resolve to the canned exchange"
+assert ($mx_row:preference == 10) "MX record should carry its preference"
+
+$ns_rec := $(dns:query "ns.test" NS nameserver=$ns port=$port | materialize)
+$ns_row := $($ns_rec[0])
+assert ($ns_row:target == "ns1.test.") "NS record should resolve to the canned nameserver"
+
+$soa := $(dns:query "soa.test" SOA nameserver=$ns port=$port | materialize)
+$soa_row := $($soa[0])
+assert ($soa_row:mname == "ns1.test.") "SOA record should carry the canned mname"
+assert ($soa_row:serial == 2026091401) "SOA record should carry the canned serial"
+
+$srv := $(dns:query "srv.test" SRV nameserver=$ns port=$port | materialize)
+$srv_row := $($srv[0])
+assert ($srv_row:target == "target.test.") "SRV record should resolve to the canned target"
+assert ($srv_row:port == 8080) "SRV record should carry its port"
+
+$txt := $(dns:query "txt.test" TXT nameserver=$ns port=$port | materialize)
+$txt_row := $($txt[0])
+assert ($(convert $string $txt_row:text) == "hello world") "TXT record should carry the canned text"
+
+$ptr := $(dns:query_reverse "1.2.3.4" nameserver=$ns port=$port)
+assert ($ptr == "ptr.test.") "Reverse lookup should resolve to the canned PTR target"
+
+# Same A query again, but over TCP -- exercises the length-prefixed TCP framing path
+# in both dns:query and dns-service, not just UDP.
+$a_tcp := $(dns:query "a.test" A tcp=$true nameserver=$ns port=$port | materialize)
+$a_tcp_row := $($a_tcp[0])
+assert ($a_tcp_row:target == "1.2.3.4") "A query over TCP should return the same answer as over UDP"
+
+# loop.test is a CNAME pointing at itself; following it must hit MAX_CNAME_DEPTH and
+# error out instead of looping forever. Deliberately not piped to materialize: when
+# dns:query isn't the pipeline's last stage, its error is swallowed by a real,
+# separately-documented bug (see test-gaps.md's Job::eval() thread-join-gap entry)
+# instead of reaching this catch.
+$loop_error := ""
+try {
+    dns:query "loop.test" A nameserver=$ns port=$port
+} catch {
+    |$e| $loop_error = $e:message
+}
+echo "barrier"
+assert ($loop_error == "CNAME chain for `loop.test.` is too long (more than 8 hops)") \
+    "a self-referencing CNAME should error out once MAX_CNAME_DEPTH is hit"
+
+echo "dns query tests ok"

@@ -23,6 +23,7 @@ members = [
     "ordered_map",
     "grpc-service",
     "ssh-service",
+    "dns-service",
 ]
 
 [dependencies.test_finder]
