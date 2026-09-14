@@ -18,28 +18,39 @@ use crate::lang::state::this::This;
 #[signature(
     grpc.connect,
     can_block = true,
-    short = "Create a connection to a gRPC service)",
-    long = "This command currently uses grpcurl under the hood. It does not have a persistent gRPC connections and can therefore be slow."
+    short = "Create a connection to a gRPC service.",
+    long = "gRPC (https://grpc.io) is Google's open-source, high-performance RPC",
+    long = "framework, built on HTTP/2 and Protocol Buffers.",
+    long = "",
+    long = "Returns a struct with one member per RPC method the service exposes (call it",
+    long = "like `$conn:MethodName arg=value`), plus a `close` member that releases the",
+    long = "connection.",
+    long = "",
+    long = "This command currently uses grpcurl under the hood and does not keep a",
+    long = "persistent gRPC connection open, so repeated calls can be slow.",
+    example = "$conn := $(grpc:connect host=\"localhost\" service=\"reverse.Reverser\" plaintext=$true)",
+    example = "# Returns \"olleh\"",
+    example = "$conn:ReverseString input=\"hello\"",
 )]
 pub struct Connect {
-    #[description("Host to connect to.")]
+    #[description("the host to connect to.")]
     host: String,
 
     #[description(
-        "Service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use `*` to connect to all available services."
+        "the service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use `*` to connect to all available services."
     )]
     service: Patterns,
 
     #[default(false)]
-    #[description("Use plaintext to connect.")]
+    #[description("use plaintext instead of TLS to connect.")]
     plaintext: bool,
 
     #[default(Duration::seconds(5))]
-    #[description("Timeout for making calls.")]
+    #[description("the timeout for making calls.")]
     timeout: Duration,
 
     #[default(50051)]
-    #[description("Port to connect to.")]
+    #[description("the port to connect to.")]
     port: i128,
 }
 

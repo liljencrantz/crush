@@ -1419,17 +1419,31 @@ This command accepts the following arguments:
 
     grpc:connect host=string @ $(one_of $string $glob $re) [--plaintext] [timeout=duration] [port=integer]
 
-Create a connection to a gRPC service)
+Create a connection to a gRPC service.
 
-This command currently uses grpcurl under the hood. It does not have a persistent gRPC connections and can therefore be slow.
+gRPC (https://grpc.io) is Google's open-source, high-performance RPC
+framework, built on HTTP/2 and Protocol Buffers.
+
+Returns a struct with one member per RPC method the service exposes (call it
+like `$conn:MethodName arg=value`), plus a `close` member that releases the
+connection.
+
+This command currently uses grpcurl under the hood and does not keep a
+persistent gRPC connection open, so repeated calls can be slow.
 
 This command accepts the following arguments:
 
-* `host` Host to connect to.
-* `service` Service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use `*` to connect to all available services.
-* `plaintext` (default: `false`) Use plaintext to connect.
-* `timeout` (default: `$duration:of seconds=5`) Timeout for making calls.
-* `port` (default: `50051`) Port to connect to.
+* `host` the host to connect to.
+* `service` the service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use `*` to connect to all available services.
+* `plaintext` (default: `false`) use plaintext instead of TLS to connect.
+* `timeout` (default: `$duration:of seconds=5`) the timeout for making calls.
+* `port` (default: `50051`) the port to connect to.
+
+# Examples
+
+    $conn := $(grpc:connect host="localhost" service="reverse.Reverser" plaintext=$true)
+    # Returns "olleh"
+    $conn:ReverseString input="hello"
 
 ---
 

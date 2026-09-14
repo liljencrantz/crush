@@ -975,21 +975,31 @@ This command accepts the following arguments:
 [32mfs[0m[36m:[0m[32mwatch[0m [36m.[0m --recurse [36m|[0m [32mwhere[0m [36m{[0m[32mkind[0m [36m=[0m[36m=[0m [36m"Create(File)"[0m[36m}[0m
 
 [32mgrpc[0m[36m:[0m[32mconnect[0m [36mhost[0m[36m=[0m[36mstring[0m [36m@[0m [36m$([0m[36mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m [36m[[0m--plaintext[36m][0m [36m[[0m[36mtimeout[0m[36m=[0m[36mduration[0m[36m][0m [36m[[0m[36mport[0m[36m=[0m[36minteger[0m[36m][0m
-Create a connection to a gRPC service)
+Create a connection to a gRPC service.
 
-This command currently uses grpcurl under the hood. It does not have a 
-persistent gRPC connections and can therefore be slow.
+gRPC (https://grpc.io) is Google's open-source, high-performance RPC framework, 
+built on HTTP/2 and Protocol Buffers.
+
+Returns a struct with one member per RPC method the service exposes (call it 
+like [32m$conn:MethodName arg=value[0m), plus a [32mclose[0m member that releases the connection.
+
+This command currently uses grpcurl under the hood and does not keep a 
+persistent gRPC connection open, so repeated calls can be slow.
 
 This command accepts the following arguments:
 
- * [32mhost[0m      Host to connect to.
- * [32mservice[0m   Service to connect to on this host. This can be a string, a glob or a 
+ * [32mhost[0m      the host to connect to.
+ * [32mservice[0m   the service to connect to on this host. This can be a string, a glob or a 
              regular expression, in order to allow you to easily specify 
              multiple services, e.g. use [32m*[0m to connect to all available services.
- * [32mplaintext[0m (default: [32mfalse[0m) Use plaintext to connect.
- * [32mtimeout[0m   (default: [32m$duration:of seconds=5[0m) Timeout for making calls.
- * [32mport[0m      (default: [32m50051[0m) Port to connect to.
+ * [32mplaintext[0m (default: [32mfalse[0m) use plaintext instead of TLS to connect.
+ * [32mtimeout[0m   (default: [32m$duration:of seconds=5[0m) the timeout for making calls.
+ * [32mport[0m      (default: [32m50051[0m) the port to connect to.
 
+[4mExamples[0m
+[36m$conn[0m [36m:=[0m [36m$([0m[36mgrpc[0m[36m:[0m[36mconnect[0m [36mhost[0m[36m=[0m[36m"localhost"[0m [36mservice[0m[36m=[0m[36m"reverse.Reverser"[0m [36mplaintext[0m[36m=[0m[36m$true[0m[36m)[0m
+[33m# Returns "olleh"[0m
+[36m$conn[0m[36m:[0m[32mReverseString[0m [36minput[0m[36m=[0m[36m"hello"[0m
 
 [32mhost[0m[36m:[0m[32mbattery[0m
 List all batteries in the system and their status
