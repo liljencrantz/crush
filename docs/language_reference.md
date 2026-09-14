@@ -80,6 +80,12 @@ word of a command (i.e. the command name) is interpreted as a variable lookup ev
 without the leading `$` -- commands live in the same namespace as all other variables,
 which is why `$echo` and `echo` refer to the same value.
 
+A whole number immediately followed (no space) by one of `ns`, `ms`, `m`, `h`, or `s` is
+a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
+respectively -- e.g. `5s` is exactly `duration:of seconds=5`. There's no literal syntax
+for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
+duration values instead, e.g. `1h + 30m`.
+
 ## Expression mode
 
 Crush has a second syntax mode, entered with parentheses, for writing mathematical and

@@ -99,6 +99,7 @@ impl From<Token<'_>> for TrackedString {
             | Token::Regex(_, l)
             | Token::Integer(_, l)
             | Token::Float(_, l)
+            | Token::Duration(_, l)
             | Token::MemberOperator(l)
             | Token::Equals(l)
             | Token::Declare(l)

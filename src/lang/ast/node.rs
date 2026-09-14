@@ -6,11 +6,12 @@ use super::{CommandNode, JobListNode, JobNode, NodeContext, expand_user, propose
 use crate::lang::argument::{ArgumentDefinition, SwitchStyle};
 use crate::lang::command::{Command, ParameterDefinition};
 use crate::lang::command_invocation::CommandInvocation;
-use crate::lang::errors::{CrushResult, compile_error};
+use crate::lang::errors::{CrushResult, compile_error, error};
 use crate::lang::job::Job;
 use crate::lang::value::{Value, ValueDefinition};
 use crate::util::escape::{unescape, unescape_file};
 use crate::util::glob::Glob;
+use chrono::Duration as ChronoDuration;
 use regex::Regex;
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -40,6 +41,7 @@ pub enum Node {
     File(TrackedString, TextLiteralStyle),
     Integer(TrackedString),
     Float(TrackedString),
+    Duration(TrackedString),
     GetItem(Box<Node>, Box<Node>),
     GetAttr(Box<Node>, TrackedString),
     Substitution(JobListNode),
@@ -133,6 +135,7 @@ impl Node {
             | String(s, _)
             | Integer(s)
             | Float(s)
+            | Duration(s)
             | Regex(s)
             | File(s, _) => s.location,
 
@@ -170,6 +173,7 @@ impl Node {
             Node::File(_, _) => "file literal",
             Node::Integer(_) => "integer literal",
             Node::Float(_) => "floating point number literal",
+            Node::Duration(_) => "duration literal",
             Node::GetItem(_, _) => "subscript",
             Node::GetAttr(_, _) => "member access",
             Node::Substitution(_) => "command substitution",
@@ -261,6 +265,10 @@ impl Node {
             ),
             Node::Float(s) => ValueDefinition::Value(
                 Value::Float(s.string.replace("_", "").parse::<f64>()?),
+                ctx.source.subtrackedstring(s),
+            ),
+            Node::Duration(s) => ValueDefinition::Value(
+                Value::Duration(Node::parse_duration_literal(&s.string)?),
                 ctx.source.subtrackedstring(s),
             ),
             Node::GetAttr(node, identifier) => ValueDefinition::GetAttr(
@@ -499,6 +507,7 @@ impl Node {
             | Node::String(_, _)
             | Node::Integer(_)
             | Node::Float(_)
+            | Node::Duration(_)
             | Node::GetAttr(_, _)
             | Node::Substitution(_)
             | Node::Closure(_, _, _)
@@ -735,6 +744,37 @@ impl Node {
 
     pub fn float(is: impl Into<TrackedString>) -> Box<Node> {
         Box::from(Node::Float(is.into()))
+    }
+
+    pub fn duration(is: impl Into<TrackedString>) -> Box<Node> {
+        Box::from(Node::Duration(is.into()))
+    }
+
+    /// Parses a duration literal's raw text (e.g. `"5s"`, `"1_500ms"`) into a
+    /// `chrono::Duration`. The lexer (`src/lang/ast/lexer.rs`) only ever produces this
+    /// text with one of these five suffixes, so this mirrors `duration:of`
+    /// (`src/builtins/types/duration.rs`) exactly -- `5s` and
+    /// `$(duration:of seconds=5)` construct via the same `Duration::seconds` call and
+    /// are guaranteed equal, not just numerically close. Checked longest-suffix-first
+    /// (`ms`/`ns` before `m`/`s`) so e.g. `5ms` isn't misparsed as `5m` plus a stray `s`.
+    pub fn parse_duration_literal(text: &str) -> CrushResult<ChronoDuration> {
+        let (digits, constructor): (&str, fn(i64) -> ChronoDuration) =
+            if let Some(d) = text.strip_suffix("ns") {
+                (d, ChronoDuration::nanoseconds)
+            } else if let Some(d) = text.strip_suffix("ms") {
+                (d, ChronoDuration::milliseconds)
+            } else if let Some(d) = text.strip_suffix('h') {
+                (d, ChronoDuration::hours)
+            } else if let Some(d) = text.strip_suffix('m') {
+                (d, ChronoDuration::minutes)
+            } else if let Some(d) = text.strip_suffix('s') {
+                (d, ChronoDuration::seconds)
+            } else {
+                // Unreachable in practice: the lexer never emits Duration token text
+                // without one of the five suffixes handled above.
+                return error(format!("Invalid duration literal `{}`.", text));
+            };
+        Ok(constructor(digits.replace("_", "").parse::<i64>()?))
     }
 
     pub fn regex(is: impl Into<TrackedString>) -> Box<Node> {

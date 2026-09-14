@@ -148,6 +148,18 @@ impl<'input> Lexer<'input> {
                         }
                     }
 
+                    if !had_period {
+                        if let Some((n_chars, suffix_end)) =
+                            match_duration_suffix(&self.chars, string_or_file_or_glob_char)
+                        {
+                            for _ in 0..n_chars {
+                                self.chars.next();
+                            }
+                            let s = &self.full_str[i..suffix_end + 1];
+                            return Some(Token::Duration(s, Location::new(i, suffix_end + 1)).into());
+                        }
+                    }
+
                     let s = &self.full_str[i..end_idx + 1];
                     if had_period {
                         return Some(Token::Float(s, Location::new(i, end_idx + 1)).into());
@@ -551,6 +563,18 @@ impl<'input> Lexer<'input> {
                         }
                     }
 
+                    if !had_period {
+                        if let Some((n_chars, suffix_end)) =
+                            match_duration_suffix(&self.chars, identifier_char)
+                        {
+                            for _ in 0..n_chars {
+                                self.chars.next();
+                            }
+                            let s = &self.full_str[i..suffix_end + 1];
+                            return Some(Token::Duration(s, Location::new(i, suffix_end + 1)).into());
+                        }
+                    }
+
                     let s = &self.full_str[i..end_idx + 1];
                     if had_period {
                         return Some(Token::Float(s, Location::new(i, end_idx + 1)).into());
@@ -682,6 +706,44 @@ fn number_or_underscore_char(ch: char) -> bool {
 
 fn whitespace_char(ch: char) -> bool {
     (ch == ' ') || (ch == '\r')
+}
+
+/// If `chars`, positioned right after an integer literal's last digit, begins with one
+/// of the duration unit suffixes (nanoseconds/milliseconds/minutes/hours/seconds) and
+/// that suffix isn't itself the start of a longer word (e.g. "5seconds" must lex as the
+/// integer `5` followed by the bareword `seconds`, not `5s` glued to a stray `econds`,
+/// per `is_word_char` -- the same continuation-character predicate the calling mode
+/// already uses for barewords/identifiers), returns the suffix's length in chars and
+/// the byte index of its last char. Two-char suffixes are tried before their one-char
+/// prefixes (`ms`/`ns` before `m`/`s`) so a real `ms`/`ns` is never cut short.
+fn match_duration_suffix(
+    chars: &Peekable<CharIndices>,
+    is_word_char: fn(char) -> bool,
+) -> Option<(usize, usize)> {
+    for suffix in ["ns", "ms", "h", "m", "s"] {
+        let mut lookahead = chars.clone();
+        let mut last_idx = None;
+        let mut matched = true;
+        for expected in suffix.chars() {
+            match lookahead.next() {
+                Some((idx, ch)) if ch == expected => last_idx = Some(idx),
+                _ => {
+                    matched = false;
+                    break;
+                }
+            }
+        }
+        if matched {
+            let boundary_ok = match lookahead.peek() {
+                Some((_, ch)) => !is_word_char(*ch),
+                None => true,
+            };
+            if boundary_ok {
+                return Some((suffix.chars().count(), last_idx.unwrap()));
+            }
+        }
+    }
+    None
 }
 
 impl<'input> Iterator for Lexer<'input> {

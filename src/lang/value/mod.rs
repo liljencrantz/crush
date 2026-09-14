@@ -150,7 +150,7 @@ impl Repr for Value {
                 f.write_str("'")
             }
             Value::List(_) => panic!(),
-            Value::Duration(_) => panic!(),
+            Value::Duration(d) => repr_duration(f, d),
             Value::Scope(env) => env.fmt(f),
             Value::Bool(v) => std::fmt::Display::fmt(if *v { "$true" } else { "$false" }, f),
             Value::Dict(_) => panic!(),
@@ -165,6 +165,27 @@ impl Repr for Value {
             | Value::BinaryInputStream(_) => panic!(),
             Value::Empty => panic!(),
         }
+    }
+}
+
+/// Renders a duration back as a single duration literal (see the lexer's
+/// `match_duration_suffix` and `Node::parse_duration_literal`), choosing the largest
+/// unit that reproduces the duration exactly -- e.g. `5s` rather than `5000ms`, both of
+/// which round-trip, but only one of which a human would have actually written. Falls
+/// back to nanoseconds, chrono's own finest granularity, which always divides evenly
+/// and so always terminates this search.
+fn repr_duration(f: &mut Formatter<'_>, d: &Duration) -> std::fmt::Result {
+    let whole = |ctor: fn(i64) -> Duration, count: i64| (ctor(count) == *d).then_some(count);
+    if let Some(h) = whole(Duration::hours, d.num_hours()) {
+        write!(f, "{}h", h)
+    } else if let Some(m) = whole(Duration::minutes, d.num_minutes()) {
+        write!(f, "{}m", m)
+    } else if let Some(s) = whole(Duration::seconds, d.num_seconds()) {
+        write!(f, "{}s", s)
+    } else if let Some(ms) = whole(Duration::milliseconds, d.num_milliseconds()) {
+        write!(f, "{}ms", ms)
+    } else {
+        write!(f, "{}ns", d.num_nanoseconds().unwrap_or(d.num_milliseconds()))
     }
 }
 

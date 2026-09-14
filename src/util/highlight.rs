@@ -213,7 +213,7 @@ fn get_color<'a>(
         Glob(_, _) => colors.get("glob_literal"),
         Comment(_, _) => colors.get("comment"),
         File(_, _) | QuotedFile(_, _) => colors.get("file_literal"),
-        Float(_, _) | Integer(_, _) => colors.get("numeric_literal"),
+        Float(_, _) | Integer(_, _) | Duration(_, _) => colors.get("numeric_literal"),
         Unnamed(_)
         | Named(_)
         | Pipe(_)
@@ -291,6 +291,7 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
         Token::Regex(_, _) => Some(ValueType::Regex),
         Token::Integer(_, _) => Some(ValueType::Integer),
         Token::Float(_, _) => Some(ValueType::Float),
+        Token::Duration(_, _) => Some(ValueType::Duration),
         Token::MemberOperator(_) => None,
         Token::Equals(_) => None,
         Token::Declare(_) => None,

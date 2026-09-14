@@ -134,6 +134,7 @@ ExprItem: Box<Node> = {
     <s:String> => Node::unquoted_string(s),
     <i:Integer> => Node::integer(i),
     <f:Float> => Node::float(f),
+    <d:Duration> => Node::duration(d),
     <e:Return> => Node::return_expr(e),
     <e:Break> => Node::break_expr(e),
     <e:Continue> => Node::continue_expr(e),
@@ -303,6 +304,7 @@ Item: Box<Node> = {
     <l:QuotedString> => Node::quoted_string(l),
     <l:Integer> => Node::integer(l),
     <l:Float> => Node::float(l),
+    <l:Duration> => Node::duration(l),
     <l:Flag> => {
         let ts = TrackedString::from(l);
         Box::from(
@@ -361,6 +363,7 @@ extern {
         Separator=> Token::Separator(<&'input str>, <Location>),
         Integer=> Token::Integer(<&'input str>, <Location>),
         Float=> Token::Float(<&'input str>, <Location>),
+        Duration=> Token::Duration(<&'input str>, <Location>),
         SubStart=> Token::SubStart(<Location>),
         SubEnd=> Token::SubEnd(<Location>),
         BlockStart=> Token::BlockStart(<Location>),

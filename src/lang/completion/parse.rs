@@ -260,6 +260,10 @@ fn fetch_value(node: &Node, scope: &Scope, is_command: bool) -> CrushResult<Opti
             s.string.replace("_", "").parse::<f64>()?,
         ))),
 
+        Node::Duration(s) => Ok(Some(Value::Duration(Node::parse_duration_literal(
+            &s.string,
+        )?))),
+
         Node::Glob(f) => Ok(Some(Value::Glob(Glob::new(&f.string)))),
 
         Node::Regex(r) => Ok(Some(Value::Regex(r.string.clone(), Regex::new(&r.string)?))),

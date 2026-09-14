@@ -24,6 +24,7 @@ pub enum Token<'input> {
     Regex(&'input str, Location),
     Integer(&'input str, Location),
     Float(&'input str, Location),
+    Duration(&'input str, Location),
     MemberOperator(Location),
     Equals(Location),
     Declare(Location),
@@ -66,6 +67,7 @@ impl Token<'_> {
             | Token::Regex(_, l)
             | Token::Integer(_, l)
             | Token::Float(_, l)
+            | Token::Duration(_, l)
             | Token::MemberOperator(l)
             | Token::Equals(l)
             | Token::Declare(l)
@@ -113,6 +115,7 @@ impl Token<'_> {
             | Token::Regex(s, _)
             | Token::Integer(s, _)
             | Token::Separator(s, _)
+            | Token::Duration(s, _)
             | Token::Float(s, _) => s,
             Token::MemberOperator(_) => ":",
             Token::Equals(_) => "=",
@@ -197,6 +200,7 @@ mod tests {
             ("^(foo)", Command, Token::Regex("", loc)),
             ("5", Command, Token::Integer("", loc)),
             ("5.0", Command, Token::Float("", loc)),
+            ("5s", Command, Token::Duration("", loc)),
             (":", Command, Token::MemberOperator(loc)),
             ("=", Command, Token::Equals(loc)),
             (":=", Command, Token::Declare(loc)),
@@ -264,6 +268,7 @@ mod tests {
                 | Token::Regex(..)
                 | Token::Integer(..)
                 | Token::Float(..)
+                | Token::Duration(..)
                 | Token::MemberOperator(..)
                 | Token::Equals(..)
                 | Token::Declare(..)
@@ -313,6 +318,7 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             | Token::Integer(_, l)
             | Token::ComparisonOperator(_, l)
             | Token::Float(_, l)
+            | Token::Duration(_, l)
             | Token::MemberOperator(l)
             | Token::Equals(l)
             | Token::Declare(l)

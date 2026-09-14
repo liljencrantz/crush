@@ -169,6 +169,7 @@ impl Parser {
                 Token::Regex(_, _) => {}
                 Token::Integer(_, _) => {}
                 Token::Float(_, _) => {}
+                Token::Duration(_, _) => {}
                 Token::Separator(_, _) => {}
                 Token::For(_) => {}
                 Token::While(_) => {}
