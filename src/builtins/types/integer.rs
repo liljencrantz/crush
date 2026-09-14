@@ -42,16 +42,26 @@ struct Add {
     term: Number,
 }
 
-binary_op!(
-    __add__,
-    integer,
-    Integer,
-    Integer,
-    |a, b| a + b,
-    Float,
-    Float,
-    |a, b| a as f64 + b
-);
+// Not implemented via binary_op! like __div__/rem/mod below: integer overflow panics in
+// Rust unless checked explicitly, and binary_op!'s $operation is a plain closure with no
+// room to return an error instead of a value. Checked here so overflow becomes a normal,
+// catchable error instead of a panic. Float addition can't overflow this way -- IEEE 754
+// saturates to infinity -- so that arm is unchanged.
+fn __add__(mut context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let this = context.this.integer()?;
+    match context.arguments.value(0)? {
+        Value::Integer(v) => match this.checked_add(v) {
+            Some(res) => context.output.send(Value::Integer(res)),
+            None => command_error("Integer overflow"),
+        },
+        Value::Float(v) => context.output.send(Value::Float(this as f64 + v)),
+        other => command_error(format!(
+            "Incompatible argument type `{}` for arithmetic operation.",
+            other.value_type()
+        )),
+    }
+}
 
 #[signature(
     types.integer.__sub__,
@@ -64,16 +74,23 @@ struct Sub {
     #[description("the number to subtract")]
     term: Number,
 }
-binary_op!(
-    __sub__,
-    integer,
-    Integer,
-    Integer,
-    |a, b| a - b,
-    Float,
-    Float,
-    |a, b| a as f64 - b
-);
+
+// See __add__ above for why this isn't binary_op!.
+fn __sub__(mut context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let this = context.this.integer()?;
+    match context.arguments.value(0)? {
+        Value::Integer(v) => match this.checked_sub(v) {
+            Some(res) => context.output.send(Value::Integer(res)),
+            None => command_error("Integer overflow"),
+        },
+        Value::Float(v) => context.output.send(Value::Float(this as f64 - v)),
+        other => command_error(format!(
+            "Incompatible argument type `{}` for arithmetic operation.",
+            other.value_type()
+        )),
+    }
+}
 
 #[signature(
     types.integer.__mul__,
@@ -87,16 +104,22 @@ struct Mul {
     term: Number,
 }
 
-binary_op!(
-    __mul__,
-    integer,
-    Integer,
-    Integer,
-    |a, b| a * b,
-    Float,
-    Float,
-    |a, b| a as f64 * b
-);
+// See __add__ above for why this isn't binary_op!.
+fn __mul__(mut context: CommandContext) -> CrushResult<()> {
+    context.arguments.check_len(1)?;
+    let this = context.this.integer()?;
+    match context.arguments.value(0)? {
+        Value::Integer(v) => match this.checked_mul(v) {
+            Some(res) => context.output.send(Value::Integer(res)),
+            None => command_error("Integer overflow"),
+        },
+        Value::Float(v) => context.output.send(Value::Float(this as f64 * v)),
+        other => command_error(format!(
+            "Incompatible argument type `{}` for arithmetic operation.",
+            other.value_type()
+        )),
+    }
+}
 
 #[signature(
     types.integer.__div__,
@@ -207,9 +230,12 @@ struct Neg {}
 
 fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(0)?;
-    context
-        .output
-        .send(Value::Integer(-context.this.integer()?))
+    // i128::MIN has no positive counterpart representable as an i128 -- negating it
+    // panics unless checked explicitly, same as the overflow cases in __add__ etc above.
+    match context.this.integer()?.checked_neg() {
+        Some(res) => context.output.send(Value::Integer(res)),
+        None => command_error("Integer overflow"),
+    }
 }
 
 #[signature(

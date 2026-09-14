@@ -1,0 +1,50 @@
+# Integer +/-/*/neg/math:abs used to panic on overflow (Rust panics on integer overflow
+# in debug builds, silently wraps in release -- neither is acceptable) instead of
+# returning a proper, catchable error. __add__/__sub__/__mul__ were pulled out of the
+# shared binary_op! macro (which has no way to return an error from its $operation
+# closure, same reason __div__/rem/mod were pulled out for division by zero) and
+# rewritten with checked_add/checked_sub/checked_mul. __neg__ and math:abs both hit the
+# same failure on i128::MIN specifically (it has no positive counterpart representable
+# as an i128), fixed with checked_neg/checked_abs.
+#
+# i128::MAX has no literal way to write i128::MIN's absolute value directly (it's one
+# larger than i128::MAX, so it can't be parsed as a positive i128 literal at all) -- it's
+# built here via subtraction instead: 0 - MAX - 1 == MIN.
+$max := 170141183460469231731687303715884105727
+$min := ((0 - $max) - 1)
+
+$add_errored := $false
+try { $max:__add__ 1 } catch { |$e| $add_errored = $true }
+assert $add_errored "integer addition overflowing past i128::MAX should error, not panic"
+
+$sub_errored := $false
+try { $min:__sub__ 1 } catch { |$e| $sub_errored = $true }
+assert $sub_errored "integer subtraction underflowing past i128::MIN should error, not panic"
+
+$mul_errored := $false
+try { $max:__mul__ 2 } catch { |$e| $mul_errored = $true }
+assert $mul_errored "integer multiplication overflowing past i128::MAX should error, not panic"
+
+$neg_errored := $false
+try { $min:__neg__ } catch { |$e| $neg_errored = $true }
+assert $neg_errored "negating i128::MIN should error, not panic"
+
+$abs_errored := $false
+try { math:abs $min } catch { |$e| $abs_errored = $true }
+assert $abs_errored "math:abs of i128::MIN should error, not panic"
+
+# Ordinary arithmetic, well within range, still works normally.
+assert ($(2:__add__ 3) == 5) "ordinary integer addition should still work"
+assert ($(10:__sub__ 4) == 6) "ordinary integer subtraction should still work"
+assert ($(6:__mul__ 7) == 42) "ordinary integer multiplication should still work"
+assert ($(5:__neg__) == (0 - 5)) "ordinary integer negation should still work"
+assert ($(math:abs (0 - 5)) == 5) "ordinary math:abs should still work"
+assert ($((2 + 3)) == 5) "the + operator should still work for ordinary addition"
+assert ($((10 - 4)) == 6) "the - operator should still work for ordinary subtraction"
+assert ($((6 * 7)) == 42) "the * operator should still work for ordinary multiplication"
+
+# Mixing with a float never overflows this way -- IEEE 754 saturates to infinity instead
+# of panicking -- so that path is unaffected and still works even at i128::MAX.
+assert ($(typeof $($max:__add__ 1.0)) == $float) "adding a float to i128::MAX should still work, returning a float"
+
+echo "integer overflow tests ok"

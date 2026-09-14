@@ -1,5 +1,5 @@
 use crate::lang::command::OutputType::{Known, Unknown};
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::number::Number;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -165,7 +165,12 @@ pub struct Abs {
 fn abs(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Abs = Abs::parse(context.remove_arguments(), &context.global_state.printer())?;
     context.output.send(match cfg.number {
-        Number::Integer(i) => Value::Integer(i.abs()),
+        // i128::MIN has no positive counterpart representable as an i128 -- i.abs()
+        // panics on it unless checked explicitly.
+        Number::Integer(i) => match i.checked_abs() {
+            Some(res) => Value::Integer(res),
+            None => return command_error("Integer overflow"),
+        },
         Number::Float(f) => Value::Float(f.abs()),
     })
 }
