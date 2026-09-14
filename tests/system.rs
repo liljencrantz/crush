@@ -157,37 +157,4 @@ fn stop_test_servers() {
     }
 }
 
-#[test]
-fn test_remote_host_file() {
-    // remote:host:list/remote:host:remove (src/builtins/remote.rs) never connect
-    // anywhere -- they just read/rewrite a known_hosts file -- so a static fixture is
-    // enough; unlike the ssh-service-backed tests, no live server is involved. Three
-    // throwaway public keys, generated once with `ssh-keygen -t ed25519`/`-t rsa` and
-    // never used to authenticate anywhere; public keys carry no secret material.
-    const FIXTURE: &str = "\
-host-a.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHFWjNefhOjX7XiOQ7/66ALKB6ru8AaaMJCxQlpp9KuQ
-host-b.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDrlzEyFYijCFoXNf3SLmwDUT8DQwxEVtdb6dQ/ajL89
-host-c.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRSEVxK2sm2QXPbIzufX9EvwiQWZeduizmKDayFO2d02L7H5iKbcO8TjKz5zCoNfcdp1weEGdm0YQ+L85vTGjpv3CYbA8YtbLoFXslxi4TcCWBZ1qZHCeDsSY4jWmdXQMRlOwrtK19qLoCnDgqvtLQMU+/YWZpAWFVm3crWiRLgFCIet+MpDggmujlWMAeZ1HnmcI7suGQeYx7ufiuKsWsST4ks+O/n3dKzpi4WEK7Z/Bd3ZA8UpBWvmiezllKooA82QqzEb1VYCTkmnaHgaIsigHnQKVTUtiN196ot3n0waHGNrGYmka8/ukbtv9emAD2A5+pceWEt2/s36x9FrCr
-";
-
-    // A fresh copy every run -- host:remove mutates the file, so this must never point
-    // at the fixture text's own (nonexistent) source location.
-    let path = std::env::temp_dir().join("crush_test_host_list_remove_known_hosts");
-    fs::write(&path, FIXTURE).expect("failed to write known_hosts fixture");
-
-    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
-        .args(&["tests/remote/host_list_remove.crush"])
-        .env("CRUSH_TEST_HOST_FIXTURE", &path)
-        .output()
-        .expect("failed to execute process");
-
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "host_list_remove.crush failed.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
-    );
-}
-
 test_finder!();

@@ -1,12 +1,15 @@
 # remote:host:list/remote:host:remove operate purely on a known_hosts FILE
 # (Session::new() with no connect/handshake involved) -- no live server needed, unlike
-# ssh_exec*.crush in this directory. See tests/system.rs's test_remote_host_file, which
-# writes a static fixture (three throwaway public keys, generated once with
-# `ssh-keygen` and never used to authenticate anywhere) to a temp file and passes its
-# path in via CRUSH_TEST_HOST_FIXTURE -- host:remove mutates its known_hosts file, so
-# this must not run against a git-tracked path directly.
+# ssh_exec*.crush. Three throwaway public keys, generated once with `ssh-keygen -t
+# ed25519`/`-t rsa` and never used to authenticate anywhere; public keys carry no secret
+# material. Written fresh at the start of this script rather than checked in as a
+# static fixture, since host:remove mutates the file.
 
-$host_file := $(crush:env["CRUSH_TEST_HOST_FIXTURE"])
+$host_file := $(convert $file "./.host_list_remove_known_hosts")
+bin:from "host-a.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHFWjNefhOjX7XiOQ7/66ALKB6ru8AaaMJCxQlpp9KuQ
+host-b.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDrlzEyFYijCFoXNf3SLmwDUT8DQwxEVtdb6dQ/ajL89
+host-c.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRSEVxK2sm2QXPbIzufX9EvwiQWZeduizmKDayFO2d02L7H5iKbcO8TjKz5zCoNfcdp1weEGdm0YQ+L85vTGjpv3CYbA8YtbLoFXslxi4TcCWBZ1qZHCeDsSY4jWmdXQMRlOwrtK19qLoCnDgqvtLQMU+/YWZpAWFVm3crWiRLgFCIet+MpDggmujlWMAeZ1HnmcI7suGQeYx7ufiuKsWsST4ks+O/n3dKzpi4WEK7Z/Bd3ZA8UpBWvmiezllKooA82QqzEb1VYCTkmnaHgaIsigHnQKVTUtiN196ot3n0waHGNrGYmka8/ukbtv9emAD2A5+pceWEt2/s36x9FrCr
+" | bin:to $host_file
 
 $before := $(remote:host:list host_file=$host_file | materialize)
 $before_count := $($before | count)
@@ -36,3 +39,6 @@ assert ($removed_rest == 2) "removing by host glob should match and remove both 
 $final := $(remote:host:list host_file=$host_file | materialize)
 $final_count := $($final | count)
 assert ($final_count == 0) "the known_hosts file should now be empty"
+
+$host_file:remove
+echo "host list remove ok"
