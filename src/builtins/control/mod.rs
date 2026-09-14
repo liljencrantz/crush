@@ -5,9 +5,9 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushResult, command_error, terminate, throw_error};
 use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
-use crate::lang::pipe::pipe;
+use crate::lang::pipe::{empty_channel, pipe};
 use crate::lang::signature::binary_input::BinaryInput;
-use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::contexts::{CommandContext, JobContext};
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, value::Value, value::ValueType};
@@ -211,8 +211,40 @@ fn timeout(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Timeout = Timeout::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let (child_output, child_input) = pipe();
-    let child_context = context.empty().with_output(child_output);
     let job_id = context.command_handle().job_handle.id();
+
+    // A genuinely separate, freshly nested job for the child -- not just this same job
+    // reused (which `context.empty()` would give). This job's own can-block invocation
+    // was itself spawned via ThreadStore::spawn, which registers a JobController under
+    // this exact job/command id (see command.register(...) there); if `cfg.command`
+    // were a bare, non-closure command, it would inherit that identical CommandHandle
+    // and its own controller would land in the very same slot. This loop's own
+    // termination calls below would then be unable to target the child without also
+    // signaling this command's own outer registration -- confirmed as a real,
+    // deterministically-reproducible bug (see tests/timeout_variable_duration.crush's
+    // history): a stale self-directed Terminate sent while this loop is still running
+    // sits queued until whoever later joins this command's own outer thread does so,
+    // at which point InterruptibleJoinHandle::join()'s crossbeam::select! races it
+    // against this function's real return value and can discard the real one. Giving
+    // the child its own job side-steps the collision entirely, for both a closure body
+    // (which already creates its own nested job or jobs regardless, via eval_inner) and
+    // a bare command alike.
+    let child_job = JobContext::new_nested(
+        empty_channel(),
+        child_output,
+        context.scope.clone(),
+        context.global_state.clone(),
+        context.job_type,
+        job_id,
+    );
+    let child_context = child_job.command_context(&context.source, vec![], None)?;
+    // command_context() clones its own output sender into child_context rather than
+    // moving it, so child_job would otherwise keep an extra, unused clone of
+    // child_output alive for the rest of this function -- which would keep the
+    // child_output/child_input pipe looking "connected" even after the real child
+    // thread (and its own real clone) exits, defeating the disconnect detection below
+    // entirely.
+    drop(child_job);
 
     let thread_id = context.global_state.threads().spawn(
         "timeout",
@@ -232,13 +264,14 @@ fn timeout(mut context: CommandContext) -> CrushResult<()> {
             Ok(())
         }
         Err(_) => {
-            // `command` almost always runs its own body as one or more freshly nested
-            // jobs with their own distinct ids (e.g. a closure's `eval_inner` does this
-            // for every statement in its body) -- that's where a cooperating command
-            // like `sleep` actually registers its controller, not under this job's own
-            // id, so terminating just this job would silently do nothing. Reach every
-            // job descended from this one too. Also resent periodically for a grace
-            // window: a single attempt can race a command that hasn't finished
+            // `command` runs as its own freshly nested job (`child_job` above), and
+            // almost always creates further nested jobs of its own too (e.g. a
+            // closure's `eval_inner` does this for every statement in its body) --
+            // that's where a cooperating command like `sleep` actually registers its
+            // controller. Reach every job descended from `job_id` (deliberately never
+            // `job_id` itself -- see child_job's own comment above for why that's not
+            // just unnecessary but actively wrong). Also resent periodically for a
+            // grace window: a single attempt can race a command that hasn't finished
             // registering yet (e.g. one still spinning up on its spawned thread), which
             // would otherwise lose the signal and let a cooperating command run to
             // completion anyway. A command that never registers a controller at all
@@ -250,7 +283,6 @@ fn timeout(mut context: CommandContext) -> CrushResult<()> {
             let grace_start = std::time::Instant::now();
             loop {
                 let jobs = context.global_state.jobs();
-                let _ = context.global_state.terminate(job_id);
                 for j in &jobs {
                     if j.id != job_id && is_descendant_job(&jobs, job_id, j.id) {
                         let _ = context.global_state.terminate(j.id);
