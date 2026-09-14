@@ -10,3 +10,4 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread", "process", "io
 russh = "0.45"
 async-trait = "0.1"
 anyhow = "1"
+ed25519-dalek = "2"

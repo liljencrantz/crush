@@ -1,0 +1,21 @@
+# A known_hosts entry that doesn't match the server's actual host key must be a hard
+# error (the CheckResult::Mismatch branch in remote.rs's run_remote()) -- never silently
+# connect anyway. The fixture below is the same fixed, committed host key ssh-service
+# always uses (see ssh-service/src/main.rs) with a few of the key's base64 characters
+# corrupted, still valid base64 of the same length, so this is a real
+# CheckResult::Mismatch rather than a key-parse failure.
+
+$host_file := $(convert $file "./.ssh_known_hosts_mismatch")
+bin:from "127.0.0.1 ssh-ed25519 XXXXXXNzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
+
+$msg := ""
+try {
+    remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$host_file
+} catch {
+    |$e| $msg = $e:message
+}
+assert ($($msg:len) > 0) "a host-key mismatch should be a caught, non-empty error"
+assert $(like $msg *mismatch*) ("expected a host-key mismatch error, got: {}":format($msg))
+
+$host_file:remove
+echo "ssh exec mismatch ok"

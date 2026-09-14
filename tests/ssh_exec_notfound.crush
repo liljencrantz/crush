@@ -1,0 +1,17 @@
+# A host missing from known_hosts, with allow_not_found left at its default false, must
+# be a hard error rather than silently trusting an unverified host key.
+
+$host_file := $(convert $file "./.ssh_known_hosts_notfound")
+bin:from "" | bin:to $host_file
+
+$msg := ""
+try {
+    remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$host_file
+} catch {
+    |$e| $msg = $e:message
+}
+assert ($($msg:len) > 0) "a missing known_hosts entry should be a caught, non-empty error"
+assert $(like $msg *known*host*) ("expected a missing-from-known-hosts error, got: {}":format($msg))
+
+$host_file:remove
+echo "ssh exec notfound ok"

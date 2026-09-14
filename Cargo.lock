@@ -690,6 +690,7 @@ dependencies = [
  "chrono",
  "const_format",
  "crossbeam",
+ "ctor",
  "dbus",
  "dirs",
  "escargot",
@@ -771,6 +772,16 @@ checksum = "b6bd9c8e659a473bce955ae5c35b116af38af11a7acb0b480e01f3ed348aeb40"
 dependencies = [
  "cfg-if",
  "memchr",
+]
+
+[[package]]
+name = "ctor"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
+dependencies = [
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -3821,6 +3832,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "ed25519-dalek",
  "russh",
  "tokio",
 ]

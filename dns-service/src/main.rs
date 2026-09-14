@@ -126,15 +126,16 @@ fn handle_tcp(mut stream: TcpStream) {
     }
 }
 
-fn main() {
-    let udp = UdpSocket::bind("127.0.0.1:0").expect("failed to bind UDP socket");
-    let port = udp.local_addr().unwrap().port();
-    let tcp = TcpListener::bind(("127.0.0.1", port)).expect("failed to bind TCP socket");
+/// Fixed rather than OS-assigned: tests/dns_query.crush is a plain, auto-discovered
+/// golden test with no custom Rust wiring to hand it a dynamically chosen port, so both
+/// sides just agree on this one ahead of time (matching grpc-service's fixed 50051).
+const BIND_PORT: u16 = 20053;
 
-    // tests/system.rs synchronizes on this line before pointing the crush client at us.
-    println!("PORT:{}", port);
-    use std::io::Write as _;
-    std::io::stdout().flush().unwrap();
+fn main() {
+    let udp =
+        UdpSocket::bind(("127.0.0.1", BIND_PORT)).expect("failed to bind UDP socket");
+    let tcp =
+        TcpListener::bind(("127.0.0.1", BIND_PORT)).expect("failed to bind TCP socket");
 
     std::thread::spawn(move || serve_tcp(tcp));
 

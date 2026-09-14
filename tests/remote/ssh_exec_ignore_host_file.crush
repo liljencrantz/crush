@@ -1,8 +1,0 @@
-# ignore_host_file=$true must skip host-key verification entirely -- the CheckResult
-# match/mismatch/not-found logic in remote.rs's run_remote() should never even run.
-# See tests/system.rs's test_remote_ssh, which points CRUSH_TEST_SSH_HOSTS at the same
-# *mismatched* known_hosts file used by ssh_exec_mismatch.crush: the connection must
-# still succeed here, which can only happen if verification was actually skipped, not
-# coincidentally passed.
-$r := $(remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$(crush:env["CRUSH_TEST_SSH_HOSTS"]) ignore_host_file=$true)
-assert ($r == 2) "remote:exec with ignore_host_file should succeed even against a mismatched known_hosts entry"

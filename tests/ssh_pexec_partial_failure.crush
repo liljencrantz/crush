@@ -3,11 +3,13 @@
 # but every other, perfectly reachable host that thread's worker would otherwise have
 # gone on to attempt. Fixed to report a per-host failure as a warning and keep going.
 # This exercises the fix against the real local ssh-service test server (see
-# tests/system.rs's test_remote_ssh): one unreachable host mixed in with reachable ones,
-# with parallel=1 so a single worker thread must survive the failure and keep draining
-# the queue by itself.
+# ssh-service/, started once for the whole test binary via tests/system.rs's ctor-based
+# setup): one unreachable host mixed in with reachable ones, with parallel=1 so a single
+# worker thread must survive the failure and keep draining the queue by itself.
 
-$host_file := $(crush:env["CRUSH_TEST_SSH_HOSTS"])
+$host_file := $(convert $file "./.ssh_known_hosts_pexec")
+bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
+
 $addr := "127.0.0.1:2849"
 $bad_addr := "127.0.0.1:1"
 $user := "crushtest"
@@ -23,3 +25,6 @@ assert ($warning_count == 1) "the unreachable host's failure should be reported 
 
 $messages := $($warnings | select message | list:collect)
 assert ($($($messages[0]):starts_with "Failed to run command on host 127.0.0.1:1.")) "the warning should name the host that failed"
+
+$host_file:remove
+echo "ssh pexec partial failure ok"

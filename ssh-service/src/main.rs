@@ -1,18 +1,29 @@
-// A minimal, test-only SSH server used by `tests/system.rs`'s `test_remote_ssh` to exercise
-// `remote:exec`/`remote:pexec` end to end. On every accepted "exec" channel it spawns the
-// real local `crush --pup` binary and pipes the SSH channel's data straight to and from that
-// child process's stdin/stdout -- so what's actually being tested is our own ssh2-based
-// client code (host key checking, auth) driving a real pup protocol round trip, not a
+// A minimal, test-only SSH server used by `tests/system.rs` to exercise `remote:exec`/
+// `remote:pexec` end to end. On every accepted "exec" channel it spawns the real local
+// `crush --pup` binary and pipes the SSH channel's data straight to and from that child
+// process's stdin/stdout -- so what's actually being tested is our own ssh2-based client
+// code (host key checking, auth) driving a real pup protocol round trip, not a
 // reimplementation of that protocol inside the test server.
 //
-// Deliberately NOT hardened: fixed, well-known credentials, a fresh host key generated (and
-// printed) on every run, no rate limiting. This binary only ever binds 127.0.0.1 and only
-// exists for the test suite -- see `src/builtins/remote.rs` for the production client code
-// this exercises.
+// Deliberately NOT hardened: fixed, well-known credentials, a fixed host key, no rate
+// limiting. This binary only ever binds 127.0.0.1 and only exists for the test suite --
+// see `src/builtins/remote.rs` for the production client code this exercises.
+//
+// The host key is a fixed, committed seed rather than freshly generated per run: there's
+// no security reason to rotate it (this server is never reachable from outside the test
+// run, and is deliberately unhardened already), and a fixed key lets the known_hosts
+// fixtures the test suite verifies against (see tests/ssh_exec*.crush) be plain,
+// self-contained literals instead of something Rust has to generate and hand to them
+// via stdout on every run. Its corresponding known_hosts line is:
+//   127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef
+const HOST_KEY_SEED: [u8; 32] = [
+    0x69, 0xbf, 0x27, 0x57, 0x10, 0xc0, 0x98, 0xc0, 0x92, 0x5d, 0x82, 0x11, 0xa7, 0xeb, 0x65, 0x91,
+    0x69, 0x35, 0x0c, 0xfa, 0x32, 0xcc, 0xfd, 0xa1, 0x7d, 0x91, 0x9a, 0x29, 0x84, 0xd9, 0x34, 0x85,
+];
 
 use async_trait::async_trait;
+use ed25519_dalek::SigningKey;
 use russh::keys::key;
-use russh::keys::PublicKeyBase64;
 use russh::server::{Auth, Config, Handler, Msg, Server as _, Session};
 use russh::{Channel, ChannelId, CryptoVec};
 use std::collections::HashMap;
@@ -23,7 +34,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::{ChildStdin, Command as TokioCommand};
 use tokio::sync::Mutex;
 
-/// Must match the `username=`/`password=` arguments `tests/remote/*.crush` passes to
+/// Must match the `username=`/`password=` arguments `tests/ssh_exec*.crush` passes to
 /// `remote:exec`/`remote:pexec`.
 const TEST_USER: &str = "crushtest";
 const TEST_PASSWORD: &str = "crushtest-password";
@@ -37,21 +48,7 @@ async fn main() {
         .nth(1)
         .unwrap_or_else(|| "./target/debug/crush".to_string());
 
-    let key_pair = key::KeyPair::generate_ed25519().expect("failed to generate host key");
-    let public_key = key_pair
-        .clone_public_key()
-        .expect("failed to clone public key");
-
-    // Printed so the test harness (which needs to pre-populate a known_hosts file to
-    // exercise the Match/Mismatch/NotFound host-key-checking paths) can pick up this run's
-    // host key without either side hardcoding key material.
-    println!(
-        "KNOWN_HOSTS_LINE:{} {} {}",
-        BIND_ADDR,
-        public_key.name(),
-        public_key.public_key_base64()
-    );
-    println!("LISTENING:{}:{}", BIND_ADDR, BIND_PORT);
+    let key_pair = key::KeyPair::Ed25519(SigningKey::from_bytes(&HOST_KEY_SEED));
 
     let config = Arc::new(Config {
         keys: vec![key_pair],

@@ -1,9 +1,9 @@
 # Exercises dns:query/dns:query_reverse against the dns-service test server (see
-# dns-service/ and tests/system.rs's test_dns, which starts it fresh each run on a
-# random loopback port and passes it in via CRUSH_TEST_DNS_PORT) across every record
-# type the builtin supports, both transports, and the CNAME-follow/CNAME-loop paths.
+# dns-service/), started once for the whole test binary via tests/system.rs's ctor-based
+# setup on a fixed port (see dns-service/src/main.rs), across every record type the
+# builtin supports, both transports, and the CNAME-follow/CNAME-loop paths.
 
-$port := $(convert $integer $(crush:env["CRUSH_TEST_DNS_PORT"]))
+$port := 20053
 $ns := "127.0.0.1"
 
 $a := $(dns:query "a.test" A nameserver=$ns port=$port | materialize)

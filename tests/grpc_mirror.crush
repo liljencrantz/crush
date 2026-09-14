@@ -1,7 +1,8 @@
-# Connects to the grpc-service test server (see grpc-service/) started by the
-# `test_grpc` Rust test in tests/system.rs, sends a fully populated `Blob` message
-# (every scalar, repeated, map and oneof field declared in grpc-service/proto/reverse.proto)
-# to the streaming `Mirror` RPC, and verifies that every field comes back unchanged.
+# Connects to the grpc-service test server (see grpc-service/), started once for the
+# whole test binary via tests/system.rs's ctor-based setup, sends a fully populated
+# `Blob` message (every scalar, repeated, map and oneof field declared in
+# grpc-service/proto/reverse.proto) to the streaming `Mirror` RPC, and verifies that
+# every field comes back unchanged.
 #
 # This exercises the crush gRPC client's encoder and decoder (src/builtins/grpc/client.rs)
 # against a real server, rather than just the individual type-conversion functions.

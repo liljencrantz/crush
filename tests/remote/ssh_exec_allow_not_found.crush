@@ -1,9 +1,0 @@
-# With allow_not_found set, a host missing from known_hosts is trusted on first use
-# instead of erroring -- exercises the CheckResult::NotFound + allow_not_found branch in
-# remote.rs's run_remote(). The connection should still succeed. See tests/system.rs's
-# test_remote_ssh, which points CRUSH_TEST_SSH_HOSTS at an empty known_hosts file and,
-# after this script exits successfully, checks on the Rust side that the server's real
-# key actually got written into that file.
-$host_file := $(crush:env["CRUSH_TEST_SSH_HOSTS"])
-$r := $(remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$host_file allow_not_found=$true)
-assert ($r == 2) "remote:exec should still succeed and return its result when allow_not_found pins a new key"

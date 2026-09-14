@@ -1,10 +1,11 @@
-use std::{fs, thread};
-use std::io::BufRead;
+use std::fs;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use test_finder::test_finder;
 use assert_cmd::prelude::*;
+use ctor::{ctor, dtor};
 
 fn run_system_test(name: &Path) {
     let output = Command::new(env!("CARGO_BIN_EXE_crush"))
@@ -73,116 +74,94 @@ fn run_system_test(name: &Path) {
     );
 }
 
-#[test]
-fn test_grpc() {
-    let run = escargot::CargoBuild::new()
-        .bin("grpc-service")
-        .package("grpc-service") // Name of the sub-crate
-        .run()
-        .expect("Failed to build grpc-service binary");
+// dns-service/grpc-service/ssh-service are started once, here, before any test runs --
+// not per-test the way they used to be -- so that tests/dns_query.crush,
+// tests/grpc_mirror.crush, and tests/ssh_exec*.crush can be plain, auto-discovered
+// tests/*.crush golden files with no custom Rust wiring of their own, exactly like
+// every other system test. `#[ctor]`/`#[dtor]` (not a plain #[test] fn) are the only
+// hook Rust's test harness offers for "run once before/after every test in this
+// binary" -- test_finder!()-generated tests have no body of their own to start a
+// server from, and cargo test's own generated `main()` isn't something this crate can
+// edit. All three servers use fixed ports and (for ssh-service) a fixed, committed host
+// key specifically so the test scripts that talk to them never need a value injected at
+// run time; see each service's own src/main.rs for why that's safe here.
+static TEST_SERVERS: OnceLock<Mutex<Vec<Child>>> = OnceLock::new();
 
-    let mut server = Command::new(run.path())
-        .spawn()
-        .expect("Failed to start gRPC service");
-
-    // Busy-poll the server's port instead of sleeping a fixed amount of time: a fixed
-    // sleep is either a wasted delay (server was ready sooner) or a race (server is
-    // slower to bind than the sleep, e.g. under full-suite load) -- confirmed as the
-    // actual cause of this test's own pre-existing flakiness under `cargo test
-    // --workspace` (it went from failing roughly 3 of every 4 full-suite runs to 8/8
-    // passes once this replaced the old fixed 500ms sleep). Exponential backoff
-    // starting at 1ms (instead of a fixed poll interval) so a fast-starting server
-    // isn't penalized with wasted sleeps, up to a 60s total budget; each sleep is
-    // clamped to the remaining budget so the loop can't overshoot it.
+fn wait_for_port(addr: &str) {
     let start = std::time::Instant::now();
     let max_wait = Duration::from_secs(60);
     let mut backoff = Duration::from_millis(1);
     loop {
-        if std::net::TcpStream::connect("[::1]:50051").is_ok() {
-            break;
+        if std::net::TcpStream::connect(addr).is_ok() {
+            return;
         }
         let elapsed = start.elapsed();
         assert!(
             elapsed < max_wait,
-            "gRPC service never started listening on [::1]:50051 within 60s"
+            "test server never started listening on {} within 60s",
+            addr
         );
-        thread::sleep(backoff.min(max_wait - elapsed));
+        std::thread::sleep(backoff.min(max_wait - elapsed));
         backoff = (backoff * 2).min(max_wait);
     }
-
-    // Run the crush gRPC client against the server: send a fully populated `Blob` message
-    // to the streaming `Mirror` RPC and verify every field comes back unchanged. See
-    // tests/grpc/mirror.crush for the actual test logic; it signals pass/fail via
-    // crush:exit's own status (force=$true, since the gRPC client's streaming call can
-    // leave its own internal jobs registered even after closing the connection, which
-    // would otherwise make crush:exit refuse to run at all).
-    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
-        .args(&["tests/grpc/mirror.crush"])
-        .output()
-        .expect("failed to execute process");
-
-    let _ = server.kill();
-    let _ = server.wait();
-
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "gRPC Mirror round-trip test did not pass.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
-    );
 }
 
-#[test]
-fn test_dns() {
+fn build_and_spawn(package: &str, extra_args: &[&str]) -> Child {
     let run = escargot::CargoBuild::new()
-        .bin("dns-service")
-        .package("dns-service") // Name of the sub-crate
+        .bin(package)
+        .package(package)
         .run()
-        .expect("Failed to build dns-service binary");
-
-    let mut server = Command::new(run.path())
-        .stdout(Stdio::piped())
+        .unwrap_or_else(|e| panic!("Failed to build {} binary: {}", package, e));
+    Command::new(run.path())
+        .args(extra_args)
         .spawn()
-        .expect("Failed to start dns test server");
+        .unwrap_or_else(|e| panic!("Failed to start {}: {}", package, e))
+}
 
-    // dns-service binds a random loopback UDP+TCP port and prints it on startup (see
-    // dns-service/src/main.rs) so the two sides never need to agree on a fixed port.
-    let stdout = server.stdout.take().expect("piped stdout");
-    let mut reader = std::io::BufReader::new(stdout);
-    let mut line = String::new();
-    reader
-        .read_line(&mut line)
-        .expect("failed to read dns-service startup line");
-    let port = line
-        .trim()
-        .strip_prefix("PORT:")
-        .expect("unexpected dns-service startup output")
-        .to_string();
+#[ctor]
+fn start_test_servers() {
+    let mut children = Vec::new();
 
-    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
-        .args(&["tests/dns/query.crush"])
-        .env("CRUSH_TEST_DNS_PORT", &port)
-        .output()
-        .expect("failed to execute process");
+    children.push(build_and_spawn("dns-service", &[]));
+    wait_for_port("127.0.0.1:20053");
 
-    let _ = server.kill();
-    let _ = server.wait();
+    children.push(build_and_spawn("grpc-service", &[]));
+    wait_for_port("[::1]:50051");
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "dns query test did not pass.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
-    );
+    // ssh-service defaults to spawning "./target/debug/crush" for each exec channel's
+    // `crush --pup` if not told otherwise -- the same stale-path problem
+    // CARGO_BIN_EXE_crush fixed for this test binary itself, just one process further
+    // out. Left as the default, this would silently run whatever plain debug binary
+    // happens to already exist under `cargo llvm-cov test` (a separate, uninstrumented
+    // build lives there too), so the pup wire round trip these tests are meant to
+    // exercise would never show up in coverage. Pass the real one explicitly.
+    children.push(build_and_spawn(
+        "ssh-service",
+        &[env!("CARGO_BIN_EXE_crush")],
+    ));
+    wait_for_port("127.0.0.1:2849");
+
+    TEST_SERVERS
+        .set(Mutex::new(children))
+        .unwrap_or_else(|_| panic!("start_test_servers ran more than once"));
+}
+
+#[dtor]
+fn stop_test_servers() {
+    if let Some(m) = TEST_SERVERS.get() {
+        let mut children = m.lock().unwrap();
+        for child in children.iter_mut() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
 }
 
 #[test]
 fn test_remote_host_file() {
     // remote:host:list/remote:host:remove (src/builtins/remote.rs) never connect
     // anywhere -- they just read/rewrite a known_hosts file -- so a static fixture is
-    // enough; unlike test_remote_ssh below, no live server is involved. Three
+    // enough; unlike the ssh-service-backed tests, no live server is involved. Three
     // throwaway public keys, generated once with `ssh-keygen -t ed25519`/`-t rsa` and
     // never used to authenticate anywhere; public keys carry no secret material.
     const FIXTURE: &str = "\
@@ -209,176 +188,6 @@ host-c.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRSEVxK2sm2QXPbIzufX9Ev
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
     );
-}
-
-#[test]
-fn test_remote_ssh() {
-    let run = escargot::CargoBuild::new()
-        .bin("ssh-service")
-        .package("ssh-service") // Name of the sub-crate
-        .run()
-        .expect("Failed to build ssh-service binary");
-
-    // ssh-service defaults to spawning "./target/debug/crush" for each exec channel's
-    // `crush --pup` if not told otherwise -- the same stale-path problem CARGO_BIN_EXE_crush
-    // fixed for this test binary itself, just one process further out. Left as the
-    // default, this silently runs whatever plain debug binary happens to already exist
-    // under `cargo llvm-cov test` (a separate, uninstrumented build lives there too),
-    // so the pup wire round trip this test is meant to exercise never shows up in
-    // coverage at all. Pass the real one explicitly.
-    let mut server = Command::new(run.path())
-        .arg(env!("CARGO_BIN_EXE_crush"))
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to start ssh test server");
-
-    // ssh-service generates a fresh host key every run and prints its known_hosts-
-    // format line on startup, so the two sides never need to agree on hardcoded key
-    // material -- read it back to build the known_hosts fixtures below.
-    let stdout = server.stdout.take().expect("piped stdout");
-    let mut reader = std::io::BufReader::new(stdout);
-    let mut line = String::new();
-    reader
-        .read_line(&mut line)
-        .expect("failed to read ssh-service startup line");
-    let known_hosts_line = line
-        .trim()
-        .strip_prefix("KNOWN_HOSTS_LINE:")
-        .expect("unexpected ssh-service startup output")
-        .to_string();
-
-    // Give it a moment to actually bind and start listening (which happens just after
-    // the print above).
-    thread::sleep(Duration::from_millis(300));
-
-    let tmp = std::env::temp_dir();
-    let good_hosts = tmp.join("crush_test_ssh_known_hosts_good");
-    let mismatch_hosts = tmp.join("crush_test_ssh_known_hosts_mismatch");
-    let empty_hosts = tmp.join("crush_test_ssh_known_hosts_empty");
-    let allow_hosts = tmp.join("crush_test_ssh_known_hosts_allow");
-
-    fs::write(&good_hosts, format!("{}\n", known_hosts_line)).unwrap();
-
-    // Corrupt the first few base64 characters right after "<host> <algo> " -- still
-    // valid base64 of the same length, so this is a real CheckResult::Mismatch rather
-    // than a key-parse failure.
-    let mismatched_line = {
-        let mut parts = known_hosts_line.splitn(3, ' ');
-        let host = parts.next().unwrap();
-        let algo = parts.next().unwrap();
-        let key = parts.next().unwrap();
-        format!("{} {} XXXXXX{}", host, algo, &key[6..])
-    };
-    fs::write(&mismatch_hosts, format!("{}\n", mismatched_line)).unwrap();
-    fs::write(&empty_hosts, "").unwrap();
-    fs::write(&allow_hosts, "").unwrap();
-
-    let run_crush = |script: &str, host_file: &Path| -> std::process::Output {
-        Command::new(env!("CARGO_BIN_EXE_crush"))
-            .args(&[script])
-            .env("CRUSH_TEST_SSH_HOSTS", host_file)
-            .output()
-            .expect("failed to execute process")
-    };
-
-    // Happy path: remote:exec and remote:pexec against a host_file that matches the
-    // server's actual key.
-    let out = run_crush("tests/remote/ssh_exec.crush", &good_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(0),
-        "ssh_exec.crush failed.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr),
-    );
-
-    // remote:pexec must keep attempting the rest of the host list after one host fails
-    // to connect, rather than silently dropping every host still queued behind it.
-    let out = run_crush("tests/remote/ssh_pexec_partial_failure.crush", &good_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(0),
-        "ssh_pexec_partial_failure.crush failed.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr),
-    );
-
-    // Host key mismatch must be a hard error naming the mismatch, not some other,
-    // coincidental failure.
-    let out = run_crush("tests/remote/ssh_exec_mismatch.crush", &mismatch_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(1),
-        "expected a host-key-mismatch error to abort the script"
-    );
-    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
-    assert!(
-        stderr.contains("mismatch"),
-        "expected a host-key mismatch error, got:\n{}",
-        stderr
-    );
-
-    // ignore_host_file=$true must skip verification entirely -- confirm by using the
-    // same mismatched known_hosts file that made the test above fail: the connection
-    // must succeed here, which can only happen if the check was actually skipped.
-    let out = run_crush("tests/remote/ssh_exec_ignore_host_file.crush", &mismatch_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(0),
-        "ssh_exec_ignore_host_file.crush failed.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr),
-    );
-
-    // A host missing from known_hosts, without allow_not_found, must also be a hard
-    // error.
-    let out = run_crush("tests/remote/ssh_exec_notfound.crush", &empty_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(1),
-        "expected a missing-known-host error to abort the script"
-    );
-    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
-    assert!(
-        stderr.contains("known host"),
-        "expected a missing-from-known-hosts error, got:\n{}",
-        stderr
-    );
-
-    // Wrong password must also be a hard error.
-    let out = run_crush("tests/remote/ssh_exec_wrongpassword.crush", &good_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(1),
-        "expected an authentication error to abort the script"
-    );
-    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
-    assert!(
-        stderr.contains("auth"),
-        "expected an authentication error, got:\n{}",
-        stderr
-    );
-
-    // allow_not_found=$true against an empty known_hosts file should succeed *and* pin
-    // the newly seen key into the file, rather than erroring.
-    let out = run_crush("tests/remote/ssh_exec_allow_not_found.crush", &allow_hosts);
-    assert_eq!(
-        out.status.code(),
-        Some(0),
-        "ssh_exec_allow_not_found.crush failed.\nStdout:\n{}\nStderr:\n{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr),
-    );
-    let pinned = fs::read_to_string(&allow_hosts).unwrap();
-    let real_key = known_hosts_line.split(' ').nth(2).unwrap();
-    assert!(
-        pinned.contains(real_key),
-        "allow_not_found should have pinned the server's actual key into the known_hosts file, got:\n{}",
-        pinned,
-    );
-
-    let _ = server.kill();
-    let _ = server.wait();
 }
 
 test_finder!();
