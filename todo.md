@@ -35,4 +35,3 @@
 * Regular file completion of strings
 * crush:commands command, showing all currently executing commands
 * Reserve `$global`. Possibly also `$true`, `$false` and a few more?
-* Directory-only completion, e.g. for `cd`.

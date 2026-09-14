@@ -1,0 +1,14 @@
+# string:lpad/rpad/substr/__getitem__ (src/builtins/types/string/mod.rs) index into
+# the string by raw byte offset with no UTF-8 char-boundary check, so any string
+# containing a multi-byte character (e.g. "hello" is 5 bytes and 5 chars, but "héllo"
+# is 6 bytes and 5 chars) panics the worker thread as soon as a computed byte offset
+# lands inside a multi-byte char instead of on its boundary. All four share this one
+# root cause and are exercised here as bare/asserted statements rather than
+# $(...)-substituted, so a panic aborts the whole script and the "reached" marker at
+# the end only prints once every one of the four is fixed.
+
+assert ($("héllo":lpad 2) == "hé") "lpad should truncate to the first N characters, not bytes"
+assert ($("héllo":rpad 2) == "hé") "rpad should truncate to the first N characters, not bytes"
+assert ($("héllo":substr from=1 to=2) == "é") "substr's from/to should be character offsets, not byte offsets"
+assert ($("héllo"[1]) == "é") "string subscript should index by character, not byte"
+echo "reached"

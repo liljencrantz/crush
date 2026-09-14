@@ -89,7 +89,6 @@ Handle ^C to cancel jobs. How?
 * Completions for wildcards
 * Complete with prior arguments from same command from history
 * Add command specific completions for dbus
-* Add command specific completions for cd to filter only directories
 * Add previous output type of previous command in pipeline if known to parsed state
 * Add command specific completions for methods
 * GetItem and SetItem completions

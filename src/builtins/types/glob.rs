@@ -151,6 +151,7 @@ fn __is_not__(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Files {
     #[description("the directory to match in. Use current working directory if unspecified.")]
+    #[directories_only]
     directory: Option<PathBuf>,
 }
 
