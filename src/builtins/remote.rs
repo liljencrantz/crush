@@ -21,7 +21,7 @@ use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, KnownHostKeyFormat, Session};
 use std::cmp::min;
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{Ipv6Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
 
 static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
@@ -49,8 +49,32 @@ fn parse(
             .unwrap_or(get_current_username()?.to_string());
     }
 
+    // An IPv6 address is itself full of colons, so naively splitting `host` on ':' to
+    // find a port breaks badly for it -- e.g. a bare "::1" would misparse as host=""
+    // port="", and the conventional bracketed form "[::1]:2849" would misparse the
+    // bracket itself as the host. Handle the IPv6 shapes explicitly, via std's own
+    // address parsers rather than hand-rolled splitting, before falling through to the
+    // plain split(':') logic that's already correct for a hostname/IPv4 address (which
+    // never contain a literal ':').
     let port: u16;
-    if !host.contains(':') {
+    if let Ok(addr) = host.parse::<SocketAddr>() {
+        // "[<ipv6>]:<port>" (also matches a plain IPv4 "a.b.c.d:port", already handled
+        // correctly below, but this is simpler and gives the same result).
+        port = addr.port();
+        host = addr.ip().to_string();
+    } else if let Ok(ip) = host.parse::<Ipv6Addr>() {
+        // Bare "<ipv6>", no port, no brackets.
+        port = 22;
+        host = ip.to_string();
+    } else if let Some(inner) = host
+        .strip_prefix('[')
+        .and_then(|s| s.strip_suffix(']'))
+        .filter(|s| s.parse::<Ipv6Addr>().is_ok())
+    {
+        // Bracketed "[<ipv6>]", no port.
+        port = 22;
+        host = inner.to_string();
+    } else if !host.contains(':') {
         port = 22;
     } else {
         let mut parts = host.split(':');
@@ -113,6 +137,46 @@ mod tests {
         assert_eq!(user, "root");
         assert_eq!(port, 2200);
     }
+
+    #[test]
+    fn test_parse_bare_ipv6_defaults_to_port_22() {
+        let (host, _user, port) = parse("::1".to_string(), &None).unwrap();
+        assert_eq!(host, "::1");
+        assert_eq!(port, 22);
+    }
+
+    #[test]
+    fn test_parse_bracketed_ipv6_with_no_port_defaults_to_port_22() {
+        let (host, _user, port) = parse("[::1]".to_string(), &None).unwrap();
+        assert_eq!(host, "::1");
+        assert_eq!(port, 22);
+    }
+
+    #[test]
+    fn test_parse_bracketed_ipv6_with_explicit_port() {
+        let (host, _user, port) = parse("[::1]:2849".to_string(), &None).unwrap();
+        assert_eq!(host, "::1");
+        assert_eq!(port, 2849);
+    }
+
+    #[test]
+    fn test_parse_full_ipv6_with_at_and_bracketed_port() {
+        let (host, user, port) = parse(
+            "root@[2001:db8::1]:2222".to_string(),
+            &Some("ignored".to_string()),
+        )
+        .unwrap();
+        assert_eq!(host, "2001:db8::1");
+        assert_eq!(user, "root");
+        assert_eq!(port, 2222);
+    }
+
+    #[test]
+    fn test_parse_ipv4_with_port_is_unaffected_by_the_ipv6_handling() {
+        let (host, _user, port) = parse("10.0.0.1:22".to_string(), &None).unwrap();
+        assert_eq!(host, "10.0.0.1");
+        assert_eq!(port, 22);
+    }
 }
 
 fn run_remote(
@@ -127,7 +191,13 @@ fn run_remote(
 ) -> CrushResult<Value> {
     let (host, username, port) = parse(host, &default_username)?;
 
-    let tcp = TcpStream::connect(&format!("{}:{}", host, port))?;
+    // Not `format!("{}:{}", host, port)`: that reintroduces the exact bracket problem
+    // `parse()` above just solved, since a bare IPv6 `host` (no brackets, as `parse()`
+    // now always returns) glued directly to ":<port>" is ambiguous/unparseable as a
+    // single string again. A (&str, u16) tuple's own ToSocketAddrs impl resolves the
+    // host component directly -- hostname, IPv4, or bare IPv6 literal -- with no
+    // string-level ambiguity at all.
+    let tcp = TcpStream::connect((host.as_str(), port))?;
     let mut sess = Session::new()?;
 
     sess.set_tcp_stream(tcp);
