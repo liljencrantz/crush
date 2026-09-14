@@ -328,6 +328,7 @@ fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     short = "Remove the element at the specified index and return it.",
 )]
 struct Remove {
+    #[description("the index of the item to remove.")]
     idx: usize,
 }
 
@@ -344,7 +345,9 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     short = "Insert a new element at the specified index. Following values will be shifted forward.",
 )]
 struct Insert {
+    #[description("the index to insert the new value at.")]
     idx: usize,
+    #[description("the value to insert.")]
     value: Value,
 }
 
@@ -362,6 +365,7 @@ fn insert(mut context: CommandContext) -> CrushResult<()> {
     short = "Remove all elements past the specified index.",
 )]
 struct Truncate {
+    #[description("the index to truncate the list to. If unspecified, removes all elements.")]
     idx: Option<usize>,
 }
 

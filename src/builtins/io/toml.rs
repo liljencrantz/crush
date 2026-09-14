@@ -91,6 +91,7 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     example = "toml:from Cargo.toml")]
 struct FromSignature {
     #[unnamed()]
+    #[description("source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`.")]
     files: Vec<BinaryInput>,
 }
 
@@ -174,6 +175,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     example = "ls | toml:to")]
 struct To {
     #[unnamed()]
+    #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
     file: Option<Files>,
 }
 

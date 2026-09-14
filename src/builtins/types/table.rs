@@ -78,6 +78,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     example = "$(bin:from Cargo.toml|materialize)[4]",
 )]
 struct GetItem {
+    #[description("the row index to return.")]
     index: usize,
 }
 

@@ -25,7 +25,9 @@ use signature::signature;
 )]
 pub struct For {
     #[named()]
+    #[description("the name to bind each element to, as `name=stream` (exactly one pair).")]
     iterator: OrderedStringMap<Value>,
+    #[description("the block to execute once per element, with the bound name available as a variable.")]
     body: Command,
 }
 

@@ -54,6 +54,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct To {
     #[unnamed()]
+    #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
     file: Option<Files>,
 }
 

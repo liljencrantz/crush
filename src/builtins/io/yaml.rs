@@ -139,6 +139,7 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
     example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
 struct FromSignature {
     #[unnamed()]
+    #[description("source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`.")]
     files: Vec<BinaryInput>,
 }
 
@@ -162,6 +163,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     example = "ls | yaml:to")]
 struct To {
     #[unnamed()]
+    #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
     file: Option<Files>,
 }
 

@@ -129,8 +129,10 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Of {
     #[unnamed()]
+    #[description("alternating keys and values, for non-string keys. Must not be combined with `values`.")]
     elements: Vec<Value>,
     #[named()]
+    #[description("named key/value pairs, for string keys. Must not be combined with `elements`.")]
     values: OrderedStringMap<Value>,
 }
 

@@ -106,6 +106,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     example = "$(files)[4]"
 )]
 struct GetItem {
+    #[description("the row index to return.")]
     index: i128,
 }
 

@@ -33,6 +33,7 @@ macro_rules! math_fun {
     example = "math:sin 1",
 )]
 pub struct Sin {
+    #[description("the number to take the sine of, in radians.")]
     number: Number,
 }
 math_fun!(sin, Sin, |x: f64| x.sin());
@@ -44,6 +45,7 @@ math_fun!(sin, Sin, |x: f64| x.sin());
     example = "math:cos 1",
 )]
 pub struct Cos {
+    #[description("the number to take the cosine of, in radians.")]
     number: Number,
 }
 math_fun!(cos, Cos, |x: f64| x.cos());
@@ -53,6 +55,7 @@ math_fun!(cos, Cos, |x: f64| x.cos());
     output = Known(ValueType::Float),
     short = "The tangent of number.")]
 pub struct Tan {
+    #[description("the number to take the tangent of, in radians.")]
     number: Number,
 }
 math_fun!(tan, Tan, |x: f64| x.tan());
@@ -62,6 +65,7 @@ math_fun!(tan, Tan, |x: f64| x.tan());
     output = Known(ValueType::Float),
     short = "The square root of number.")]
 pub struct Sqrt {
+    #[description("the number to take the square root of.")]
     number: Number,
 }
 math_fun!(sqrt, Sqrt, |x: f64| x.sqrt());
@@ -71,6 +75,7 @@ math_fun!(sqrt, Sqrt, |x: f64| x.sqrt());
     output = Known(ValueType::Float),
     short = "The arc sine of number.")]
 pub struct ASin {
+    #[description("the value, between -1 and 1, to take the arc sine of.")]
     number: Number,
 }
 math_fun!(asin, ASin, |x: f64| x.asin());
@@ -80,6 +85,7 @@ math_fun!(asin, ASin, |x: f64| x.asin());
     output = Known(ValueType::Float),
     short = "The arc cosine of number.")]
 pub struct ACos {
+    #[description("the value, between -1 and 1, to take the arc cosine of.")]
     number: Number,
 }
 math_fun!(acos, ACos, |x: f64| x.acos());
@@ -89,6 +95,7 @@ math_fun!(acos, ACos, |x: f64| x.acos());
     output = Known(ValueType::Float),
     short = "The arc tangent of number.")]
 pub struct ATan {
+    #[description("the value to take the arc tangent of.")]
     number: Number,
 }
 math_fun!(atan, ATan, |x: f64| x.atan());
@@ -98,6 +105,7 @@ math_fun!(atan, ATan, |x: f64| x.atan());
     output = Known(ValueType::Float),
     short = "The smallest integer larger than number.")]
 pub struct Ceil {
+    #[description("the number to round up to the nearest integer.")]
     number: Number,
 }
 math_fun!(ceil, Ceil, |x: f64| x.ceil());
@@ -107,6 +115,7 @@ math_fun!(ceil, Ceil, |x: f64| x.ceil());
     output = Known(ValueType::Float),
     short = "The largest integer smaller than number.")]
 pub struct Floor {
+    #[description("the number to round down to the nearest integer.")]
     number: Number,
 }
 math_fun!(floor, Floor, |x: f64| x.floor());
@@ -116,6 +125,7 @@ math_fun!(floor, Floor, |x: f64| x.floor());
     output = Known(ValueType::Float),
     short = "The natural logarithm of number.")]
 pub struct Ln {
+    #[description("the number to take the natural logarithm of.")]
     number: Number,
 }
 math_fun!(ln, Ln, |x: f64| x.ln());
@@ -125,7 +135,9 @@ math_fun!(ln, Ln, |x: f64| x.ln());
     output = Known(ValueType::Float),
     short = "The logarithm of number in base.")]
 pub struct Log {
+    #[description("the number to take the logarithm of.")]
     number: Number,
+    #[description("the base of the logarithm.")]
     base: Number,
 }
 
@@ -141,7 +153,9 @@ fn log(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Float),
     short = "Raise the number to n.")]
 pub struct Pow {
+    #[description("the base to raise to a power.")]
     base: Number,
+    #[description("the exponent to raise the base to.")]
     n: Number,
 }
 
@@ -159,6 +173,7 @@ fn pow(mut context: CommandContext) -> CrushResult<()> {
     example = "math:abs -5",
 )]
 pub struct Abs {
+    #[description("the number to take the absolute value of.")]
     number: Number,
 }
 
@@ -182,6 +197,7 @@ fn abs(mut context: CommandContext) -> CrushResult<()> {
     example = "math:sign -5",
 )]
 pub struct Sign {
+    #[description("the number to inspect the sign of.")]
     number: Number,
 }
 
@@ -198,6 +214,7 @@ fn sign(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Float),
     short = "Number rounded to the nearest whole number.")]
 pub struct Round {
+    #[description("the number to round to the nearest whole number.")]
     number: Number,
 }
 math_fun!(round, Round, |x: f64| x.round());
@@ -209,8 +226,11 @@ math_fun!(round, Round, |x: f64| x.round());
     example = "math:clamp 15 min=0 max=10",
 )]
 pub struct Clamp {
+    #[description("the number to clamp.")]
     number: Number,
+    #[description("the lower bound of the allowed range.")]
     min: Number,
+    #[description("the upper bound of the allowed range.")]
     max: Number,
 }
 

@@ -142,6 +142,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     example = "http \"https://jsonplaceholder.typicode.com/todos/3\"| member body | json:from")]
 struct FromSignature {
     #[unnamed()]
+    #[description("source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`.")]
     files: Vec<BinaryInput>,
 }
 
@@ -165,6 +166,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     example = "files | json:to")]
 struct To {
     #[unnamed()]
+    #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
     file: Option<Files>,
     #[description("Disable line breaking and indentation.")]
     #[default(false)]

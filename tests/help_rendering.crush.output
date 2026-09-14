@@ -232,6 +232,12 @@ This command accepts the following arguments:
 control:for [<any>=any...] body=command
 Execute a command once for each element in a stream.
 
+This command accepts the following arguments:
+
+ * [32miterator[0m the name to bind each element to, as [32mname=stream[0m (exactly one pair).
+ * [32mbody[0m     the block to execute once per element, with the bound name available as a 
+            variable.
+
 [4mExamples[0m
 [33m# Iterate over the processes on the host[0m
 [32mfor[0m [36mi[0m[36m=[0m[36m$([0m[36mhost[0m[36m:[0m[36mprocs[0m[36m)[0m [36m{[0m
@@ -1118,6 +1124,11 @@ This command accepts the following arguments:
 Write specified iterator of strings to a file (or convert to BinaryStream) 
 separated by newlines
 
+This command accepts the following arguments:
+
+ * [32mfile[0m destination file to write to. If unspecified, output is returned as a [32m
+        binary_stream[0m.
+
 
 io:csv:from [files=one_of $file $string $binary $binary_input_stream $glob $re...] [<any>=type...] [separator=string] [head=integer] [trim=string]
 Parse specified files as CSV files
@@ -1192,6 +1203,11 @@ Write specified binary or string as hexadecimal
 [32mbinary_stream[0m
 If no file is specified, produce a binary stream as output.
 
+This command accepts the following arguments:
+
+ * [32mfile[0m destination file to write to. If unspecified, output is returned as a [32m
+        binary_stream[0m.
+
 [4mExamples[0m
 [36m"hello, world!"[0m [36m|[0m [32mhex[0m[36m:[0m[32mto[0m
 
@@ -1228,6 +1244,11 @@ the elements of the list are of the same type, the list will be parametrized to
 the same type. If all elements are objects, and all objects have the same set of 
 fields with the same types, the list will be turned into a table.
 
+This command accepts the following arguments:
+
+ * [32mfiles[0m source to read from. If unspecified, will read from input, which must be a [32m
+         string[0m, [32mbinary[0m or [32mbinary_stream[0m.
+
 [4mExamples[0m
 [32mhttp[0m [36m"https://jsonplaceholder.typicode.com/todos/3"[0m[36m|[0m [32mmember[0m [36mbody[0m [36m|[0m [32mjson[0m[36m:[0m[32mfrom[0m
 
@@ -1242,6 +1263,8 @@ have all the same types that Crush does:
 
 This command accepts the following arguments:
 
+ * [32mfile[0m    destination file to write to. If unspecified, output is returned as a [32m
+           binary_stream[0m.
  * [32mcompact[0m (default: [32mfalse[0m) Disable line breaking and indentation.
 
 [4mExamples[0m
@@ -1262,6 +1285,11 @@ This command accepts the following arguments:
 [32mio[0m[36m:[0m[32mlines[0m[36m:[0m[32mto[0m [36m[[0m[36mfile[0m[36m=[0m[36mone_of[0m [36m$string[0m [36m$file[0m [36m$glob[0m [36m$re[0m[36m][0m
 Write specified stream of strings to a file (or convert to BinaryStream) 
 separated by newlines
+
+This command accepts the following arguments:
+
+ * [32mfile[0m destination file to write to. If unspecified, output is returned as a [32m
+        binary_stream[0m.
 
 
 [32mio[0m[36m:[0m[32mmember[0m [36mfield[0m[36m=[0m[36mstring[0m
@@ -1290,6 +1318,11 @@ of its actual rows.
 [32mio[0m[36m:[0m[32mpup[0m[36m:[0m[32mfrom[0m [36m[[0m[36mfiles[0m[36m=[0m[36mone_of[0m [36m$file[0m [36m$string[0m [36m$binary[0m [36m$binary_input_stream[0m [36m$glob[0m [36m$re[0m[36m...[0m[36m][0m
 Parse pup format
 
+This command accepts the following arguments:
+
+ * [32mfiles[0m source to read from. If unspecified, will read from input, which must be a [32m
+         string[0m, [32mbinary[0m or [32mbinary_stream[0m.
+
 [4mExamples[0m
 [32mpup[0m[36m:[0m[32mfrom[0m [36mserialized.pup[0m
 
@@ -1298,6 +1331,11 @@ Serialize to pup format
 
 Pup is the native crush serialization format. All Crush types, including lambdas 
 can be serialized to this format.
+
+This command accepts the following arguments:
+
+ * [32mfile[0m destination file to write to. If unspecified, output is returned as a [32m
+        binary_stream[0m.
 
 [4mExamples[0m
 [32mls[0m [36m|[0m [32mpup[0m[36m:[0m[32mto[0m
@@ -1345,6 +1383,11 @@ the elements of the list are of the same type, the list will be parametrized to
 the same type. If all elements are objects, and all objects have the same set of 
 fields with the same types, the list will be turned into a table.
 
+This command accepts the following arguments:
+
+ * [32mfiles[0m source to read from. If unspecified, will read from input, which must be a [32m
+         string[0m, [32mbinary[0m or [32mbinary_stream[0m.
+
 [4mExamples[0m
 [32mtoml[0m[36m:[0m[32mfrom[0m [36mCargo.toml[0m
 
@@ -1360,6 +1403,11 @@ have all the same types that Crush does:
 
  * [32mtime[0m     values are turned into strings in the RFC 3339 format.
  * [32mduration[0m values are turned into the integer number of seconds in the duration.
+
+This command accepts the following arguments:
+
+ * [32mfile[0m destination file to write to. If unspecified, output is returned as a [32m
+        binary_stream[0m.
 
 [4mExamples[0m
 [32mls[0m [36m|[0m [32mtoml[0m[36m:[0m[32mto[0m
@@ -1399,6 +1447,11 @@ the elements of the list are of the same type, the list will be parametrized to
 the same type. If all elements are objects, and all objects have the same set of 
 fields with the same types, the list will be turned into a table.
 
+This command accepts the following arguments:
+
+ * [32mfiles[0m source to read from. If unspecified, will read from input, which must be a [32m
+         string[0m, [32mbinary[0m or [32mbinary_stream[0m.
+
 [4mExamples[0m
 [36m([0m[36mhttp[0m [36m"https://jsonplaceholder.typicode.com/todos/3"[0m[36m)[0m[36m:[0m[36mbody[0m [36m|[0m [32myaml[0m[36m:[0m[32mfrom[0m
 
@@ -1411,11 +1464,20 @@ have all the same types that Crush does:
  * [32mtime[0m     values are turned into strings in the RFC 3339 format.
  * [32mduration[0m values are turned into the integer number of seconds in the duration.
 
+This command accepts the following arguments:
+
+ * [32mfile[0m destination file to write to. If unspecified, output is returned as a [32m
+        binary_stream[0m.
+
 [4mExamples[0m
 [32mls[0m [36m|[0m [32myaml[0m[36m:[0m[32mto[0m
 
 [32mmath[0m[36m:[0m[32mabs[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The absolute value of number.
+
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the absolute value of.
 
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mabs[0m -5
@@ -1425,27 +1487,49 @@ The arc cosine of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the value, between -1 and 1, to take the arc cosine of.
+
 
 [32mmath[0m[36m:[0m[32masin[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The arc sine of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the value, between -1 and 1, to take the arc sine of.
+
 
 [32mmath[0m[36m:[0m[32matan[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The arc tangent of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the value to take the arc tangent of.
+
 
 [32mmath[0m[36m:[0m[32mceil[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The smallest integer larger than number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to round up to the nearest integer.
+
 
 [32mmath[0m[36m:[0m[32mclamp[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mmin[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mmax[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 Number restricted to the inclusive range [min, max].
+
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to clamp.
+ * [32mmin[0m    the lower bound of the allowed range.
+ * [32mmax[0m    the upper bound of the allowed range.
 
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mclamp[0m [36m15[0m [36mmin[0m[36m=[0m[36m0[0m [36mmax[0m[36m=[0m[36m10[0m
@@ -1455,6 +1539,10 @@ The cosine of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the cosine of, in radians.
+
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mcos[0m [36m1[0m
 
@@ -1463,33 +1551,59 @@ The largest integer smaller than number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to round down to the nearest integer.
+
 
 [32mmath[0m[36m:[0m[32mln[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The natural logarithm of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the natural logarithm of.
+
 
 [32mmath[0m[36m:[0m[32mlog[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mbase[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The logarithm of number in base.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the logarithm of.
+ * [32mbase[0m   the base of the logarithm.
+
 
 [32mmath[0m[36m:[0m[32mpow[0m [36mbase[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mn[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 Raise the number to n.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mbase[0m the base to raise to a power.
+ * [32mn[0m    the exponent to raise the base to.
+
 
 [32mmath[0m[36m:[0m[32mround[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 Number rounded to the nearest whole number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to round to the nearest whole number.
+
 
 [32mmath[0m[36m:[0m[32msign[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 -1, 0 or 1 depending on the sign of number.
+
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to inspect the sign of.
 
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32msign[0m -5
@@ -1499,6 +1613,10 @@ The sine of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the sine of, in radians.
+
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32msin[0m [36m1[0m
 
@@ -1507,12 +1625,20 @@ The square root of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the square root of.
+
 
 [32mmath[0m[36m:[0m[32mtan[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The tangent of number.
 
 [4mOutput[0m
 [32mfloat[0m
+This command accepts the following arguments:
+
+ * [32mnumber[0m the number to take the tangent of, in radians.
+
 
 [32mrandom[0m[36m:[0m[32mfloat[0m [36mto[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 generate a random floating point number between 0 (inclusive) and 1 (exclusive)

@@ -37,6 +37,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     short = "Return the specified member in the current scope",
 )]
 struct GetItem {
+    #[description("the name of the member to look up.")]
     name: String,
 }
 
@@ -58,6 +59,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     long = "This method looks at the current scope as well as all it parents to resolve the specified member",
 )]
 struct Resolve {
+    #[description("the name of the member to resolve.")]
     name: String,
 }
 
