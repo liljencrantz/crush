@@ -152,6 +152,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "base64",
         "Base64 conversions",
+        None,
         Box::new(move |env| {
             FromSignature::declare(env)?;
             To::declare(env)?;

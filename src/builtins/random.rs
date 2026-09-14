@@ -102,6 +102,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "random",
         "Random number generation",
+        None,
         Box::new(move |env| {
             Float::declare(env)?;
             FloatStream::declare(env)?;

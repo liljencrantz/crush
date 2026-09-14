@@ -160,6 +160,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "comp",
         "Comparison operators",
+        None,
         Box::new(|env| {
             env.declare("gt", Value::Command(Gt::create_command()))?;
             env.declare("gte", Value::Command(Gte::create_command()))?;

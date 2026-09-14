@@ -106,6 +106,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "csv",
         "CSV I/O",
+        None,
         Box::new(move |env| {
             From::declare(env)?;
             Ok(())

@@ -836,6 +836,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dbus",
         "D-Bus RPC command",
+        None,
         Box::new(move |dbus| {
             Session::declare(dbus)?;
             System::declare(dbus)?;

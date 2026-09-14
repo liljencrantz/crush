@@ -313,6 +313,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "var",
         "Commands related to variables",
+        None,
         Box::new(move |ns| {
             Let::declare(ns)?;
             Set::declare(ns)?;

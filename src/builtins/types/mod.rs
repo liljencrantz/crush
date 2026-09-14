@@ -298,6 +298,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "types",
         "Crush built in types and type related builtins.",
+        None,
         Box::new(move |env| {
             let root =
                 Struct::new(vec![

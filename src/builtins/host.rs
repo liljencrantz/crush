@@ -419,6 +419,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "host",
         "Information about the host this crush session is running on",
+        None,
         Box::new(move |host| {
             Battery::declare(host)?;
             Memory::declare(host)?;
@@ -433,6 +434,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             host.create_namespace(
                 "os",
                 "Metadata about the operating system this host is running",
+                None,
                 Box::new(move |env| {
                     os::Name::declare(env)?;
                     os::Version::declare(env)?;
@@ -442,6 +444,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             host.create_namespace(
                 "cpu",
                 "Metadata about the CPUs of this host",
+                None,
                 Box::new(move |env| {
                     cpu::Arch::declare(env)?;
                     cpu::Count::declare(env)?;

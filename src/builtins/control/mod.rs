@@ -490,6 +490,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "control",
         "Commands for flow control, (loops, etc)",
+        None,
         Box::new(move |env| {
             r#if::If::declare(env)?;
             r#match::Match::declare(env)?;

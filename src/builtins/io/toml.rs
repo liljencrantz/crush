@@ -198,6 +198,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "toml",
         "TOML I/O",
+        None,
         Box::new(move |env| {
             FromSignature::declare(env)?;
             To::declare(env)?;

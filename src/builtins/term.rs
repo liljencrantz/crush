@@ -15,6 +15,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "term",
         "Constants useful for manipulating the terminal, such as changing text color and text weight.",
+        None,
         Box::new(move |fd| {
             fd.declare("normal", Value::from("\x1b[0m"))?;
             fd.declare("bold", Value::from(BOLD))?;

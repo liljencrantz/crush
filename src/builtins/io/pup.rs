@@ -54,6 +54,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "pup",
         "Pup I/O",
+        None,
         Box::new(move |env| {
             From::declare(env)?;
             To::declare(env)?;

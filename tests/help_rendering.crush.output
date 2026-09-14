@@ -980,11 +980,29 @@ Create a connection to a gRPC service.
 gRPC (https://grpc.io) is Google's open-source, high-performance RPC framework, 
 built on HTTP/2 and Protocol Buffers.
 
-Returns a struct with one member per RPC method the service exposes (call it 
-like [32m$conn:MethodName arg=value[0m), plus a [32mclose[0m member that releases the connection.
+To send RPC calls to a server, you must first create a grpc connection, writing 
+something like [32m$conn := $(grpc:connect host=localhost service=* --plaintext)[0m.
 
-This command currently uses grpcurl under the hood and does not keep a 
-persistent gRPC connection open, so repeated calls can be slow.
+The resulting connection struct will have one method for each endpoint on the 
+chosen services of the host you connected to. When calling a method, there are 
+two different ways to pass in input parameters.
+
+If you want to pass exactly one message to the endpoint, e.g. because the 
+endpoint does not use client streaming, you have the option of passing the 
+fields of the message as arguments to the method call, e.g. [32m
+$conn:ReverseString input=hello[0m. The grpc methods support tab completion of argument names. They also come with 
+help messages (e.g. [32mhelp $conn:ReverseString[0m) that describes the input and output format.
+
+If you want to pass multiple messages to the endpoint, you must do so by piping 
+in a table_input_stream, where the column names of the stream are identical to 
+the field names of the message, e.g. [32m
+list:of foo bar baz | select input={$value} | $conn:ReverseString[0m
+
+Output from a gRPC method call is always a [32m$table_input_stream[0m, with one row per message. If an 
+endpoint does not use server side streaming, the output always has one row.
+
+Once you are done with a gRPC connection, you should close it to free up 
+resources. Do so by calling the close method, e.g. [32m$conn:close[0m.
 
 This command accepts the following arguments:
 
@@ -997,9 +1015,13 @@ This command accepts the following arguments:
  * [32mport[0m      (default: [32m50051[0m) the port to connect to.
 
 [4mExamples[0m
-[36m$conn[0m [36m:=[0m [36m$([0m[36mgrpc[0m[36m:[0m[36mconnect[0m [36mhost[0m[36m=[0m[36m"localhost"[0m [36mservice[0m[36m=[0m[36m"reverse.Reverser"[0m [36mplaintext[0m[36m=[0m[36m$true[0m[36m)[0m
+[36m$conn[0m [36m:=[0m [36m$([0m[36mgrpc[0m[36m:[0m[36mconnect[0m [36mhost[0m[36m=[0m[36mlocalhost[0m [36mservice[0m[36m=[0m[36m*[0m --plaintext[36m)[0m
 [33m# Returns "olleh"[0m
 [36m$conn[0m[36m:[0m[32mReverseString[0m [36minput[0m[36m=[0m[36m"hello"[0m
+[33m# Returns a stream with the values "oof", "rab", and "zab"[0m
+[32mlist[0m[36m:[0m[32mof[0m [36mfoo[0m [36mbar[0m [36mbaz[0m [36m|[0m [32mselect[0m [36minput[0m[36m=[0m[36m{[0m[36m$value[0m[36m}[0m [36m|[0m [36m$conn[0m[36m:[0m[32mReverseString[0m
+[33m# Close the connection once you're done[0m
+[36m$conn[0m[36m:[0m[32mclose[0m
 
 [32mhost[0m[36m:[0m[32mbattery[0m
 List all batteries in the system and their status

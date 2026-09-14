@@ -85,6 +85,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "percent",
         "Percent-encoding (URL-style) conversions",
+        None,
         Box::new(move |env| {
             To::declare(env)?;
             From::declare(env)?;

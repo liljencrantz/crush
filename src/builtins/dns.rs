@@ -537,6 +537,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dns",
         "DNS querying and metadata",
+        None,
         Box::new(move |dns| {
             Query::declare(dns)?;
             QueryReverse::declare(dns)?;

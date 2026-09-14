@@ -57,6 +57,10 @@ impl Serializable<Scope> for Scope {
                     let res = Scope::create(
                         name,
                         description,
+                        // long_help isn't part of the pup wire format (see Parameter's
+                        // `complete`/`dirs_only` fields for the same pattern) -- a
+                        // deserialized scope never carries one.
+                        None,
                         deserialize_scope_type(s.scope_type, maybe_source)?,
                         s.is_stopped,
                         s.is_readonly,

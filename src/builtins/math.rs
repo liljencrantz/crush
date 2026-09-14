@@ -249,6 +249,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "math",
         "Math commands",
+        None,
         Box::new(move |env| {
             Sin::declare(env)?;
             Cos::declare(env)?;

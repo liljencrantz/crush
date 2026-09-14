@@ -90,6 +90,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "cond",
         "Logical operators (`and` and `or`)",
+        None,
         Box::new(|env| {
             env.declare(
                 "and",

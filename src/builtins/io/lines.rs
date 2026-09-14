@@ -102,6 +102,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "lines",
         "Line based I/O",
+        None,
         Box::new(move |env| {
             FromSignature::declare(env)?;
             To::declare(env)?;

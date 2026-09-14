@@ -31,6 +31,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "stream",
         "Stream handling commands",
+        None,
         Box::new(move |env| {
             count::Count::declare(env)?;
             drop::Drop::declare(env)?;

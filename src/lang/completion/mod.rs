@@ -473,6 +473,7 @@ mod tests {
             .create_namespace(
                 "namespace",
                 "bla",
+                None,
                 Box::new(|env| {
                     MyCmdSignature::declare(env)?;
                     Ok(())
@@ -483,6 +484,7 @@ mod tests {
             .create_namespace(
                 "other_namespace",
                 "bla",
+                None,
                 Box::new(|env| {
                     AllowedCmdSignature::declare(env)?;
                     MultiArgumentCmdSignature::declare(env)?;
@@ -760,6 +762,7 @@ mod tests {
         s.create_namespace(
             "abcd",
             "bla",
+            None,
             Box::new(|env| {
                 env.declare("bcde", Value::Empty).unwrap();
                 Ok(())
@@ -781,6 +784,7 @@ mod tests {
         s.create_namespace(
             "abcd",
             "bla",
+            None,
             Box::new(|env| {
                 env.declare("bcde", Value::Empty).unwrap();
                 Ok(())

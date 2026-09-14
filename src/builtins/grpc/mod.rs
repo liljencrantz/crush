@@ -24,6 +24,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "grpc",
         "gRPC connection",
+        None,
         Box::new(move |grpc| {
             Connect::declare(grpc)?;
             Ok(())

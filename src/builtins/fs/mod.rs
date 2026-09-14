@@ -165,6 +165,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "fs",
         "File system functionality",
+        None,
         Box::new(move |fs| {
             files::FilesSignature::declare(fs)?;
             Cd::declare(fs)?;

@@ -99,6 +99,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "hex",
         "Hexadecimal conversions",
+        None,
         Box::new(move |env| {
             FromSignature::declare(env)?;
             To::declare(env)?;

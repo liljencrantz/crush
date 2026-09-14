@@ -63,6 +63,7 @@ impl ScopeLoader {
         &mut self,
         name: &str,
         description: impl Into<String>,
+        long_help: Option<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
@@ -71,6 +72,7 @@ impl ScopeLoader {
                 Some(self.scope.clone()),
                 Some(name.to_string()),
                 Some(description.into()),
+                long_help,
                 loader,
             ))),
         };
@@ -90,6 +92,7 @@ impl ScopeLoader {
                 Some(self.parent.clone()),
                 Some(self.parent.clone()),
                 ScopeType::Namespace,
+                None,
                 None,
                 None,
             ))),
@@ -174,6 +177,10 @@ pub struct ScopeData {
     /// A human readable description of this scope, if any. Used for the short help message.
     description: Option<String>,
 
+    /// A longer, human readable description of this scope, if any. If present, it is
+    /// prepended to the long help message.
+    long_help: Option<String>,
+
     /// If this scope has been loaded. Used for lazy loading modules.
     is_loaded: bool,
 
@@ -188,6 +195,7 @@ impl ScopeData {
         scope_type: ScopeType,
         name: Option<String>,
         description: Option<String>,
+        long_help: Option<String>,
     ) -> ScopeData {
         ScopeData {
             parent_scope,
@@ -200,6 +208,7 @@ impl ScopeData {
             return_value: None,
             name,
             description,
+            long_help,
             is_loaded: true,
             loader: None,
         }
@@ -210,6 +219,7 @@ impl ScopeData {
         calling_scope: Option<Scope>,
         name: Option<String>,
         description: Option<String>,
+        long_help: Option<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> ScopeData {
         ScopeData {
@@ -223,6 +233,7 @@ impl ScopeData {
             return_value: None,
             name,
             description,
+            long_help,
             is_loaded: false,
             loader: Some(loader),
         }
@@ -242,6 +253,7 @@ impl Clone for ScopeData {
             return_value: self.return_value.clone(),
             name: self.name.clone(),
             description: self.description.clone(),
+            long_help: self.long_help.clone(),
             is_loaded: true,
             loader: None,
         }
@@ -261,6 +273,7 @@ impl Scope {
                 ScopeType::Namespace,
                 Some("global".to_string()),
                 Some("The root of all scopes. All scopes directly or indirectly inherit from the root scope.".to_string()),
+                None,
             ))),
         }
     }
@@ -268,6 +281,7 @@ impl Scope {
     pub fn create(
         name: Option<String>,
         description: Option<String>,
+        long_help: Option<String>,
         scope_type: ScopeType,
         is_stopped: bool,
         is_readonly: bool,
@@ -284,6 +298,7 @@ impl Scope {
                 return_value: None,
                 name,
                 description,
+                long_help,
                 is_loaded: true,
                 loader: None,
             })),
@@ -298,6 +313,7 @@ impl Scope {
                 scope_type,
                 None,
                 None,
+                None,
             ))),
         }
     }
@@ -306,6 +322,7 @@ impl Scope {
         &self,
         name: &str,
         description: impl Into<String>,
+        long_help: Option<String>,
         loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
@@ -314,6 +331,7 @@ impl Scope {
                 Some(self.clone()),
                 Some(name.to_string()),
                 Some(description.into()),
+                long_help,
                 loader,
             ))),
         };
@@ -888,6 +906,10 @@ impl Help for Scope {
         ];
 
         let data = self.lock().unwrap();
+        if let Some(long_help) = &data.long_help {
+            lines.insert(0, "".to_string());
+            lines.insert(0, long_help.clone());
+        }
         let mut keys: Vec<_> = data
             .mapping
             .iter()
@@ -949,5 +971,39 @@ impl TableStreamReader for ScopeReader {
             ColumnType::new("value", ValueType::Any),
         ];
         &SCOPE_STREAM_TYPE
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn long_help_prepends_scope_long_help_when_present() -> CrushResult<()> {
+        let root = Scope::create_root();
+        let ns = root.create_namespace(
+            "test_scope_with_long_help",
+            "short description",
+            Some("this is the long help text".to_string()),
+            Box::new(|_| Ok(())),
+        )?;
+        let help = ns.long_help().expect("expected long help");
+        assert!(help.starts_with("this is the long help text"));
+        assert!(help.contains("This scope contains the following elements:"));
+        Ok(())
+    }
+
+    #[test]
+    fn long_help_has_no_prefix_when_absent() -> CrushResult<()> {
+        let root = Scope::create_root();
+        let ns = root.create_namespace(
+            "test_scope_without_long_help",
+            "short description",
+            None,
+            Box::new(|_| Ok(())),
+        )?;
+        let help = ns.long_help().expect("expected long help");
+        assert!(help.starts_with("This scope contains the following elements:"));
+        Ok(())
     }
 }

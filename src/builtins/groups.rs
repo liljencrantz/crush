@@ -71,6 +71,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "groups",
         "User group commands",
+        None,
         Box::new(move |groups| {
             List::declare(groups)?;
             GetItem::declare(groups)?;

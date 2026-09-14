@@ -1424,12 +1424,18 @@ Create a connection to a gRPC service.
 gRPC (https://grpc.io) is Google's open-source, high-performance RPC
 framework, built on HTTP/2 and Protocol Buffers.
 
-Returns a struct with one member per RPC method the service exposes (call it
-like `$conn:MethodName arg=value`), plus a `close` member that releases the
-connection.
+To send RPC calls to a server, you must first create a grpc connection, writing something like `$conn := $(grpc:connect host=localhost service=* --plaintext)`.
 
-This command currently uses grpcurl under the hood and does not keep a
-persistent gRPC connection open, so repeated calls can be slow.
+The resulting connection struct will have one method for each endpoint on the chosen services of the host you connected to. When calling a method, there are two different ways to pass in input parameters.
+
+If you want to pass exactly one message to the endpoint, e.g. because the endpoint does not use client streaming, you have the option of passing the fields of the message as arguments to the method call, e.g. `$conn:ReverseString input=hello`.
+The grpc methods support tab completion of argument names. They also come with help messages (e.g. `help $conn:ReverseString`) that describes the input and output format.
+
+If you want to pass multiple messages to the endpoint, you must do so by piping in a table_input_stream, where the column names of the stream are identical to the field names of the message, e.g. `list:of foo bar baz | select input={$value} | $conn:ReverseString`
+
+Output from a gRPC method call is always a `$table_input_stream`, with one row per message. If an endpoint does not use server side streaming, the output always has one row.
+
+Once you are done with a gRPC connection, you should close it to free up resources. Do so by calling the close method, e.g. `$conn:close`.
 
 This command accepts the following arguments:
 
@@ -1441,9 +1447,13 @@ This command accepts the following arguments:
 
 # Examples
 
-    $conn := $(grpc:connect host="localhost" service="reverse.Reverser" plaintext=$true)
+    $conn := $(grpc:connect host=localhost service=* --plaintext)
     # Returns "olleh"
     $conn:ReverseString input="hello"
+    # Returns a stream with the values "oof", "rab", and "zab"
+    list:of foo bar baz | select input={$value} | $conn:ReverseString
+    # Close the connection once you're done
+    $conn:close
 
 ---
 

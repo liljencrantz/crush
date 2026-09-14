@@ -180,6 +180,7 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     root.create_namespace(
         "yaml",
         "YAML I/O",
+        None,
         Box::new(move |env| {
             FromSignature::declare(env)?;
             To::declare(env)?;

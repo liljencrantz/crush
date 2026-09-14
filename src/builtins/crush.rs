@@ -725,6 +725,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "crush",
         "Information about this Crush session",
+        None,
         Box::new(move |crush| {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;
@@ -749,6 +750,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.create_namespace(
                 "prompt",
                 "Prompt data for Crush",
+                None,
                 Box::new(move |env| {
                     prompt::Set::declare(env)?;
                     prompt::Get::declare(env)?;
@@ -766,6 +768,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.create_namespace(
                 "title",
                 "Title data for Crush",
+                None,
                 Box::new(move |env| {
                     title::Set::declare(env)?;
                     title::Get::declare(env)?;
@@ -781,12 +784,14 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.create_namespace(
                 "warn",
                 "Warnings reported by commands that experienced a partial failure",
+                None,
                 Box::new(move |env| {
                     warn::New::declare(env)?;
                     warn::List::declare(env)?;
                     env.create_namespace(
                         "limit",
                         "How many warnings crush:warn:list keeps before evicting the oldest",
+                        None,
                         Box::new(move |env| {
                             warn::limit::Get::declare(env)?;
                             warn::limit::Set::declare(env)?;
@@ -796,6 +801,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     env.create_namespace(
                         "print",
                         "Whether warnings are printed to the screen as they happen",
+                        None,
                         Box::new(move |env| {
                             warn::print::Get::declare(env)?;
                             warn::print::Set::declare(env)?;
@@ -809,6 +815,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.create_namespace(
                 "locale",
                 "Locale data for Crush",
+                None,
                 Box::new(move |env| {
                     locale::List::declare(env)?;
                     locale::Get::declare(env)?;
@@ -820,6 +827,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.create_namespace(
                 "env",
                 "Environment variables",
+                None,
                 Box::new(move |loader| {
                     env::GetItem::declare(loader)?;
                     env::SetItem::declare(loader)?;
@@ -832,6 +840,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             crush.create_namespace(
                 "byte_unit",
                 "Formating style for table columns containing byte sizes.",
+                None,
                 Box::new(move |env| {
                     byte_unit::List::declare(env)?;
                     byte_unit::Get::declare(env)?;

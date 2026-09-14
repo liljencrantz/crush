@@ -247,6 +247,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "users",
         "User commands",
+        None,
         Box::new(move |users| {
             Me::declare(users)?;
             Current::declare(users)?;

@@ -91,6 +91,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "sockets",
         "List opened sockets",
+        None,
         Box::new(move |sockets| {
             TCP::declare(sockets)?;
             UDP::declare(sockets)?;

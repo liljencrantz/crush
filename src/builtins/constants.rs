@@ -7,6 +7,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "constants",
         "Language constants",
+        None,
         Box::new(move |env| {
             env.declare("true", Value::Bool(true))?;
             env.declare("false", Value::Bool(false))?;
