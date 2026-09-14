@@ -2324,4 +2324,485 @@ This command accepts the following arguments:
 [32mvar[0m[36m:[0m[32muse[0m [36m$math[0m
 [32msqrt[0m [36m2[0m
 
+[32mtype[0m [36mstring[0m
+Textual data, stored as an immutable sequence of unicode code points.
+
+A string literal is written between double quotes, e.g. [32m"hello world"[0m. A string is a sequence 
+of legal unicode characters -- nothing else can be represented, and every crush 
+string is guaranteed to be valid text.
+
+Strings are immutable -- every method that looks like it modifies a string ([32m
+upper[0m, [32mreplace[0m, [32mtrim[0m, ...) returns a new string rather than changing the receiver.
+
+[32mfile[0m and [32mbinary[0m are the two other types that hold sequences of data rather than a single 
+scalar value, and it's worth being precise about how they differ from [32mstring[0m and from 
+each other. A [32mfile[0m represents an operating system path: a sequence of bytes that is 
+a legal file name, a system-dependent notion of legality that usually allows 
+byte sequences that aren't legal unicode (for example, a Latin-1-encoded name on 
+a system whose text encoding is UTF-8). A [32mbinary[0m is simply a sequence of bytes with no 
+legality constraint at all -- the type to reach for when the data isn't 
+necessarily text or a path. Because "legal file name" and "legal unicode text" 
+are overlapping but different constraints, [32mstring[0m and [32mfile[0m have to be separate types: some 
+strings can't be legal file names (most commonly one containing a zero byte -- 
+many operating systems represent a path internally as a zero-terminated byte 
+sequence, so a zero byte can never be part of one), and some legal file names 
+can't be represented as a string at all.
+
+For convenience, builtin commands that expect a [32mfile[0m argument also accept a [32mstring[0m, which 
+crush converts automatically. That conversion doesn't validate the result up 
+front, though -- passing a string containing a zero byte is accepted silently, 
+and only fails once the resulting file value is actually used against the 
+filesystem. This isn't just an implementation shortcut: neither crush nor the 
+computer it's running on can actually know what does and doesn't constitute a 
+legal file name ahead of time, because that's up to whatever filesystem the path 
+eventually resolves into, and that can change from one path component to the 
+next -- a network mount, for instance, can enforce completely different naming 
+rules than the local filesystem it's mounted under, and crush has no general way 
+to know a path crosses into one before it's used. Some obviously-illegal names 
+could be rejected early (a zero byte, for example, is illegal everywhere), but 
+the only way to be certain a given name is legal is to actually hand it to the 
+operating system in a real syscall. Going the other way, a [32mfile[0m whose bytes aren't 
+valid unicode can't be losslessly converted to a [32mstring[0m either; rather than erroring, 
+crush falls back to displaying it as the placeholder text [32m<invalid filename>[0m.
+
+ * [32m__getitem__[0m     Extract a one character substring from this string.
+ * [32m__is__[0m          True if the needle equals this string. Not meant to be called directly -- 
+                   use the [32mlike[0m command or the [32m=~[0m operator.
+ * [32m__is_not__[0m      False if the needle equals this string. Not meant to be called directly -- 
+                   use the [32mlike[0m command or the [32m!~[0m operator.
+ * [32mbytes[0m           Returns the length (in number of bytes) of the string, as encoded using 
+                   UTF-8
+ * [32mends_with[0m       True if this string ends with the specified suffix
+ * [32mformat[0m          Format arguments into a string
+ * [32mis_alphabetic[0m   True if every character of this string is alphabetic
+ * [32mis_alphanumeric[0m True if every character of this string is alphabetic or numeric
+ * [32mis_ascii[0m        True if every character of this string is part of the ascii character set
+ * [32mis_control[0m      True if every character of this string is a control character
+ * [32mis_digit[0m        True if every character of this string is a digit in the specified radix
+ * [32mis_lowercase[0m    True if every character of this string is lower case
+ * [32mis_uppercase[0m    True if every character of this string is upper case
+ * [32mis_whitespace[0m   True if every character of this string is a whitespace character
+ * [32mjoin[0m            Join all arguments by the specified string
+ * [32mlen[0m             Returns the length (in number of unicode characters) of the string.
+ * [32mlower[0m           Returns an identical string but in lower case
+ * [32mlpad[0m            Returns a string truncated or left-padded to be the exact specified length
+ * [32mrepeat[0m          Returns this string repeated times times
+ * [32mrpad[0m            Returns a string truncated or right-padded to be the exact specified length
+ * [32msplit[0m           Splits a string using the specified separator
+ * [32mstarts_with[0m     True if this string starts with the specified prefix
+ * [32msubstr[0m          Extract a substring from this string.
+ * [32mtrim[0m            Returns a string with all whitespace trimmed from both ends
+ * [32mupper[0m           Returns an identical string but in upper case
+
+
+[32mtype[0m [36minteger[0m
+A numeric type representing an integer number.
+
+An integer literal is a bare number, e.g. [32m5[0m or [32m-3[0m. Underscores may be used as digit 
+separators to make large numbers easier to read, e.g. [32m1_000_000[0m.
+
+A Crush integer uses signed 128 bit precision. This means that the highest 
+number that can be represented is 170141183460469231731687303715884105727, and 
+the lowest is -170141183460469231731687303715884105728.
+
+Integers are immutable values. The most similar type is [32mfloat[0m, used for numbers that 
+need a fractional part; mixing an integer and a float in an arithmetic 
+expression promotes the result to a float.
+
+ * [32m__add__[0m Add this number and the specified term and return the result
+ * [32m__div__[0m Divide this number by the specified factor
+ * [32m__mul__[0m multiply this number and the specified factor and return the result
+ * [32m__neg__[0m Negate this integer
+ * [32m__sub__[0m Subtract the specified term from this number and return the result
+ * [32mmax[0m     Largest integer value
+ * [32mmin[0m     Smallest integer value
+ * [32mmod[0m     Least positive residue after integer division
+ * [32mrem[0m     Remainder after integer division
+
+
+[32mtype[0m [36mtime[0m
+A point in time with nanosecond precision.
+
+To get the current time, use [32mtime:now[0m. To parse a time from text, use [32mtime:parse[0m.
+
+All time instances use the local time zone.
+
+A time instance has nanosecond precision. It is represented internally as two 64 
+bit numbers, one for the number of seconds since the Unix epoc, and one for the 
+nanosecond remainder.
+
+Times are immutable values -- arithmetic methods like adding a [32mduration[0m return a new 
+time rather than changing the receiver. The most similar type is [32mduration[0m, used to 
+represent the difference between two times.
+
+ * [32m__add__[0m Add the specified delta to this time
+ * [32m__sub__[0m Remove the specified duration from this time to produce an earlier time, or 
+           calculate the difference between two points in time.
+ * [32mformat[0m  Format this time using a strftime-style pattern string
+ * [32mnow[0m     The current point in time.
+ * [32mparse[0m   Parse a time string using a strptime-style pattern string
+
+
+[32mtype[0m [36mduration[0m
+A difference between two points in time.
+
+To create your own duration objects, use the [32mduration:of[0m method, for example
+
+[32mduration[0m[36m:[0m[32mof[0m [36mseconds[0m[36m=[0m[36m10[0m
+A duration instance has nanosecond precision. It is represented internally as 
+two 64 bit numbers, one for the number of seconds, and one for the nanosecond 
+remainder.
+
+durations are signed, i.e. they can be used to denote a negative span of time. 
+Durations are immutable values. The most similar type is [32mtime[0m: subtracting one [32mtime[0m from 
+another produces a [32mduration[0m, and a [32mduration[0m can be added to or subtracted from a [32mtime[0m.
+
+ * [32m__add__[0m          Add the specified delta or time to this duration.
+ * [32m__div__[0m          Divide this duration by the specified divisor.
+ * [32m__mul__[0m          Multiply this duration by the specified factor.
+ * [32m__neg__[0m          Negate this duration.
+ * [32m__sub__[0m          Remove the specified delta from this duration.
+ * [32mdays[0m             Returns the number of minutes in this duration, rounded towards zero.
+ * [32mhours[0m            Returns the number of minutes in this duration, rounded towards zero.
+ * [32mmilliseconds[0m     Returns the number of milliseconds in this duration, rounded towards zero.
+ * [32mminutes[0m          Returns the number of minutes in this duration, rounded towards zero.
+ * [32mnanoseconds_part[0m Returns the nanosecond part of this duration.
+ * [32mof[0m               Create a new duration.
+ * [32mseconds[0m          Returns the number of seconds in this duration, rounded towards zero.
+
+
+[32mtype[0m [36mglob[0m
+A pattern containing wildcards.
+
+Globs are usually created by writing an unescaped string containing a wildcard 
+character ([32m*[0m or [32m?[0m), like [32mfiles *.toml[0m.
+
+If you want to construct a new glob from a string, use the [32mglob:new[0m command, e.g. [32m
+glob:new "*.txt"[0m.
+
+Globs are immutable. The most similar types are [32mre[0m, which supports much richer 
+patterns at the cost of more complex syntax, and [32mstring[0m, which globs otherwise 
+resemble but never match by wildcard -- only a real glob value does.
+
+ * [32m__is__[0m     True if the needle matches this glob. Not meant to be called directly -- use 
+              the [32mlike[0m command or the [32m=~[0m operator.
+ * [32m__is_not__[0m False if the needle matches this glob. Not meant to be called directly -- 
+              use the [32mlike[0m command or the [32m!~[0m operator.
+ * [32mfiles[0m      Perform file matching of this glob.
+ * [32mfilter[0m     Filter input stream based on this glob.
+ * [32mnew[0m        Create a glob from a string
+
+
+[32mtype[0m [36mre[0m
+A regular expression is an advanced pattern that can be used for matching and 
+replacing text.
+
+Regular expressions are usually created by writing using regexp literal syntax, 
+e.g. [32mfiles ^(^...$)[0m.
+
+If you want to construct a new glob from a string, use the [32mre:new[0m command, e.g. [32m
+re:new "[a-z]*\.txt"[0m.
+
+Regular expressions are immutable. The most similar type is [32mglob[0m, which supports 
+only simple wildcard patterns but with much simpler syntax.
+
+ * [32m__is__[0m      True if the needle matches this regular expression. Not meant to be called 
+               directly -- use the [32mlike[0m command or the [32m=~[0m operator.
+ * [32m__is_not__[0m  True if the needle does not match this regular expression. Not meant to be 
+               called directly -- use the [32mlike[0m command or the [32m!~[0m operator.
+ * [32mfilter[0m      Filter input stream based on this regex.
+ * [32mnew[0m         Compile a string into a new regular expression instance.
+ * [32mreplace[0m     Replace the first match of the regex in text with the replacement
+ * [32mreplace_all[0m Replace all matches of the regex in text with the replacement
+
+
+[32mtype[0m [36mcommand[0m
+A piece fo code that can be called.
+
+The most common way to create a command is a closure literal, e.g. [32m{echo hello}[0m, or with 
+named parameters, [32m{|$x| echo $x}[0m. Builtin commands are themselves command values and can be 
+captured into a variable the same way, e.g. [32m$e := $echo[0m.
+
+A command value is immutable -- calling it runs its body, but that doesn't 
+change the value itself. Reassigning the variable that holds a command is a 
+separate operation from mutating the command.
+
+
+[32mtype[0m [36mfile[0m
+Any type of file.
+
+A file value is usually written as a bareword or single-quoted path, e.g. [32m
+./Cargo.toml[0m or [32m'my file.txt'[0m -- crush recognizes these as files rather than plain strings based on their 
+syntax. You can also convert an existing string explicitly, e.g. [32m
+convert $file "./Cargo.toml"[0m.
+
+A file value simply names a path; the value itself is immutable, though of 
+course the file it points at on disk can change, be created, or be removed out 
+from under it via methods like [32mremove[0m or commands like [32mfs:mkdir[0m. See [32mhelp string[0m for exactly how [32mfile[0m differs 
+from [32mstring[0m and [32mbinary[0m, the other two types that represent a sequence of data rather than a 
+single scalar value; [32mglob[0m is also related, matching a whole set of paths rather than 
+naming a single one.
+
+ * [32m__getitem__[0m Return a file or subdirectory in the specified base directory.
+ * [32mchmod[0m       Change permissions of this file.
+ * [32mchown[0m       Change owner of this file.
+ * [32mexists[0m      True if the file exists.
+ * [32mmkdir[0m       Create directory
+ * [32mname[0m        The name (excluding path) of this file, as a string
+ * [32mparent[0m      The parent directory of this file
+ * [32mread[0m        A read source for binary_stream values
+ * [32mremove[0m      Delete this file
+ * [32mtouch[0m       Set the modification and access times of file.
+ * [32mwrite[0m       Write a binary_stream to this file. If no stream is given, input pipe must 
+               be one.
+
+
+[32mtype[0m [36mtable_input_stream[0m
+An input stream of table rows.
+
+A table_input_stream is produced by any streaming command -- for example, the 
+output of [32mfiles[0m or [32mseq[0m -- or by reading the [32mread[0m member of a pipe object (see [32m
+(table_input_stream ...):pipe[0m, under [32mhelp pipe[0m).
+
+It can only be traversed once: each row is consumed as it's read, so a second 
+pass over the same stream sees nothing. If you need to read the same rows more 
+than once, pipe the stream through [32mmaterialize[0m to turn it into a reusable [32mtable[0m. [32m
+table_output_stream[0m is the writable counterpart of the same rows.
+
+ * [32m__call__[0m    return the table_input_stream type with the specified column signature.
+ * [32m__getitem__[0m Returns the specified row of the table stream as a struct.
+ * [32mpipe[0m        Returns a pipe consisting of a read end and a write end.
+
+
+[32mtype[0m [36mtable_output_stream[0m
+An output stream of table rows.
+
+A table_output_stream is obtained from the [32moutput[0m member of a pipe object, created by 
+calling [32m:pipe[0m on a [32mtable_input_stream[0m type, e.g. [32m$p := $($(table_input_stream value=$integer):pipe)[0m; [32m$p:output[0m is then a table_output_stream that rows can be 
+written to, and [32m$p:read[0m is the matching table_input_stream those same rows can be read 
+back from.
+
+Rows are written with the [32mwrite[0m method (see [32mhelp pipe:write[0m). The most similar type is [32m
+table_input_stream[0m, its read-side counterpart.
+
+ * [32m__call__[0m return the table_output_stream type with the specified column signature.
+ * [32mwrite[0m    write input to this output stream
+
+
+[32mtype[0m [36mtable[0m
+A table of rows.
+
+A table is created by piping a table_input_stream through [32mmaterialize[0m, e.g. [32m
+files | materialize[0m.
+
+Unlike a table_input_stream, a table is a fixed snapshot: it can be read more 
+than once, indexed by row number ([32m$t[0][0m), and asked for its length ([32m$t:len[0m) -- but it has 
+no methods for adding, removing, or replacing rows. The most similar type is [32m
+table_input_stream[0m, the one-shot, streaming form it's materialized from.
+
+ * [32m__call__[0m    Return the table_input_stream type with the specified column signature.
+ * [32m__getitem__[0m Returns the specified row of the table as a struct.
+ * [32mlen[0m         The number of rows in the table.
+
+
+[32mtype[0m [36mstruct[0m
+A mapping from name to value.
+
+To create a simple immutable struct, use the [32mstruct:of[0m command, e.g. [32mstruct:of x=1 y=2[0m; its fields can be 
+read ([32m$s:x[0m) but not reassigned.
+
+To create a mutable struct that supports inheritance and methods, use the [32mclass[0m 
+command; instances created from a class ([32m$MyClass:new ...[0m) do support field reassignment ([32m
+$instance:x = 5[0m) from outside the class as well as from within its own methods.
+
+The most similar type is [32mdict[0m, which is also a mapping from keys to values, but with 
+keys chosen at runtime rather than fixed named fields, and no support for 
+methods or inheritance.
+
+ * [32mof[0m Construct a struct with the specified members
+
+
+[32mtype[0m [36mlist[0m [36m$string[0m
+A mutable list of items, usually of the same type.
+
+Create a list with the [32mlist:of[0m command, e.g. [32mlist:of 1 2 3[0m, or by collecting a column out of piped 
+table input with [32mlist:collect[0m.
+
+Lists are mutable: elements can be appended, removed, or replaced in place. The 
+most similar type is [32mtable[0m, which is also an ordered sequence of items but where each 
+item is a row of several named, differently-typed columns rather than a single 
+value.
+
+ * [32m__call__[0m    Returns a list type with the specified value type.
+ * [32m__getitem__[0m Return the value at the specified index of the list.
+ * [32m__setitem__[0m Assign a new value to the element at the specified index.
+ * [32mclear[0m       Remove all values from this list.
+ * [32mclone[0m       Create a duplicate of the list.
+ * [32mcollect[0m     Create a new list by reading a column from the input.
+ * [32mempty[0m       True if there are no values in the list.
+ * [32minsert[0m      Insert a new element at the specified index. Following values will be 
+               shifted forward.
+ * [32mlen[0m         The number of values in the list.
+ * [32mnew[0m         Create a new list with the specified element type.
+ * [32mof[0m          Create a new list containing the supplied elements.
+ * [32mpeek[0m        Return the last element from the list without removing it.
+ * [32mpop[0m         Remove the last element from the list.
+ * [32mpush[0m        Push elements to the end of the list.
+ * [32mremove[0m      Remove the element at the specified index and return it.
+ * [32mrepeat[0m      Create a list containing the same value multiple times
+ * [32mslice[0m       Extract a slice from this list.
+ * [32mtruncate[0m    Remove all elements past the specified index.
+
+
+[32mtype[0m [36mdict[0m [36m$string[0m [36m$integer[0m
+A mutable mapping from one set of values to another.
+
+Create a dict with the [32mdict:of[0m command, e.g. [32mdict:of a=1 b=2[0m, or by collecting key/value columns out 
+of piped table input with [32mdict:collect[0m.
+
+Dicts are mutable: entries can be inserted, removed, or have their value 
+replaced in place. The most similar type is [32mstruct[0m, which is also a mapping from keys 
+to values, but with a fixed set of keys chosen when the struct is created rather 
+than a dynamic, mutable set of keys.
+
+ * [32m__call__[0m    Returns a dict type parametrized with the specified key and value types.
+ * [32m__getitem__[0m Return the value mapped to the specified key of the dict.
+ * [32m__setitem__[0m Create a new mapping or replace an existing one.
+ * [32mclear[0m       Remove all mappings from this dict.
+ * [32mclone[0m       Create a new dict with the same set of mappings as this one.
+ * [32mcollect[0m     Create a new dict by reading the specified columns from the input.
+ * [32mcontains[0m    Returns whether the given key is in the dict
+ * [32mempty[0m       True if there are no mappings in the dict.
+ * [32mjoin[0m        Create a new dict with the same set of mappings as this one.
+ * [32mkey_type[0m    the type of the keys in this dict.
+ * [32mlen[0m         The number of mappings in the dict.
+ * [32mnew[0m         Create an empty new dict.
+ * [32mof[0m          Create a new dict with the specified elements.
+ * [32mremove[0m      Remove a mapping from the dict and return the value, or nothing if there was 
+               no value in the dict
+ * [32mvalue_type[0m  the type of the values in this dict.
+
+
+[32mtype[0m [36mscope[0m
+A scope in the Crush namespace.
+
+A scope is normally not constructed directly -- crush creates one implicitly for 
+the root namespace ([32m$global[0m) and for every closure or block invocation. The scope 
+currently executing can be obtained by calling [32m__current_scope__[0m on any existing scope value, 
+e.g. [32m$global:__current_scope__[0m.
+
+Scopes are mutable: declaring a new variable ([32m:=[0m) or assignment ([32m=[0m) modifies the 
+scope it's declared or resolved in.
+
+ * [32m__all__[0m           The names of all variable visible from the current scope.
+ * [32m__current_scope__[0m The current scope.
+ * [32m__getitem__[0m       Return the specified member in the current scope
+ * [32m__local__[0m         The names of all variables defined in the local scope.
+ * [32m__name__[0m          The name of this scope, or empty if unnamed.
+ * [32m__read_only__[0m     True if this scope is write protected.
+ * [32m__resolve__[0m       Resolve the specified member in the current scope
+ * [32m__super__[0m         The parent of this scope. The root (global) scope returns itself.
+ * [32m__use__[0m           All use imports in this scope.
+
+
+[32mtype[0m [36mbool[0m
+True or false.
+
+A boolean value is one of the two literals [32m$true[0m or [32m$false[0m -- there is no other way to 
+construct one. Booleans are immutable, and are the result type of every 
+comparison ([32m==[0m, [32m<[0m, ...) and logical ([32mand[0m, [32mor[0m) operator.
+
+
+[32mtype[0m [36mfloat[0m
+A numeric type representing any number with floating point precision.
+
+A float literal is a bare number containing a decimal point, e.g. [32m5.0[0m or [32m-3.25[0m.
+
+A Crush float is a IEEE 754 64-bit (double precision) floating point number. 
+Floats are immutable values. The most similar type is [32minteger[0m; mixing the two in an 
+arithmetic expression promotes the result to a float.
+
+ * [32m__add__[0m     Add this number and the specified term and return the result
+ * [32m__div__[0m     Divide this number by the specified factor
+ * [32m__mul__[0m     multiply this number and the specified factor and return the result
+ * [32m__neg__[0m     Negate this float
+ * [32m__sub__[0m     Subtract the specified term from this number and return the result
+ * [32minfinity[0m    Infinity
+ * [32mis_infinite[0m True if this float is positive or negative infinity.
+ * [32mis_nan[0m      True if this float is NaN
+ * [32mmax[0m         Largest finite float value
+ * [32mmin[0m         Smallest finite float value
+ * [32mnan[0m         Not a number
+
+
+[32mtype[0m [36mempty[0m
+Nothing.
+
+The instance of the empty type is returned by commands that don't return any 
+value, e.g. [32mecho[0m. There is no way to construct it directly -- it only ever shows up 
+as the natural result of a command that produces no output.
+
+
+[32mtype[0m [36many[0m
+Any type.
+
+This is a wildcard type, matching a value of any other type. It shows up as the 
+declared type of a column or argument that intentionally imposes no type 
+restriction -- it is not a type user code constructs values of directly.
+
+
+[32mtype[0m [36mbinary_stream[0m
+A stream of binary data.
+
+A binary_stream is obtained by reading binary data without fully loading it into 
+memory first, e.g. [32mbin:from ./Cargo.toml[0m, or the [32mbody[0m of an HTTP response from [32mio:http[0m.
+
+Like [32mtable_input_stream[0m, it can only be read once. Pipe it through [32mmaterialize[0m to get a reusable [32mbinary[0m value 
+instead.
+
+
+[32mtype[0m [36mbinary[0m
+Binary data.
+
+A binary value can be created by converting another value, e.g. [32m
+convert $binary "hi"[0m, or by reading a [32mbinary_stream[0m to completion with [32mmaterialize[0m, e.g. [32mbin:from ./Cargo.toml | materialize[0m.
+
+Binary data is immutable once created, and unlike [32mstring[0m or [32mfile[0m it has no legality 
+constraint at all -- it's simply an arbitrary sequence of bytes, the type to 
+reach for when data isn't necessarily text or a path. See [32mhelp string[0m for how the three 
+sequence-of-data types ([32mstring[0m, [32mfile[0m, [32mbinary[0m) differ. The most similar type is [32mbinary_stream[0m, its one-shot 
+streaming form.
+
+ * [32m__getitem__[0m Returns the byte at the specified offset.
+ * [32mlen[0m         The number of bytes in the binary.
+
+
+[32mtype[0m [36mtype[0m
+A type.
+
+A type value names one of crush's own types, e.g. [32m$string[0m or [32m$integer[0m -- [32mtypeof[0m returns a value of 
+this kind. Types are mostly used to declare what kind of value a signature 
+parameter or table column accepts, e.g. via [32mconvert[0m or a class field declaration, 
+rather than being manipulated directly by everyday scripts.
+
+ * [32m__is__[0m     True if the needle's type is this type. Not meant to be called directly -- 
+              use the [32mlike[0m command, the [32m=~[0m operator, or the [32mis[0m arm of a [32mmatch[0m block.
+ * [32m__is_not__[0m False if the needle's type is this type. Not meant to be called directly -- 
+              use the [32mlike[0m command or the [32m!~[0m operator.
+
+
+[32mtype[0m [36mone_of[0m [36m$string[0m [36m$integer[0m
+One of string, integer
+
+A one_of value is constructed with the [32mone_of:of[0m command, e.g. [32m
+one_of:of $file $string $regex[0m, and names a set of acceptable types rather than a single one. It's used the 
+same way an ordinary type is -- most commonly to declare that a signature 
+parameter accepts any one of several types -- rather than being a type user code 
+creates values of.
+
+ * [32m__call__[0m Construct a one_of value type with the specified allowed types
+
+
 === checked 176 commands, 6 skipped ===
+
+=== checked 23 types, 0 skipped ===

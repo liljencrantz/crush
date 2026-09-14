@@ -60,4 +60,32 @@ $crawl := {
 crawl $global
 $_barrier := "x"
 
+# `help` on a command exercises the Help impl for commands; it never touches
+# ValueType::short_help/long_help/Display::fmt, which are a completely separate set of
+# match arms (one per type, in src/lang/value/value_type.rs) that the crawl above can't
+# reach -- types aren't listed by `dir` the way commands are, since they're merged into
+# the root scope via `use` rather than declared as members of it. So this is a flat,
+# hardcoded list rather than a crawl: one value per `ValueType` variant, covering every
+# variant declared in value_type.rs (a new variant not added here is still exercised by
+# value_type_variants_are_all_accounted_for_in_serialization_crush in
+# src/lang/value/mod.rs, but that test doesn't call `help` -- add it here too).
+$checked_types := $($(list $string):new)
+$skipped_types := $($(list $string):new)
+$all_types := $(list:of \
+    $string $integer $time $duration $glob $re $command $file \
+    $table_input_stream $table_output_stream $table $struct \
+    $(list $string) $(dict $string $integer) $scope $bool $float \
+    $empty $any $binary_stream $binary $type $(one_of $string $integer) \
+)
+for t=$all_types {
+    try {
+        help $t
+        $checked_types:push $("{}":format $t)
+    } catch {
+        |$e| $skipped_types:push $("{} (help rendering failed)":format $t)
+    }
+}
+$_barrier2 := "x"
+
 echo --raw $("\n=== checked {} commands, {} skipped ===":format $($checked:len) $($skipped:len))
+echo --raw $("\n=== checked {} types, {} skipped ===":format $($checked_types:len) $($skipped_types:len))

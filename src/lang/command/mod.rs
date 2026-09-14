@@ -483,12 +483,12 @@ impl Display for Parameter {
                 Ok(())
             }
             (true, false) => {
-                f.write_str("@@")?;
+                f.write_str("@@ $")?;
                 self.name.fmt(f)?;
                 Ok(())
             }
             (false, true) => {
-                f.write_str("@")?;
+                f.write_str("@ $")?;
                 self.name.fmt(f)?;
                 Ok(())
             }
@@ -531,12 +531,12 @@ impl Display for ParameterDefinition {
                 Ok(())
             }
             ParameterDefinition::Named { name, .. } => {
-                f.write_str("@@")?;
+                f.write_str("@@ $")?;
                 name.fmt(f)?;
                 Ok(())
             }
             ParameterDefinition::Unnamed { name, .. } => {
-                f.write_str("@")?;
+                f.write_str("@ $")?;
                 name.fmt(f)?;
                 Ok(())
             }
