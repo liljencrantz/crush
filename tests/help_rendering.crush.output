@@ -1892,17 +1892,28 @@ Pass on some old fields and calculate new ones for each line of input
 [33m# Add an extra column to the output of files that shows the time passed since last modification[0m
 [32mfiles[0m [36m|[0m [32mselect[0m [36m*[0m [36mage[0m[36m=[0m[36m{[0m[36m([0m[36mtime[0m[36m.[0m[36mnow[0m[36m([0m[36m)[0m [36m-[0m [36mmodified[0m[36m)[0m[36m}[0m
 
-[32mstream[0m[36m:[0m[32mseq[0m [36m[[0m[36mfrom[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m[36mto[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m[36mstep[0m[36m=[0m[36minteger[0m[36m][0m
+[32mstream[0m[36m:[0m[32mseq[0m [36m[[0m[36margs[0m[36m=[0m[36minteger...[0m[36m][0m [36m[[0m[36mfrom[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m[36mto[0m[36m=[0m[36minteger[0m[36m][0m [36m[[0m[36mstep[0m[36m=[0m[36minteger[0m[36m][0m
 Return a stream of sequential numbers
+
+With no arguments, seq counts forever starting at 0. Given one to three unnamed 
+numbers, they're interpreted the same way Python's [32mrange[0m does: [32mseq to[0m counts from 0 up to 
+(but not including) [32mto[0m; [32mseq from to[0m starts at [32mfrom[0m instead; [32mseq from to step[0m also sets the step size. The [32mfrom[0m, [32mto[0m, and [32m
+step[0m named arguments below are equivalent to the two- and three-number unnamed 
+forms, spelled out -- but can't be mixed with the unnamed form in the same call, 
+since e.g. [32mseq 3 to=10[0m would leave it ambiguous which one actually sets the end of the 
+sequence.
 
 This command accepts the following arguments:
 
- * [32mfrom[0m (default: [32m0[0m) the first number in the sequence.
+ * [32margs[0m 1 to 3 numbers: [32mto[0m, [32mfrom to[0m, or [32mfrom to step[0m -- see the command's own long help. Can't be 
+        combined with the from/to/step named arguments.
+ * [32mfrom[0m the first number in the sequence. Defaults to 0.
  * [32mto[0m   the end of the sequence (exclusive). If not specified, the sequence will 
         continue forever.
- * [32mstep[0m (default: [32m1[0m) the step size.
+ * [32mstep[0m the step size. Defaults to 1.
 
 [4mExamples[0m
+[32mseq[0m [36m3[0m
 [33m# Prepend an index column to the output of the files command[0m
 [32mzip[0m [36m$([0m[36mseq[0m[36m)[0m [36m$([0m[36mfiles[0m[36m)[0m
 

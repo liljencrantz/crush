@@ -1,0 +1,49 @@
+# seq's unnamed-argument form is interpreted by count, the same way Python's `range`
+# is: `seq to`, `seq from to`, or `seq from to step`. The `from`/`to`/`step` named
+# arguments (src/builtins/stream/seq.rs) are equivalent to the two- and three-number
+# unnamed forms spelled out, but the unnamed collector is declared before them in the
+# signature struct, so it drains every positional argument first -- from/to/step can
+# only ever be filled by name, never positionally, which is what makes mixing the two
+# forms in the same call detectable and worth rejecting outright rather than picking one
+# arbitrarily.
+
+$values := {
+    |$s|
+    $($s | select value | list:collect)
+}
+
+# One unnamed argument: 0 up to (but not including) it.
+assert ($($values $(seq 3)) == $(list:of 0 1 2)) "seq 3 should be 0, 1, 2"
+
+# Two unnamed arguments: from, to (exclusive).
+assert ($($values $(seq 2 5)) == $(list:of 2 3 4)) "seq 2 5 should be 2, 3, 4"
+
+# Three unnamed arguments: from, to, step.
+assert ($($values $(seq 0 10 2)) == $(list:of 0 2 4 6 8)) "seq 0 10 2 should step by 2"
+
+# The named arguments produce the exact same results as their unnamed equivalents.
+assert ($($values $(seq to=3)) == $(list:of 0 1 2)) "seq to=3 should equal seq 3"
+assert ($($values $(seq from=2 to=5)) == $(list:of 2 3 4)) "seq from=2 to=5 should equal seq 2 5"
+assert ($($values $(seq from=0 to=10 step=2)) == $(list:of 0 2 4 6 8)) "seq from=0 to=10 step=2 should equal seq 0 10 2"
+
+# With no arguments at all, seq still counts forever starting at 0 -- unaffected by any
+# of the above, since the unnamed collector is simply empty in that case.
+assert ($($values $(seq | head 5)) == $(list:of 0 1 2 3 4)) "seq with no arguments should still count forever from 0"
+assert ($($values $(seq from=5 | head 3)) == $(list:of 5 6 7)) "seq from=5 with no to should still count forever from 5"
+
+# Mixing the unnamed form with any of from/to/step is rejected rather than silently
+# picking one.
+$mix_errored := $false
+try {
+    seq 3 to=5 | materialize
+} catch { |$e| $mix_errored = $true }
+assert $mix_errored "seq should reject mixing unnamed arguments with from/to/step"
+
+# More than 3 unnamed arguments is also rejected.
+$too_many_errored := $false
+try {
+    seq 1 2 3 4 | materialize
+} catch { |$e| $too_many_errored = $true }
+assert $too_many_errored "seq should reject more than 3 unnamed arguments"
+
+echo "seq tests ok"
