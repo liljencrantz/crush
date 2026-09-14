@@ -1,0 +1,27 @@
+# Found while testing duration literals: `timeout`'s termination retry loop
+# (src/builtins/control/mod.rs) works when its `duration` argument is written as an
+# inline substitution (`timeout $(duration:of milliseconds=200) {...}`, exactly what
+# tests/timeout.crush uses) but NOT when the exact same Duration value is read from a
+# variable that was assigned by an earlier, already-finished top-level statement
+# (`$d := $(duration:of milliseconds=200)`, then `timeout $d {...}`) -- the terminate
+# signal is still sent (confirmed by instrumenting the retry loop directly: job
+# structure and `join_one`'s result were byte-for-byte identical between the working
+# and failing cases), yet the caught error is the generic "receiving on an empty and
+# disconnected channel" instead of "Command timed out". 100% reproducible either way
+# (10/10 each), not a timing race.
+#
+# Root cause not yet found. Strong suspicion, not confirmed: `next_id()`
+# (src/lang/state/global_state.rs) reuses job ids the moment a finished job is swept
+# from the registry, so an unrelated, already-completed prior statement's job id can be
+# immediately recycled for `timeout`'s own job -- but the working and failing cases'
+# job trees were observed to be structurally identical (same ids, same parent chain),
+# so this alone doesn't explain the divergence yet.
+
+$d := $(duration:of milliseconds=200)
+$msg := ""
+try {
+    timeout $d {sleep $(duration:of seconds=30)}
+} catch {
+    |$e| $msg = $e:message
+}
+assert ($msg == "Command timed out") "timeout should report a timeout, not a leaked disconnected-channel error, regardless of whether its duration argument is a variable or an inline substitution"
