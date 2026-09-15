@@ -16,7 +16,7 @@ use signature::signature;
     short = "Serialize to pup format",
     long = "Pup is the native crush serialization format. All Crush types, including",
     long = "lambdas can be serialized to this format.",
-    example = "ls | pup:to")]
+    example = "files | pup:to")]
 struct To {
     #[unnamed()]
     #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]

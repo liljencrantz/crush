@@ -172,7 +172,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     long = "When serializing a list, some types have to be squashed, because toml does not have all the same types that Crush does:",
     long = "* `time` values are turned into strings in the RFC 3339 format.",
     long = "* `duration` values are turned into the integer number of seconds in the duration.",
-    example = "ls | toml:to")]
+    example = "$(files)[0] | toml:to")]
 struct To {
     #[unnamed()]
     #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
