@@ -9,8 +9,8 @@ service is `dbus:system:org:freedesktop:login1:org:freedesktop:login1`. An objec
 callable member per method and per property.
 
 Everything is loaded one level at a time, the first time it is used, which is what makes tab
-completion work without walking the whole bus up front: listing the services on a bus is a single
-`ListNames` call, and each object level is a single `Introspect` call.
+completion work without walking the whole bus up front: listing the services on a bus takes two
+calls, `ListNames` and `ListActivatableNames`, and each object level is a single `Introspect` call.
  */
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::{CrushCommand, Parameter};
@@ -51,6 +51,195 @@ const HIDDEN_INTERFACES: [&str; 3] = [
     "org.freedesktop.DBus.Peer",
     "org.freedesktop.DBus.Properties",
 ];
+
+/// The long help of the dbus namespace.
+const DBUS_LONG_HELP: &str = r##"D-Bus is the message bus that Linux system services and desktop applications use to talk to each other. A program that offers functionality on the bus is a service, identified by a name like `org.freedesktop.login1`. A service has objects, identified by paths like `/org/freedesktop/login1`. Each object implements one or more interfaces, made up of methods that can be called and properties that can be read and sometimes written.
+
+There are two busses. The system bus, `dbus:system`, is shared by the whole machine and hosts services like systemd, logind and NetworkManager. The session bus, `dbus:session`, belongs to a single login session and hosts desktop services like notifications and media players. Much of what `systemctl`, `loginctl`, `hostnamectl` and `timedatectl` do, they do by calling these services, and all of it is available directly from crush.
+
+# Finding your way around
+
+A service name is split on periods, so the service `org.freedesktop.login1` is `dbus:system:org:freedesktop:login1`. A service contains its objects, with paths split on slashes, so the object `/org/freedesktop/login1` of that service is `dbus:system:org:freedesktop:login1:org:freedesktop:login1`. An object contains one member per method and property. Some services, like the bus itself, answer on the root object, in which case the methods are members of the service directly, e.g. `dbus:system:org:freedesktop:DBus:GetId`.
+
+Every level can be tab completed. Levels are loaded the first time they are used, one D-Bus call per level. Services that are started on demand are listed even when they are not running, and using one starts it. Use `dir` to list the members of a level and `help` on a method to see its arguments and their types. Run `dbus:refresh` to see services and objects that appeared after a bus was first used.
+
+Object paths can only contain letters, digits and underscores, so services escape other characters. systemd, for example, names the object for `dbus.service` `dbus_2eservice`.
+
+# Calling methods
+
+Methods are called like commands. Arguments can be passed by name or by position. Services that don't name their arguments get them called `arg0`, `arg1`, and so on. A bare word containing periods or slashes, like `dbus.service` or `Europe/Stockholm`, is parsed as a file, but is accepted wherever a string is expected. A method returns nothing, a single value, or a struct with one field per return value.
+
+If more than one interface of an object has a method or property with the same name, those members are prefixed with the last part of their interface name, e.g. `Manager_ListSessions`. The methods of the standard Introspectable, Peer and Properties interfaces are not listed.
+
+D-Bus types map to crush types as follows:
+
+* `y n q i u x t` are integers of different sizes. Values are range checked when sent.
+* `d` is a float. Integers are accepted when sending.
+* `b` is a bool.
+* `s o g` are strings, object paths and type signatures, which are all strings.
+* `a...` is an array, which is a list. Arrays of bytes also accept binary data.
+* `a{...}` is a dict. A struct is accepted too, which is convenient for the common options argument of type `a{sv}`.
+* `(...)` is a struct, which is received as a list, and can be sent as a list or a struct.
+* `v` is a variant, which is received as the value it contains. When sending, the D-Bus type is picked from the crush value, e.g. integers are sent as `x`.
+* `h` is a Unix file descriptor, which can't be sent, and is received as an empty value.
+
+# Properties
+
+A property is read by calling it without arguments, and written by calling it with the new value as the only argument, e.g. `$player:Volume 0.5`.
+
+# Permissions
+
+Methods that change the state of the machine are usually guarded by polkit. They work when run as root, and otherwise fail with a permission error unless the policy allows them. Many such methods take an `interactive` argument. Passing `$true` lets polkit ask for a password through an authentication agent, which a plain terminal usually doesn't have, so pass `$false` there.
+
+# Common services on the system bus
+
+Which services exist depends on the machine. These are found on many Linux systems.
+
+* `org.freedesktop.DBus` is the bus itself. List services, and find the process id and credentials of the connection that owns a name.
+* `org.freedesktop.systemd1` is the systemd service manager. List, start, stop, restart and reload units, enable and disable unit files, and read every unit setting and runtime value, like its state, main process id, memory use and start time.
+* `org.freedesktop.login1` is logind. List and inspect users, sessions and seats, lock and terminate sessions, power off, reboot, suspend and hibernate, and check the idle state.
+* `org.freedesktop.hostname1` is hostnamed. Read and set the hostname, and read the operating system, kernel, chassis type and hardware vendor and model.
+* `org.freedesktop.timedate1` is timedated. Read and set the time zone, the time and whether NTP is used, and list all time zones.
+* `org.freedesktop.locale1` is localed. Read and set the system locale and the console and X11 keyboard layouts.
+* `org.freedesktop.resolve1` is systemd-resolved. Resolve host names, addresses and DNS records, inspect DNS settings per network link, and flush caches.
+* `org.freedesktop.network1` is systemd-networkd. List network links and their state, and reconfigure or renew them.
+* `org.freedesktop.timesync1` is systemd-timesyncd. Read the NTP server in use and the synchronization state.
+* `org.freedesktop.NetworkManager` is NetworkManager. List devices, connections and wireless access points, and activate and deactivate connections.
+* `org.freedesktop.UPower` is UPower. Read battery charge, time to empty or full, and whether the machine runs on battery.
+* `org.freedesktop.UDisks2` is UDisks. List drives, partitions and file systems, mount, unmount and format them, and read SMART data.
+* `org.freedesktop.Accounts` is AccountsService. List user accounts and read and change their real names, icons and languages.
+* `org.bluez` is BlueZ. List Bluetooth adapters and devices, scan, pair, connect and disconnect.
+* `org.freedesktop.PackageKit` is PackageKit. Search for, install, remove and update packages.
+* `org.freedesktop.fwupd` is fwupd. List devices with updatable firmware and install firmware updates.
+
+# Common services on the session bus
+
+These are found on most graphical desktops. Desktop environments add their own as well, e.g. `org.gnome.Shell` and `org.kde.KWin`.
+
+* `org.freedesktop.Notifications` shows desktop notifications.
+* `org.mpris.MediaPlayer2.*` are media players, e.g. `org.mpris.MediaPlayer2.spotify`. Play, pause, skip, seek, set the volume and read the metadata of what is playing.
+* `org.freedesktop.portal.Desktop` is the desktop portal, used for screenshots, file choosers and reading desktop settings like the color scheme.
+* `org.freedesktop.secrets` is the secret service of the desktop keyring, e.g. GNOME Keyring or KWallet.
+* `org.freedesktop.ScreenSaver` locks the screen and reports whether it is active.
+
+# Examples
+
+The bus itself:
+
+```
+$bus := $dbus:system:org:freedesktop:DBus
+# The unique id of this machine's bus
+$bus:GetId
+# Is a service running?
+$bus:NameHasOwner org.freedesktop.login1
+# The process id of a service
+$bus:GetConnectionUnixProcessID org.freedesktop.login1
+```
+
+systemd, the service manager:
+
+```
+$systemd := $dbus:system:org:freedesktop:systemd1:org:freedesktop:systemd1
+$systemd:Version
+
+# All active socket units. Each unit is a list of its name, description, load
+# state, active state, sub state, following unit, object path, job id, job type
+# and job object path.
+$systemd:ListUnitsByPatterns states=$(list:of active) patterns=$(list:of "*.socket")
+
+# The names of all running services
+for unit=$($systemd:ListUnitsByPatterns $(list:of running) $(list:of "*.service")) {
+    echo $unit[0]
+}
+
+# The object path of a unit
+$systemd:GetUnit dbus.service
+
+# Properties of a unit
+$unit := $dbus:system:org:freedesktop:systemd1:org:freedesktop:systemd1:unit:dbus_2eservice
+$unit:ActiveState
+$unit:MainPID
+$unit:MemoryCurrent
+$unit:Description
+
+# Restart and stop units. Requires root.
+$systemd:RestartUnit name=ssh.service mode=replace
+$systemd:StopUnit name=ssh.service mode=replace
+```
+
+logind, users, sessions and power:
+
+```
+$login := $dbus:system:org:freedesktop:login1:org:freedesktop:login1
+
+# Logged in users, each a list of user id, name and object path
+$login:ListUsers
+for user=$($login:ListUsers) {
+    echo $user[1]
+}
+
+# The session this shell runs in
+$login:session:self:Name
+$login:session:self:Type
+$login:user:self:Name
+
+# Is the machine idle?
+$login:IdleHint
+
+# Suspend or power off the machine
+$login:Suspend interactive=$false
+$login:PowerOff interactive=$false
+```
+
+The host name, time and locale:
+
+```
+$host := $dbus:system:org:freedesktop:hostname1:org:freedesktop:hostname1
+$host:Hostname
+$host:OperatingSystemPrettyName
+$host:KernelRelease
+$host:Chassis
+$host:SetStaticHostname hostname=build-server interactive=$false
+
+$time := $dbus:system:org:freedesktop:timedate1:org:freedesktop:timedate1
+$time:Timezone
+$time:NTP
+$time:SetTimezone timezone=Europe/Stockholm interactive=$false
+
+$dbus:system:org:freedesktop:locale1:org:freedesktop:locale1:Locale
+```
+
+Networking and name resolution:
+
+```
+$network := $dbus:system:org:freedesktop:network1:org:freedesktop:network1
+# Each link is a list of its index, name and object path
+$network:ListLinks
+$network:OperationalState
+
+# Resolve a host name on any interface (0), for any address family (0), with no
+# flags (0)
+$dbus:system:org:freedesktop:resolve1:org:freedesktop:resolve1:ResolveHostname 0 example.com 0 0
+```
+
+The session bus, on a desktop:
+
+```
+# Show a notification. The arguments are the application name, the id of a
+# notification to replace (0 for none), an icon, the summary, the body, a list of
+# actions, a dict of hints, and a timeout in milliseconds (-1 for the default).
+$notifications := $dbus:session:org:freedesktop:Notifications:org:freedesktop:Notifications
+$notifications:Notify crush 0 "" "Build finished" "All tests passed" $($(list $string):new) $(struct:of) (-1)
+
+# Control a media player
+$player := $dbus:session:org:mpris:MediaPlayer2:spotify:org:mpris:MediaPlayer2
+$player:PlayPause
+$player:Next
+$player:PlaybackStatus
+$player:Metadata
+$player:Volume 0.5
+```
+"##;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum Bus {
@@ -99,19 +288,25 @@ impl Bus {
     }
 
     fn list_services(&self) -> CrushResult<Vec<String>> {
-        let message = Message::new_method_call(
-            "org.freedesktop.DBus",
-            "/org/freedesktop/DBus",
-            "org.freedesktop.DBus",
-            "ListNames",
-        )?;
-        let reply = self.call(message, INTROSPECTION_TIMEOUT)?;
-        let names: Vec<String> = reply.get1().ok_or("Invalid reply to ListNames")?;
-        // Unique connection names (":1.42") are not services anyone would want to browse.
-        let mut names = names
-            .into_iter()
-            .filter(|n| !n.starts_with(':'))
-            .collect::<Vec<_>>();
+        // Services that are started on demand, like hostname1 and timedate1 on most systemd
+        // machines, usually aren't running, so the activatable names are included too. Using such
+        // a service starts it.
+        let mut names = HashSet::new();
+        for method in ["ListNames", "ListActivatableNames"] {
+            let message = Message::new_method_call(
+                "org.freedesktop.DBus",
+                "/org/freedesktop/DBus",
+                "org.freedesktop.DBus",
+                method,
+            )?;
+            let reply = self.call(message, INTROSPECTION_TIMEOUT)?;
+            let list: Vec<String> = reply
+                .get1()
+                .ok_or_else(|| format!("Invalid reply to {}", method))?;
+            // Unique connection names (":1.42") are not services anyone would want to browse.
+            names.extend(list.into_iter().filter(|n| !n.starts_with(':')));
+        }
+        let mut names = names.into_iter().collect::<Vec<_>>();
         names.sort();
         Ok(names)
     }
@@ -1059,19 +1254,9 @@ fn declare_bus(dbus: &mut ScopeLoader, bus: Bus) -> CrushResult<()> {
         bus.name(),
         format!("The services on the D-Bus {} bus", bus.name()),
         Some(format!(
-            "Every service on the {bus} bus, with its name split on periods, e.g. the service \
-             `org.freedesktop.DBus` is `dbus:{bus}:org:freedesktop:DBus`.\n\n\
-             A service contains its objects, with their paths split on slashes, e.g. the object \
-             `/org/freedesktop/login1` of the service `org.freedesktop.login1` is \
-             `dbus:{bus}:org:freedesktop:login1:org:freedesktop:login1`. Some services, like \
-             the bus itself, answer on the root object, in which case the methods are members of \
-             the service directly, e.g. `dbus:{bus}:org:freedesktop:DBus:GetId`. An object contains one member \
-             per method, which is called like a command, and one member per property, which is \
-             called without arguments to read it and with one argument to set it. A method or \
-             property name used by more than one interface is prefixed with the last part of its \
-             interface name, e.g. `Manager_ListSessions`.\n\n\
-             Services and objects are loaded the first time they are used. Use `dbus:refresh` to \
-             see services and objects that have appeared since.",
+            "Every service on the {bus} bus, with its name split on periods, e.g. \
+             `dbus:{bus}:org:freedesktop:DBus`. See `help $dbus` for how to find and call services, \
+             the services commonly found on each bus, and examples.",
             bus = bus.name()
         )),
         Box::new(move |env| load_service_level(env, bus, &[], &Arc::new(bus.list_services()?))),
@@ -1107,12 +1292,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dbus",
         "D-Bus services",
-        Some(
-            "Browse and call the services on the D-Bus system and session busses, e.g. \
-             `dbus:system:org:freedesktop:login1:org:freedesktop:login1:ListSessions`. See \
-             `help $dbus:system` for how services, objects, methods and properties are laid out."
-                .to_string(),
-        ),
+        Some(DBUS_LONG_HELP.to_string()),
         Box::new(move |dbus| {
             declare_bus(dbus, Bus::System)?;
             declare_bus(dbus, Bus::Session)?;
