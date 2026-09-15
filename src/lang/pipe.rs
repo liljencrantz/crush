@@ -137,6 +137,30 @@ impl TableOutputStream {
         }
     }
 
+    /// Handle any pending control message, e.g. from the user pressing Ctrl-C, without sending a
+    /// row. `send` does this as part of sending, but a command that waits for a long time between
+    /// rows, like one waiting for events, needs to check in between to stop in time. Returns an
+    /// error if the job has been terminated, and blocks while it is paused.
+    pub fn poll_control(&self) -> CrushResult<()> {
+        let Some(control) = &self.control else {
+            return Ok(());
+        };
+        loop {
+            match control.try_recv() {
+                Ok(StreamControlMessage::Terminate) => return terminate(),
+                Ok(StreamControlMessage::Resume) => {}
+                Ok(StreamControlMessage::Pause) => loop {
+                    match control.recv()? {
+                        StreamControlMessage::Terminate => return terminate(),
+                        StreamControlMessage::Pause => {}
+                        StreamControlMessage::Resume => break,
+                    }
+                },
+                Err(_) => return Ok(()),
+            }
+        }
+    }
+
     pub fn types(&self) -> &[ColumnType] {
         &self.types
     }
