@@ -23,6 +23,11 @@ $scope_path := {
 $checked := $($(list $string):new)
 $failed := $($(list $string):new)
 $seen := $($(dict $string $bool):new)
+# The D-Bus busses mirror every service and object on the machine, loaded on demand. Crawling
+# them would introspect everything on both busses, and what's there depends on the machine.
+$skip_scopes := $($(dict $string $bool):new)
+$skip_scopes["global:dbus:system"] = $true
+$skip_scopes["global:dbus:session"] = $true
 
 # Renders help for a value both to the terminal and as markdown, recording a failure if
 # either one errors out or the markdown comes back empty.
@@ -67,7 +72,10 @@ $crawl := {
                 $val := $($found[0])
                 $t := $(typeof $val)
                 if ($t == $scope) {
-                    crawl $val
+                    if ($skip_scopes:contains($("{}:{}":format $path $name))) {
+                    } else {
+                        crawl $val
+                    }
                 } else {
                     if ($t == $command) {
                         check_help $val $("{}:{}":format $path $name)

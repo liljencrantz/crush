@@ -1,0 +1,51 @@
+# Exercises dbus:system against the bus daemon itself, org.freedesktop.DBus, which is present on
+# every bus. Skipped (exit status 0) when not on Linux or when there is no system bus to talk to,
+# e.g. in a container.
+if ($(host:os:name) != "linux") {
+    crush:exit
+}
+$reachable := $($(list $bool):new)
+try {
+    $probe := $dbus:system:org:freedesktop:DBus:GetId
+    $reachable:push $true
+} catch {|$e|
+}
+if ($($reachable:len) == 0) {
+    crush:exit
+}
+
+$bus := $dbus:system:org:freedesktop:DBus
+
+# A method without arguments that returns a single value.
+$id := $($bus:GetId)
+assert ($($id:len) == 32)
+
+# Arguments by name, by position, and as a bare word containing periods, which is parsed as a file.
+# The bus daemon doesn't name its arguments, so they are called arg0, arg1, ...
+assert ($($bus:NameHasOwner arg0="org.freedesktop.DBus") == $true)
+assert ($($bus:NameHasOwner "org.freedesktop.DBus") == $true)
+assert ($($bus:NameHasOwner org.freedesktop.DBus) == $true)
+assert ($($bus:NameHasOwner "org.example.DoesNotExist") == $false)
+
+# A method returning a dict (a{sv}).
+$credentials := $($bus:GetConnectionCredentials "org.freedesktop.DBus")
+assert ($(typeof $credentials) == $(dict $string $any))
+
+# A method returning nothing. Match rules belong to the connection that added them, and each
+# command may run on a different connection, so there is no matching RemoveMatch here.
+$bus:AddMatch "type='signal',interface='org.example.DoesNotExist'"
+
+# Properties aren't tested here: the bus daemon lists its properties on the root object, but only
+# answers property requests on /org/freedesktop/DBus, which isn't part of its object tree.
+
+# Bad calls are errors, not crashes.
+$errors := $($(list $string):new)
+try { $bus:NameHasOwner nam="org.freedesktop.DBus" } catch {|$e| $errors:push "unknown argument"}
+try { $bus:NameHasOwner } catch {|$e| $errors:push "missing argument"}
+try { $bus:NameHasOwner 5 } catch {|$e| $errors:push "wrong type"}
+try { $bus:NameHasOwner "a" "b" } catch {|$e| $errors:push "too many arguments"}
+assert ($($errors:len) == 4)
+
+# Reloading the bus namespace still finds the service.
+dbus:refresh
+assert ($($dbus:system:org:freedesktop:DBus:GetId) == $id)

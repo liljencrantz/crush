@@ -97,6 +97,14 @@ $prose_marker := "<p>This scope contains the following elements:</p>"
 
 # Recursively walks every nested namespace under $s, collecting its own
 # documentation plus every command and child namespace it declares directly.
+# The D-Bus busses mirror every service and object on the machine, loaded on
+# demand. Crawling them would introspect everything on both busses, and the
+# result would document whatever happens to run on the machine generating the
+# docs rather than crush itself.
+$skip_scopes := $($(dict $string $bool):new)
+$skip_scopes["global:dbus:system"] = $true
+$skip_scopes["global:dbus:session"] = $true
+
 # Wrapped in try/catch per member: a few builtins (e.g. crush:env:list,
 # users:list) touch real OS/environment state and can fail to even look up
 # in this context -- one bad member should not abort documenting everything
@@ -150,7 +158,7 @@ $crawl := {
                     # no seen-set of its own, rendering "constants" would
                     # recurse into "global", which recurses into
                     # "constants", forever.
-                    if ($val != $global) {
+                    if (($val != $global) and ($($skip_scopes:contains $("{}:{}":format $path $name)) == $false)) {
                         crawl $val
                         $my_children:push $(scope_path $val)
                         # Sub-namespaces of a use'd namespace are bare-
