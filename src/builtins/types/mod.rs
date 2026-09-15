@@ -1,5 +1,6 @@
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::{Command, CrushCommand};
+use crate::lang::data::dict::Dict;
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::ordered_string_map::OrderedStringMap;
@@ -195,6 +196,33 @@ pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
+    types.fields,
+    can_block = false,
+    output = Known(ValueType::Dict(Box::from(ValueType::String), Box::from(ValueType::Command))),
+    short = "List the methods of the specified type, as a name to command dict.",
+    long = "There's no way to look up a single named method of a type directly (e.g. \
+    `$float[\"is_nan\"]` doesn't work the way `$some_scope[\"some_command\"]` does for a \
+    namespace) -- `fields` is the one way to get at a type's own methods as real command \
+    values, e.g. to call `help` on one of them.",
+    example = "# The full help text of every method float has",
+    example = "types:fields $float | each {|$key $value| help $value}",
+)]
+struct Fields {
+    #[unnamed()]
+    #[description("the type to list the methods of.")]
+    target_type: ValueType,
+}
+
+fn fields(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Fields = Fields::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let dict = Dict::new(ValueType::String, ValueType::Command)?;
+    for (name, cmd) in cfg.target_type.fields().into_iter() {
+        dict.insert(Value::from(name.as_str()), Value::Command(cmd.clone()))?;
+    }
+    context.output.send(Value::Dict(dict))
+}
+
+#[signature(
     types.root.__setitem__,
     can_block = false,
     output = Known(ValueType::Empty),
@@ -329,6 +357,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Class::declare(env)?;
             Convert::declare(env)?;
             TypeOf::declare(env)?;
+            Fields::declare(env)?;
             Like::declare(env)?;
             Materialize::declare(env)?;
             Definition::declare(env)?;

@@ -2410,6 +2410,23 @@ This command accepts the following arguments:
 [36m$all_the_files[0m [36m:=[0m [36m{[0m[32mfiles[0m --recursive [36m/[0m[36m}[0m
 [32mdefinition[0m [36m$all_the_files[0m
 
+[32mtypes[0m[36m:[0m[32mfields[0m [36mtarget_type[0m[36m=[0m[36mtype[0m
+List the methods of the specified type, as a name to command dict.
+
+[4mOutput[0m
+[32mdict[0m [36m$string[0m [36m$command[0m
+There's no way to look up a single named method of a type directly (e.g. [32m
+$float["is_nan"][0m doesn't work the way [32m$some_scope["some_command"][0m does for a namespace) -- [32mfields[0m is the one way to get at a 
+type's own methods as real command values, e.g. to call [32mhelp[0m on one of them.
+
+This command accepts the following arguments:
+
+ * [32mtarget_type[0m the type to list the methods of.
+
+[4mExamples[0m
+[33m# The full help text of every method float has[0m
+[32mtypes[0m[36m:[0m[32mfields[0m [36m$float[0m [36m|[0m [32meach[0m [36m{[0m[36m|[0m[36m$key[0m [36m$value[0m[36m|[0m [32mhelp[0m [36m$value[0m[36m}[0m
+
 [32mtypes[0m[36m:[0m[32mlike[0m [36mvalue[0m[36m=[0m[36many[0m [36m[[0m[36mpattern[0m[36m=[0m[36many...[0m[36m][0m
 Check if the specified value matches one or more patterns.
 
@@ -3095,6 +3112,6 @@ creates values of.
  * [32m__call__[0m Construct a one_of value type with the specified allowed types
 
 
-=== checked 181 commands, 6 skipped ===
+=== checked 182 commands, 6 skipped ===
 
 === checked 23 types, 0 skipped ===

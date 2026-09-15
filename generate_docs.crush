@@ -79,6 +79,11 @@ $cmd_doc := $($(dict $string $string):new)
 $ns_types := $($(dict $string $(list $string)):new)
 # full type path -> help($type, format=html), unmodified.
 $type_doc := $($(dict $string $string):new)
+# full type path -> sorted list of full paths of that type's own methods
+# (types:float:is_nan, types:list:len, ...) -- these are documented the
+# same as any other command (and land in $cmd_doc alongside them), this
+# just tracks which ones belong to which type for $render_type's index.
+$type_methods := $($(dict $string $(list $string)):new)
 # Every command and namespace, flattened, for the client-side search index.
 $search_items := $($(list $struct):new)
 # bare (unqualified) name -> full command path, for every command that's
@@ -228,6 +233,44 @@ $crawl := {
                                         $bare_aliases[$name] = $full_name
                                     }
                                 } catch {|$e| }
+
+                                # A type's own methods (float:is_nan,
+                                # list:len, ...) are exactly as
+                                # documentable as a namespace's commands --
+                                # there's no $val["name"] lookup for a type
+                                # the way there is for a scope
+                                # ($val["is_nan"] errors, "Missing field
+                                # __getitem__"), so types:fields is the one
+                                # way to reach them as real Command values.
+                                # Landing them in $cmd_doc means they get
+                                # every existing command resolution pass
+                                # (bare/compound aliasing included) for
+                                # free -- list being bare-aliased to
+                                # types:list already makes list:len resolve
+                                # the same way json:to does.
+                                $my_methods := $($(list $string):new)
+                                try {
+                                    for entry=$(types:fields $val) {
+                                        if ($entry:key:starts_with("__")) {
+                                        } else {
+                                            $method_full_name := $("{}:{}":format $full_name $entry:key)
+                                            try {
+                                                $cmd_doc[$method_full_name] = $(help $entry:value format=html)
+                                                $my_methods:push $method_full_name
+                                                $search_items:push $(struct:of \
+                                                    path=$(display_path $method_full_name) \
+                                                    anchor=$(slugify $method_full_name) \
+                                                    short=$(short_of $entry:value) \
+                                                    kind="command")
+                                            } catch {|$e|
+                                                $errors:push $("{} (method help failed)":format $method_full_name)
+                                            }
+                                        }
+                                    }
+                                } catch {|$e|
+                                    $errors:push $("{} (types:fields failed)":format $full_name)
+                                }
+                                $type_methods[$full_name] = $($my_methods | sort | list:collect value)
                             } catch {|$e|
                                 $errors:push $("{} (type help failed)":format $full_name)
                             }
@@ -260,6 +303,44 @@ $error_count := $($errors:len)
 $search_json := $(convert $string $($search_items | json:to compact=$true))
 
 # Renders one namespace section (its own prose, an index of its direct
+# Renders one type as its own mini-section, the same shape $render_ns
+# renders a namespace as (own prose, an index, each member's own full doc
+# block) but without recursion -- a type's methods are always leaves,
+# never namespaces with further children of their own. $type_doc[$path]
+# still carries the auto-generated "* `method` short description" summary
+# help($type, format=html) always appends (see long_help_methods in
+# src/lang/value/value_type.rs) -- cut off here the same way $ns_prose
+# already cuts off a namespace's, since this builds its own linked index
+# right below instead.
+$render_type := {
+    |$path $depth|
+    $dp := $(display_path $path)
+    $slug := $(slugify $path)
+    $level := $(if (($depth + 2) > 6) { 6 } else { ($depth + 2) })
+    $tag := $("h{}":format $level)
+
+    $methods := $type_methods[$path]
+    $prose := $($($type_doc[$path]:split "<ul>")[0])
+
+    $html := $("<section class=\"ns type-section\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
+        slug=$slug depth=$depth tag=$tag dp=$dp prose=$prose)
+
+    if (($methods:len()) > 0) {
+        $items := $($(list $string):new)
+        for c=$methods {
+            $items:push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $c) $(display_path $c))
+        }
+        $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n":format $html $($items | fold {"{}{}":format $acc $value} initial=""))
+    }
+
+    for c=$methods {
+        $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
+            $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($cmd_doc[$c]))
+    }
+
+    $("{}</section>\n":format $html)
+}
+
 # commands and child namespaces, each command's own doc block) and then,
 # after it, every child namespace's section in turn -- siblings in the
 # document rather than physically nested, indentation and grouping instead
@@ -292,17 +373,16 @@ $render_ns := {
         $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n":format $html $($items | fold {"{}{}":format $acc $value} initial=""))
     }
 
-    for c=$types {
-        $html = $("{}<article class=\"cmd type\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
-            $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($type_doc[$c]))
-    }
-
     for c=$commands {
         $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
             $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($cmd_doc[$c]))
     }
 
     $html = $("{}</section>\n":format $html)
+
+    for c=$types {
+        $html = $("{}{}":format $html $(render_type $c ($depth + 1)))
+    }
 
     for c=$children {
         $html = $("{}{}":format $html $(render_ns $c ($depth + 1)))
@@ -606,6 +686,7 @@ section.ns {
 }
 section.ns[data-depth='0'] { margin-top: 48px; }
 section.ns[data-depth] { margin-left: calc(var(--depth, 0) * 0px); }
+section.type-section { border-left: 3px solid var(--accent); }
 .ns-title { margin: 0 0 10px; }
 .ns-title code { font-size: 1em; background: none; padding: 0; color: inherit; }
 .ns-prose p:first-child { margin-top: 0; }
