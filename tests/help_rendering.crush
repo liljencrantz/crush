@@ -2,10 +2,14 @@
 # example fields, and `help` renders it through crate::util::md::render for terminal
 # display. This test crawls the entire builtin namespace (the same approach
 # generate_docs.crush uses) and calls `help` on every single command it finds, purely
-# to prove that rendering completes without crashing for all of them -- a help string
-# containing unusual markdown (backticks, long lines, code blocks) is exactly the kind
-# of thing that can trip up a renderer that a hand-picked handful of manual checks would
-# never happen to exercise.
+# to prove that rendering completes without crashing and produces some output for all of
+# them -- a help string containing unusual markdown (backticks, long lines, code blocks)
+# is exactly the kind of thing that can trip up a renderer that a hand-picked handful of
+# manual checks would never happen to exercise.
+#
+# No .crush.output file: the set of builtins differs between platforms (e.g. dbus and
+# systemd only exist on Linux), so the exact rendered text is not compared. The asserts
+# below are what make this test fail.
 
 $scope_path := {
     |$s|
@@ -17,12 +21,30 @@ $scope_path := {
 }
 
 $checked := $($(list $string):new)
-$skipped := $($(list $string):new)
+$failed := $($(list $string):new)
 $seen := $($(dict $string $bool):new)
 
-# Wrapped in try/catch per member, same as generate_docs.crush: a few builtins (e.g.
-# crush:env:list, users:list) touch real OS/environment state and can fail to even look
-# up in this context -- one bad member should not abort checking everything else.
+# Renders help for a value both to the terminal and as markdown, recording a failure if
+# either one errors out or the markdown comes back empty.
+$check_help := {
+    |$val $label|
+    try {
+        help $val
+        $md := $(help $val format="markdown")
+        if ($($md:len) > 0) {
+            $checked:push $label
+        } else {
+            $failed:push $("{} (empty help)":format $label)
+        }
+    } catch {|$e|
+        $failed:push $("{} (help rendering failed)":format $label)
+    }
+}
+
+# Member lookup is wrapped in try/catch, same as generate_docs.crush: a few builtins
+# (e.g. crush:env:list, users:list) touch real OS/environment state and can fail to even
+# look up in this context -- that is not a help rendering problem, so it is not counted
+# as a failure.
 $crawl := {
     |$s|
     $path := $(scope_path $s)
@@ -34,24 +56,23 @@ $crawl := {
     for name=$(dir $s) {
         if ($name:starts_with("__")) {
         } else {
+            # Holds the looked-up member, if the lookup succeeded. A list is used because
+            # a variable can't be reassigned to a value of a different type.
+            $found := $($(list $any):new)
             try {
-                $val := $($s[$name])
+                $found:push $($s[$name])
+            } catch {|$e|
+            }
+            if ($($found:len) > 0) {
+                $val := $($found[0])
                 $t := $(typeof $val)
                 if ($t == $scope) {
                     crawl $val
                 } else {
                     if ($t == $command) {
-                        $full_name := $("{}:{}":format $path $name)
-                        try {
-                            help $val
-                            $checked:push $full_name
-                        } catch {|$e|
-                            $skipped:push $("{} (help rendering failed)":format $full_name)
-                        }
+                        check_help $val $("{}:{}":format $path $name)
                     }
                 }
-            } catch {|$e|
-                $skipped:push $("{}:{} (lookup failed)":format $path $name)
             }
         }
     }
@@ -69,8 +90,7 @@ $_barrier := "x"
 # variant declared in value_type.rs (a new variant not added here is still exercised by
 # value_type_variants_are_all_accounted_for_in_serialization_crush in
 # src/lang/value/mod.rs, but that test doesn't call `help` -- add it here too).
-$checked_types := $($(list $string):new)
-$skipped_types := $($(list $string):new)
+$command_count := $($checked:len)
 $all_types := $(list:of \
     $string $integer $time $duration $glob $re $command $file \
     $table_input_stream $table_output_stream $table $struct \
@@ -78,14 +98,13 @@ $all_types := $(list:of \
     $empty $any $binary_stream $binary $type $(one_of $string $integer) \
 )
 for t=$all_types {
-    try {
-        help $t
-        $checked_types:push $("{}":format $t)
-    } catch {
-        |$e| $skipped_types:push $("{} (help rendering failed)":format $t)
-    }
+    check_help $t $("{}":format $t)
 }
 $_barrier2 := "x"
 
-echo --raw $("\n=== checked {} commands, {} skipped ===":format $($checked:len) $($skipped:len))
-echo --raw $("\n=== checked {} types, {} skipped ===":format $($checked_types:len) $($skipped_types:len))
+for f=$failed {
+    echo $f
+}
+assert ($($failed:len) == 0)
+assert ($command_count > 0)
+assert ($($checked:len) == $command_count + $($all_types:len))
