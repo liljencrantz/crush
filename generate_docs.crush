@@ -251,20 +251,17 @@ $crawl := {
                                 $my_methods := $($(list $string):new)
                                 try {
                                     for entry=$(types:fields $val) {
-                                        if ($entry:key:starts_with("__")) {
-                                        } else {
-                                            $method_full_name := $("{}:{}":format $full_name $entry:key)
-                                            try {
-                                                $cmd_doc[$method_full_name] = $(help $entry:value format=html)
-                                                $my_methods:push $method_full_name
-                                                $search_items:push $(struct:of \
-                                                    path=$(display_path $method_full_name) \
-                                                    anchor=$(slugify $method_full_name) \
-                                                    short=$(short_of $entry:value) \
-                                                    kind="command")
-                                            } catch {|$e|
-                                                $errors:push $("{} (method help failed)":format $method_full_name)
-                                            }
+                                        $method_full_name := $("{}:{}":format $full_name $entry:key)
+                                        try {
+                                            $cmd_doc[$method_full_name] = $(help $entry:value format=html)
+                                            $my_methods:push $method_full_name
+                                            $search_items:push $(struct:of \
+                                                path=$(display_path $method_full_name) \
+                                                anchor=$(slugify $method_full_name) \
+                                                short=$(short_of $entry:value) \
+                                                kind="command")
+                                        } catch {|$e|
+                                            $errors:push $("{} (method help failed)":format $method_full_name)
                                         }
                                     }
                                 } catch {|$e|
