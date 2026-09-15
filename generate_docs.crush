@@ -1,10 +1,48 @@
 #! /usr/bin/env crush
 #
-# Generates Markdown reference documentation for every builtin command by
-# introspecting the running binary's own root scope. Run it with the crush
-# binary you want documented, e.g.:
+# Generates an HTML reference page for every builtin command and namespace by
+# introspecting the running binary's own root scope: one documented, indexed
+# section per namespace (nested to match the real namespace tree), plus a
+# client-side search box with autocomplete over every command and namespace.
+# Run it with the crush binary you want documented, e.g.:
 #
-#   crush generate_docs.crush > docs/builtins.md
+#   crush generate_docs.crush > docs/builtins.html
+
+$colon_re := $(re:new ":")
+$backtick_re := $(re:new "`")
+
+# global:foo:bar -> foo:bar. Every real full_path this script produces starts
+# with "global:" (see $scope_path below), but nobody ever types that prefix
+# at the prompt -- it's an artifact of $global itself having the name
+# "global", not something a caller writes.
+$display_path := {
+    |$p|
+    if ($p:starts_with("global:")) {
+        $p:substr from=7
+    } else {
+        $p
+    }
+}
+
+# A namespace path (colon-separated) turned into a safe HTML id/anchor.
+$slugify := {
+    |$p|
+    $colon_re:replace_all $(display_path $p) "-"
+}
+
+# The one-line description of any Help-implementing value (a command or a
+# scope), with backticks stripped for plain-text display in the search
+# dropdown. help's own three output formats (terminal/markdown/html) are all
+# built from the same "<signature>\n\n<short>[\n\n<long>]" string -- the
+# short description is always the second paragraph, regardless of format or
+# whether a long help exists, so splitting on the paragraph break and taking
+# index 1 reliably isolates it without needing a dedicated format of its own.
+$short_of := {
+    |$val|
+    $full := $(help $val format=markdown)
+    $bits := $($full:split "\n\n")
+    $backtick_re:replace_all $($bits[1]) ""
+}
 
 $scope_path := {
     |$s|
@@ -15,16 +53,33 @@ $scope_path := {
     }
 }
 
-$names := $($(list $string):new)
-$docs := $($(dict $string $string):new)
 $errors := $($(list $string):new)
 $seen := $($(dict $string $bool):new)
 
-# Recursively walks every nested namespace under $s, collecting every command
-# it finds (name -> markdown help text) into $names/$docs. Wrapped in
-# try/catch per member: a few builtins (e.g. crush:env:list, users:list) touch
-# real OS/environment state and can fail to even look up in this context --
-# one bad member should not abort documenting everything else.
+# path -> help($s, format=html), with the auto-generated "This scope contains
+# the following elements" listing cut off the end -- this script builds its
+# own linked index instead (see $render_ns), so keeping both would just show
+# the same member list twice, once as plain text and once as real links.
+$ns_prose := $($(dict $string $string):new)
+# path -> sorted list of full paths of the commands declared directly in
+# that namespace (not recursively).
+$ns_commands := $($(dict $string $(list $string)):new)
+# path -> sorted list of full paths of the namespaces nested directly inside
+# that namespace (not recursively).
+$ns_children := $($(dict $string $(list $string)):new)
+# full command path -> help($cmd, format=html), unmodified.
+$cmd_doc := $($(dict $string $string):new)
+# Every command and namespace, flattened, for the client-side search index.
+$search_items := $($(list $struct):new)
+
+$prose_marker := "<p>This scope contains the following elements:</p>"
+
+# Recursively walks every nested namespace under $s, collecting its own
+# documentation plus every command and child namespace it declares directly.
+# Wrapped in try/catch per member: a few builtins (e.g. crush:env:list,
+# users:list) touch real OS/environment state and can fail to even look up
+# in this context -- one bad member should not abort documenting everything
+# else.
 $crawl := {
     |$s|
     $path := $(scope_path $s)
@@ -33,6 +88,32 @@ $crawl := {
     }
     $seen[$path] = $true
 
+    try {
+        $full_prose := $(help $s format=html)
+        $ns_prose[$path] = $($($full_prose:split $prose_marker)[0])
+    } catch {|$e|
+        $errors:push $("{} (namespace help failed)":format $path)
+    }
+    # $global itself is never rendered as its own section (its direct
+    # children are the top-level sections), so it has no anchor to link to
+    # -- everything else does get a search entry, even namespaces with no
+    # commands of their own (e.g. "constants"), since finding your way to
+    # one is exactly what the search box is for.
+    if ($s != $global) {
+        try {
+            $search_items:push $(struct:of \
+                path=$(display_path $path) \
+                anchor=$(slugify $path) \
+                short=$(short_of $s) \
+                kind="namespace")
+        } catch {|$e|
+            $errors:push $("{} (namespace search entry failed)":format $path)
+        }
+    }
+
+    $my_commands := $($(list $string):new)
+    $my_children := $($(list $string):new)
+
     for name=$(dir $s) {
         if ($name:starts_with("__")) {
         } else {
@@ -40,14 +121,28 @@ $crawl := {
                 $val := $($s[$name])
                 $t := $(typeof $val)
                 if ($t == $scope) {
-                    crawl $val
+                    # constants.rs declares "global" as a plain constant
+                    # pointing back at the root scope (so $global works
+                    # anywhere) -- without this check it would be crawled as
+                    # a normal child, and since render_ns (unlike crawl) has
+                    # no seen-set of its own, rendering "constants" would
+                    # recurse into "global", which recurses into
+                    # "constants", forever.
+                    if ($val != $global) {
+                        crawl $val
+                        $my_children:push $(scope_path $val)
+                    }
                 } else {
                     if ($t == $command) {
                         $full_name := $("{}:{}":format $path $name)
                         try {
-                            $doc := $(help $val format=markdown)
-                            $names:push $full_name
-                            $docs[$full_name] = $doc
+                            $cmd_doc[$full_name] = $(help $val format=html)
+                            $my_commands:push $full_name
+                            $search_items:push $(struct:of \
+                                path=$(display_path $full_name) \
+                                anchor=$(slugify $full_name) \
+                                short=$(short_of $val) \
+                                kind="command")
                         } catch {|$e|
                             $errors:push $("{} (help failed)":format $full_name)
                         }
@@ -58,19 +153,422 @@ $crawl := {
             }
         }
     }
+
+    $ns_commands[$path] = $($my_commands | sort | list:collect value)
+    $ns_children[$path] = $($my_children | sort | list:collect value)
 }
 
 crawl $global
 
-$count := $($names:len)
-$header := $("# Crush builtin command reference\n\nAuto-generated by generate_docs.crush by introspecting the running binary's own namespace. {} commands, {} members skipped.\n\n---\n\n":format $count $($errors:len))
+$command_count := $($cmd_doc:len)
+# $ns_prose includes one entry for $global itself, which (per above) is
+# never rendered as its own section -- excluded here so the count matches
+# what's actually on the page.
+$namespace_count := (($ns_prose:len()) - 1)
+$error_count := $($errors:len)
 
-# $names | sort returns a table_input_stream (not a re-usable List), so it's
-# piped straight into fold here rather than stored in an intermediate
-# variable and reused.
-$body := $($names | sort | fold {
-    $doc := $($docs[$value])
-    "{}\n## {}\n\n{}\n\n---\n\n":format $acc $value $doc
-} initial="")
+$search_json := $(convert $string $($search_items | json:to compact=$true))
 
-echo --raw $("{}{}":format $header $body)
+# Renders one namespace section (its own prose, an index of its direct
+# commands and child namespaces, each command's own doc block) and then,
+# after it, every child namespace's section in turn -- siblings in the
+# document rather than physically nested, indentation and grouping instead
+# coming from heading level and the `data-depth` attribute in the CSS.
+$render_ns := {
+    |$path $depth|
+    $dp := $(display_path $path)
+    $slug := $(slugify $path)
+    $level := $(if (($depth + 2) > 6) { 6 } else { ($depth + 2) })
+    $tag := $("h{}":format $level)
+
+    $commands := $ns_commands[$path]
+    $children := $ns_children[$path]
+
+    # Named placeholders can only be used once per :format call, so the
+    # opening and closing heading tag each get their own name even though
+    # both hold the same value.
+    $html := $("<section class=\"ns\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag_open} class=\"ns-title\"><code>{dp}</code></{tag_close}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
+        slug=$slug depth=$depth tag_open=$tag tag_close=$tag dp=$dp prose=$($ns_prose[$path]))
+
+    if ((($commands:len()) > 0) or (($children:len()) > 0)) {
+        $items := $($(list $string):new)
+        for c=$children {
+            $items:push $("<li class=\"idx-ns\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">namespace</span></li>":format $(slugify $c) $(display_path $c))
+        }
+        for c=$commands {
+            $items:push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $c) $(display_path $c))
+        }
+        $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n":format $html $($items | fold {"{}{}":format $acc $value} initial=""))
+    }
+
+    for c=$commands {
+        $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
+            $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($cmd_doc[$c]))
+    }
+
+    $html = $("{}</section>\n":format $html)
+
+    for c=$children {
+        $html = $("{}{}":format $html $(render_ns $c ($depth + 1)))
+    }
+
+    $html
+}
+
+$top_level := $ns_children["global"]
+
+$sidebar_items := $($(list $string):new)
+for ns=$top_level {
+    $sidebar_items:push $("<li><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $ns) $(display_path $ns))
+}
+$sidebar := $($sidebar_items | fold {"{}{}":format $acc $value} initial="")
+
+$sections := $($top_level | fold {"{}{}":format $acc $(render_ns $value 0)} initial="")
+
+# The CSS and JS below are plain text, never passed through :format
+# themselves -- they're full of literal `{`/`}` (every CSS rule, every JS
+# block) that :format would otherwise try to parse as placeholders. Instead
+# they're split at the one point that needs a real substitution (the JSON
+# search index) and joined back with a minimal "{}{}{}" template whose only
+# job is to paste three opaque strings together.
+$style_css := "<style>
+:root {
+  --bg: #fafaf8;
+  --bg-raised: #ffffff;
+  --ink: #1c1e21;
+  --ink-soft: #5c6066;
+  --line: #e2e0da;
+  --accent: #2f5db3;
+  --accent-soft: #e8eefb;
+  --mono-bg: #f1efe8;
+  --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181a;
+    --bg-raised: #1e2124;
+    --ink: #e7e6e2;
+    --ink-soft: #9a9da3;
+    --line: #33363a;
+    --accent: #7fa6f0;
+    --accent-soft: #1e2a3f;
+    --mono-bg: #202325;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.35);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+code, pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+code {
+  background: var(--mono-bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+pre {
+  background: var(--mono-bg);
+  padding: 10px 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+header.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+header.top h1 {
+  font-size: 1.15rem;
+  margin: 0;
+  white-space: nowrap;
+}
+header.top .count {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.search-wrap { position: relative; flex: 1; min-width: 220px; max-width: 480px; }
+#search-input {
+  width: 100%;
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--ink);
+}
+#search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  max-height: 60vh;
+  overflow-y: auto;
+  display: none;
+  z-index: 30;
+}
+#search-results.open { display: block; }
+#search-results li { list-style: none; }
+#search-results a {
+  display: block;
+  padding: 8px 12px;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+#search-results li:last-child a { border-bottom: none; }
+#search-results a code { color: var(--accent); background: none; padding: 0; }
+#search-results a .r-short {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+#search-results a .r-kind {
+  float: right;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+#search-results li.active a { background: var(--accent-soft); }
+#search-empty { padding: 10px 12px; color: var(--ink-soft); font-size: 0.85rem; }
+
+.layout { display: flex; align-items: flex-start; max-width: 1200px; margin: 0 auto; }
+nav.sidebar {
+  position: sticky;
+  top: 61px;
+  align-self: flex-start;
+  width: 240px;
+  flex-shrink: 0;
+  max-height: calc(100vh - 61px);
+  overflow-y: auto;
+  padding: 20px 16px;
+}
+nav.sidebar ul { list-style: none; margin: 0; padding: 0; }
+nav.sidebar li { margin-bottom: 4px; }
+nav.sidebar a { display: block; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem; }
+nav.sidebar a:hover { background: var(--mono-bg); text-decoration: none; }
+
+main { flex: 1; min-width: 0; padding: 8px 24px 96px; max-width: 900px; }
+
+section.ns {
+  margin: 40px 0;
+  padding: 20px 24px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+section.ns[data-depth='0'] { margin-top: 48px; }
+section.ns[data-depth] { margin-left: calc(var(--depth, 0) * 0px); }
+.ns-title { margin: 0 0 10px; scroll-margin-top: 72px; }
+.ns-title code { font-size: 1em; background: none; padding: 0; color: inherit; }
+.ns-prose p:first-child { margin-top: 0; }
+.ns-prose h1 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 18px 0 6px;
+}
+nav.ns-index { margin: 16px 0; padding: 12px 16px; background: var(--mono-bg); border-radius: 8px; }
+nav.ns-index ul { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 20px; }
+nav.ns-index li { break-inside: avoid; font-size: 0.88rem; padding: 2px 0; }
+.idx-tag { font-size: 0.68rem; text-transform: uppercase; color: var(--ink-soft); margin-left: 4px; }
+
+article.cmd {
+  margin: 22px 0 0;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line);
+}
+.cmd-title { margin: 0 0 8px; scroll-margin-top: 72px; }
+.cmd-title code { font-size: 0.95em; background: none; padding: 0; color: var(--accent); }
+.cmd-doc h1 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 14px 0 6px;
+}
+.cmd-doc ul { padding-left: 20px; }
+
+footer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 760px) {
+  nav.sidebar { display: none; }
+  main { max-width: 100%; }
+}
+</style>
+<script id=\"search-data\" type=\"application/json\">"
+
+$script_js := "</script>
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('search-data').textContent);
+  var input = document.getElementById('search-input');
+  var results = document.getElementById('search-results');
+  var activeIndex = -1;
+  var current = [];
+
+  function score(item, q) {
+    var p = item.path.toLowerCase();
+    if (p === q) return 0;
+    if (p.indexOf(q) === 0) return 1;
+    var lastSeg = p.split(':').pop();
+    if (lastSeg.indexOf(q) === 0) return 2;
+    if (p.indexOf(q) !== -1) return 3;
+    if (item.short.toLowerCase().indexOf(q) !== -1) return 4;
+    return -1;
+  }
+
+  function render() {
+    if (current.length === 0) {
+      results.innerHTML = '<div id=\"search-empty\">No matches</div>';
+      results.classList.add('open');
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < current.length; i++) {
+      var item = current[i];
+      html += '<li class=\"' + (i === activeIndex ? 'active' : '') + '\">' +
+        '<a href=\"#' + item.anchor + '\">' +
+        '<span class=\"r-kind\">' + item.kind + '</span>' +
+        '<code>' + item.path + '</code>' +
+        '<span class=\"r-short\">' + item.short + '</span>' +
+        '</a></li>';
+    }
+    results.innerHTML = html;
+    results.classList.add('open');
+  }
+
+  function search() {
+    var q = input.value.trim().toLowerCase();
+    activeIndex = -1;
+    if (q.length === 0) {
+      results.classList.remove('open');
+      current = [];
+      return;
+    }
+    var scored = [];
+    for (var i = 0; i < data.length; i++) {
+      var s = score(data[i], q);
+      if (s >= 0) scored.push([s, i]);
+    }
+    scored.sort(function (a, b) {
+      if (a[0] !== b[0]) return a[0] - b[0];
+      return data[a[1]].path.length - data[b[1]].path.length;
+    });
+    current = scored.slice(0, 20).map(function (pair) { return data[pair[1]]; });
+    render();
+  }
+
+  input.addEventListener('input', search);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (current.length === 0) return;
+      activeIndex = (activeIndex + 1) % current.length;
+      render();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (current.length === 0) return;
+      activeIndex = (activeIndex - 1 + current.length) % current.length;
+      render();
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && current[activeIndex]) {
+        e.preventDefault();
+        window.location.hash = '#' + current[activeIndex].anchor;
+        results.classList.remove('open');
+        input.blur();
+      }
+    } else if (e.key === 'Escape') {
+      results.classList.remove('open');
+      input.blur();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target !== input && !results.contains(e.target)) {
+      results.classList.remove('open');
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement !== input) {
+      e.preventDefault();
+      input.focus();
+    }
+  });
+})();
+</script>"
+
+$style_and_script := $("{}{}{}":format $style_css $search_json $script_js)
+
+$doc := $("<!doctype html>
+<html lang=\"en\">
+<head>
+<meta charset=\"utf-8\">
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+<title>Crush Builtin Reference</title>
+{style_and_script}
+</head>
+<body>
+<header class=\"top\">
+<h1>Crush Builtin Reference</h1>
+<div class=\"search-wrap\">
+<input id=\"search-input\" type=\"text\" placeholder=\"Search commands and namespaces... (press /)\" autocomplete=\"off\">
+<ul id=\"search-results\"></ul>
+</div>
+<div class=\"count\">{command_count} commands &middot; {namespace_count} namespaces</div>
+</header>
+<div class=\"layout\">
+<nav class=\"sidebar\"><ul>{sidebar}</ul></nav>
+<main>
+{sections}
+</main>
+</div>
+<footer>
+Auto-generated by <code>generate_docs.crush</code> by introspecting the running binary's own namespace. {error_count} members skipped.
+</footer>
+</body>
+</html>":format \
+    style_and_script=$style_and_script \
+    command_count=$command_count \
+    namespace_count=$namespace_count \
+    sidebar=$sidebar \
+    sections=$sections \
+    error_count=$error_count)
+
+echo --raw $doc

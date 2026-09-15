@@ -10,6 +10,8 @@ a syntax geared toward both batch and interactive shell usage.
   core language features (error handling, background jobs, warnings, pattern
   matching, and more) in depth.
 - [The configuration documentation](docs/config.md) describes how to configure Crush.
+- [The builtin reference](docs/builtins.html) is a searchable page documenting every
+  builtin command and namespace, generated directly from the running binary.
 
 ## Building and installing Crush
 
