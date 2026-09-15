@@ -101,12 +101,13 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
         Node::Yaml(_) => {}
         Node::Break(_) => {}
         Node::InlineCode(n) => {
-            state.out.push_str(INLINE_CODE_START);
             if !state.fits(&n.value) {
                 state.newline();
             }
+            state.out.push_str(INLINE_CODE_START);
             state.out.push_str(&n.value);
             state.out.push_str(INLINE_CODE_END);
+            state.pos += n.value.len();
         }
         Node::InlineMath(_) => {}
         Node::Delete(_) => {}
@@ -142,6 +143,9 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
         Node::Code(n) => {
             state.newline();
             syntax_highlight_code(&n.value, state)?;
+            // End the last line of code, so that whatever follows starts on a line of its own
+            // and gets the same blank line before it as after a paragraph.
+            state.newline();
         }
         Node::Math(_) => {}
         Node::MdxFlowExpression(_) => {}
@@ -171,6 +175,7 @@ fn recurse(node: Node, state: &mut State) -> CrushResult<()> {
                                     let l = c.value.len();
                                     recurse(Node::InlineCode(c), state)?;
                                     state.out.push_str(&" ".repeat(w - l));
+                                    state.pos += w - l;
                                 }
                                 first = false;
                             } else {
