@@ -1860,7 +1860,7 @@ SIGCONT and SIGWINCH.</p>
 <h2 class="ns-title"><code>io</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:io</span></code></pre>
 <p>Data serialization I/O</p>
-<p>Reading and writing structured data in specific wire formats -- <code>json</code>, <code>yaml</code>, <code>toml</code>, <code>csv</code>, <code>hex</code>, <code>base64</code>, and <code>percent</code> encoding, and Crush&#39;s own native <code>pup</code> format, each its own <code>to</code>/<code>from</code> pair. Also home to a few general-purpose I/O commands that don&#39;t belong to any one format: <a href="#io-http"><code>http</code></a>, <a href="#io-echo"><code>echo</code></a>, <a href="#io-readline"><code>readline</code></a>, and <a href="#io-member"><code>member</code></a>/<a href="#io-members"><code>members</code></a> for pulling data out of a struct or stream. Imported into the global scope, so e.g. <a href="#io-json-from"><code>io:json:from</code></a> and bare <code>json:from</code> are the same command.</p>
+<p>Reading and writing structured data in specific wire formats -- <a href="#io-json"><code>json</code></a>, <a href="#io-yaml"><code>yaml</code></a>, <a href="#io-toml"><code>toml</code></a>, <a href="#io-csv"><code>csv</code></a>, <a href="#io-hex"><code>hex</code></a>, <a href="#io-base64"><code>base64</code></a>, and <a href="#io-percent"><code>percent</code></a> encoding, and Crush&#39;s own native <a href="#io-pup"><code>pup</code></a> format, each its own <code>to</code>/<code>from</code> pair. Also home to a few general-purpose I/O commands that don&#39;t belong to any one format: <a href="#io-http"><code>http</code></a>, <a href="#io-echo"><code>echo</code></a>, <a href="#io-readline"><code>readline</code></a>, and <a href="#io-member"><code>member</code></a>/<a href="#io-members"><code>members</code></a> for pulling data out of a struct or stream. Imported into the global scope, so e.g. <a href="#io-json-from"><code>io:json:from</code></a> and bare <a href="#io-json-from"><code>json:from</code></a> are the same command.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-ns"><a href="#io-base64"><code>io:base64</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-bin"><code>io:bin</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-csv"><code>io:csv</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-hex"><code>io:hex</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-json"><code>io:json</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-lines"><code>io:lines</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-percent"><code>io:percent</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-pup"><code>io:pup</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-split"><code>io:split</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-toml"><code>io:toml</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-words"><code>io:words</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-yaml"><code>io:yaml</code></a> <span class="idx-tag">namespace</span></li><li class="idx-cmd"><a href="#io-dir"><code>io:dir</code></a></li><li class="idx-cmd"><a href="#io-echo"><code>io:echo</code></a></li><li class="idx-cmd"><a href="#io-http"><code>io:http</code></a></li><li class="idx-cmd"><a href="#io-member"><code>io:member</code></a></li><li class="idx-cmd"><a href="#io-members"><code>io:members</code></a></li><li class="idx-cmd"><a href="#io-readline"><code>io:readline</code></a></li><li class="idx-cmd"><a href="#io-val"><code>io:val</code></a></li></ul></nav>
 <article class="cmd" id="io-dir">
@@ -1944,7 +1944,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-identifier">$uri</span> <span class="tok-operator">:=</span> <span class="tok-string_literal">&quot;https://raw.githubusercontent.com/liljencrantz/crush/refs/heads/master/example_data/dinosaurs.json&quot;</span>
-<a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-identifier">$uri</span> <span class="tok-operator">|</span> <a href="#io-member"><span class="tok-command">member</span></a> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">json:from</span></code></pre>
+<a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-identifier">$uri</span> <span class="tok-operator">|</span> <a href="#io-member"><span class="tok-command">member</span></a> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <a href="#io-json-from"><span class="tok-command">json:from</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-members">
@@ -2021,7 +2021,7 @@ any of its actual rows.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Will output hello, world!</span>
-<span class="tok-string_literal">&quot;aGVsbG8sIHdvcmxkIQ==&quot;</span> <span class="tok-operator">|</span> <span class="tok-command">base64:from</span></code></pre>
+<span class="tok-string_literal">&quot;aGVsbG8sIHdvcmxkIQ==&quot;</span> <span class="tok-operator">|</span> <a href="#io-base64-from"><span class="tok-command">base64:from</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-base64-to">
@@ -2041,7 +2041,7 @@ any of its actual rows.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Will output aGVsbG8sIHdvcmxkIQ==</span>
-<span class="tok-string_literal">&quot;hello, world!&quot;</span> <span class="tok-operator">|</span> <span class="tok-command">base64:to</span></code></pre>
+<span class="tok-string_literal">&quot;hello, world!&quot;</span> <span class="tok-operator">|</span> <a href="#io-base64-to"><span class="tok-command">base64:to</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -2099,7 +2099,7 @@ any of its actual rows.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">csv:from</span> <span class="tok-string_literal">separator</span><span class="tok-operator">=</span><span class="tok-string_literal">&quot;,&quot;</span> <span class="tok-string_literal">head</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span> <span class="tok-string_literal">age</span><span class="tok-operator">=</span><span class="tok-identifier">$integer</span> <span class="tok-string_literal">nick</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span></code></pre>
+<pre><code><a href="#io-csv-from"><span class="tok-command">csv:from</span></a> <span class="tok-string_literal">separator</span><span class="tok-operator">=</span><span class="tok-string_literal">&quot;,&quot;</span> <span class="tok-string_literal">head</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span> <span class="tok-string_literal">age</span><span class="tok-operator">=</span><span class="tok-identifier">$integer</span> <span class="tok-string_literal">nick</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span></code></pre>
 </div>
 </article>
 </section>
@@ -2122,7 +2122,7 @@ any of its actual rows.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-string_literal">&quot;68656c6c6f2c20776f726c6421&quot;</span> <span class="tok-operator">|</span> <span class="tok-command">hex:from</span></code></pre>
+<pre><code><span class="tok-string_literal">&quot;68656c6c6f2c20776f726c6421&quot;</span> <span class="tok-operator">|</span> <a href="#io-hex-from"><span class="tok-command">hex:from</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-hex-to">
@@ -2138,7 +2138,7 @@ any of its actual rows.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-string_literal">&quot;hello, world!&quot;</span> <span class="tok-operator">|</span> <span class="tok-command">hex:to</span></code></pre>
+<pre><code><span class="tok-string_literal">&quot;hello, world!&quot;</span> <span class="tok-operator">|</span> <a href="#io-hex-to"><span class="tok-command">hex:to</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -2152,14 +2152,14 @@ any of its actual rows.</p>
 <h4 class="cmd-title"><code>io:json:from</code></h4>
 <div class="cmd-doc"><pre><code><a href="#io-json-from"><span class="tok-command">io:json:from</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">files</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <span class="tok-identifier">$file</span> <span class="tok-identifier">$string</span> <span class="tok-identifier">$binary</span> <span class="tok-identifier">$binary_input_stream</span> <span class="tok-identifier">$glob</span> <span class="tok-identifier">$re</span><span class="tok-file_literal">...</span><span class="tok-operator">]</span></code></pre>
 <p>Parse json format</p>
-<p>When deserializing a list, <code>json:from</code> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
+<p>When deserializing a list, <a href="#io-json-from"><code>json:from</code></a> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-string_literal">&quot;https://jsonplaceholder.typicode.com/todos/3&quot;</span><span class="tok-operator">|</span> <a href="#io-member"><span class="tok-command">member</span></a> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">json:from</span></code></pre>
+<pre><code><a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-string_literal">&quot;https://jsonplaceholder.typicode.com/todos/3&quot;</span><span class="tok-operator">|</span> <a href="#io-member"><span class="tok-command">member</span></a> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <a href="#io-json-from"><span class="tok-command">json:from</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-json-to">
@@ -2181,7 +2181,7 @@ any of its actual rows.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <span class="tok-command">json:to</span></code></pre>
+<pre><code><a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#io-json-to"><span class="tok-command">json:to</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -2241,7 +2241,7 @@ decoded bytes aren&#39;t valid UTF-8.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Returns &quot;a b/c&quot;</span>
-<span class="tok-command">percent:from</span> <span class="tok-string_literal">&quot;a%20b%2Fc&quot;</span></code></pre>
+<a href="#io-percent-from"><span class="tok-command">percent:from</span></a> <span class="tok-string_literal">&quot;a%20b%2Fc&quot;</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-percent-to">
@@ -2262,7 +2262,7 @@ to one component of one.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Returns &quot;a%20b%2Fc&quot;</span>
-<span class="tok-command">percent:to</span> <span class="tok-string_literal">&quot;a b/c&quot;</span></code></pre>
+<a href="#io-percent-to"><span class="tok-command">percent:to</span></a> <span class="tok-string_literal">&quot;a b/c&quot;</span></code></pre>
 </div>
 </article>
 </section>
@@ -2282,7 +2282,7 @@ to one component of one.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">pup:from</span> <span class="tok-file_literal">serialized.pup</span></code></pre>
+<pre><code><a href="#io-pup-from"><span class="tok-command">pup:from</span></a> <span class="tok-file_literal">serialized.pup</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-pup-to">
@@ -2297,7 +2297,7 @@ lambdas can be serialized to this format.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">ls</span> <span class="tok-operator">|</span> <span class="tok-command">pup:to</span></code></pre>
+<pre><code><span class="tok-command">ls</span> <span class="tok-operator">|</span> <a href="#io-pup-to"><span class="tok-command">pup:to</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -2336,14 +2336,14 @@ lambdas can be serialized to this format.</p>
 <div class="cmd-doc"><pre><code><a href="#io-toml-from"><span class="tok-command">io:toml:from</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">files</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <span class="tok-identifier">$file</span> <span class="tok-identifier">$string</span> <span class="tok-identifier">$binary</span> <span class="tok-identifier">$binary_input_stream</span> <span class="tok-identifier">$glob</span> <span class="tok-identifier">$re</span><span class="tok-file_literal">...</span><span class="tok-operator">]</span></code></pre>
 <p>Parse toml format</p>
 <p>Input can either be a binary stream or a file. All Toml types except datetime are supported. Datetime is not supported because the rust toml library currently doesn&#39;t support accessing the internal state of a datetime.</p>
-<p>When deserializing a list, <code>toml:from</code> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
+<p>When deserializing a list, <a href="#io-toml-from"><code>toml:from</code></a> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">toml:from</span> <span class="tok-file_literal">Cargo.toml</span></code></pre>
+<pre><code><a href="#io-toml-from"><span class="tok-command">toml:from</span></a> <span class="tok-file_literal">Cargo.toml</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-toml-to">
@@ -2364,7 +2364,7 @@ lambdas can be serialized to this format.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">ls</span> <span class="tok-operator">|</span> <span class="tok-command">toml:to</span></code></pre>
+<pre><code><span class="tok-command">ls</span> <span class="tok-operator">|</span> <a href="#io-toml-to"><span class="tok-command">toml:to</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -2397,14 +2397,14 @@ lambdas can be serialized to this format.</p>
 <h4 class="cmd-title"><code>io:yaml:from</code></h4>
 <div class="cmd-doc"><pre><code><a href="#io-yaml-from"><span class="tok-command">io:yaml:from</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">files</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <span class="tok-identifier">$file</span> <span class="tok-identifier">$string</span> <span class="tok-identifier">$binary</span> <span class="tok-identifier">$binary_input_stream</span> <span class="tok-identifier">$glob</span> <span class="tok-identifier">$re</span><span class="tok-file_literal">...</span><span class="tok-operator">]</span></code></pre>
 <p>Parse yaml format</p>
-<p>When deserializing a list, <code>yaml:from</code> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
+<p>When deserializing a list, <a href="#io-yaml-from"><code>yaml:from</code></a> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-operator">(</span><span class="tok-string_literal">http</span> <span class="tok-string_literal">&quot;https://jsonplaceholder.typicode.com/todos/3&quot;</span><span class="tok-operator">)</span><span class="tok-operator">:</span><span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">yaml:from</span></code></pre>
+<pre><code><span class="tok-operator">(</span><span class="tok-string_literal">http</span> <span class="tok-string_literal">&quot;https://jsonplaceholder.typicode.com/todos/3&quot;</span><span class="tok-operator">)</span><span class="tok-operator">:</span><span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <a href="#io-yaml-from"><span class="tok-command">yaml:from</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-yaml-to">
@@ -2424,7 +2424,7 @@ lambdas can be serialized to this format.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">ls</span> <span class="tok-operator">|</span> <span class="tok-command">yaml:to</span></code></pre>
+<pre><code><span class="tok-command">ls</span> <span class="tok-operator">|</span> <a href="#io-yaml-to"><span class="tok-command">yaml:to</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -3167,7 +3167,7 @@ ever held in memory at once. Output order is not the input order.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Pick 5 pseudo-random lines out of a huge file, without reading it all into memory</span>
-<span class="tok-command">lines:from</span> <span class="tok-file_literal">big_log_file.txt</span> <span class="tok-operator">|</span> <a href="#stream-sample"><span class="tok-command">sample</span></a> <span class="tok-numeric_literal">5</span></code></pre>
+<a href="#io-lines-from"><span class="tok-command">lines:from</span></a> <span class="tok-file_literal">big_log_file.txt</span> <span class="tok-operator">|</span> <a href="#stream-sample"><span class="tok-command">sample</span></a> <span class="tok-numeric_literal">5</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-select">
@@ -3296,7 +3296,7 @@ reported via <a href="#crush-warn-list"><code>crush:warn:list</code></a> rather 
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Write a snapshot to disk while continuing to filter the live stream</span>
-<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-tee"><span class="tok-command">tee</span></a> <span class="tok-operator">{</span><span class="tok-command">json:to</span> <span class="tok-file_literal">snapshot.json</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$cpu</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">50</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-tee"><span class="tok-command">tee</span></a> <span class="tok-operator">{</span><a href="#io-json-to"><span class="tok-command">json:to</span></a> <span class="tok-file_literal">snapshot.json</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$cpu</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">50</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-union">

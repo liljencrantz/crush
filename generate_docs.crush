@@ -137,6 +137,30 @@ $crawl := {
                     if ($val != $global) {
                         crawl $val
                         $my_children:push $(scope_path $val)
+                        # Sub-namespaces of a use'd namespace are bare-
+                        # reachable too, e.g. "json" resolves directly
+                        # since io is use'd by default -- which is also
+                        # why a partial path like json:to works without
+                        # the "io:" prefix. Unlike commands, two Scope
+                        # values CAN be compared directly and reliably
+                        # with ==, so there's no need for the help-text
+                        # workaround used for commands below.
+                        try {
+                            $bare_val := $(var:get $name)
+                            # A top-level namespace (dns, io, math, ...) is
+                            # ALWAYS trivially "bare" too, e.g. $io always
+                            # resolves -- not because anything's use'd, but
+                            # simply because it's a direct child of
+                            # $global, which is always in scope. That's not
+                            # an alias, it's just $name already being the
+                            # real display path; registering it anyway
+                            # would make the compound pass below re-mark
+                            # (and double data-link) every already-correct
+                            # full path under it.
+                            if (($bare_val == $val) and ($name != $(display_path $(scope_path $val)))) {
+                                $bare_aliases[$name] = $(scope_path $val)
+                            }
+                        } catch {|$e| }
                     }
                 } else {
                     if ($t == $command) {
@@ -296,6 +320,32 @@ for entry=$bare_aliases {
     $slug := $(slugify $entry:value)
     $ref_re := $(re:new $("data-ref=\"{}\"":format $entry:key))
     $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $entry:key $slug))
+}
+# A bare-reachable namespace also makes everything under it reachable via
+# a partial path -- json:to works without the "io:" prefix precisely
+# because json itself does (io being use'd by default). Every
+# $bare_aliases entry that names a namespace (one that names a command
+# has no descendants, so these inner loops just find nothing for it) gets
+# every one of its descendants registered under this same compound form.
+for alias=$bare_aliases {
+    $prefix := $("{}:":format $alias:value)
+    $prefix_len := $($prefix:len)
+    for entry=$cmd_doc {
+        if ($entry:key:starts_with($prefix)) {
+            $compound := $("{}:{}":format $alias:key $($entry:key:substr from=$prefix_len))
+            $slug := $(slugify $entry:key)
+            $ref_re := $(re:new $("data-ref=\"{}\"":format $compound))
+            $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $compound $slug))
+        }
+    }
+    for entry=$ns_prose {
+        if (($entry:key != "global") and ($entry:key:starts_with($prefix))) {
+            $compound := $("{}:{}":format $alias:key $($entry:key:substr from=$prefix_len))
+            $slug := $(slugify $entry:key)
+            $ref_re := $(re:new $("data-ref=\"{}\"":format $compound))
+            $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $compound $slug))
+        }
+    }
 }
 
 $code_link_re := $(re:new "<code data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</code>")
