@@ -356,17 +356,12 @@ mod linux {
         let users = create_user_map()?;
 
         for (pid, proc) in sys.processes() {
-            if let Some(kind) = proc.thread_kind() {
+            if proc.thread_kind().is_some() {
                 output.send(Row::new(vec![
                     Value::from(pid.as_u32()),
                     Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
                     proc.user_id()
-                        .and_then(|i| {
-                            let ii = i.deref();
-                            let iii = *ii as uid_t;
-                            let iiii = unistd::Uid::from_raw(iii);
-                            return users.get(&iiii);
-                        })
+                        .and_then(|uid| users.get(uid))
                         .map(|s| Value::from(s))
                         .unwrap_or_else(|| Value::from("?")),
                     Value::from(proc.memory()),
@@ -435,7 +430,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             #[cfg(target_os = "macos")]
             macos::Threads::declare(host)?;
             #[cfg(target_os = "linux")]
-            Threads::declare(host)?;
+            linux::Threads::declare(host)?;
             Signal::declare(host)?;
             host.create_namespace(
                 "os",

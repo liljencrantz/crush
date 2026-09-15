@@ -10,7 +10,7 @@ use crate::lang::{data::table::ColumnType, value::ValueType};
 use chrono::{DateTime, Local};
 use signature::signature;
 use std::convert::TryFrom;
-use systemd::journal::{Journal, JournalFiles, JournalSeek};
+use systemd::journal::{Journal, JournalSeek, OpenOptions};
 
 static JOURNAL_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("time", ValueType::Time),
@@ -48,13 +48,23 @@ struct JournalSignature {
     filters: OrderedStringMap<String>,
 }
 
-fn parse_files(cfg: &JournalSignature) -> CrushResult<JournalFiles> {
+fn open_journal(cfg: &JournalSignature) -> CrushResult<Journal> {
+    let mut options = OpenOptions::default();
     match (!cfg.skip_system_files, !cfg.skip_user_files) {
-        (true, true) => Ok(JournalFiles::All),
-        (true, false) => Ok(JournalFiles::System),
-        (false, true) => Ok(JournalFiles::CurrentUser),
-        (false, false) => command_error("No files specified"),
+        // Setting neither flag means all journal files.
+        (true, true) => {}
+        (true, false) => {
+            options.system(true);
+        }
+        (false, true) => {
+            options.current_user(true);
+        }
+        (false, false) => return command_error("No files specified"),
     }
+    Ok(options
+        .runtime_only(cfg.runtime_only)
+        .local_only(cfg.local_only)
+        .open()?)
 }
 
 fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
@@ -68,7 +78,7 @@ fn usec_since_epoch(tm: DateTime<Local>) -> CrushResult<u64> {
 fn journal(mut context: CommandContext) -> CrushResult<()> {
     let cfg: JournalSignature =
         JournalSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut journal = Journal::open(parse_files(&cfg)?, cfg.runtime_only, cfg.local_only)?;
+    let mut journal = open_journal(&cfg)?;
 
     match cfg.seek {
         Some(Value::Time(tm)) => {

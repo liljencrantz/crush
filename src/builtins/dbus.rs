@@ -1,5 +1,5 @@
 use crate::lang::argument::{Argument, column_names};
-use crate::lang::ast::location::Location;
+use crate::lang::ast::source::{Source, SourceType};
 use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::*;
 use crate::lang::data::dict::Dict;
@@ -18,6 +18,7 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::ops::Deref;
 use std::str::Chars;
+use std::sync::Arc;
 use std::time::Duration;
 
 struct DBusThing {
@@ -70,8 +71,14 @@ impl DBusThing {
         let values_as_arguments = values
             .drain(..)
             .zip(output_arguments.drain(..))
-            // Fake location, only needed to call the column_names function
-            .map(|(value, arg)| Argument::new(arg.name.clone(), value, Location::new(0, 0)))
+            // Fake source, only needed to call the column_names function
+            .map(|(value, arg)| {
+                Argument::new(
+                    arg.name.clone(),
+                    value,
+                    &Source::new(SourceType::Input, Arc::from("")),
+                )
+            })
             .collect::<Vec<_>>();
 
         let mut names = column_names(&values_as_arguments);
@@ -96,7 +103,7 @@ impl DBusThing {
         queue.push("/".to_string());
         let mut res = Vec::new();
         while !queue.is_empty() {
-            let path = queue.pop()?;
+            let path = queue.pop().ok_or("Empty object queue")?;
             let sub_proxy = self.proxy(service, &path);
             let (intro_xml,): (String,) = sub_proxy.method_call(
                 "org.freedesktop.DBus.Introspectable", //&name,
@@ -130,7 +137,15 @@ impl DBusThing {
 fn parse_interface(path: &str, xml: &str) -> CrushResult<DBusParsedInterface> {
     let mut objects = Vec::new();
     let mut interfaces = Vec::new();
-    let doc = roxmltree::Document::parse(xml)?;
+    // D-Bus introspection data starts with a DOCTYPE declaration, which roxmltree rejects
+    // unless DTD parsing is explicitly allowed.
+    let doc = roxmltree::Document::parse_with_options(
+        xml,
+        roxmltree::ParsingOptions {
+            allow_dtd: true,
+            ..Default::default()
+        },
+    )?;
     for node in doc.root().children() {
         if !node.is_element() {
             continue;
@@ -412,10 +427,7 @@ impl DBusArgument {
             }
             DBusType::Array(_) => {}
             DBusType::Variant => {}
-            DBusType::DictEntry {
-                key_type,
-                value_type,
-            } => {}
+            DBusType::DictEntry { .. } => {}
             DBusType::UnixFd => {}
             DBusType::Struct(_) => {}
             DBusType::ObjectPath => {}
@@ -438,7 +450,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::UInt64 => Value::Integer(iter.get::<u64>().ok_or("Unexpected type")? as i128),
         ArgType::Double => Value::Float(iter.get::<f64>().ok_or("Unexpected type")?),
         ArgType::Array => {
-            let mut sub = iter.recurse(ArgType::Array)?;
+            let mut sub = iter.recurse(ArgType::Array).ok_or("Invalid D-Bus array")?;
 
             if sub.arg_type() == ArgType::DictEntry {
                 let mut res = Vec::new();
@@ -528,7 +540,7 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
             }
         }
         ArgType::Variant => {
-            let mut sub = iter.recurse(ArgType::Variant)?;
+            let mut sub = iter.recurse(ArgType::Variant).ok_or("Invalid D-Bus variant")?;
             match deserialize(&mut sub) {
                 Ok(value) => {
                     sub.next();
@@ -544,10 +556,10 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
             }
         }
         ArgType::Invalid => return eof_error(),
-        ArgType::DictEntry => panic!("Invalid location for DictEntry"),
-        ArgType::UnixFd => panic!("unimplemented"),
+        ArgType::DictEntry => return data_error("Invalid location for D-Bus dict entry"),
+        ArgType::UnixFd => return data_error("D-Bus Unix file descriptors are not supported"),
         ArgType::Struct => {
-            let mut sub = iter.recurse(ArgType::Struct)?;
+            let mut sub = iter.recurse(ArgType::Struct).ok_or("Invalid D-Bus struct")?;
             let mut res = Vec::new();
             loop {
                 match deserialize(&mut sub) {
@@ -566,8 +578,16 @@ fn deserialize(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
             }
             List::new(ValueType::Any, res).into()
         }
-        ArgType::ObjectPath => panic!("unimplemented"),
-        ArgType::Signature => panic!("unimplemented"),
+        ArgType::ObjectPath => Value::from(
+            iter.get::<dbus::Path>()
+                .ok_or("Unexpected type")?
+                .to_string(),
+        ),
+        ArgType::Signature => Value::from(
+            iter.get::<dbus::Signature>()
+                .ok_or("Unexpected type")?
+                .to_string(),
+        ),
     })
 }
 
@@ -633,7 +653,7 @@ struct ServiceCall {
 fn filter_object(mut input: Vec<DBusObject>, filter: Value) -> CrushResult<DBusObject> {
     let mut res: Vec<_>;
     match &filter {
-        Value::File(p) => res = input.drain(..).filter(|o| &o.path == p.to_str()?).collect(),
+        Value::File(p) => res = input.drain(..).filter(|o| p.to_str() == Some(o.path.as_str())).collect(),
         Value::Glob(p) => res = input.drain(..).filter(|o| p.matches(&o.path)).collect(),
         Value::Regex(_, re) => res = input.drain(..).filter(|o| re.is_match(&o.path)).collect(),
         _ => return error("Invalid filter type"),
@@ -702,7 +722,12 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
             .get("service")
             .ok_or("Missing service field in struct")?
         {
-            let dbus = DBusThing::new(Connection::new_session()?);
+            let connection = match service_obj.get("bus").ok_or("Missing bus field in struct")? {
+                Value::String(bus) if bus.deref() == "system" => Connection::new_system()?,
+                Value::String(bus) if bus.deref() == "session" => Connection::new_session()?,
+                _ => return command_error("Invalid bus field in struct"),
+            };
+            let dbus = DBusThing::new(connection);
             let mut objects = dbus.list_objects(&service)?;
             match (cfg.object, cfg.method) {
                 (None, None) => context.output.send(
@@ -759,9 +784,9 @@ fn service_call(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Session {}
 
-fn session(mut context: CommandContext) -> CrushResult<()> {
+fn session(context: CommandContext) -> CrushResult<()> {
     let dbus = DBusThing::new(Connection::new_session()?);
-    populate_bus(context, dbus)
+    populate_bus(context, dbus, "session")
 }
 
 #[signature(
@@ -772,12 +797,12 @@ fn session(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct System {}
 
-fn system(mut context: CommandContext) -> CrushResult<()> {
+fn system(context: CommandContext) -> CrushResult<()> {
     let dbus = DBusThing::new(Connection::new_system()?);
-    populate_bus(context, dbus)
+    populate_bus(context, dbus, "system")
 }
 
-fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
+fn populate_bus(context: CommandContext, dbus: DBusThing, bus: &str) -> CrushResult<()> {
     let mut members = Vec::new();
 
     for service in dbus.list_services()? {
@@ -786,6 +811,7 @@ fn populate_bus(context: CommandContext, dbus: DBusThing) -> CrushResult<()> {
             Value::Struct(Struct::new(
                 vec![
                     ("service", Value::from(service)),
+                    ("bus", Value::from(bus)),
                     (
                         "__call__",
                         Value::Command(<dyn CrushCommand>::command(
