@@ -99,6 +99,13 @@ crush# list:of "carrot" "carrot" "acorn" | json:to
 every Crush value, including closures and class instances -- at the cost of being
 useless for sharing data with anything that isn't Crush.
 
+This one-namespace-per-format shape -- rather than a single `serialize`/`deserialize`
+command taking a `format=json` argument -- is a deliberate, recurring choice in Crush's
+own builtins: prefer several small, focused, composable commands over one command
+configured by a flag. Each format namespace only needs to know its own format, and
+supporting a new one means adding a namespace, not touching a shared command that
+already handles every other one.
+
 ## Expression mode and pattern matching
 
 For math and comparisons, enter *expression mode* with parentheses:

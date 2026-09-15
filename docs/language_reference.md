@@ -120,6 +120,23 @@ the command name, unlike in command mode's space-separated form:
 ("Hello, {}":format($name))
 ```
 
+Every call needs its `()`, even one that takes no arguments at all -- expression mode is
+modeled on C-style languages, where a bare name is a reference to a value, not an
+invocation of it:
+
+```shell script
+crush# $items := $(list:of 1 2 3)
+crush# (($items:len()) > 0)
+true
+crush# (($items:len) > 0)
+Error: The two provided values of types command and integer could not be compared
+```
+
+Without `()`, `$items:len` is the method itself (a `command` value) rather than the
+result of calling it -- the same distinction
+[Assignment takes exactly one value](#assignment-takes-exactly-one-value) shows further
+down for `$string:upper`.
+
 `and`/`or` work as infix operators in expression mode; in command mode they're ordinary
 commands taking two values (`or $false $true`):
 
@@ -308,6 +325,50 @@ since nothing is reading from it yet:
 $all_the_files := $(files --recurse /)
 $all_the_files | head 1
 ```
+
+### Assignment takes exactly one value
+
+`:=` and `=` each take exactly one value on the right-hand side. A single token -- a
+literal, a `$variable`, or a bare `$value:member` reference with no arguments of its
+own -- is used directly, without being called:
+
+```shell script
+crush# $x := "hello"
+crush# $y := $x
+crush# $upper := $string:upper   # the method itself, as a value -- not called
+crush# typeof $upper
+command
+```
+
+A right-hand side that's itself a job -- anything with its own argument list, like a
+`:format` call, or a control-flow construct such as `if`/`else` used as an expression --
+is *not* automatically run and reduced to a single result first. Command mode just sees
+a flat sequence of tokens, and `:=`/`=` only expect a name and one value, so the extra
+tokens are rejected:
+
+```shell script
+crush# $x := "{}":format "hi"
+Error: Stray arguments
+```
+
+Wrap the right-hand side in `$(...)` to run it as its own job and substitute the single
+result -- exactly command substitution's usual role, just used on the right of an
+assignment:
+
+```shell script
+crush# $x := $("{}":format "hi")
+crush# $x
+hi
+
+crush# $score := 95
+crush# $level := $(if ($score > 90) {"A"} else {"B"})
+crush# $level
+A
+```
+
+This only applies to an *explicit* `:=`/`=`. A bare job as the last statement in a
+closure body -- its implicit return value -- needs no such wrapping; that's a different
+mechanism, unrelated to assignment.
 
 ## Namespaces, members and methods
 
