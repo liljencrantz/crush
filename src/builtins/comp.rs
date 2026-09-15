@@ -64,7 +64,7 @@ struct Lt {
     short = "True if left side is greater than or equal right side",
     long = "In expression mode, this method can be used via the the `>=` operator.",
     example = "gte 10 5",
-    example = "(10 >+ 5)",
+    example = "(10 >= 5)",
     output = Known(ValueType::Bool),
 )]
 struct Gte {
