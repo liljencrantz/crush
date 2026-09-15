@@ -437,7 +437,7 @@ footer {
 
 $script_js := "</script>
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
   var data = JSON.parse(document.getElementById('search-data').textContent);
   var input = document.getElementById('search-input');
   var results = document.getElementById('search-results');
@@ -531,7 +531,7 @@ $script_js := "</script>
       input.focus();
     }
   });
-})();
+});
 </script>"
 
 $style_and_script := $("{}{}{}":format $style_css $search_json $script_js)
