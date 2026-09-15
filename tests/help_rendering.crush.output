@@ -1140,8 +1140,8 @@ This command accepts the following arguments:
  * [32malphabet[0m (default: [32mstandard[0m) base64 encoding style to use.
 
 [4mExamples[0m
-Will output hello, world!
-"aGVsbG8sIHdvcmxkIQ==" | base64:from
+[33m# Will output hello, world![0m
+[36m"aGVsbG8sIHdvcmxkIQ=="[0m [36m|[0m [32mbase64[0m[36m:[0m[32mfrom[0m
 
 [32mio[0m[36m:[0m[32mbase64[0m[36m:[0m[32mto[0m [36m[[0m[36mfile[0m[36m=[0m[36mone_of[0m [36m$string[0m [36m$file[0m [36m$glob[0m [36m$re[0m[36m][0m [36m[[0m[36malphabet[0m[36m=[0m[36mstring[0m[36m][0m
 Write specified binary or string as Base64
@@ -1159,7 +1159,7 @@ This command accepts the following arguments:
  * [32malphabet[0m (default: [32mstandard[0m) base64 encoding style to use.
 
 [4mExamples[0m
-[32mWill[0m [36moutput[0m [36maGVsbG8sIHdvcmxkIQ[0m[36m=[0m[36m=[0m
+[33m# Will output aGVsbG8sIHdvcmxkIQ==[0m
 [36m"hello, world!"[0m [36m|[0m [32mbase64[0m[36m:[0m[32mto[0m
 
 [32mio[0m[36m:[0m[32mbin[0m[36m:[0m[32mfrom[0m [36m[[0m[36mfiles[0m[36m=[0m[36mone_of[0m [36m$file[0m [36m$string[0m [36m$binary[0m [36m$binary_input_stream[0m [36m$glob[0m [36m$re[0m[36m...[0m[36m][0m

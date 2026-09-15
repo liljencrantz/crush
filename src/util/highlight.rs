@@ -5,6 +5,7 @@ use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
+use crate::util::html_escape;
 use std::cmp::min;
 use std::collections::HashMap;
 
@@ -29,13 +30,15 @@ pub fn highlight_colors(scope: &Scope) -> HashMap<String, String> {
     }
 }
 
-pub fn syntax_highlight(
-    code: &str,
-    colors: &HashMap<String, String>,
+/// Every token of `code`, in order, paired with the presentation category
+/// (matching a key of the `crush:highlight` color map, or a `tok-<name>`
+/// CSS class for HTML output) that applies to it, if any. Shared by both
+/// output modes below so the (fairly involved) command/argument-tracking
+/// state machine only needs to live in one place.
+fn classify_tokens<'a>(
+    code: &'a str,
     scope: &Option<Scope>,
-) -> CrushResult<String> {
-    let mut res = String::new();
-    let mut pos = 0;
+) -> CrushResult<Vec<(Token<'a>, Option<&'static str>)>> {
     let mut new_command = true;
     let mut prev = None;
 
@@ -52,12 +55,11 @@ pub fn syntax_highlight(
         Some(s) => CommandContext::Known(Value::Scope(s.clone())),
     };
 
+    let mut result = Vec::with_capacity(tokens.len());
+
     for idx in 0..tokens.len() {
         let tok = tokens[idx];
         let ntok = tokens.get(idx + 1);
-
-        res.push_str(&code[pos..min(tok.location().start, code.len())]);
-        let mut do_reset = false;
 
         new_command = match (new_command, prev, tok, ntok) {
             (_, _, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
@@ -121,23 +123,40 @@ pub fn syntax_highlight(
             None
         };
 
-        match get_color(
+        let category = get_category(
             tok,
             ntok,
             new_command,
-            colors,
             scope,
             &current_command,
             &expected_argument_type,
-        ) {
-            Some(color) => {
-                if !color.is_empty() {
-                    do_reset = true;
-                    res.push_str(color);
-                }
+        );
+        result.push((tok, category));
+
+        prev = Some(tok);
+    }
+    Ok(result)
+}
+
+pub fn syntax_highlight(
+    code: &str,
+    colors: &HashMap<String, String>,
+    scope: &Option<Scope>,
+) -> CrushResult<String> {
+    let classified = classify_tokens(code, scope)?;
+    let mut res = String::new();
+    let mut pos = 0;
+
+    for (tok, category) in classified {
+        res.push_str(&code[pos..min(tok.location().start, code.len())]);
+        let color = category.and_then(|c| colors.get(c));
+        let do_reset = match color {
+            Some(color) if !color.is_empty() => {
+                res.push_str(color);
+                true
             }
-            None => {}
-        }
+            _ => false,
+        };
 
         res.push_str(&code[tok.location().start..min(tok.location().end, code.len())]);
 
@@ -145,25 +164,86 @@ pub fn syntax_highlight(
             res.push_str("\x1b[0m");
         }
         pos = tok.location().end;
-        prev = Some(tok);
     }
     Ok(res)
 }
 
-fn get_color<'a>(
+/// Renders `code` (a snippet of crush source, e.g. one command's example
+/// block) as HTML: each token wrapped in `<span class="tok-<category>">`.
+/// Unlike [`syntax_highlight`], this isn't tied to a live scope -- example
+/// text in documentation has no running interpreter behind it, so `scope`
+/// is always `None` here, which also means every bare leading-position
+/// token is optimistically classified as a "command" (see `get_category`'s
+/// `None`-scope branch) rather than flagged as unresolvable. A command
+/// token additionally gets a `data-ref="<token text>"` attribute so a
+/// downstream pass that *does* know the full set of documented command
+/// paths (see `generate_docs.crush`) can turn genuine matches into links,
+/// leaving anything that merely looks like a command alone.
+pub fn syntax_highlight_html(code: &str) -> CrushResult<String> {
+    let classified = classify_tokens(code, &None)?;
+    let mut res = String::new();
+    let mut pos = 0;
+    let mut i = 0;
+
+    while i < classified.len() {
+        let (tok, category) = classified[i];
+        res.push_str(&html_escape(
+            &code[pos..min(tok.location().start, code.len())],
+        ));
+
+        if category == Some("command") {
+            // A multi-segment command path (dns:query_reverse, io:base64:to)
+            // lexes as separate String/MemberOperator/String/... tokens --
+            // there's nothing at the lexer level distinguishing it from a
+            // $value:method access. Stitch a whole chain of them back into
+            // one link candidate, since that's the one thing a reader (or
+            // the downstream doc-path lookup in generate_docs.crush) can
+            // actually resolve; a bare "dns" or "query_reverse" half isn't
+            // a real path on its own.
+            let start = tok.location().start;
+            let mut end = tok.location().end;
+            let mut j = i + 1;
+            while j + 1 < classified.len()
+                && matches!(classified[j].0, Token::MemberOperator(_))
+                && classified[j + 1].1 == Some("command")
+            {
+                end = classified[j + 1].0.location().end;
+                j += 2;
+            }
+            let escaped = html_escape(&code[start..min(end, code.len())]);
+            res.push_str(&format!(
+                "<span class=\"tok-command\" data-ref=\"{escaped}\">{escaped}</span>"
+            ));
+            pos = end;
+            i = j;
+            continue;
+        }
+
+        let text = &code[tok.location().start..min(tok.location().end, code.len())];
+        let escaped = html_escape(text);
+        match category {
+            Some(cat) => res.push_str(&format!("<span class=\"tok-{cat}\">{escaped}</span>")),
+            None => res.push_str(&escaped),
+        }
+        pos = tok.location().end;
+        i += 1;
+    }
+    Ok(res)
+}
+
+fn get_category(
     token: Token,
     next_token_type: Option<&Token>,
     new_command: bool,
-    colors: &'a HashMap<String, String>,
     scope: &Option<Scope>,
     current_command: &Option<Command>,
     expected_argument_type: &Option<ValueType>,
-) -> Option<&'a String> {
+) -> Option<&'static str> {
     use crate::lang::ast::token::Token::*;
 
     if let (Some(expected), Some(actual)) = (expected_argument_type, token_type(token, scope)) {
         if *expected != ValueType::Any && *expected != actual {
-            return colors.get("error");
+            return Some("error");
         }
     }
 
@@ -171,15 +251,15 @@ fn get_color<'a>(
         String(name, _) => {
             if new_command {
                 if current_command.is_some() {
-                    colors.get("command")
+                    Some("command")
                 } else {
                     match next_token_type {
-                        Some(MemberOperator(_)) => colors.get("command"),
+                        Some(MemberOperator(_)) => Some("command"),
                         _ => match scope {
-                            None => colors.get("command"),
-                            Some(s) => match resolve_external_command(name) {
-                                Ok(Some(_)) => colors.get("command"),
-                                _ => colors.get("error"),
+                            None => Some("command"),
+                            Some(_) => match resolve_external_command(name) {
+                                Ok(Some(_)) => Some("command"),
+                                _ => Some("error"),
                             },
                         },
                     }
@@ -188,32 +268,32 @@ fn get_color<'a>(
                 match (current_command, next_token_type) {
                     (Some(cmd), Some(Token::Equals(_))) => {
                         if allowed_named_argument(cmd.completion_data(), name) {
-                            colors.get("named_argument")
+                            Some("named_argument")
                         } else {
-                            colors.get("error")
+                            Some("error")
                         }
                     }
-                    _ => colors.get("string_literal"),
+                    _ => Some("string_literal"),
                 }
             }
         }
 
-        QuotedString(_, _) => colors.get("string_literal"),
+        QuotedString(_, _) => Some("string_literal"),
         Flag(name, _) => match current_command {
             Some(cmd) => {
                 if name.len() > 2 && allowed_named_argument(cmd.completion_data(), &name[2..]) {
-                    colors.get("named_argument")
+                    Some("named_argument")
                 } else {
-                    colors.get("error")
+                    Some("error")
                 }
             }
-            _ => colors.get("named_argument"),
+            _ => Some("named_argument"),
         },
-        Regex(_, _) => colors.get("regex_literal"),
-        Glob(_, _) => colors.get("glob_literal"),
-        Comment(_, _) => colors.get("comment"),
-        File(_, _) | QuotedFile(_, _) => colors.get("file_literal"),
-        Float(_, _) | Integer(_, _) | Duration(_, _) => colors.get("numeric_literal"),
+        Regex(_, _) => Some("regex_literal"),
+        Glob(_, _) => Some("glob_literal"),
+        Comment(_, _) => Some("comment"),
+        File(_, _) | QuotedFile(_, _) => Some("file_literal"),
+        Float(_, _) | Integer(_, _) | Duration(_, _) => Some("numeric_literal"),
         Unnamed(_)
         | Named(_)
         | Pipe(_)
@@ -234,20 +314,20 @@ fn get_color<'a>(
         | ExprModeStart(_)
         | SubStart(_)
         | BlockEnd(_)
-        | BlockStart(_) => colors.get("operator"),
+        | BlockStart(_) => Some("operator"),
         Identifier(name, _) => match scope {
-            None => colors.get("identifier"),
+            None => Some("identifier"),
             Some(s) => match (s.get(&name[1..]).unwrap_or(None), next_token_type) {
-                (Some(_), Some(Declare(_))) => colors.get("error"),
-                (Some(_), _) => colors.get("identifier"),
-                (None, Some(Declare(_))) => colors.get("identifier"),
-                (None, _) => colors.get("error"),
+                (Some(_), Some(Declare(_))) => Some("error"),
+                (Some(_), _) => Some("identifier"),
+                (None, Some(Declare(_))) => Some("identifier"),
+                (None, _) => Some("error"),
             },
         },
         Background(_) => None,
         Separator(_, _) => None,
         For(_) | While(_) | Loop(_) | If(_) | Else(_) | Return(_) | Break(_) | Continue(_) => {
-            colors.get("keyword")
+            Some("keyword")
         }
     }
 }

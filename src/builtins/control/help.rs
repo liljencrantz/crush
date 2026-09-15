@@ -65,7 +65,7 @@ members of a value, write `dir <value>`.
 
     match cfg.format.as_str() {
         "markdown" => context.output.send(Value::from(s)),
-        "html" => context.output.send(Value::from(markdown::to_html(s))),
+        "html" => context.output.send(Value::from(crate::util::md::render_html(s)?)),
         "terminal" => {
             context
                 .global_state

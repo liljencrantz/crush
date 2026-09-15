@@ -225,6 +225,58 @@ $sidebar := $($sidebar_items | fold {"{}{}":format $acc $value} initial="")
 
 $sections := $($top_level | fold {"{}{}":format $acc $(render_ns $value 0)} initial="")
 
+# Rust's help(format=html) (see syntax_highlight_html's doc comment in
+# src/util/highlight.rs, and recurse_html's InlineCode arm in
+# src/util/md.rs) marks every backtick code span and every command-shaped
+# token inside an example with a `data-ref="<path>"` attribute, but it
+# never decides whether that's a real link -- it only ever renders one
+# command's help in isolation, with no view of the rest of the site. This
+# script is the one place that does know (it just crawled the whole
+# tree), so resolving a data-ref into a real link, or dropping it when
+# there's nothing to link to, happens here.
+#
+# re:replace_all only does literal/backreference substitution, not
+# per-match conditional logic, so this needs three passes:
+#   1. for every path actually documented on this page, mark the data-ref
+#      that names it with the anchor it should link to. (These are real
+#      regexes, not literal strings, but every character a path can
+#      contain is a non-metacharacter, so no escaping is needed.)
+#   2. two fixed regexes turn a marked element into a real <a>.
+#   3. anything left over -- a data-ref that named something that isn't
+#      actually a documented path, e.g. a value type mentioned in an
+#      example, or prose backtick text that was never a command to begin
+#      with -- has the now-meaningless attribute stripped.
+for entry=$ns_prose {
+    if ($entry:key != "global") {
+        # A data-ref never carries the "global:" prefix (nobody writes
+        # global:dns:query in an example or a `backtick` reference) --
+        # match against the same stripped form $slugify itself derives
+        # its anchor from, not the raw dict key.
+        $dp := $(display_path $entry:key)
+        $slug := $(slugify $entry:key)
+        $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
+        $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+    }
+}
+for entry=$cmd_doc {
+    $dp := $(display_path $entry:key)
+    $slug := $(slugify $entry:key)
+    $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
+    $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+}
+
+$code_link_re := $(re:new "<code data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</code>")
+$sections = $($code_link_re:replace_all $sections "<a href=\"#$1\"><code>$2</code></a>")
+
+$command_link_re := $(re:new "<span class=\"tok-command\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
+$sections = $($command_link_re:replace_all $sections "<a href=\"#$1\"><span class=\"tok-command\">$2</span></a>")
+
+$stray_code_ref_re := $(re:new "<code data-ref=\"[^\"]*\">")
+$sections = $($stray_code_ref_re:replace_all $sections "<code>")
+
+$stray_command_ref_re := $(re:new "<span class=\"tok-command\" data-ref=\"[^\"]*\">")
+$sections = $($stray_command_ref_re:replace_all $sections "<span class=\"tok-command\">")
+
 # The CSS and JS below are plain text, never passed through :format
 # themselves -- they're full of literal `{`/`}` (every CSS rule, every JS
 # block) that :format would otherwise try to parse as placeholders. Instead
@@ -244,6 +296,11 @@ $style_css := "<style>
   --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
   --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --tok-keyword: #9a4dc4;
+  --tok-literal: #3f7d3f;
+  --tok-numeric: #0f7c86;
+  --tok-named-argument: #a15c00;
+  --tok-error: #b3261e;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -256,6 +313,11 @@ $style_css := "<style>
     --accent-soft: #1e2a3f;
     --mono-bg: #202325;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.35);
+    --tok-keyword: #c792ea;
+    --tok-literal: #8fd694;
+    --tok-numeric: #63c9d1;
+    --tok-named-argument: #e0a458;
+    --tok-error: #ff8a80;
   }
 }
 * { box-sizing: border-box; }
@@ -283,6 +345,14 @@ pre {
   overflow-x: auto;
 }
 pre code { background: none; padding: 0; }
+.tok-command { color: var(--accent); font-weight: 600; }
+.tok-keyword { color: var(--tok-keyword); font-weight: 600; }
+.tok-string_literal, .tok-file_literal, .tok-regex_literal, .tok-glob_literal { color: var(--tok-literal); }
+.tok-numeric_literal { color: var(--tok-numeric); }
+.tok-named_argument { color: var(--tok-named-argument); }
+.tok-comment { color: var(--ink-soft); font-style: italic; }
+.tok-operator { color: var(--ink-soft); }
+.tok-error { color: var(--tok-error); text-decoration: underline wavy; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 

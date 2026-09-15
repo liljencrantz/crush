@@ -1,5 +1,6 @@
 use crate::lang::errors::CrushResult;
-use crate::util::highlight::syntax_highlight;
+use crate::util::highlight::{syntax_highlight, syntax_highlight_html};
+use crate::util::html_escape;
 use markdown::mdast::Node;
 use markdown::{ParseOptions, to_mdast};
 use std::cmp::{max, min};
@@ -214,5 +215,122 @@ fn syntax_highlight_code(code: &String, state: &mut State) -> CrushResult<()> {
         }
     }
     state.pos = 0;
+    Ok(())
+}
+
+/// Renders the same markdown `render` above renders for the terminal, as an
+/// HTML fragment instead -- used by `help format=html`. A separate walk
+/// rather than a shared one: the terminal renderer's `State` is all about
+/// line-wrapping and indentation, none of which HTML output needs, while
+/// HTML needs real tag nesting the terminal renderer has no reason to
+/// track.
+pub fn render_html(s: &str) -> CrushResult<String> {
+    let tree = to_mdast(s, &ParseOptions::default())?;
+    let mut out = String::new();
+    recurse_html(tree, &mut out)?;
+    Ok(out)
+}
+
+fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
+    match node {
+        Node::Root(n) => {
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+        }
+        Node::Blockquote(_) => {}
+        Node::FootnoteDefinition(_) => {}
+        Node::MdxJsxFlowElement(_) => {}
+        Node::List(n) => {
+            let tag = if n.ordered { "ol" } else { "ul" };
+            out.push_str(&format!("<{tag}>\n"));
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str(&format!("</{tag}>\n"));
+        }
+        Node::MdxjsEsm(_) => {}
+        Node::Toml(_) => {}
+        Node::Yaml(_) => {}
+        Node::Break(_) => out.push_str("<br>\n"),
+        Node::InlineCode(n) => {
+            // data-ref marks this as a link candidate for the docs
+            // generator, which is the only thing that knows whether
+            // `n.value` is actually the path of a documented command --
+            // see syntax_highlight_html's doc comment for the same split.
+            let escaped = html_escape(&n.value);
+            out.push_str(&format!(
+                "<code data-ref=\"{escaped}\">{escaped}</code>"
+            ));
+        }
+        Node::InlineMath(_) => {}
+        Node::Delete(_) => {}
+        Node::Emphasis(n) => {
+            out.push_str("<em>");
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str("</em>");
+        }
+        Node::MdxTextExpression(_) => {}
+        Node::FootnoteReference(_) => {}
+        Node::Html(_) => {}
+        Node::Image(_) => {}
+        Node::ImageReference(_) => {}
+        Node::MdxJsxTextElement(_) => {}
+        Node::Link(n) => {
+            out.push_str(&format!("<a href=\"{}\">", html_escape(&n.url)));
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str("</a>");
+        }
+        Node::LinkReference(_) => {}
+        Node::Strong(n) => {
+            out.push_str("<strong>");
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str("</strong>");
+        }
+        Node::Text(n) => out.push_str(&html_escape(&n.value)),
+        Node::Code(n) => {
+            out.push_str("<pre><code>");
+            match syntax_highlight_html(&n.value) {
+                Ok(res) => out.push_str(&res),
+                Err(_) => out.push_str(&html_escape(&n.value)),
+            }
+            out.push_str("</code></pre>\n");
+        }
+        Node::Math(_) => {}
+        Node::MdxFlowExpression(_) => {}
+        Node::Heading(n) => {
+            let level = n.depth.clamp(1, 6);
+            out.push_str(&format!("<h{level}>"));
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str(&format!("</h{level}>\n"));
+        }
+        Node::Table(_) => {}
+        Node::ThematicBreak(_) => out.push_str("<hr>\n"),
+        Node::TableRow(_) => {}
+        Node::TableCell(_) => {}
+        Node::ListItem(n) => {
+            out.push_str("<li>");
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str("</li>\n");
+        }
+        Node::Definition(_) => {}
+        Node::Paragraph(n) => {
+            out.push_str("<p>");
+            for child in n.children {
+                recurse_html(child, out)?;
+            }
+            out.push_str("</p>\n");
+        }
+    }
     Ok(())
 }
