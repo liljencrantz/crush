@@ -90,12 +90,20 @@ fn __is_not__(mut context: CommandContext) -> CrushResult<()> {
     types.re.replace,
     can_block = false,
     short = "Replace the first match of the regex in text with the replacement",
-    long = "re\"[0-9]\":replace \"123-456\" \"X\"",
+    long = "The replacement string may reference capture groups from the match: `$0` for \
+    the whole match, `$1`, `$2`, ... for positional groups, or `$name` for a named group \
+    (`(?P<name>...)`). Use `${1}` (or `${name}`) instead of `$1` when the reference is \
+    immediately followed by a character that would otherwise be read as part of the \
+    group number or name.",
+    example = "# Replaces the first run of digits",
+    example = "^([0-9]+):replace \"a123b456\" \"X\"",
+    example = "# Swap the two halves of a dash-separated pair, using capture groups",
+    example = "^((.*)-(.*)):replace \"123-456\" \"$2-$1\"",
 )]
 struct ReplaceSignature {
     #[description("the text to perform replacement on.")]
     text: String,
-    #[description("the replacement")]
+    #[description("the replacement text; may reference capture groups, see above.")]
     replacement: String,
 }
 
@@ -112,12 +120,20 @@ fn replace(mut context: CommandContext) -> CrushResult<()> {
     types.re.replace_all,
     can_block = false,
     short = "Replace all matches of the regex in text with the replacement",
-    long = "re\"[0-9]\":replace \"123-456\" \"X\"",
+    long = "The replacement string may reference capture groups from each match: `$0` for \
+    the whole match, `$1`, `$2`, ... for positional groups, or `$name` for a named group \
+    (`(?P<name>...)`). Use `${1}` (or `${name}`) instead of `$1` when the reference is \
+    immediately followed by a character that would otherwise be read as part of the \
+    group number or name.",
+    example = "# Replaces every run of digits",
+    example = "^([0-9]+):replace_all \"a123b456c789\" \"X\"",
+    example = "# Swap key and value in every space-separated pair",
+    example = "^(([a-z]+)=([0-9]+)):replace_all \"a=1 b=2 c=3\" \"$2=$1\"",
 )]
 struct ReplaceAllSignature {
     #[description("the text to perform replacement on.")]
     text: String,
-    #[description("the replacement")]
+    #[description("the replacement text; may reference capture groups, see above.")]
     replacement: String,
 }
 

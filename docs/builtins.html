@@ -4745,28 +4745,46 @@ simple wildcard patterns but with much simpler syntax.</p>
 <h4 class="cmd-title"><code>types:re:replace</code></h4>
 <div class="cmd-doc"><pre><code><a href="#types-re-replace"><span class="tok-command">types:re:replace</span></a> <span class="tok-string_literal">text</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span> <span class="tok-string_literal">replacement</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span></code></pre>
 <p>Replace the first match of the regex in text with the replacement</p>
-<p>re&quot;[0-9]&quot;:replace &quot;123-456&quot; &quot;X&quot;</p>
+<p>The replacement string may reference capture groups from the match: <code>$0</code> for
+the whole match, <code>$1</code>, <code>$2</code>, ... for positional groups, or <code>$name</code> for a named group
+(<code>(?P&lt;name&gt;...)</code>). Use <code>${1}</code> (or <code>${name}</code>) instead of <code>$1</code> when the reference is
+immediately followed by a character that would otherwise be read as part of the
+group number or name.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>text</code> the text to perform replacement on.</p>
 </li>
-<li><p><code>replacement</code> the replacement</p>
+<li><p><code>replacement</code> the replacement text; may reference capture groups, see above.</p>
 </li>
 </ul>
+<h1>Examples</h1>
+<pre><code><span class="tok-comment"># Replaces the first run of digits</span>
+<span class="tok-regex_literal">^([0-9]+)</span><span class="tok-operator">:</span><span class="tok-string_literal">replace</span> <span class="tok-string_literal">&quot;a123b456&quot;</span> <span class="tok-string_literal">&quot;X&quot;</span>
+<span class="tok-comment"># Swap the two halves of a dash-separated pair, using capture groups</span>
+<span class="tok-regex_literal">^((.*)-(.*))</span><span class="tok-operator">:</span><span class="tok-string_literal">replace</span> <span class="tok-string_literal">&quot;123-456&quot;</span> <span class="tok-string_literal">&quot;$2-$1&quot;</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="types-re-replace_all">
 <h4 class="cmd-title"><code>types:re:replace_all</code></h4>
 <div class="cmd-doc"><pre><code><a href="#types-re-replace_all"><span class="tok-command">types:re:replace_all</span></a> <span class="tok-string_literal">text</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span> <span class="tok-string_literal">replacement</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span></code></pre>
 <p>Replace all matches of the regex in text with the replacement</p>
-<p>re&quot;[0-9]&quot;:replace &quot;123-456&quot; &quot;X&quot;</p>
+<p>The replacement string may reference capture groups from each match: <code>$0</code> for
+the whole match, <code>$1</code>, <code>$2</code>, ... for positional groups, or <code>$name</code> for a named group
+(<code>(?P&lt;name&gt;...)</code>). Use <code>${1}</code> (or <code>${name}</code>) instead of <code>$1</code> when the reference is
+immediately followed by a character that would otherwise be read as part of the
+group number or name.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>text</code> the text to perform replacement on.</p>
 </li>
-<li><p><code>replacement</code> the replacement</p>
+<li><p><code>replacement</code> the replacement text; may reference capture groups, see above.</p>
 </li>
 </ul>
+<h1>Examples</h1>
+<pre><code><span class="tok-comment"># Replaces every run of digits</span>
+<span class="tok-regex_literal">^([0-9]+)</span><span class="tok-operator">:</span><span class="tok-string_literal">replace_all</span> <span class="tok-string_literal">&quot;a123b456c789&quot;</span> <span class="tok-string_literal">&quot;X&quot;</span>
+<span class="tok-comment"># Swap key and value in every space-separated pair</span>
+<span class="tok-regex_literal">^(([a-z]+)=([0-9]+))</span><span class="tok-operator">:</span><span class="tok-string_literal">replace_all</span> <span class="tok-string_literal">&quot;a=1 b=2 c=3&quot;</span> <span class="tok-string_literal">&quot;$2=$1&quot;</span></code></pre>
 </div>
 </article>
 </section>
