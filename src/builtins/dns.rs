@@ -537,7 +537,19 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "dns",
         "DNS querying and metadata",
-        None,
+        Some(
+            "DNS, the Domain Name System (https://en.wikipedia.org/wiki/Domain_Name_System), \
+             is the internet's distributed naming system -- it translates human-readable \
+             domain names like `example.com` into the numeric IP addresses computers actually \
+             use to connect to each other, along with a handful of other record types (mail \
+             servers, text records, service discovery, ...).\n\n\
+             It's hierarchical and distributed rather than a single lookup table: no one \
+             server holds every record. A name is resolved by delegating from root servers \
+             down through top-level-domain servers to the domain's own authoritative servers, \
+             though in practice a query is usually answered by a caching resolver (see \
+             `dns:nameserver`) long before it needs to walk that whole chain."
+                .to_string(),
+        ),
         Box::new(move |dns| {
             Query::declare(dns)?;
             QueryReverse::declare(dns)?;
