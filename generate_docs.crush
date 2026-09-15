@@ -71,6 +71,12 @@ $ns_children := $($(dict $string $(list $string)):new)
 $cmd_doc := $($(dict $string $string):new)
 # Every command and namespace, flattened, for the client-side search index.
 $search_items := $($(list $struct):new)
+# bare (unqualified) name -> full command path, for every command that's
+# also reachable without its namespace prefix -- e.g. "help" for
+# control:help, since control is use'd by default and plenty of examples
+# write the bare form. See the bare-alias detection below for how this is
+# populated and why identity can't just be checked with ==.
+$bare_aliases := $($(dict $string $string):new)
 
 $prose_marker := "<p>This scope contains the following elements:</p>"
 
@@ -136,13 +142,31 @@ $crawl := {
                     if ($t == $command) {
                         $full_name := $("{}:{}":format $path $name)
                         try {
-                            $cmd_doc[$full_name] = $(help $val format=html)
+                            $doc := $(help $val format=html)
+                            $cmd_doc[$full_name] = $doc
                             $my_commands:push $full_name
                             $search_items:push $(struct:of \
                                 path=$(display_path $full_name) \
                                 anchor=$(slugify $full_name) \
                                 short=$(short_of $val) \
                                 kind="command")
+                            # Is $name (bare, e.g. "help") ALSO reachable
+                            # without the "control:" prefix, because
+                            # control is use'd by default? There's no
+                            # reliable identity check for two Command
+                            # values (== on commands isn't meaningful), so
+                            # this resolves the bare name the same way a
+                            # script actually would and compares its
+                            # rendered help text byte-for-byte against this
+                            # command's -- two distinct commands rendering
+                            # identical full help text (signature, every
+                            # example, everything) isn't realistic.
+                            try {
+                                $bare_val := $(var:get $name)
+                                if ($($(help $bare_val format=html)) == $doc) {
+                                    $bare_aliases[$name] = $full_name
+                                }
+                            } catch {|$e| }
                         } catch {|$e|
                             $errors:push $("{} (help failed)":format $full_name)
                         }
@@ -263,6 +287,15 @@ for entry=$cmd_doc {
     $slug := $(slugify $entry:key)
     $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
     $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+}
+# Same idea, for the bare aliases collected during the crawl (e.g. "help"
+# on its own, not just "control:help") -- a bare data-ref never collides
+# with a qualified one, since the qualified pattern always has more text
+# between the quotes.
+for entry=$bare_aliases {
+    $slug := $(slugify $entry:value)
+    $ref_re := $(re:new $("data-ref=\"{}\"":format $entry:key))
+    $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $entry:key $slug))
 }
 
 $code_link_re := $(re:new "<code data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</code>")

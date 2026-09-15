@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">eq</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
+<pre><code><a href="#comp-eq"><span class="tok-command">eq</span></a> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
 <span class="tok-operator">(</span><span class="tok-numeric_literal">10</span> <span class="tok-operator">==</span> <span class="tok-numeric_literal">5</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">gt</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
+<pre><code><a href="#comp-gt"><span class="tok-command">gt</span></a> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
 <span class="tok-operator">(</span><span class="tok-numeric_literal">10</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">5</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">gte</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
+<pre><code><a href="#comp-gte"><span class="tok-command">gte</span></a> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
 <span class="tok-operator">(</span><span class="tok-numeric_literal">10</span> <span class="tok-operator">&gt;</span><span class="tok-operator">+</span> <span class="tok-numeric_literal">5</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">lt</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
+<pre><code><a href="#comp-lt"><span class="tok-command">lt</span></a> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
 <span class="tok-operator">(</span><span class="tok-numeric_literal">10</span> <span class="tok-operator">&lt;</span> <span class="tok-numeric_literal">5</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
@@ -465,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">lte</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
+<pre><code><a href="#comp-lte"><span class="tok-command">lte</span></a> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">5</span>
 <span class="tok-operator">(</span><span class="tok-numeric_literal">10</span> <span class="tok-operator">&lt;=</span> <span class="tok-numeric_literal">5</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">not</span> <span class="tok-identifier">$true</span>
+<pre><code><a href="#comp-not"><span class="tok-command">not</span></a> <span class="tok-identifier">$true</span>
 <span class="tok-operator">(</span><span class="tok-operator">!</span><span class="tok-identifier">$true</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <section class="ns" id="cond" data-depth="0">
 <h2 class="ns-title"><code>cond</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:cond</span></code></pre>
-<p>Logical operators (<code>and</code> and <code>or</code>)</p>
+<p>Logical operators (<a href="#cond-and"><code>and</code></a> and <a href="#cond-or"><code>or</code></a>)</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#cond-and"><code>cond:and</code></a></li><li class="idx-cmd"><a href="#cond-or"><code>cond:or</code></a></li></ul></nav>
 <article class="cmd" id="cond-and">
@@ -519,15 +519,15 @@ document.addEventListener('DOMContentLoaded', function () {
 <p>Every argument to and must be either a boolean or a command that returns a boolean.
 The and command will check all arguments in order, and if any of them are false, and
 will return false. If all conditions are true, and returns true.</p>
-<p>Do note that <code>and</code> is a short circuiting command, meaning that if one of the conditions
-is found to be false, <code>and</code> will not evaluate any remaining closures.</p>
-<p>In expression mode, this method can be used via the the <code>and</code> operator.</p>
+<p>Do note that <a href="#cond-and"><code>and</code></a> is a short circuiting command, meaning that if one of the conditions
+is found to be false, <a href="#cond-and"><code>and</code></a> will not evaluate any remaining closures.</p>
+<p>In expression mode, this method can be used via the the <a href="#cond-and"><code>and</code></a> operator.</p>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># true, if $file exists and is a symlink</span>
-<span class="tok-command">and</span> <span class="tok-operator">$(</span><span class="tok-identifier">$file</span><span class="tok-operator">:</span><span class="tok-string_literal">exists</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><span class="tok-operator">$(</span><span class="tok-string_literal">stat</span> <span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">[</span><span class="tok-numeric_literal">0</span><span class="tok-operator">]</span><span class="tok-operator">:</span><span class="tok-string_literal">is_symlink</span><span class="tok-operator">}</span>
+<a href="#cond-and"><span class="tok-command">and</span></a> <span class="tok-operator">$(</span><span class="tok-identifier">$file</span><span class="tok-operator">:</span><span class="tok-string_literal">exists</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><span class="tok-operator">$(</span><span class="tok-string_literal">stat</span> <span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">[</span><span class="tok-numeric_literal">0</span><span class="tok-operator">]</span><span class="tok-operator">:</span><span class="tok-string_literal">is_symlink</span><span class="tok-operator">}</span>
 
 <span class="tok-comment"># true, if $file exists and is a symlink</span>
-<span class="tok-operator">(</span><span class="tok-identifier">$file</span><span class="tok-operator">.</span><span class="tok-string_literal">exists</span><span class="tok-operator">(</span><span class="tok-operator">)</span> <span class="tok-operator">and</span> <span class="tok-operator">{</span><span class="tok-command">stat</span><span class="tok-operator">(</span><span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">[</span><span class="tok-numeric_literal">0</span><span class="tok-operator">]</span><span class="tok-operator">.</span><span class="tok-string_literal">is_symlink</span><span class="tok-operator">}</span><span class="tok-operator">)</span></code></pre>
+<span class="tok-operator">(</span><span class="tok-identifier">$file</span><span class="tok-operator">.</span><span class="tok-string_literal">exists</span><span class="tok-operator">(</span><span class="tok-operator">)</span> <span class="tok-operator">and</span> <span class="tok-operator">{</span><a href="#fs-stat"><span class="tok-command">stat</span></a><span class="tok-operator">(</span><span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">[</span><span class="tok-numeric_literal">0</span><span class="tok-operator">]</span><span class="tok-operator">.</span><span class="tok-string_literal">is_symlink</span><span class="tok-operator">}</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="cond-or">
@@ -537,14 +537,14 @@ is found to be false, <code>and</code> will not evaluate any remaining closures.
 <p>Every argument to or must be either a <code>boolean</code> or a command that returns a <code>boolean</code>.
 The or command will check all arguments in order, and if any of them are <code>true</code>, or
 will return <code>true</code>. If all conditions are <code>false</code>, or returns <code>false</code>.</p>
-<p>Do note that <code>or</code> is a short circuiting command, meaning that if one of the conditions
-is found to be true, <code>or</code> will not evaluate any remaining closures.</p>
-<p>In expression mode, this method can be used via the the <code>or</code> operator.</p>
+<p>Do note that <a href="#cond-or"><code>or</code></a> is a short circuiting command, meaning that if one of the conditions
+is found to be true, <a href="#cond-or"><code>or</code></a> will not evaluate any remaining closures.</p>
+<p>In expression mode, this method can be used via the the <a href="#cond-or"><code>or</code></a> operator.</p>
 <h1>Examples</h1>
 <pre><code><span class="tok-identifier">$stat_out</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">stat</span> <span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">[</span><span class="tok-numeric_literal">0</span><span class="tok-operator">]</span>
 
 <span class="tok-comment"># true, if $file is either a symlink or a directory</span>
-<span class="tok-command">or</span> <span class="tok-identifier">$stat_out</span><span class="tok-operator">:</span><span class="tok-string_literal">is_symlink</span> <span class="tok-identifier">$stat_out</span><span class="tok-operator">:</span><span class="tok-string_literal">is_dir</span>
+<a href="#cond-or"><span class="tok-command">or</span></a> <span class="tok-identifier">$stat_out</span><span class="tok-operator">:</span><span class="tok-string_literal">is_symlink</span> <span class="tok-identifier">$stat_out</span><span class="tok-operator">:</span><span class="tok-string_literal">is_dir</span>
 
 <span class="tok-comment"># true, if $file is either a symlink or a directory</span>
 <span class="tok-operator">(</span><span class="tok-identifier">$stat_out</span><span class="tok-operator">.</span><span class="tok-string_literal">is_symlink</span> <span class="tok-operator">or</span> <span class="tok-identifier">$stat_out</span><span class="tok-operator">.</span><span class="tok-string_literal">is_dir</span><span class="tok-operator">)</span></code></pre>
@@ -561,7 +561,7 @@ is found to be true, <code>or</code> will not evaluate any remaining closures.</
 <h2 class="ns-title"><code>control</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:control</span></code></pre>
 <p>Commands for flow control, (loops, etc)</p>
-<p>The language&#39;s control-flow and process-execution builtins: conditionals and loops (<code>if</code>, <code>match</code>, <code>while</code>, <code>loop</code>, <code>for</code>), error handling (<code>try</code>, <code>throw</code>), job control (<code>bg</code>, <code>fg</code>, <code>sleep</code>, <code>timeout</code>), running external commands (<code>cmd</code>), and script-level utilities like <code>source</code>, <code>which</code>, and <code>help</code> itself. Imported into the global scope, so e.g. <a href="#control-if"><code>control:if</code></a> and bare <code>if</code> are the same command -- in practice everything here is almost always written bare, since these are effectively the language&#39;s own keywords.</p>
+<p>The language&#39;s control-flow and process-execution builtins: conditionals and loops (<a href="#control-if"><code>if</code></a>, <a href="#control-match"><code>match</code></a>, <a href="#control-while"><code>while</code></a>, <a href="#control-loop"><code>loop</code></a>, <a href="#control-for"><code>for</code></a>), error handling (<a href="#control-try"><code>try</code></a>, <a href="#control-throw"><code>throw</code></a>), job control (<a href="#control-bg"><code>bg</code></a>, <a href="#control-fg"><code>fg</code></a>, <a href="#control-sleep"><code>sleep</code></a>, <a href="#control-timeout"><code>timeout</code></a>), running external commands (<a href="#control-cmd"><code>cmd</code></a>), and script-level utilities like <a href="#control-source"><code>source</code></a>, <a href="#control-which"><code>which</code></a>, and <a href="#control-help"><code>help</code></a> itself. Imported into the global scope, so e.g. <a href="#control-if"><code>control:if</code></a> and bare <a href="#control-if"><code>if</code></a> are the same command -- in practice everything here is almost always written bare, since these are effectively the language&#39;s own keywords.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#control-assert"><code>control:assert</code></a></li><li class="idx-cmd"><a href="#control-bg"><code>control:bg</code></a></li><li class="idx-cmd"><a href="#control-break"><code>control:break</code></a></li><li class="idx-cmd"><a href="#control-cmd"><code>control:cmd</code></a></li><li class="idx-cmd"><a href="#control-continue"><code>control:continue</code></a></li><li class="idx-cmd"><a href="#control-fg"><code>control:fg</code></a></li><li class="idx-cmd"><a href="#control-for"><code>control:for</code></a></li><li class="idx-cmd"><a href="#control-help"><code>control:help</code></a></li><li class="idx-cmd"><a href="#control-if"><code>control:if</code></a></li><li class="idx-cmd"><a href="#control-loop"><code>control:loop</code></a></li><li class="idx-cmd"><a href="#control-match"><code>control:match</code></a></li><li class="idx-cmd"><a href="#control-return"><code>control:return</code></a></li><li class="idx-cmd"><a href="#control-schedule"><code>control:schedule</code></a></li><li class="idx-cmd"><a href="#control-sleep"><code>control:sleep</code></a></li><li class="idx-cmd"><a href="#control-source"><code>control:source</code></a></li><li class="idx-cmd"><a href="#control-throw"><code>control:throw</code></a></li><li class="idx-cmd"><a href="#control-timeit"><code>control:timeit</code></a></li><li class="idx-cmd"><a href="#control-timeout"><code>control:timeout</code></a></li><li class="idx-cmd"><a href="#control-timer"><code>control:timer</code></a></li><li class="idx-cmd"><a href="#control-try"><code>control:try</code></a></li><li class="idx-cmd"><a href="#control-which"><code>control:which</code></a></li><li class="idx-cmd"><a href="#control-while"><code>control:while</code></a></li></ul></nav>
 <article class="cmd" id="control-assert">
@@ -578,8 +578,8 @@ is found to be true, <code>or</code> will not evaluate any remaining closures.</
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">assert</span> <span class="tok-operator">(</span><span class="tok-numeric_literal">1</span> <span class="tok-operator">+</span> <span class="tok-numeric_literal">1</span> <span class="tok-operator">==</span> <span class="tok-numeric_literal">2</span><span class="tok-operator">)</span>
-<span class="tok-command">assert</span> <span class="tok-operator">(</span><span class="tok-identifier">$x</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">0</span><span class="tok-operator">)</span> <span class="tok-string_literal">&quot;x must be positive&quot;</span></code></pre>
+<pre><code><a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-numeric_literal">1</span> <span class="tok-operator">+</span> <span class="tok-numeric_literal">1</span> <span class="tok-operator">==</span> <span class="tok-numeric_literal">2</span><span class="tok-operator">)</span>
+<a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$x</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">0</span><span class="tok-operator">)</span> <span class="tok-string_literal">&quot;x must be positive&quot;</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-bg">
@@ -589,9 +589,9 @@ is found to be true, <code>or</code> will not evaluate any remaining closures.</
 <h1>Output</h1>
 <pre><code><span class="tok-command">empty</span></code></pre>
 <p>Unlike a job started with a trailing <code>&amp;</code> (which is in the background from the
-moment it starts), <code>bg</code> acts on a job that already exists and is currently
+moment it starts), <a href="#control-bg"><code>bg</code></a> acts on a job that already exists and is currently
 paused (e.g. via <a href="#crush-pause"><code>crush:pause</code></a>) -- it resumes it without putting it in the
-foreground the way <code>fg</code> would.</p>
+foreground the way <a href="#control-fg"><code>fg</code></a> would.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>job</code> the job id of the paused job to resume in the background.</p>
@@ -638,7 +638,7 @@ foreground the way <code>fg</code> would.</p>
 <div class="cmd-doc"><pre><code><a href="#control-fg"><span class="tok-command">control:fg</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">job</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span></code></pre>
 <p>Return the output of a background pipeline</p>
 <p>A job started with a trailing <code>&amp;</code> runs in the background and registers its
-eventual result for later retrieval; <code>fg</code> waits for and returns that result.</p>
+eventual result for later retrieval; <a href="#control-fg"><code>fg</code></a> waits for and returns that result.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>job</code> the job id of the background job to put into the foreground.</p>
@@ -648,13 +648,13 @@ eventual result for later retrieval; <code>fg</code> waits for and returns that 
 <pre><code><span class="tok-comment"># Create a pipe</span>
 <span class="tok-identifier">$pipe</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-operator">$(</span><span class="tok-string_literal">table_input_stream</span> <span class="tok-string_literal">value</span><span class="tok-operator">=</span><span class="tok-identifier">$integer</span><span class="tok-operator">)</span><span class="tok-operator">:</span><span class="tok-string_literal">pipe</span><span class="tok-operator">)</span>
 <span class="tok-comment"># Create a job that writes 100_000 integers to the pipe and put this job in the background</span>
-<span class="tok-command">seq</span> <span class="tok-numeric_literal">100_000</span> <span class="tok-operator">|</span> <span class="tok-command">pipe:write</span> &amp;
+<a href="#stream-seq"><span class="tok-command">seq</span></a> <span class="tok-numeric_literal">100_000</span> <span class="tok-operator">|</span> <span class="tok-command">pipe:write</span> &amp;
 <span class="tok-comment"># Create a second job that reads from the pipe and sums all the integers and put this job in the background</span>
-<span class="tok-identifier">$sum_job_handle</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">pipe</span><span class="tok-operator">:</span><span class="tok-string_literal">read</span> <span class="tok-operator">|</span> <span class="tok-command">sum</span> &amp;<span class="tok-operator">)</span>
+<span class="tok-identifier">$sum_job_handle</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">pipe</span><span class="tok-operator">:</span><span class="tok-string_literal">read</span> <span class="tok-operator">|</span> <a href="#stream-sum"><span class="tok-command">sum</span></a> &amp;<span class="tok-operator">)</span>
 <span class="tok-comment"># Close the pipe so that the second job can finish</span>
 <span class="tok-command">pipe:close</span>
 <span class="tok-comment"># Put the sum job in the foreground</span>
-<span class="tok-command">fg</span> <span class="tok-identifier">$sum_job_handle</span></code></pre>
+<a href="#control-fg"><span class="tok-command">fg</span></a> <span class="tok-identifier">$sum_job_handle</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-for">
@@ -670,12 +670,12 @@ eventual result for later retrieval; <code>fg</code> waits for and returns that 
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Iterate over the processes on the host</span>
-<span class="tok-command">for</span> <span class="tok-string_literal">i</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><span class="tok-string_literal">host</span><span class="tok-operator">:</span><span class="tok-string_literal">procs</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
-  <span class="tok-command">echo</span> <span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Iterating over process {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$i</span><span class="tok-operator">:</span><span class="tok-string_literal">name</span><span class="tok-operator">)</span>
+<a href="#control-for"><span class="tok-command">for</span></a> <span class="tok-string_literal">i</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><span class="tok-string_literal">host</span><span class="tok-operator">:</span><span class="tok-string_literal">procs</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
+  <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Iterating over process {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$i</span><span class="tok-operator">:</span><span class="tok-string_literal">name</span><span class="tok-operator">)</span>
 <span class="tok-operator">}</span>
 <span class="tok-comment"># Print ten messages</span>
-<span class="tok-command">for</span> <span class="tok-string_literal">i</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-string_literal">to</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
-  <span class="tok-command">echo</span> <span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Lap #{}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$i</span><span class="tok-operator">)</span>
+<a href="#control-for"><span class="tok-command">for</span></a> <span class="tok-string_literal">i</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-string_literal">to</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
+  <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Lap #{}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$i</span><span class="tok-operator">)</span>
 <span class="tok-operator">}</span></code></pre>
 </div>
 </article>
@@ -685,7 +685,7 @@ eventual result for later retrieval; <code>fg</code> waits for and returns that 
 <p>Show help on the specified value.</p>
 <h1>Output</h1>
 <pre><code><span class="tok-command">empty</span></code></pre>
-<p>The help command will show you help about a thing that you pass in. If you, for example pass in an integer (e.g. <code>help 3</code>), then you will see a help message about how crush represents integers and what methods an integer holds. You can also pass in any command to help (e.g. <code>help $files</code> for help on the <code>files</code> command). Note that you will need to prepend the <code>$</code> sigil to the command name, since you&#39;re not using it as the command name.</p>
+<p>The help command will show you help about a thing that you pass in. If you, for example pass in an integer (e.g. <code>help 3</code>), then you will see a help message about how crush represents integers and what methods an integer holds. You can also pass in any command to help (e.g. <code>help $files</code> for help on the <a href="#fs-files"><code>files</code></a> command). Note that you will need to prepend the <code>$</code> sigil to the command name, since you&#39;re not using it as the command name.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>topic</code> the topic you want help on.</p>
@@ -695,9 +695,9 @@ eventual result for later retrieval; <code>fg</code> waits for and returns that 
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Show this message</span>
-<span class="tok-command">help</span> <span class="tok-identifier">$help</span>
+<a href="#control-help"><span class="tok-command">help</span></a> <span class="tok-identifier">$help</span>
 <span class="tok-comment"># Show help on the root namespace</span>
-<span class="tok-command">help</span> <span class="tok-identifier">$global</span></code></pre>
+<a href="#control-help"><span class="tok-command">help</span></a> <span class="tok-identifier">$global</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-if">
@@ -714,10 +714,10 @@ eventual result for later retrieval; <code>fg</code> waits for and returns that 
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">if</span> <span class="tok-operator">(</span><span class="tok-identifier">$a</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">10</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
-  <span class="tok-command">echo</span> <span class="tok-string_literal">big</span>
+<pre><code><a href="#control-if"><span class="tok-command">if</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$a</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">10</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
+  <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">big</span>
 <span class="tok-operator">}</span> <span class="tok-string_literal">else</span> <span class="tok-operator">{</span>
-  <span class="tok-command">echo</span> <span class="tok-string_literal">small</span>
+  <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">small</span>
 <span class="tok-operator">}</span></code></pre>
 </div>
 </article>
@@ -733,11 +733,11 @@ eventual result for later retrieval; <code>fg</code> waits for and returns that 
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">loop</span> <span class="tok-operator">{</span>
-  <span class="tok-command">if</span> <span class="tok-operator">$(</span><span class="tok-string_literal">i_am_tired</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
-    <span class="tok-command">break</span>
+<pre><code><a href="#control-loop"><span class="tok-command">loop</span></a> <span class="tok-operator">{</span>
+  <a href="#control-if"><span class="tok-command">if</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">i_am_tired</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
+    <a href="#control-break"><span class="tok-command">break</span></a>
   <span class="tok-operator">}</span>
-  <span class="tok-command">echo</span> <span class="tok-string_literal">Working</span>
+  <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">Working</span>
 <span class="tok-operator">}</span></code></pre>
 </div>
 </article>
@@ -758,7 +758,7 @@ produced by reading <code>&lt;stream&gt;</code> (e.g. <code>$(seq 5 10)</code> o
 </li>
 </ul>
 <p>Arms are tried in order; the first one that matches runs, and the rest are
-skipped. If nothing matches, <code>match</code> errors.</p>
+skipped. If nothing matches, <a href="#control-match"><code>match</code></a> errors.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>subject</code> the value to match against.</p>
@@ -767,11 +767,11 @@ skipped. If nothing matches, <code>match</code> errors.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">match</span> <span class="tok-identifier">$x</span> <span class="tok-operator">{</span>
-    <span class="tok-command">case</span> <span class="tok-numeric_literal">2</span> <span class="tok-operator">{</span><span class="tok-command">echo</span> <span class="tok-string_literal">&quot;$x is 2&quot;</span><span class="tok-operator">}</span>
-    <span class="tok-command">any</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-numeric_literal">5</span> <span class="tok-numeric_literal">10</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><span class="tok-command">echo</span> <span class="tok-string_literal">&quot;$x is between 5 and 10&quot;</span><span class="tok-operator">}</span>
-    <span class="tok-command">is</span> <span class="tok-identifier">$string</span> <span class="tok-operator">{</span><span class="tok-command">echo</span> <span class="tok-string_literal">&quot;$x is a string&quot;</span><span class="tok-operator">}</span>
-    <span class="tok-command">default</span> <span class="tok-operator">{</span><span class="tok-command">echo</span> <span class="tok-string_literal">&quot;I don&#39;t know what $x is&quot;</span><span class="tok-operator">}</span>
+<pre><code><a href="#control-match"><span class="tok-command">match</span></a> <span class="tok-identifier">$x</span> <span class="tok-operator">{</span>
+    <span class="tok-command">case</span> <span class="tok-numeric_literal">2</span> <span class="tok-operator">{</span><a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;$x is 2&quot;</span><span class="tok-operator">}</span>
+    <span class="tok-command">any</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-numeric_literal">5</span> <span class="tok-numeric_literal">10</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;$x is between 5 and 10&quot;</span><span class="tok-operator">}</span>
+    <span class="tok-command">is</span> <span class="tok-identifier">$string</span> <span class="tok-operator">{</span><a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;$x is a string&quot;</span><span class="tok-operator">}</span>
+    <span class="tok-command">default</span> <span class="tok-operator">{</span><a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;I don&#39;t know what $x is&quot;</span><span class="tok-operator">}</span>
 <span class="tok-operator">}</span></code></pre>
 </div>
 </article>
@@ -779,7 +779,7 @@ skipped. If nothing matches, <code>match</code> errors.</p>
 <h3 class="cmd-title"><code>control:return</code></h3>
 <div class="cmd-doc"><pre><code><a href="#control-return"><span class="tok-command">control:return</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">value</span><span class="tok-operator">=</span><span class="tok-string_literal">any</span><span class="tok-operator">]</span></code></pre>
 <p>break execution of a closure command and optionally return a value.</p>
-<p>The <code>return</code> command can only be used when inside of a closure command. Closure blocks can not break early using the <code>return</code> command. Do note that you can use the <code>return</code> command inside of a closure block which is nested arbitrarily deeply inside of a closure command, which will stop execution of all inner blocks and return the closure command.</p>
+<p>The <a href="#control-return"><code>return</code></a> command can only be used when inside of a closure command. Closure blocks can not break early using the <a href="#control-return"><code>return</code></a> command. Do note that you can use the <a href="#control-return"><code>return</code></a> command inside of a closure block which is nested arbitrarily deeply inside of a closure command, which will stop execution of all inner blocks and return the closure command.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>value</code> the value to return</p>
@@ -789,10 +789,10 @@ skipped. If nothing matches, <code>match</code> errors.</p>
 <pre><code><span class="tok-comment"># Define a factorial command</span>
 <span class="tok-identifier">$factorial</span> <span class="tok-operator">:=</span> <span class="tok-operator">{</span>
   <span class="tok-operator">|</span><span class="tok-identifier">$number</span><span class="tok-operator">:</span> <span class="tok-identifier">$integer</span><span class="tok-operator">|</span>
-  <span class="tok-command">if</span> <span class="tok-operator">(</span><span class="tok-identifier">$number</span> <span class="tok-operator">==</span> <span class="tok-numeric_literal">1</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
-    <span class="tok-command">return</span> <span class="tok-numeric_literal">1</span>
+  <a href="#control-if"><span class="tok-command">if</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$number</span> <span class="tok-operator">==</span> <span class="tok-numeric_literal">1</span><span class="tok-operator">)</span> <span class="tok-operator">{</span>
+    <a href="#control-return"><span class="tok-command">return</span></a> <span class="tok-numeric_literal">1</span>
   <span class="tok-operator">}</span> <span class="tok-string_literal">else</span> <span class="tok-operator">{</span>
-    <span class="tok-command">return</span> <span class="tok-operator">(</span><span class="tok-identifier">$number</span> <span class="tok-operator">*</span> <span class="tok-string_literal">factorial</span><span class="tok-operator">(</span><span class="tok-identifier">$number</span> <span class="tok-operator">-</span> <span class="tok-numeric_literal">1</span><span class="tok-operator">)</span><span class="tok-operator">)</span>
+    <a href="#control-return"><span class="tok-command">return</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$number</span> <span class="tok-operator">*</span> <span class="tok-string_literal">factorial</span><span class="tok-operator">(</span><span class="tok-identifier">$number</span> <span class="tok-operator">-</span> <span class="tok-numeric_literal">1</span><span class="tok-operator">)</span><span class="tok-operator">)</span>
   <span class="tok-operator">}</span>
 <span class="tok-operator">}</span>
 <span class="tok-comment"># Call the command</span>
@@ -827,9 +827,9 @@ skipped. If nothing matches, <code>match</code> errors.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Show one row of the pipeline output every second</span>
-<span class="tok-command">files</span> <span class="tok-file_literal">/</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <span class="tok-command">schedule</span> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span><span class="tok-operator">)</span>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-file_literal">/</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <a href="#control-schedule"><span class="tok-command">schedule</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span><span class="tok-operator">)</span>
 <span class="tok-comment"># Wait for a second and then print hello once</span>
-<span class="tok-command">schedule</span> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span><span class="tok-operator">)</span> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-operator">{</span> <span class="tok-command">echo</span> <span class="tok-string_literal">hello</span> <span class="tok-operator">}</span> <span class="tok-named_argument">--once</span></code></pre>
+<a href="#control-schedule"><span class="tok-command">schedule</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span><span class="tok-operator">)</span> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-operator">{</span> <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">hello</span> <span class="tok-operator">}</span> <span class="tok-named_argument">--once</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-sleep">
@@ -842,7 +842,7 @@ skipped. If nothing matches, <code>match</code> errors.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">sleep</span> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span><span class="tok-operator">)</span></code></pre>
+<pre><code><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-source">
@@ -851,11 +851,11 @@ skipped. If nothing matches, <code>match</code> errors.</p>
 <p>Evaluate files into current crush session</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to source</p>
+<li><p><a href="#fs-files"><code>files</code></a> the files to source</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">source</span> <span class="tok-glob_literal">*.crush</span></code></pre>
+<pre><code><a href="#control-source"><span class="tok-command">source</span></a> <span class="tok-glob_literal">*.crush</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-throw">
@@ -876,7 +876,7 @@ catch its own error categories.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">try</span> <span class="tok-operator">{</span> <span class="tok-command">throw</span> <span class="tok-string_literal">&quot;NotFound&quot;</span> <span class="tok-string_literal">&quot;no such user&quot;</span> <span class="tok-operator">}</span> <span class="tok-string_literal">catch</span> <span class="tok-operator">{</span><span class="tok-operator">|</span><span class="tok-identifier">$e</span><span class="tok-operator">|</span> <span class="tok-command">assert</span> <span class="tok-operator">(</span><span class="tok-identifier">$e</span><span class="tok-operator">:</span><span class="tok-string_literal">type</span> <span class="tok-operator">==</span> <span class="tok-string_literal">&quot;NotFound&quot;</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#control-try"><span class="tok-command">try</span></a> <span class="tok-operator">{</span> <a href="#control-throw"><span class="tok-command">throw</span></a> <span class="tok-string_literal">&quot;NotFound&quot;</span> <span class="tok-string_literal">&quot;no such user&quot;</span> <span class="tok-operator">}</span> <span class="tok-string_literal">catch</span> <span class="tok-operator">{</span><span class="tok-operator">|</span><span class="tok-identifier">$e</span><span class="tok-operator">|</span> <a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$e</span><span class="tok-operator">:</span><span class="tok-string_literal">type</span> <span class="tok-operator">==</span> <span class="tok-string_literal">&quot;NotFound&quot;</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-timeit">
@@ -893,24 +893,24 @@ catch its own error categories.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">timeit</span> <span class="tok-operator">{</span><span class="tok-command">files</span><span class="tok-operator">|</span><span class="tok-command">sort</span> <span class="tok-string_literal">size</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#control-timeit"><span class="tok-command">timeit</span></a> <span class="tok-operator">{</span><a href="#fs-files"><span class="tok-command">files</span></a><span class="tok-operator">|</span><a href="#stream-sort"><span class="tok-command">sort</span></a> <span class="tok-string_literal">size</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-timeout">
 <h3 class="cmd-title"><code>control:timeout</code></h3>
 <div class="cmd-doc"><pre><code><a href="#control-timeout"><span class="tok-command">control:timeout</span></a> <span class="tok-string_literal">duration</span><span class="tok-operator">=</span><span class="tok-string_literal">duration</span> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-string_literal">command</span></code></pre>
 <p>Run a command, terminating it if it hasn&#39;t finished within the given duration.</p>
-<p>If <code>command</code> finishes before <code>duration</code> elapses, <code>timeout</code> returns its result
+<p>If <code>command</code> finishes before <code>duration</code> elapses, <a href="#control-timeout"><code>timeout</code></a> returns its result
 normally. Otherwise, a termination signal is sent to it -- the same cooperative
 mechanism <a href="#crush-terminate"><code>crush:terminate</code></a> uses, which only a command that actually checks for
-it (like <code>sleep</code>) will actually stop for; most builtins don&#39;t, and will keep
-running in the background regardless -- and <code>timeout</code> itself fails with a
+it (like <a href="#control-sleep"><code>sleep</code></a>) will actually stop for; most builtins don&#39;t, and will keep
+running in the background regardless -- and <a href="#control-timeout"><code>timeout</code></a> itself fails with a
 timeout error.</p>
 <p>A command left running this way isn&#39;t just background noise: crush waits for
 every spawned thread to finish before the whole session exits, so a <code>command</code>
 that never cooperates and never finishes on its own (an infinite loop, for
 example) will keep the script -- or the whole interactive session -- from
-exiting cleanly, even though <code>timeout</code> itself already returned its error.</p>
+exiting cleanly, even though <a href="#control-timeout"><code>timeout</code></a> itself already returned its error.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>duration</code> how long to let the command run before terminating it.</p>
@@ -919,7 +919,7 @@ exiting cleanly, even though <code>timeout</code> itself already returned its er
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">timeout</span> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">5</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><span class="tok-command">sleep</span> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">30</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#control-timeout"><span class="tok-command">timeout</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">5</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">duration</span><span class="tok-operator">:</span><span class="tok-string_literal">of</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">30</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-timer">
@@ -934,7 +934,7 @@ exiting cleanly, even though <code>timeout</code> itself already returned its er
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">timer</span> <span class="tok-operator">{</span><span class="tok-command">files</span><span class="tok-operator">|</span><span class="tok-command">sort</span> <span class="tok-string_literal">size</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#control-timer"><span class="tok-command">timer</span></a> <span class="tok-operator">{</span><a href="#fs-files"><span class="tok-command">files</span></a><span class="tok-operator">|</span><a href="#stream-sort"><span class="tok-command">sort</span></a> <span class="tok-string_literal">size</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-try">
@@ -946,7 +946,7 @@ exiting cleanly, even though <code>timeout</code> itself already returned its er
 error as its single unnamed argument: <code>message</code> (the error text), <code>type</code> (the
 internal error variant&#39;s name, e.g. <code>IOError</code>), and <code>command</code> (the name of the
 command that failed, if known -- empty otherwise). Either way, the error does
-not propagate past <code>try</code> -- execution continues normally with whatever comes
+not propagate past <a href="#control-try"><code>try</code></a> -- execution continues normally with whatever comes
 after it, the same as if <code>catch</code> had been given but was empty.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -956,10 +956,10 @@ after it, the same as if <code>catch</code> had been given but was empty.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">try</span> <span class="tok-operator">{</span>
+<pre><code><a href="#control-try"><span class="tok-command">try</span></a> <span class="tok-operator">{</span>
   <span class="tok-command">risky:command</span>
 <span class="tok-operator">}</span> <span class="tok-string_literal">catch</span> <span class="tok-operator">{</span>
-  <span class="tok-operator">|</span><span class="tok-identifier">$error</span><span class="tok-operator">|</span> <span class="tok-command">echo</span> <span class="tok-operator">(</span><span class="tok-string_literal">&quot;Recovered: {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span><span class="tok-operator">(</span><span class="tok-identifier">$error</span><span class="tok-operator">:</span><span class="tok-string_literal">message</span><span class="tok-operator">)</span><span class="tok-operator">)</span>
+  <span class="tok-operator">|</span><span class="tok-identifier">$error</span><span class="tok-operator">|</span> <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-operator">(</span><span class="tok-string_literal">&quot;Recovered: {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span><span class="tok-operator">(</span><span class="tok-identifier">$error</span><span class="tok-operator">:</span><span class="tok-string_literal">message</span><span class="tok-operator">)</span><span class="tok-operator">)</span>
 <span class="tok-operator">}</span></code></pre>
 </div>
 </article>
@@ -969,7 +969,7 @@ after it, the same as if <code>catch</code> had been given but was empty.</p>
 <p>Find the path of an executable</p>
 <h1>Output</h1>
 <pre><code><span class="tok-command">file</span></code></pre>
-<p><code>which</code> searches the directories of the <code>$crush:end[PATH]</code> enivornment variable list for the specified command and returns the path to the first match.</p>
+<p><a href="#control-which"><code>which</code></a> searches the directories of the <code>$crush:end[PATH]</code> enivornment variable list for the specified command and returns the path to the first match.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>command</code> the name of the command to find.</p>
@@ -977,7 +977,7 @@ after it, the same as if <code>catch</code> had been given but was empty.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Returns &#39;/bin/ps&#39;</span>
-<span class="tok-command">which</span> <span class="tok-string_literal">ps</span></code></pre>
+<a href="#control-which"><span class="tok-command">which</span></a> <span class="tok-string_literal">ps</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-while">
@@ -995,7 +995,7 @@ after it, the same as if <code>catch</code> had been given but was empty.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">while</span> <span class="tok-operator">{</span><span class="tok-file_literal">./some_file</span><span class="tok-operator">:</span><span class="tok-string_literal">exists</span><span class="tok-operator">}</span> <span class="tok-operator">{</span><span class="tok-command">echo</span> <span class="tok-string_literal">&quot;hello&quot;</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#control-while"><span class="tok-command">while</span></a> <span class="tok-operator">{</span><span class="tok-file_literal">./some_file</span><span class="tok-operator">:</span><span class="tok-string_literal">exists</span><span class="tok-operator">}</span> <span class="tok-operator">{</span><a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;hello&quot;</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 </section>
@@ -1102,13 +1102,13 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <pre><code><span class="tok-comment"># Create a job that produces a lot of output</span>
 <span class="tok-identifier">$all_files</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span> <span class="tok-named_argument">--recurse</span> <span class="tok-file_literal">/</span><span class="tok-operator">)</span>
 <span class="tok-comment"># Read a few lines of output</span>
-<span class="tok-identifier">$all_files</span> <span class="tok-operator">|</span> <span class="tok-command">head</span>
+<span class="tok-identifier">$all_files</span> <span class="tok-operator">|</span> <a href="#stream-head"><span class="tok-command">head</span></a>
 <span class="tok-comment"># Find the job id of the job we want to terminate</span>
 <a href="#crush-jobs"><span class="tok-command">crush:jobs</span></a>
 <span class="tok-comment"># Ask the job to terminate.</span>
 <a href="#crush-terminate"><span class="tok-command">crush:terminate</span></a> <span class="tok-numeric_literal">1</span>
 <span class="tok-comment"># This will output the number of buffered rows that were buffered</span>
-<span class="tok-identifier">$all_files</span> <span class="tok-operator">|</span> <span class="tok-command">count</span></code></pre>
+<span class="tok-identifier">$all_files</span> <span class="tok-operator">|</span> <a href="#stream-count"><span class="tok-command">count</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="crush-threads">
@@ -1422,7 +1422,7 @@ unqualified name.</p>
 </li>
 <li><p><code>no_follow_cname</code> (default: <code>false</code>) if a CNAME record is encountered, do not follow it. Show the actual CNAME record instead.</p>
 </li>
-<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
+<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1453,7 +1453,7 @@ contain one.</p>
 </li>
 <li><p><code>port</code> (default: <code>53</code>) DNS port</p>
 </li>
-<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) Connection timeout.</p>
+<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) Connection timeout.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1476,7 +1476,7 @@ asked to resolve plain <a href="#host"><code>host</code></a>); <a href="#dns-que
 <h2 class="ns-title"><code>fs</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:fs</span></code></pre>
 <p>File system functionality</p>
-<p>Commands for working with the filesystem: listing and stat-ing files (<code>files</code>, <code>stat</code>), changing directory (<code>cd</code>), computing disk usage (<code>usage</code>), listing mount points (<code>mounts</code>), and watching a path for changes (<code>watch</code>). Imported into the global scope, so e.g. <a href="#fs-cd"><code>fs:cd</code></a> and bare <code>cd</code> are the same command.</p>
+<p>Commands for working with the filesystem: listing and stat-ing files (<a href="#fs-files"><code>files</code></a>, <a href="#fs-stat"><code>stat</code></a>), changing directory (<a href="#fs-cd"><code>cd</code></a>), computing disk usage (<a href="#fs-usage"><code>usage</code></a>), listing mount points (<a href="#fs-mounts"><code>mounts</code></a>), and watching a path for changes (<a href="#fs-watch"><code>watch</code></a>). Imported into the global scope, so e.g. <a href="#fs-cd"><code>fs:cd</code></a> and bare <a href="#fs-cd"><code>cd</code></a> are the same command.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#fs-cd"><code>fs:cd</code></a></li><li class="idx-cmd"><a href="#fs-cwd"><code>fs:cwd</code></a></li><li class="idx-cmd"><a href="#fs-files"><code>fs:files</code></a></li><li class="idx-cmd"><a href="#fs-mounts"><code>fs:mounts</code></a></li><li class="idx-cmd"><a href="#fs-stat"><code>fs:stat</code></a></li><li class="idx-cmd"><a href="#fs-usage"><code>fs:usage</code></a></li><li class="idx-cmd"><a href="#fs-watch"><code>fs:watch</code></a></li></ul></nav>
 <article class="cmd" id="fs-cd">
@@ -1506,7 +1506,7 @@ asked to resolve plain <a href="#host"><code>host</code></a>); <a href="#dns-que
 <p>Show information about files and directories</p>
 <p>If given no arguments, list the contents to the current working directory.
 If given any unnamed arguments, those will be the files and directories to list.</p>
-<p>By default, <code>files</code> will not recurse into subdirectories. You can override this using
+<p>By default, <a href="#fs-files"><code>files</code></a> will not recurse into subdirectories. You can override this using
 the <code>--recurse</code> switch.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -1522,7 +1522,7 @@ the <code>--recurse</code> switch.</p>
 </li>
 <li><p><code>user</code> (default: <code>true</code>) show username</p>
 </li>
-<li><p><code>group</code> (default: <code>true</code>) show group name</p>
+<li><p><a href="#stream-group"><code>group</code></a> (default: <code>true</code>) show group name</p>
 </li>
 <li><p><code>size</code> (default: <code>true</code>) show file size</p>
 </li>
@@ -1545,13 +1545,13 @@ the <code>--recurse</code> switch.</p>
 <p>List filesystem mount points</p>
 <h1>Output</h1>
 <pre><code><span class="tok-command">table_input_stream</span> <span class="tok-string_literal">size</span><span class="tok-operator">=</span><span class="tok-identifier">$integer</span> <span class="tok-string_literal">available</span><span class="tok-operator">=</span><span class="tok-identifier">$integer</span> <span class="tok-string_literal">usage</span><span class="tok-operator">=</span><span class="tok-identifier">$float</span> <span class="tok-string_literal">format</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span> <span class="tok-string_literal">readonly</span><span class="tok-operator">=</span><span class="tok-identifier">$any</span> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span> <span class="tok-string_literal">path</span><span class="tok-operator">=</span><span class="tok-identifier">$file</span></code></pre>
-<p><code>mounts</code> outputs the following information about each mount point:</p>
+<p><a href="#fs-mounts"><code>mounts</code></a> outputs the following information about each mount point:</p>
 <ul>
 <li><p><code>size</code> size in bytes.</p>
 </li>
 <li><p><code>available</code> available space in bytes.</p>
 </li>
-<li><p><code>usage</code> usage percentage.</p>
+<li><p><a href="#fs-usage"><code>usage</code></a> usage percentage.</p>
 </li>
 <li><p><code>format</code> filesystem type (ntfs, ext4, etc.).</p>
 </li>
@@ -1652,7 +1652,7 @@ granularity differs by platform.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#fs-watch"><span class="tok-command">fs:watch</span></a> <span class="tok-file_literal">.</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <span class="tok-command">where</span> <span class="tok-operator">{</span><span class="tok-command">kind</span> <span class="tok-operator">=</span><span class="tok-operator">=</span> <span class="tok-string_literal">&quot;Create(File)&quot;</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#fs-watch"><span class="tok-command">fs:watch</span></a> <span class="tok-file_literal">.</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-command">kind</span> <span class="tok-operator">=</span><span class="tok-operator">=</span> <span class="tok-string_literal">&quot;Create(File)&quot;</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 </section>
@@ -1690,7 +1690,7 @@ The grpc methods support tab completion of argument names. They also come with h
 </li>
 <li><p><code>plaintext</code> (default: <code>false</code>) use plaintext instead of TLS to connect.</p>
 </li>
-<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) the timeout for making calls.</p>
+<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) the timeout for making calls.</p>
 </li>
 <li><p><code>port</code> (default: <code>50051</code>) the port to connect to.</p>
 </li>
@@ -1700,7 +1700,7 @@ The grpc methods support tab completion of argument names. They also come with h
 <span class="tok-comment"># Returns &quot;olleh&quot;</span>
 <span class="tok-identifier">$conn</span><span class="tok-operator">:</span><span class="tok-command">ReverseString</span> <span class="tok-string_literal">input</span><span class="tok-operator">=</span><span class="tok-string_literal">&quot;hello&quot;</span>
 <span class="tok-comment"># Returns a stream with the values &quot;oof&quot;, &quot;rab&quot;, and &quot;zab&quot;</span>
-<span class="tok-command">list:of</span> <span class="tok-string_literal">foo</span> <span class="tok-string_literal">bar</span> <span class="tok-string_literal">baz</span> <span class="tok-operator">|</span> <span class="tok-command">select</span> <span class="tok-string_literal">input</span><span class="tok-operator">=</span><span class="tok-operator">{</span><span class="tok-identifier">$value</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <span class="tok-identifier">$conn</span><span class="tok-operator">:</span><span class="tok-command">ReverseString</span>
+<span class="tok-command">list:of</span> <span class="tok-string_literal">foo</span> <span class="tok-string_literal">bar</span> <span class="tok-string_literal">baz</span> <span class="tok-operator">|</span> <a href="#stream-select"><span class="tok-command">select</span></a> <span class="tok-string_literal">input</span><span class="tok-operator">=</span><span class="tok-operator">{</span><span class="tok-identifier">$value</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <span class="tok-identifier">$conn</span><span class="tok-operator">:</span><span class="tok-command">ReverseString</span>
 <span class="tok-comment"># Close the connection once you&#39;re done</span>
 <span class="tok-identifier">$conn</span><span class="tok-operator">:</span><span class="tok-command">close</span></code></pre>
 </div>
@@ -1779,7 +1779,7 @@ SIGCONT and SIGWINCH.</p>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Create a `killall` command that kills any process whose name matches the specified pattern</span>
 <span class="tok-comment"># The pattern can be a an exact string, a wildcard, or a regex</span>
-<span class="tok-identifier">$killall</span> <span class="tok-operator">:=</span> <span class="tok-operator">{</span> <span class="tok-operator">|</span><span class="tok-identifier">$victim</span><span class="tok-operator">|</span> <a href="#host-signal"><span class="tok-command">host:signal</span></a> <span class="tok-operator">@</span><span class="tok-operator">$(</span><span class="tok-string_literal">host</span><span class="tok-operator">:</span><span class="tok-string_literal">procs</span><span class="tok-operator">|</span><span class="tok-command">where</span> <span class="tok-operator">{</span><span class="tok-identifier">$name</span> <span class="tok-operator">=</span><span class="tok-file_literal">~</span> <span class="tok-identifier">$victim</span><span class="tok-operator">}</span><span class="tok-operator">|</span><span class="tok-command">select</span> <span class="tok-string_literal">pid</span> <span class="tok-operator">|</span> <span class="tok-command">list:collect</span><span class="tok-operator">)</span> <span class="tok-string_literal">signal</span><span class="tok-operator">=</span><span class="tok-string_literal">SIGKILL</span><span class="tok-operator">}</span>
+<span class="tok-identifier">$killall</span> <span class="tok-operator">:=</span> <span class="tok-operator">{</span> <span class="tok-operator">|</span><span class="tok-identifier">$victim</span><span class="tok-operator">|</span> <a href="#host-signal"><span class="tok-command">host:signal</span></a> <span class="tok-operator">@</span><span class="tok-operator">$(</span><span class="tok-string_literal">host</span><span class="tok-operator">:</span><span class="tok-string_literal">procs</span><span class="tok-operator">|</span><a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-identifier">$name</span> <span class="tok-operator">=</span><span class="tok-file_literal">~</span> <span class="tok-identifier">$victim</span><span class="tok-operator">}</span><span class="tok-operator">|</span><a href="#stream-select"><span class="tok-command">select</span></a> <span class="tok-string_literal">pid</span> <span class="tok-operator">|</span> <span class="tok-command">list:collect</span><span class="tok-operator">)</span> <span class="tok-string_literal">signal</span><span class="tok-operator">=</span><span class="tok-string_literal">SIGKILL</span><span class="tok-operator">}</span>
 <span class="tok-comment"># Kill all crush commands</span>
 <span class="tok-command">killall</span> <span class="tok-regex_literal">^(crush)</span></code></pre>
 </div>
@@ -1860,7 +1860,7 @@ SIGCONT and SIGWINCH.</p>
 <h2 class="ns-title"><code>io</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:io</span></code></pre>
 <p>Data serialization I/O</p>
-<p>Reading and writing structured data in specific wire formats -- <code>json</code>, <code>yaml</code>, <code>toml</code>, <code>csv</code>, <code>hex</code>, <code>base64</code>, and <code>percent</code> encoding, and Crush&#39;s own native <code>pup</code> format, each its own <code>to</code>/<code>from</code> pair. Also home to a few general-purpose I/O commands that don&#39;t belong to any one format: <code>http</code>, <code>echo</code>, <code>readline</code>, and <code>member</code>/<code>members</code> for pulling data out of a struct or stream. Imported into the global scope, so e.g. <a href="#io-json-from"><code>io:json:from</code></a> and bare <code>json:from</code> are the same command.</p>
+<p>Reading and writing structured data in specific wire formats -- <code>json</code>, <code>yaml</code>, <code>toml</code>, <code>csv</code>, <code>hex</code>, <code>base64</code>, and <code>percent</code> encoding, and Crush&#39;s own native <code>pup</code> format, each its own <code>to</code>/<code>from</code> pair. Also home to a few general-purpose I/O commands that don&#39;t belong to any one format: <a href="#io-http"><code>http</code></a>, <a href="#io-echo"><code>echo</code></a>, <a href="#io-readline"><code>readline</code></a>, and <a href="#io-member"><code>member</code></a>/<a href="#io-members"><code>members</code></a> for pulling data out of a struct or stream. Imported into the global scope, so e.g. <a href="#io-json-from"><code>io:json:from</code></a> and bare <code>json:from</code> are the same command.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-ns"><a href="#io-base64"><code>io:base64</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-bin"><code>io:bin</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-csv"><code>io:csv</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-hex"><code>io:hex</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-json"><code>io:json</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-lines"><code>io:lines</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-percent"><code>io:percent</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-pup"><code>io:pup</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-split"><code>io:split</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-toml"><code>io:toml</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-words"><code>io:words</code></a> <span class="idx-tag">namespace</span></li><li class="idx-ns"><a href="#io-yaml"><code>io:yaml</code></a> <span class="idx-tag">namespace</span></li><li class="idx-cmd"><a href="#io-dir"><code>io:dir</code></a></li><li class="idx-cmd"><a href="#io-echo"><code>io:echo</code></a></li><li class="idx-cmd"><a href="#io-http"><code>io:http</code></a></li><li class="idx-cmd"><a href="#io-member"><code>io:member</code></a></li><li class="idx-cmd"><a href="#io-members"><code>io:members</code></a></li><li class="idx-cmd"><a href="#io-readline"><code>io:readline</code></a></li><li class="idx-cmd"><a href="#io-val"><code>io:val</code></a></li></ul></nav>
 <article class="cmd" id="io-dir">
@@ -1875,7 +1875,7 @@ SIGCONT and SIGWINCH.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">dir</span> <span class="tok-file_literal">.</span></code></pre>
+<pre><code><a href="#io-dir"><span class="tok-command">dir</span></a> <span class="tok-file_literal">.</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-echo">
@@ -1885,7 +1885,7 @@ SIGCONT and SIGWINCH.</p>
 <h1>Output</h1>
 <pre><code><span class="tok-command">empty</span></code></pre>
 <p>If no arguments are passed to the <code>values</code> parameter, print the input pipeline value instead.</p>
-<p>This command may at first appear pointless, since values entered on the prompt are printed to standard output by default. But that is only true when running a command interactively. When executing a file or running a closure, results are either completely ignored or returned as the return value of the block. In these situations, the <code>echo</code> command is useful for making sure a given value is written to standard output.</p>
+<p>This command may at first appear pointless, since values entered on the prompt are printed to standard output by default. But that is only true when running a command interactively. When executing a file or running a closure, results are either completely ignored or returned as the return value of the block. In these situations, the <a href="#io-echo"><code>echo</code></a> command is useful for making sure a given value is written to standard output.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>values</code> the values to print.</p>
@@ -1895,8 +1895,8 @@ SIGCONT and SIGWINCH.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># These command invocations are equivalent</span>
-<span class="tok-command">echo</span> <span class="tok-string_literal">&quot;Hello, world!&quot;</span>
-<span class="tok-string_literal">&quot;Hello, world!&quot;</span> <span class="tok-operator">|</span> <span class="tok-command">echo</span></code></pre>
+<a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;Hello, world!&quot;</span>
+<span class="tok-string_literal">&quot;Hello, world!&quot;</span> <span class="tok-operator">|</span> <a href="#io-echo"><span class="tok-command">echo</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-http">
@@ -1926,11 +1926,11 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 </li>
 <li><p><code>header</code> HTTP headers, must be on the form &quot;key:value&quot;.</p>
 </li>
-<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
+<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">http</span> <span class="tok-string_literal">&quot;https://example.com/&quot;</span> <span class="tok-string_literal">header</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Authorization: Bearer {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$token</span><span class="tok-operator">)</span></code></pre>
+<pre><code><a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-string_literal">&quot;https://example.com/&quot;</span> <span class="tok-string_literal">header</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Authorization: Bearer {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$token</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-member">
@@ -1944,7 +1944,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-identifier">$uri</span> <span class="tok-operator">:=</span> <span class="tok-string_literal">&quot;https://raw.githubusercontent.com/liljencrantz/crush/refs/heads/master/example_data/dinosaurs.json&quot;</span>
-<span class="tok-command">http</span> <span class="tok-identifier">$uri</span> <span class="tok-operator">|</span> <span class="tok-command">member</span> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">json:from</span></code></pre>
+<a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-identifier">$uri</span> <span class="tok-operator">|</span> <a href="#io-member"><span class="tok-command">member</span></a> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">json:from</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-members">
@@ -1957,7 +1957,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 dict, a struct, a scope -- and reports that stream&#39;s shape without consuming
 any of its actual rows.</p>
 <h1>Examples</h1>
-<pre><code><span class="tok-identifier">$my_dict</span> <span class="tok-operator">|</span> <span class="tok-command">members</span></code></pre>
+<pre><code><span class="tok-identifier">$my_dict</span> <span class="tok-operator">|</span> <a href="#io-members"><span class="tok-command">members</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-readline">
@@ -1976,9 +1976,9 @@ any of its actual rows.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Ask the user for their name</span>
-<span class="tok-command">echo</span> <span class="tok-string_literal">&quot;What is your name?&quot;</span>
+<a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">&quot;What is your name?&quot;</span>
 <span class="tok-identifier">$name</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">readline</span> <span class="tok-string_literal">prompt</span><span class="tok-operator">=</span><span class="tok-string_literal">&quot;name: &quot;</span><span class="tok-operator">)</span>
-<span class="tok-command">echo</span> <span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Hello, {}!&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$name</span><span class="tok-operator">)</span></code></pre>
+<a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">&quot;Hello, {}!&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span> <span class="tok-identifier">$name</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-val">
@@ -1994,7 +1994,7 @@ any of its actual rows.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">val</span> <span class="tok-identifier">$val</span></code></pre>
+<pre><code><a href="#io-val"><span class="tok-command">val</span></a> <span class="tok-identifier">$val</span></code></pre>
 </div>
 </article>
 </section>
@@ -2014,7 +2014,7 @@ any of its actual rows.</p>
 <p>The standard alphabet follows RFC 4648, and uses <code>a</code>-<code>z</code>, <code>A</code>-<code>Z</code>, <code>0</code>-<code>9</code>, <code>+</code>, and <code>/</code>. The urlsafe alphabet uses <code>a-</code>z, <code>A</code>-<code>Z</code>, <code>0</code>-<code>9</code>, <code>-</code>, and <code>.</code>. Both use <code>=</code> for padding.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from. Read from input if no file is specified.</p>
+<li><p><a href="#fs-files"><code>files</code></a> the files to read from. Read from input if no file is specified.</p>
 </li>
 <li><p><code>alphabet</code> (default: <code>standard</code>) base64 encoding style to use.</p>
 </li>
@@ -2058,7 +2058,7 @@ any of its actual rows.</p>
 <p>If no file is specified, the input must be either binary or a string which will be converted to a binary using utf-8.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 </div>
@@ -2087,13 +2087,13 @@ any of its actual rows.</p>
 <p>Parse specified files as CSV files</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
+<li><p><a href="#fs-files"><code>files</code></a> source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
 </li>
 <li><p><code>columns</code> name and type of all columns.</p>
 </li>
 <li><p><code>separator</code> (default: <code>&#39;,&#39;</code>) column separator.</p>
 </li>
-<li><p><code>head</code> (default: <code>0</code>) skip this many lines of input from the beginning.</p>
+<li><p><a href="#stream-head"><code>head</code></a> (default: <code>0</code>) skip this many lines of input from the beginning.</p>
 </li>
 <li><p><code>trim</code> trim this character from start and end of every value.</p>
 </li>
@@ -2118,7 +2118,7 @@ any of its actual rows.</p>
 <p>If no file is specified, use the input, which must be a binary or a string.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
+<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input if no file is specified).</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2155,11 +2155,11 @@ any of its actual rows.</p>
 <p>When deserializing a list, <code>json:from</code> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">http</span> <span class="tok-string_literal">&quot;https://jsonplaceholder.typicode.com/todos/3&quot;</span><span class="tok-operator">|</span> <span class="tok-command">member</span> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">json:from</span></code></pre>
+<pre><code><a href="#io-http"><span class="tok-command">http</span></a> <span class="tok-string_literal">&quot;https://jsonplaceholder.typicode.com/todos/3&quot;</span><span class="tok-operator">|</span> <a href="#io-member"><span class="tok-command">member</span></a> <span class="tok-string_literal">body</span> <span class="tok-operator">|</span> <span class="tok-command">json:from</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-json-to">
@@ -2181,7 +2181,7 @@ any of its actual rows.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">json:to</span></code></pre>
+<pre><code><a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <span class="tok-command">json:to</span></code></pre>
 </div>
 </article>
 </section>
@@ -2199,7 +2199,7 @@ any of its actual rows.</p>
 <pre><code><span class="tok-command">table_input_stream</span> <span class="tok-string_literal">line</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span></code></pre>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
+<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input if no file is specified).</p>
 </li>
 <li><p><code>skip_empty_lines</code> (default: <code>false</code>) do not emit empty lines.</p>
 </li>
@@ -2278,7 +2278,7 @@ to one component of one.</p>
 <p>Parse pup format</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2313,7 +2313,7 @@ lambdas can be serialized to this format.</p>
 <p>Read specified files (or input) as a table, split on the specified separator characters.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
+<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input if no file is specified).</p>
 </li>
 <li><p><code>separator</code> characters to split on</p>
 </li>
@@ -2339,7 +2339,7 @@ lambdas can be serialized to this format.</p>
 <p>When deserializing a list, <code>toml:from</code> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2381,7 +2381,7 @@ lambdas can be serialized to this format.</p>
 <p>Input can be files or the input pipe, which must be a binary input stream, split on word boundaries, trim away punctuation and discard empty &quot;words&quot;.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input pipe if no file is specified).</p>
+<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input pipe if no file is specified).</p>
 </li>
 </ul>
 </div>
@@ -2400,7 +2400,7 @@ lambdas can be serialized to this format.</p>
 <p>When deserializing a list, <code>yaml:from</code> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2507,9 +2507,9 @@ lambdas can be serialized to this format.</p>
 <ul>
 <li><p><code>number</code> the number to clamp.</p>
 </li>
-<li><p><code>min</code> the lower bound of the allowed range.</p>
+<li><p><a href="#stream-min"><code>min</code></a> the lower bound of the allowed range.</p>
 </li>
-<li><p><code>max</code> the upper bound of the allowed range.</p>
+<li><p><a href="#stream-max"><code>max</code></a> the upper bound of the allowed range.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2687,7 +2687,7 @@ lambdas can be serialized to this format.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Generate 20 floating point numbers between 0 and 100</span>
-<span class="tok-file_literal">random.float_stream</span> <span class="tok-numeric_literal">100</span> <span class="tok-operator">|</span> <span class="tok-command">head</span> <span class="tok-numeric_literal">20</span></code></pre>
+<span class="tok-file_literal">random.float_stream</span> <span class="tok-numeric_literal">100</span> <span class="tok-operator">|</span> <a href="#stream-head"><span class="tok-command">head</span></a> <span class="tok-numeric_literal">20</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="random-integer">
@@ -2716,7 +2716,7 @@ lambdas can be serialized to this format.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Generate 20 integers between 0 and 100</span>
-<span class="tok-file_literal">random.integer_stream</span> <span class="tok-numeric_literal">100</span> <span class="tok-operator">|</span> <span class="tok-command">head</span> <span class="tok-numeric_literal">20</span></code></pre>
+<span class="tok-file_literal">random.integer_stream</span> <span class="tok-numeric_literal">100</span> <span class="tok-operator">|</span> <a href="#stream-head"><span class="tok-command">head</span></a> <span class="tok-numeric_literal">20</span></code></pre>
 </div>
 </article>
 </section>
@@ -2877,7 +2877,7 @@ Returns the number of host entries deleted.</p>
 <h2 class="ns-title"><code>stream</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:stream</span></code></pre>
 <p>Stream handling commands</p>
-<p>Crush&#39;s pipes carry typed streams of rows, not bytes -- <a href="#stream"><code>stream</code></a> is where the SQL-like operations on those streams live: filtering (<code>where</code>), sorting, grouping, aggregating, joining two streams, deduplicating, and more. This namespace is imported into the global scope, so every command here works equally well as <a href="#stream-sort"><code>stream:sort</code></a> or the bare word <code>sort</code> -- most Crush pipelines are built by chaining these together with <code>|</code>.</p>
+<p>Crush&#39;s pipes carry typed streams of rows, not bytes -- <a href="#stream"><code>stream</code></a> is where the SQL-like operations on those streams live: filtering (<a href="#stream-where"><code>where</code></a>), sorting, grouping, aggregating, joining two streams, deduplicating, and more. This namespace is imported into the global scope, so every command here works equally well as <a href="#stream-sort"><code>stream:sort</code></a> or the bare word <a href="#stream-sort"><code>sort</code></a> -- most Crush pipelines are built by chaining these together with <code>|</code>.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#stream-all_match"><code>stream:all_match</code></a></li><li class="idx-cmd"><a href="#stream-any_match"><code>stream:any_match</code></a></li><li class="idx-cmd"><a href="#stream-avg"><code>stream:avg</code></a></li><li class="idx-cmd"><a href="#stream-concat"><code>stream:concat</code></a></li><li class="idx-cmd"><a href="#stream-count"><code>stream:count</code></a></li><li class="idx-cmd"><a href="#stream-drop"><code>stream:drop</code></a></li><li class="idx-cmd"><a href="#stream-each"><code>stream:each</code></a></li><li class="idx-cmd"><a href="#stream-fold"><code>stream:fold</code></a></li><li class="idx-cmd"><a href="#stream-group"><code>stream:group</code></a></li><li class="idx-cmd"><a href="#stream-head"><code>stream:head</code></a></li><li class="idx-cmd"><a href="#stream-join"><code>stream:join</code></a></li><li class="idx-cmd"><a href="#stream-max"><code>stream:max</code></a></li><li class="idx-cmd"><a href="#stream-median"><code>stream:median</code></a></li><li class="idx-cmd"><a href="#stream-min"><code>stream:min</code></a></li><li class="idx-cmd"><a href="#stream-prod"><code>stream:prod</code></a></li><li class="idx-cmd"><a href="#stream-rename"><code>stream:rename</code></a></li><li class="idx-cmd"><a href="#stream-reverse"><code>stream:reverse</code></a></li><li class="idx-cmd"><a href="#stream-sample"><code>stream:sample</code></a></li><li class="idx-cmd"><a href="#stream-select"><code>stream:select</code></a></li><li class="idx-cmd"><a href="#stream-seq"><code>stream:seq</code></a></li><li class="idx-cmd"><a href="#stream-skip"><code>stream:skip</code></a></li><li class="idx-cmd"><a href="#stream-sort"><code>stream:sort</code></a></li><li class="idx-cmd"><a href="#stream-sum"><code>stream:sum</code></a></li><li class="idx-cmd"><a href="#stream-tail"><code>stream:tail</code></a></li><li class="idx-cmd"><a href="#stream-tee"><code>stream:tee</code></a></li><li class="idx-cmd"><a href="#stream-union"><code>stream:union</code></a></li><li class="idx-cmd"><a href="#stream-uniq"><code>stream:uniq</code></a></li><li class="idx-cmd"><a href="#stream-where"><code>stream:where</code></a></li><li class="idx-cmd"><a href="#stream-zip"><code>stream:zip</code></a></li></ul></nav>
 <article class="cmd" id="stream-all_match">
@@ -2888,8 +2888,8 @@ Returns the number of host entries deleted.</p>
 <pre><code><span class="tok-command">bool</span></code></pre>
 <p>Stops reading input as soon as one non-matching row is found, rather than
 always consuming the whole stream. True for an empty input, same as an empty
-<code>and</code> chain would be. The columns of the row are exported to <code>condition</code> by
-name, exactly like <code>where</code>.</p>
+<a href="#cond-and"><code>and</code></a> chain would be. The columns of the row are exported to <code>condition</code> by
+name, exactly like <a href="#stream-where"><code>where</code></a>.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>condition</code> the condition to check for each row.</p>
@@ -2897,7 +2897,7 @@ name, exactly like <code>where</code>.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Are all processes owned by root?</span>
-<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">all_match</span> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$user</span> <span class="tok-operator">==</span> <span class="tok-string_literal">&quot;root&quot;</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-all_match"><span class="tok-command">all_match</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$user</span> <span class="tok-operator">==</span> <span class="tok-string_literal">&quot;root&quot;</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-any_match">
@@ -2908,7 +2908,7 @@ name, exactly like <code>where</code>.</p>
 <pre><code><span class="tok-command">bool</span></code></pre>
 <p>Stops reading input as soon as one matching row is found, rather than always
 consuming the whole stream. The columns of the row are exported to <code>condition</code>
-by name, exactly like <code>where</code>.</p>
+by name, exactly like <a href="#stream-where"><code>where</code></a>.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>condition</code> the condition to check for each row.</p>
@@ -2916,7 +2916,7 @@ by name, exactly like <code>where</code>.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Is there any process using more than 50% of a CPU core?</span>
-<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">any_match</span> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$cpu</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">50</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-any_match"><span class="tok-command">any_match</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$cpu</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">50</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-avg">
@@ -2931,7 +2931,7 @@ The column type must be numeric or a duration.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">avg</span> <span class="tok-string_literal">cpu</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-avg"><span class="tok-command">avg</span></a> <span class="tok-string_literal">cpu</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-concat">
@@ -2948,7 +2948,7 @@ The column can be numeric, or textual.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">concat</span> <span class="tok-string_literal">name</span> <span class="tok-string_literal">&quot;:&quot;</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-concat"><span class="tok-command">concat</span></a> <span class="tok-string_literal">name</span> <span class="tok-string_literal">&quot;:&quot;</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-count">
@@ -2959,10 +2959,10 @@ The column can be numeric, or textual.</p>
 <pre><code><span class="tok-command">integer</span></code></pre>
 <p>The input type can be any type that can be streamed, such as a table, a list, etc.
 If the input type is not a materialized type, such as a <code>$table_input_stream</code>, the whole stream will be consumed by this operation.
-Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict</code>, have a know size, and <code>count</code> will not need to iterate over them to find it.</p>
+Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict</code>, have a know size, and <a href="#stream-count"><code>count</code></a> will not need to iterate over them to find it.</p>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Returns the number of processes on the system</span>
-<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">count</span></code></pre>
+<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-count"><span class="tok-command">count</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-drop">
@@ -2972,12 +2972,12 @@ Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict
 <p>This command is does the opposite of the select command. It copies all columns except the ones specified from input to output.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>drop</code> the columns to remove from the stream.</p>
+<li><p><a href="#stream-drop"><code>drop</code></a> the columns to remove from the stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Drop memory usage columns from output of ps</span>
-<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">drop</span> <span class="tok-string_literal">vms</span> <span class="tok-string_literal">rss</span></code></pre>
+<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-drop"><span class="tok-command">drop</span></a> <span class="tok-string_literal">vms</span> <span class="tok-string_literal">rss</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-each">
@@ -3001,11 +3001,11 @@ Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict
 <div class="cmd-doc"><pre><code><a href="#stream-fold"><span class="tok-command">stream:fold</span></a> <span class="tok-string_literal">initial</span><span class="tok-operator">=</span><span class="tok-string_literal">any</span> <span class="tok-string_literal">body</span><span class="tok-operator">=</span><span class="tok-string_literal">command</span></code></pre>
 <p>Accumulate a single result across all rows of input using a user-supplied closure.</p>
 <p><code>body</code> is called once per input row, with the accumulator available as <code>acc</code>
-and the row&#39;s own columns exported by name, exactly like <code>where</code>/<code>each</code>. Its
+and the row&#39;s own columns exported by name, exactly like <a href="#stream-where"><code>where</code></a>/<a href="#stream-each"><code>each</code></a>. Its
 return value becomes the accumulator for the next row; once the input is
 exhausted, the final accumulator is fold&#39;s own output. This is the general
 escape hatch for one-off aggregations that don&#39;t have (or don&#39;t need) their own
-dedicated command like <code>sum</code> or <code>max</code>.</p>
+dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#stream-max"><code>max</code></a>.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>initial</code> the accumulator&#39;s value before the first row is processed.</p>
@@ -3015,9 +3015,9 @@ dedicated command like <code>sum</code> or <code>max</code>.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Sum 1 through 5 by hand</span>
-<span class="tok-command">seq</span> <span class="tok-numeric_literal">1</span> <span class="tok-numeric_literal">6</span> <span class="tok-operator">|</span> <span class="tok-command">fold</span> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$acc</span> <span class="tok-operator">+</span> <span class="tok-identifier">$value</span><span class="tok-operator">)</span><span class="tok-operator">}</span> <span class="tok-string_literal">initial</span><span class="tok-operator">=</span><span class="tok-numeric_literal">0</span>
+<a href="#stream-seq"><span class="tok-command">seq</span></a> <span class="tok-numeric_literal">1</span> <span class="tok-numeric_literal">6</span> <span class="tok-operator">|</span> <a href="#stream-fold"><span class="tok-command">fold</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$acc</span> <span class="tok-operator">+</span> <span class="tok-identifier">$value</span><span class="tok-operator">)</span><span class="tok-operator">}</span> <span class="tok-string_literal">initial</span><span class="tok-operator">=</span><span class="tok-numeric_literal">0</span>
 <span class="tok-comment"># Build a comma separated string from a column</span>
-<span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">fold</span> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-string_literal">&quot;{}, {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span><span class="tok-operator">(</span><span class="tok-identifier">$acc</span>, <span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">)</span><span class="tok-operator">}</span> <span class="tok-string_literal">initial</span><span class="tok-operator">=</span><span class="tok-string_literal">&quot;&quot;</span></code></pre>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#stream-fold"><span class="tok-command">fold</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-string_literal">&quot;{}, {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span><span class="tok-operator">(</span><span class="tok-identifier">$acc</span>, <span class="tok-identifier">$file</span><span class="tok-operator">)</span><span class="tok-operator">)</span><span class="tok-operator">}</span> <span class="tok-string_literal">initial</span><span class="tok-operator">=</span><span class="tok-string_literal">&quot;&quot;</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-group">
@@ -3035,7 +3035,7 @@ dedicated command like <code>sum</code> or <code>max</code>.</p>
 <pre><code><span class="tok-comment"># Group files in current tree by the number of hardlinks pointing to them, show</span>
 <span class="tok-comment"># the number of files and the sum total file size for each link count. Sort results</span>
 <span class="tok-comment"># by size.</span>
-<span class="tok-command">files</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <span class="tok-command">group</span> <span class="tok-string_literal">links</span> <span class="tok-string_literal">file_count</span><span class="tok-operator">=</span><span class="tok-operator">{</span><span class="tok-command">count</span><span class="tok-operator">}</span> <span class="tok-string_literal">size</span><span class="tok-operator">=</span><span class="tok-operator">{</span><span class="tok-command">sum</span> <span class="tok-string_literal">size</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <span class="tok-command">sort</span> <span class="tok-string_literal">size</span></code></pre>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <a href="#stream-group"><span class="tok-command">group</span></a> <span class="tok-string_literal">links</span> <span class="tok-string_literal">file_count</span><span class="tok-operator">=</span><span class="tok-operator">{</span><a href="#stream-count"><span class="tok-command">count</span></a><span class="tok-operator">}</span> <span class="tok-string_literal">size</span><span class="tok-operator">=</span><span class="tok-operator">{</span><a href="#stream-sum"><span class="tok-command">sum</span></a> <span class="tok-string_literal">size</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <a href="#stream-sort"><span class="tok-command">sort</span></a> <span class="tok-string_literal">size</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-head">
@@ -3057,11 +3057,11 @@ dedicated command like <code>sum</code> or <code>max</code>.</p>
 <p>Join two streams together on the specified keys.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>join</code> Fields to join</p>
+<li><p><a href="#stream-join"><code>join</code></a> Fields to join</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">join</span> <span class="tok-string_literal">user</span><span class="tok-operator">=</span><span class="tok-operator">(</span><span class="tok-string_literal">files</span><span class="tok-operator">)</span> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><span class="tok-operator">(</span><span class="tok-string_literal">user</span><span class="tok-operator">:</span><span class="tok-string_literal">list</span><span class="tok-operator">)</span></code></pre>
+<pre><code><a href="#stream-join"><span class="tok-command">join</span></a> <span class="tok-string_literal">user</span><span class="tok-operator">=</span><span class="tok-operator">(</span><span class="tok-string_literal">files</span><span class="tok-operator">)</span> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><span class="tok-operator">(</span><span class="tok-string_literal">user</span><span class="tok-operator">:</span><span class="tok-string_literal">list</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-max">
@@ -3076,7 +3076,7 @@ The column can be numeric, temporal, a string or a file.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">max</span> <span class="tok-string_literal">cpu</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-max"><span class="tok-command">max</span></a> <span class="tok-string_literal">cpu</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-median">
@@ -3085,7 +3085,7 @@ The column can be numeric, temporal, a string or a file.</p>
 <p>Calculate the median for the specific column across all rows.</p>
 <p>If the input only has one column, the column name is optional.
 The column type must be numeric or a duration.
-If the column contains a NaN float value, <code>median</code> fails with an error rather
+If the column contains a NaN float value, <a href="#stream-median"><code>median</code></a> fails with an error rather
 than silently including it in (or excluding it from) the calculation.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -3093,7 +3093,7 @@ than silently including it in (or excluding it from) the calculation.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">median</span> <span class="tok-string_literal">cpu</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-median"><span class="tok-command">median</span></a> <span class="tok-string_literal">cpu</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-min">
@@ -3108,7 +3108,7 @@ The column can be numeric, temporal, a string or a file.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">min</span> <span class="tok-string_literal">cpu</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-min"><span class="tok-command">min</span></a> <span class="tok-string_literal">cpu</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-prod">
@@ -3123,7 +3123,7 @@ The column type must be numeric.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">seq</span> <span class="tok-numeric_literal">5</span> <span class="tok-numeric_literal">10</span> <span class="tok-operator">|</span> <span class="tok-command">prod</span></code></pre>
+<pre><code><a href="#stream-seq"><span class="tok-command">seq</span></a> <span class="tok-numeric_literal">5</span> <span class="tok-numeric_literal">10</span> <span class="tok-operator">|</span> <a href="#stream-prod"><span class="tok-command">prod</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-rename">
@@ -3140,7 +3140,7 @@ new name to give it. Columns not mentioned pass through unchanged.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">rename</span> <span class="tok-string_literal">file</span><span class="tok-operator">=</span><span class="tok-string_literal">path</span></code></pre>
+<pre><code><a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#stream-rename"><span class="tok-command">rename</span></a> <span class="tok-string_literal">file</span><span class="tok-operator">=</span><span class="tok-string_literal">path</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-reverse">
@@ -3167,7 +3167,7 @@ ever held in memory at once. Output order is not the input order.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Pick 5 pseudo-random lines out of a huge file, without reading it all into memory</span>
-<span class="tok-command">lines:from</span> <span class="tok-file_literal">big_log_file.txt</span> <span class="tok-operator">|</span> <span class="tok-command">sample</span> <span class="tok-numeric_literal">5</span></code></pre>
+<span class="tok-command">lines:from</span> <span class="tok-file_literal">big_log_file.txt</span> <span class="tok-operator">|</span> <a href="#stream-sample"><span class="tok-command">sample</span></a> <span class="tok-numeric_literal">5</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-select">
@@ -3176,10 +3176,10 @@ ever held in memory at once. Output order is not the input order.</p>
 <p>Pass on some old fields and calculate new ones for each line of input</p>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Show only the filename and discard all other columns</span>
-<span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">select</span> <span class="tok-string_literal">file</span>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#stream-select"><span class="tok-command">select</span></a> <span class="tok-string_literal">file</span>
 
 <span class="tok-comment"># Add an extra column to the output of files that shows the time passed since last modification</span>
-<span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">select</span> <span class="tok-glob_literal">*</span> <span class="tok-string_literal">age</span><span class="tok-operator">=</span><span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-string_literal">time</span><span class="tok-operator">.</span><span class="tok-string_literal">now</span><span class="tok-operator">(</span><span class="tok-operator">)</span> <span class="tok-operator">-</span> <span class="tok-string_literal">modified</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#stream-select"><span class="tok-command">select</span></a> <span class="tok-glob_literal">*</span> <span class="tok-string_literal">age</span><span class="tok-operator">=</span><span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-string_literal">time</span><span class="tok-operator">.</span><span class="tok-string_literal">now</span><span class="tok-operator">(</span><span class="tok-operator">)</span> <span class="tok-operator">-</span> <span class="tok-string_literal">modified</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-seq">
@@ -3206,9 +3206,9 @@ ambiguous which one actually sets the end of the sequence.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">seq</span> <span class="tok-numeric_literal">3</span>
+<pre><code><a href="#stream-seq"><span class="tok-command">seq</span></a> <span class="tok-numeric_literal">3</span>
 <span class="tok-comment"># Prepend an index column to the output of the files command</span>
-<span class="tok-command">zip</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span><span class="tok-operator">)</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span><span class="tok-operator">)</span></code></pre>
+<a href="#stream-zip"><span class="tok-command">zip</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span><span class="tok-operator">)</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-skip">
@@ -3231,21 +3231,21 @@ ambiguous which one actually sets the end of the sequence.</p>
 <p>Sort input stream based on one or more of it&#39;s columns</p>
 <h1>Output</h1>
 <p>A stream with the same columns as the input</p>
-<p>If any sort column contains a NaN float value, <code>sort</code> fails with an error rather
+<p>If any sort column contains a NaN float value, <a href="#stream-sort"><code>sort</code></a> fails with an error rather
 than picking an arbitrary position for it, since NaN has no defined ordering relative to
 other floats.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>field</code> the columns to sort on. Optional if input only has one column.</p>
 </li>
-<li><p><code>reverse</code> (default: <code>false</code>) reverse the sort order.</p>
+<li><p><a href="#stream-reverse"><code>reverse</code></a> (default: <code>false</code>) reverse the sort order.</p>
 </li>
 <li><p><code>case_insensitive</code> (default: <code>false</code>) ignore case when sorting textual columns.</p>
 </li>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Show the contents of the current directory, sorted first on type and then on filename</span>
-<span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">sort</span> <span class="tok-string_literal">type</span> <span class="tok-string_literal">file</span></code></pre>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#stream-sort"><span class="tok-command">sort</span></a> <span class="tok-string_literal">type</span> <span class="tok-string_literal">file</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-sum">
@@ -3254,14 +3254,14 @@ other floats.</p>
 <p>Calculate the sum for the specific column across all rows.</p>
 <p>If the input only has one column, the column name is optional.</p>
 <p>The column contents must be exactly one of the types <code>$integer</code>, <code>$float</code>, or <code>$duration</code>.</p>
-<p>Normally, <code>sum</code> expects the type of the column to be the type to sum over, but <code>sum</code> can also sum over a column of type <code>any</code>, so long as there is at least one row in the table, and all the rows are actually of the same type.</p>
+<p>Normally, <a href="#stream-sum"><code>sum</code></a> expects the type of the column to be the type to sum over, but <a href="#stream-sum"><code>sum</code></a> can also sum over a column of type <code>any</code>, so long as there is at least one row in the table, and all the rows are actually of the same type.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>field</code> The name of the column to find the sum of</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">sum</span> <span class="tok-string_literal">cpu</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-sum"><span class="tok-command">sum</span></a> <span class="tok-string_literal">cpu</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-tail">
@@ -3286,9 +3286,9 @@ other floats.</p>
 <p>Each <code>branches</code> block receives its own independent copy of every row and runs
 to completion as its own pipeline, in parallel with the others; its own output
 is discarded, so a branch is only useful for its side effects (writing to a
-file, counting, etc). <code>tee</code>&#39;s own output is the untouched original stream, so
+file, counting, etc). <a href="#stream-tee"><code>tee</code></a>&#39;s own output is the untouched original stream, so
 it composes directly into a larger pipeline. If a branch fails, the failure is
-reported via <a href="#crush-warn-list"><code>crush:warn:list</code></a> rather than aborting <code>tee</code> or the other branches.</p>
+reported via <a href="#crush-warn-list"><code>crush:warn:list</code></a> rather than aborting <a href="#stream-tee"><code>tee</code></a> or the other branches.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>branches</code> one or more pipelines to send an independent copy of the stream through.</p>
@@ -3296,7 +3296,7 @@ reported via <a href="#crush-warn-list"><code>crush:warn:list</code></a> rather 
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Write a snapshot to disk while continuing to filter the live stream</span>
-<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">tee</span> <span class="tok-operator">{</span><span class="tok-command">json:to</span> <span class="tok-file_literal">snapshot.json</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <span class="tok-command">where</span> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$cpu</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">50</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-tee"><span class="tok-command">tee</span></a> <span class="tok-operator">{</span><span class="tok-command">json:to</span> <span class="tok-file_literal">snapshot.json</span><span class="tok-operator">}</span> <span class="tok-operator">|</span> <a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-operator">(</span><span class="tok-identifier">$cpu</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">50</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-union">
@@ -3311,7 +3311,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">union</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-numeric_literal">0</span> <span class="tok-numeric_literal">3</span><span class="tok-operator">)</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">13</span><span class="tok-operator">)</span></code></pre>
+<pre><code><a href="#stream-union"><span class="tok-command">union</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-numeric_literal">0</span> <span class="tok-numeric_literal">3</span><span class="tok-operator">)</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span> <span class="tok-numeric_literal">10</span> <span class="tok-numeric_literal">13</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-uniq">
@@ -3328,7 +3328,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <span class="tok-command">uniq</span> <span class="tok-string_literal">user</span></code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-uniq"><span class="tok-command">uniq</span></a> <span class="tok-string_literal">user</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-where">
@@ -3337,7 +3337,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <p>Filter out rows from input based on condition</p>
 <h1>Output</h1>
 <p>A stream with the same columns as the input</p>
-<p>The columns of the row are exported to the environment using the column names, i.e. if the table the <code>where</code> command is applied to has columns <code>a</code> and <code>b</code>, then the environment will have variables <code>type</code> and <code>name</code>, the variables <code>$type</code> and <code>$name</code> will be set to the values of the columns in the current row on each execution of the closure.</p>
+<p>The columns of the row are exported to the environment using the column names, i.e. if the table the <a href="#stream-where"><code>where</code></a> command is applied to has columns <code>a</code> and <code>b</code>, then the environment will have variables <code>type</code> and <code>name</code>, the variables <code>$type</code> and <code>$name</code> will be set to the values of the columns in the current row on each execution of the closure.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>condition</code> the condition to filter on.</p>
@@ -3345,7 +3345,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># List all subdirectories to the current working directory</span>
-<span class="tok-command">files</span> <span class="tok-operator">|</span> <span class="tok-command">where</span> <span class="tok-operator">{</span><span class="tok-identifier">$type</span> <span class="tok-operator">=</span><span class="tok-operator">=</span> <span class="tok-string_literal">directory</span><span class="tok-operator">}</span></code></pre>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-operator">|</span> <a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-identifier">$type</span> <span class="tok-operator">=</span><span class="tok-operator">=</span> <span class="tok-string_literal">directory</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="stream-zip">
@@ -3362,7 +3362,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Prepend an index column to the output of the files command</span>
-<span class="tok-command">zip</span> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span><span class="tok-operator">)</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span><span class="tok-operator">)</span></code></pre>
+<a href="#stream-zip"><span class="tok-command">zip</span></a> <span class="tok-operator">$(</span><span class="tok-string_literal">seq</span><span class="tok-operator">)</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span><span class="tok-operator">)</span></code></pre>
 </div>
 </article>
 </section>
@@ -3377,7 +3377,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h2 class="ns-title"><code>types</code></h2>
 <div class="ns-prose"><pre><code><span class="tok-command">global:types</span></code></pre>
 <p>Crush built in types and type related builtins.</p>
-<p>Every value type Crush knows about, and the methods you can call on instances of it -- <code>string</code>, <code>integer</code>, <code>list</code>, <code>dict</code>, <code>time</code>, <code>duration</code>, <code>table</code>, <code>re</code>, <code>glob</code>, and the rest, each its own sub-namespace of methods (e.g. <code>&quot;hello&quot;:upper</code>, <code>$my_list:push value</code>). Also home to the type system&#39;s own cross-cutting machinery: <code>class</code> (defining new types), <code>convert</code>, <code>typeof</code>, <code>like</code> (pattern matching), and <code>materialize</code>. Imported into the global scope, so both <code>types:string</code> and bare <code>string</code> refer to the same type.</p>
+<p>Every value type Crush knows about, and the methods you can call on instances of it -- <code>string</code>, <code>integer</code>, <code>list</code>, <code>dict</code>, <code>time</code>, <code>duration</code>, <code>table</code>, <code>re</code>, <code>glob</code>, and the rest, each its own sub-namespace of methods (e.g. <code>&quot;hello&quot;:upper</code>, <code>$my_list:push value</code>). Also home to the type system&#39;s own cross-cutting machinery: <a href="#types-class"><code>class</code></a> (defining new types), <a href="#types-convert"><code>convert</code></a>, <a href="#types-typeof"><code>typeof</code></a>, <a href="#types-like"><code>like</code></a> (pattern matching), and <a href="#types-materialize"><code>materialize</code></a>. Imported into the global scope, so both <code>types:string</code> and bare <code>string</code> refer to the same type.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-class"><code>types:class</code></a></li><li class="idx-cmd"><a href="#types-convert"><code>types:convert</code></a></li><li class="idx-cmd"><a href="#types-definition"><code>types:definition</code></a></li><li class="idx-cmd"><a href="#types-like"><code>types:like</code></a></li><li class="idx-cmd"><a href="#types-materialize"><code>types:materialize</code></a></li><li class="idx-cmd"><a href="#types-typeof"><code>types:typeof</code></a></li></ul></nav>
 <article class="cmd" id="types-class">
@@ -3446,7 +3446,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><span class="tok-command">convert</span> <span class="tok-identifier">$integer</span> <span class="tok-numeric_literal">1.8</span></code></pre>
+<pre><code><a href="#types-convert"><span class="tok-command">convert</span></a> <span class="tok-identifier">$integer</span> <span class="tok-numeric_literal">1.8</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="types-definition">
@@ -3456,7 +3456,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h1>Output</h1>
 <pre><code><span class="tok-command">string</span></code></pre>
 <p>Returns nothing if the command is not a closure</p>
-<p>Note that the outputted of the <code>definition</code> builtin is reformatted, including switching code between expression mode and command mode.</p>
+<p>Note that the outputted of the <a href="#types-definition"><code>definition</code></a> builtin is reformatted, including switching code between expression mode and command mode.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>command</code> the closure to show the definition of.</p>
@@ -3464,8 +3464,8 @@ the second stream, and so on. All streams must have identical column types.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># returns { $files --recursive &#39;/&#39;}</span>
-<span class="tok-identifier">$all_the_files</span> <span class="tok-operator">:=</span> <span class="tok-operator">{</span><span class="tok-command">files</span> <span class="tok-named_argument">--recursive</span> <span class="tok-file_literal">/</span><span class="tok-operator">}</span>
-<span class="tok-command">definition</span> <span class="tok-identifier">$all_the_files</span></code></pre>
+<span class="tok-identifier">$all_the_files</span> <span class="tok-operator">:=</span> <span class="tok-operator">{</span><a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-named_argument">--recursive</span> <span class="tok-file_literal">/</span><span class="tok-operator">}</span>
+<a href="#types-definition"><span class="tok-command">definition</span></a> <span class="tok-identifier">$all_the_files</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="types-like">
@@ -3476,8 +3476,8 @@ the second stream, and so on. All streams must have identical column types.</p>
 <pre><code><span class="tok-command">bool</span></code></pre>
 <p>A pattern can be a string (exact match), a glob, a regular expression, a type
 (checks <code>value</code>&#39;s type), or any other value that implements an <code>__is__</code>
-method -- <code>like</code> simply calls it. If multiple patterns are given, they&#39;re
-checked in order and <code>like</code> returns true as soon as one of them matches.</p>
+method -- <a href="#types-like"><code>like</code></a> simply calls it. If multiple patterns are given, they&#39;re
+checked in order and <a href="#types-like"><code>like</code></a> returns true as soon as one of them matches.</p>
 <p>In expression mode, a single pattern can also be checked via the <code>=~</code>
 operator (or <code>!~</code> for the negation).</p>
 <p>This command accepts the following arguments:</p>
@@ -3489,11 +3489,11 @@ operator (or <code>!~</code> for the negation).</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Match the string &quot;fooo&quot; against the regex ^(ooo)</span>
-<span class="tok-command">like</span> <span class="tok-string_literal">fooo</span> <span class="tok-regex_literal">^(ooo)</span>
+<a href="#types-like"><span class="tok-command">like</span></a> <span class="tok-string_literal">fooo</span> <span class="tok-regex_literal">^(ooo)</span>
 <span class="tok-comment"># Same, in expression mode</span>
 <span class="tok-operator">(</span><span class="tok-string_literal">fooo</span> <span class="tok-operator">=~</span> <span class="tok-regex_literal">^(ooo)</span><span class="tok-operator">)</span>
 <span class="tok-comment"># A value matches if it equals any of several patterns</span>
-<span class="tok-command">like</span> <span class="tok-string_literal">fooo</span> <span class="tok-regex_literal">^(ooo)</span> <span class="tok-glob_literal">*.txt</span> <span class="tok-string_literal">&quot;fooo&quot;</span></code></pre>
+<a href="#types-like"><span class="tok-command">like</span></a> <span class="tok-string_literal">fooo</span> <span class="tok-regex_literal">^(ooo)</span> <span class="tok-glob_literal">*.txt</span> <span class="tok-string_literal">&quot;fooo&quot;</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="types-materialize">
@@ -3502,9 +3502,9 @@ operator (or <code>!~</code> for the negation).</p>
 <p>Recursively convert all streams in io to materialized form</p>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Put a table of files in the current directory into the variable $f</span>
-<span class="tok-identifier">$f</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span> <span class="tok-operator">|</span> <span class="tok-command">materialize</span><span class="tok-operator">)</span>
+<span class="tok-identifier">$f</span> <span class="tok-operator">:=</span> <span class="tok-operator">$(</span><span class="tok-string_literal">files</span> <span class="tok-operator">|</span> <a href="#types-materialize"><span class="tok-command">materialize</span></a><span class="tok-operator">)</span>
 <span class="tok-comment"># Because we materialized the table stream into a table, counting the elements is not a destructive operation.</span>
-<span class="tok-identifier">$f</span> <span class="tok-operator">|</span> <span class="tok-command">count</span></code></pre>
+<span class="tok-identifier">$f</span> <span class="tok-operator">|</span> <a href="#stream-count"><span class="tok-command">count</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="types-typeof">
@@ -3520,7 +3520,7 @@ operator (or <code>!~</code> for the negation).</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># returns float</span>
-<span class="tok-command">typeof</span> <span class="tok-numeric_literal">1.8</span></code></pre>
+<a href="#types-typeof"><span class="tok-command">typeof</span></a> <span class="tok-numeric_literal">1.8</span></code></pre>
 </div>
 </article>
 </section>
@@ -3689,7 +3689,7 @@ the provided scopes through the entire chain.</p>
 <pre><code><span class="tok-comment"># Stop using the stream scope</span>
 <a href="#var-unuse"><span class="tok-command">var:unuse</span></a> <span class="tok-identifier">$stream</span>
 <span class="tok-comment"># This command will now fail, because stream::select is not in scope</span>
-<span class="tok-command">select</span></code></pre>
+<a href="#stream-select"><span class="tok-command">select</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="var-use">
