@@ -69,6 +69,16 @@ $ns_commands := $($(dict $string $(list $string)):new)
 $ns_children := $($(dict $string $(list $string)):new)
 # full command path -> help($cmd, format=html), unmodified.
 $cmd_doc := $($(dict $string $string):new)
+# path -> sorted list of full paths of the types declared directly in that
+# namespace (not recursively) -- e.g. types:float, types:one_of. A type's
+# own help (signature, description, member list) is exactly as
+# documentable as a command's, and just as often referenced by name in an
+# argument type (math:acos's signature literally reads
+# "number=$(one_of $float $integer)"), so it gets the same treatment: its
+# own little page and an anchor, not just a crawl of namespaces/commands.
+$ns_types := $($(dict $string $(list $string)):new)
+# full type path -> help($type, format=html), unmodified.
+$type_doc := $($(dict $string $string):new)
 # Every command and namespace, flattened, for the client-side search index.
 $search_items := $($(list $struct):new)
 # bare (unqualified) name -> full command path, for every command that's
@@ -119,6 +129,7 @@ $crawl := {
 
     $my_commands := $($(list $string):new)
     $my_children := $($(list $string):new)
+    $my_types := $($(list $string):new)
 
     for name=$(dir $s) {
         if ($name:starts_with("__")) {
@@ -194,6 +205,33 @@ $crawl := {
                         } catch {|$e|
                             $errors:push $("{} (help failed)":format $full_name)
                         }
+                    } else {
+                        if ($t == $type) {
+                            $full_name := $("{}:{}":format $path $name)
+                            try {
+                                $doc := $(help $val format=html)
+                                $type_doc[$full_name] = $doc
+                                $my_types:push $full_name
+                                $search_items:push $(struct:of \
+                                    path=$(display_path $full_name) \
+                                    anchor=$(slugify $full_name) \
+                                    short=$(short_of $val) \
+                                    kind="type")
+                                # Base types are bare-reachable the same
+                                # way sub-namespaces are (float, not just
+                                # types:float) -- and unlike commands, Type
+                                # values DO support a reliable ==, same as
+                                # Scope.
+                                try {
+                                    $bare_val := $(var:get $name)
+                                    if (($bare_val == $val) and ($name != $(display_path $full_name))) {
+                                        $bare_aliases[$name] = $full_name
+                                    }
+                                } catch {|$e| }
+                            } catch {|$e|
+                                $errors:push $("{} (type help failed)":format $full_name)
+                            }
+                        }
                     }
                 }
             } catch {|$e|
@@ -204,6 +242,7 @@ $crawl := {
 
     $ns_commands[$path] = $($my_commands | sort | list:collect value)
     $ns_children[$path] = $($my_children | sort | list:collect value)
+    $ns_types[$path] = $($my_types | sort | list:collect value)
 }
 
 crawl $global
@@ -234,19 +273,28 @@ $render_ns := {
 
     $commands := $ns_commands[$path]
     $children := $ns_children[$path]
+    $types := $ns_types[$path]
 
     $html := $("<section class=\"ns\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
         slug=$slug depth=$depth tag=$tag dp=$dp prose=$($ns_prose[$path]))
 
-    if ((($commands:len()) > 0) or (($children:len()) > 0)) {
+    if ((($commands:len()) > 0) or (($children:len()) > 0) or (($types:len()) > 0)) {
         $items := $($(list $string):new)
         for c=$children {
             $items:push $("<li class=\"idx-ns\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">namespace</span></li>":format $(slugify $c) $(display_path $c))
+        }
+        for c=$types {
+            $items:push $("<li class=\"idx-type\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">type</span></li>":format $(slugify $c) $(display_path $c))
         }
         for c=$commands {
             $items:push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $c) $(display_path $c))
         }
         $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n":format $html $($items | fold {"{}{}":format $acc $value} initial=""))
+    }
+
+    for c=$types {
+        $html = $("{}<article class=\"cmd type\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
+            $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($type_doc[$c]))
     }
 
     for c=$commands {
@@ -312,6 +360,12 @@ for entry=$cmd_doc {
     $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
     $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
 }
+for entry=$type_doc {
+    $dp := $(display_path $entry:key)
+    $slug := $(slugify $entry:key)
+    $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
+    $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+}
 # Same idea, for the bare aliases collected during the crawl (e.g. "help"
 # on its own, not just "control:help") -- a bare data-ref never collides
 # with a qualified one, since the qualified pattern always has more text
@@ -354,11 +408,21 @@ $sections = $($code_link_re:replace_all $sections "<a href=\"#$1\"><code>$2</cod
 $command_link_re := $(re:new "<span class=\"tok-command\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
 $sections = $($command_link_re:replace_all $sections "<a href=\"#$1\"><span class=\"tok-command\">$2</span></a>")
 
+# A bare $float/$one_of reference in an example or a signature line (see
+# syntax_highlight_html's identifier arm in src/util/highlight.rs) --
+# same idea as tok-command, just for a type being referenced rather than
+# invoked.
+$identifier_link_re := $(re:new "<span class=\"tok-identifier\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
+$sections = $($identifier_link_re:replace_all $sections "<a href=\"#$1\"><span class=\"tok-identifier\">$2</span></a>")
+
 $stray_code_ref_re := $(re:new "<code data-ref=\"[^\"]*\">")
 $sections = $($stray_code_ref_re:replace_all $sections "<code>")
 
 $stray_command_ref_re := $(re:new "<span class=\"tok-command\" data-ref=\"[^\"]*\">")
 $sections = $($stray_command_ref_re:replace_all $sections "<span class=\"tok-command\">")
+
+$stray_identifier_ref_re := $(re:new "<span class=\"tok-identifier\" data-ref=\"[^\"]*\">")
+$sections = $($stray_identifier_ref_re:replace_all $sections "<span class=\"tok-identifier\">")
 
 # The CSS and JS below are plain text, never passed through :format
 # themselves -- they're full of literal `{`/`}` (every CSS rule, every JS

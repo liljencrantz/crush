@@ -62,7 +62,18 @@ fn classify_tokens<'a>(
         let ntok = tokens.get(idx + 1);
 
         new_command = match (new_command, prev, tok, ntok) {
-            (_, _, Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_), _) => true,
+            // $(...) always opens a fresh job, exactly like `{` or a `;`/
+            // pipe separator -- the token right after it is a command
+            // start, not a continuation of whatever came before the `$(`.
+            // Without this, something like `$(files --recurse /)` colored
+            // `files` as a plain string, since the state machine only
+            // reset on BlockStart/Separator/Pipe.
+            (
+                _,
+                _,
+                Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_) | Token::SubStart(_),
+                _,
+            ) => true,
             (
                 true,
                 Some(Token::String(_, _) | Token::Identifier(_, _)),
@@ -222,6 +233,19 @@ pub fn syntax_highlight_html(code: &str) -> CrushResult<String> {
         let text = &code[tok.location().start..min(tok.location().end, code.len())];
         let escaped = html_escape(text);
         match category {
+            // A bare identifier ($float, $one_of, ...) is how a type
+            // that's just being referenced -- an argument to one_of, a
+            // column type, the right-hand side of `:like` -- gets
+            // written, as opposed to invoked; it never chains through
+            // MemberOperator into a multi-segment path the way a command
+            // reference does, so this just needs the one token, minus its
+            // leading `$` (documented paths never include the sigil).
+            Some(cat @ "identifier") => {
+                let name = html_escape(&text[1..]);
+                res.push_str(&format!(
+                    "<span class=\"tok-{cat}\" data-ref=\"{name}\">{escaped}</span>"
+                ));
+            }
             Some(cat) => res.push_str(&format!("<span class=\"tok-{cat}\">{escaped}</span>")),
             None => res.push_str(&escaped),
         }

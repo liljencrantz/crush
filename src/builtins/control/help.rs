@@ -40,7 +40,11 @@ pub fn help(mut context: CommandContext) -> CrushResult<()> {
     // generates backtick-wraps each argument's name and its default/
     // allowed values purely for visual styling (see render_html's doc
     // comment) -- collected here, before cfg.topic is consumed below, so
-    // format=html can tell those apart from a real cross-reference.
+    // format=html can tell those apart from a real cross-reference. A
+    // type's own member list (ValueType::long_help_methods, e.g. float's
+    // `min`/`max`/`is_nan`) is generated the same way and has the exact
+    // same problem -- "min" could just as easily name a real, unrelated
+    // command (stream:min).
     let own_names: HashSet<String> = match &cfg.topic {
         Some(Value::Command(cmd)) => cmd
             .completion_data()
@@ -56,6 +60,7 @@ pub fn help(mut context: CommandContext) -> CrushResult<()> {
                 names
             })
             .collect(),
+        Some(Value::Type(t)) => t.fields().into_iter().map(|(k, _)| k.clone()).collect(),
         _ => HashSet::new(),
     };
 

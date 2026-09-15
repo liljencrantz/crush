@@ -124,7 +124,7 @@ In expression mode, this method can be used via the the [32mand[0m operator.
 
 [4mExamples[0m
 [33m# true, if $file exists and is a symlink[0m
-[32mand[0m [36m$([0m[36m$file[0m[36m:[0m[36mexists[0m[36m)[0m [36m{[0m[36m$([0m[36mstat[0m [36m$file[0m[36m)[0m[36m[[0m[36m0[0m[36m][0m[36m:[0m[36mis_symlink[0m[36m}[0m
+[32mand[0m [36m$([0m[36m$file[0m[36m:[0m[32mexists[0m[36m)[0m [36m{[0m[36m$([0m[32mstat[0m [36m$file[0m[36m)[0m[36m[[0m[36m0[0m[36m][0m[36m:[0m[36mis_symlink[0m[36m}[0m
 
 [33m# true, if $file exists and is a symlink[0m
 [36m([0m[36m$file[0m[36m.[0m[36mexists[0m[36m([0m[36m)[0m [36mand[0m [36m{[0m[32mstat[0m[36m([0m[36m$file[0m[36m)[0m[36m[[0m[36m0[0m[36m][0m[36m.[0m[36mis_symlink[0m[36m}[0m[36m)[0m
@@ -142,7 +142,7 @@ conditions is found to be true, [32mor[0m will not evaluate any remaining clos
 In expression mode, this method can be used via the the [32mor[0m operator.
 
 [4mExamples[0m
-[36m$stat_out[0m [36m:=[0m [36m$([0m[36mstat[0m [36m$file[0m[36m)[0m[36m[[0m[36m0[0m[36m][0m
+[36m$stat_out[0m [36m:=[0m [36m$([0m[32mstat[0m [36m$file[0m[36m)[0m[36m[[0m[36m0[0m[36m][0m
 
 [33m# true, if $file is either a symlink or a directory[0m
 [32mor[0m [36m$stat_out[0m[36m:[0m[36mis_symlink[0m [36m$stat_out[0m[36m:[0m[36mis_dir[0m
@@ -219,11 +219,11 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [33m# Create a pipe[0m
-[36m$pipe[0m [36m:=[0m [36m$([0m[36m$([0m[36mtable_input_stream[0m [36mvalue[0m[36m=[0m[36m$integer[0m[36m)[0m[36m:[0m[36mpipe[0m[36m)[0m
+[36m$pipe[0m [36m:=[0m [36m$([0m[36m$([0m[32mtable_input_stream[0m [36mvalue[0m[36m=[0m[36m$integer[0m[36m)[0m[36m:[0m[36mpipe[0m[36m)[0m
 [33m# Create a job that writes 100_000 integers to the pipe and put this job in the background[0m
 [32mseq[0m [36m100_000[0m [36m|[0m [32mpipe[0m[36m:[0m[32mwrite[0m &
 [33m# Create a second job that reads from the pipe and sums all the integers and put this job in the background[0m
-[36m$sum_job_handle[0m [36m:=[0m [36m$([0m[36mpipe[0m[36m:[0m[36mread[0m [36m|[0m [32msum[0m &[36m)[0m
+[36m$sum_job_handle[0m [36m:=[0m [36m$([0m[32mpipe[0m[36m:[0m[32mread[0m [36m|[0m [32msum[0m &[36m)[0m
 [33m# Close the pipe so that the second job can finish[0m
 [32mpipe[0m[36m:[0m[32mclose[0m
 [33m# Put the sum job in the foreground[0m
@@ -240,11 +240,11 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [33m# Iterate over the processes on the host[0m
-[32mfor[0m [36mi[0m[36m=[0m[36m$([0m[36mhost[0m[36m:[0m[36mprocs[0m[36m)[0m [36m{[0m
+[32mfor[0m [36mi[0m[36m=[0m[36m$([0m[32mhost[0m[36m:[0m[32mprocs[0m[36m)[0m [36m{[0m
   [32mecho[0m [36m$([0m[36m"Iterating over process {}"[0m[36m:[0m[36mformat[0m [36m$i[0m[36m:[0m[36mname[0m[36m)[0m
 [36m}[0m
 [33m# Print ten messages[0m
-[32mfor[0m [36mi[0m[36m=[0m[36m$([0m[36mseq[0m [36mto[0m[36m=[0m[36m10[0m[36m)[0m [36m{[0m
+[32mfor[0m [36mi[0m[36m=[0m[36m$([0m[32mseq[0m [36mto[0m[36m=[0m[36m10[0m[36m)[0m [36m{[0m
   [32mecho[0m [36m$([0m[36m"Lap #{}"[0m[36m:[0m[36mformat[0m [36m$i[0m[36m)[0m
 [36m}[0m
 
@@ -300,7 +300,7 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [32mloop[0m [36m{[0m
-  [32mif[0m [36m$([0m[36mi_am_tired[0m[36m)[0m [36m{[0m
+  [32mif[0m [36m$([0m[32mi_am_tired[0m[36m)[0m [36m{[0m
     [32mbreak[0m
   [36m}[0m
   [32mecho[0m [36mWorking[0m
@@ -328,7 +328,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmatch[0m [36m$x[0m [36m{[0m
     [32mcase[0m [36m2[0m [36m{[0m[32mecho[0m [36m"$x is 2"[0m[36m}[0m
-    [32many[0m [36m$([0m[36mseq[0m [36m5[0m [36m10[0m[36m)[0m [36m{[0m[32mecho[0m [36m"$x is between 5 and 10"[0m[36m}[0m
+    [32many[0m [36m$([0m[32mseq[0m [36m5[0m [36m10[0m[36m)[0m [36m{[0m[32mecho[0m [36m"$x is between 5 and 10"[0m[36m}[0m
     [32mis[0m [36m$string[0m [36m{[0m[32mecho[0m [36m"$x is a string"[0m[36m}[0m
     [32mdefault[0m [36m{[0m[32mecho[0m [36m"I don't know what $x is"[0m[36m}[0m
 [36m}[0m
@@ -382,9 +382,9 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [33m# Show one row of the pipeline output every second[0m
-[32mfiles[0m [36m/[0m --recurse [36m|[0m [32mschedule[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m1[0m[36m)[0m
+[32mfiles[0m [36m/[0m --recurse [36m|[0m [32mschedule[0m [36m$([0m[32mduration[0m[36m:[0m[32mof[0m [36mseconds[0m[36m=[0m[36m1[0m[36m)[0m
 [33m# Wait for a second and then print hello once[0m
-[32mschedule[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m1[0m[36m)[0m [36mcommand[0m[36m=[0m[36m{[0m [32mecho[0m [36mhello[0m [36m}[0m --once
+[32mschedule[0m [36m$([0m[32mduration[0m[36m:[0m[32mof[0m [36mseconds[0m[36m=[0m[36m1[0m[36m)[0m [36mcommand[0m[36m=[0m[36m{[0m [32mecho[0m [36mhello[0m [36m}[0m --once
 
 [32mcontrol[0m[36m:[0m[32msleep[0m [36mduration[0m[36m=[0m[36mduration[0m
 Pause execution of commands for the specified amount of time
@@ -394,7 +394,7 @@ This command accepts the following arguments:
  * [32mduration[0m the time to sleep for.
 
 [4mExamples[0m
-[32msleep[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m10[0m[36m)[0m
+[32msleep[0m [36m$([0m[32mduration[0m[36m:[0m[32mof[0m [36mseconds[0m[36m=[0m[36m10[0m[36m)[0m
 
 [32mcontrol[0m[36m:[0m[32msource[0m [36m[[0m[36mfiles[0m[36m=[0m[36mone_of[0m [36m$file[0m [36m$string[0m [36m$binary[0m [36m$binary_input_stream[0m [36m$glob[0m [36m$re[0m[36m...[0m[36m][0m
 Evaluate files into current crush session
@@ -458,7 +458,7 @@ This command accepts the following arguments:
  * [32mcommand[0m  the command to run.
 
 [4mExamples[0m
-[32mtimeout[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m5[0m[36m)[0m [36m{[0m[32msleep[0m [36m$([0m[36mduration[0m[36m:[0m[36mof[0m [36mseconds[0m[36m=[0m[36m30[0m[36m)[0m[36m}[0m
+[32mtimeout[0m [36m$([0m[32mduration[0m[36m:[0m[32mof[0m [36mseconds[0m[36m=[0m[36m5[0m[36m)[0m [36m{[0m[32msleep[0m [36m$([0m[32mduration[0m[36m:[0m[32mof[0m [36mseconds[0m[36m=[0m[36m30[0m[36m)[0m[36m}[0m
 
 [32mcontrol[0m[36m:[0m[32mtimer[0m [36mit[0m[36m=[0m[36mcommand[0m
 Execute a command once and return the execution time.
@@ -671,7 +671,7 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [33m# Create a job that produces a lot of output[0m
-[36m$all_files[0m [36m:=[0m [36m$([0m[36mfiles[0m --recurse [36m/[0m[36m)[0m
+[36m$all_files[0m [36m:=[0m [36m$([0m[32mfiles[0m --recurse [36m/[0m[36m)[0m
 [33m# Read a few lines of output[0m
 [36m$all_files[0m [36m|[0m [32mhead[0m
 [33m# Find the job id of the job we want to terminate[0m
@@ -974,7 +974,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mfs[0m[36m:[0m[32mwatch[0m [36m.[0m --recurse [36m|[0m [32mwhere[0m [36m{[0m[32mkind[0m [36m=[0m[36m=[0m [36m"Create(File)"[0m[36m}[0m
 
-[32mgrpc[0m[36m:[0m[32mconnect[0m [36mhost[0m[36m=[0m[36mstring[0m [36m@[0m [36m$([0m[36mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m [36m[[0m--plaintext[36m][0m [36m[[0m[36mtimeout[0m[36m=[0m[36mduration[0m[36m][0m [36m[[0m[36mport[0m[36m=[0m[36minteger[0m[36m][0m
+[32mgrpc[0m[36m:[0m[32mconnect[0m [36mhost[0m[36m=[0m[36mstring[0m [36m@[0m [36m$([0m[32mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m [36m[[0m--plaintext[36m][0m [36m[[0m[36mtimeout[0m[36m=[0m[36mduration[0m[36m][0m [36m[[0m[36mport[0m[36m=[0m[36minteger[0m[36m][0m
 Create a connection to a gRPC service.
 
 gRPC (https://grpc.io) is Google's open-source, high-performance RPC framework, 
@@ -1015,7 +1015,7 @@ This command accepts the following arguments:
  * [32mport[0m      (default: [32m50051[0m) the port to connect to.
 
 [4mExamples[0m
-[36m$conn[0m [36m:=[0m [36m$([0m[36mgrpc[0m[36m:[0m[36mconnect[0m [36mhost[0m[36m=[0m[36mlocalhost[0m [36mservice[0m[36m=[0m[36m*[0m --plaintext[36m)[0m
+[36m$conn[0m [36m:=[0m [36m$([0m[32mgrpc[0m[36m:[0m[32mconnect[0m [36mhost[0m[36m=[0m[36mlocalhost[0m [36mservice[0m[36m=[0m[36m*[0m --plaintext[36m)[0m
 [33m# Returns "olleh"[0m
 [36m$conn[0m[36m:[0m[32mReverseString[0m [36minput[0m[36m=[0m[36m"hello"[0m
 [33m# Returns a stream with the values "oof", "rab", and "zab"[0m
@@ -1106,7 +1106,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [33m# Create a `killall` command that kills any process whose name matches the specified pattern[0m
 [33m# The pattern can be a an exact string, a wildcard, or a regex[0m
-[36m$killall[0m [36m:=[0m [36m{[0m [36m|[0m[36m$victim[0m[36m|[0m [32mhost[0m[36m:[0m[32msignal[0m [36m@[0m[36m$([0m[36mhost[0m[36m:[0m[36mprocs[0m[36m|[0m[32mwhere[0m [36m{[0m[36m$name[0m [36m=[0m[36m~[0m [36m$victim[0m[36m}[0m[36m|[0m[32mselect[0m [36mpid[0m [36m|[0m [32mlist[0m[36m:[0m[32mcollect[0m[36m)[0m [36msignal[0m[36m=[0m[36mSIGKILL[0m[36m}[0m
+[36m$killall[0m [36m:=[0m [36m{[0m [36m|[0m[36m$victim[0m[36m|[0m [32mhost[0m[36m:[0m[32msignal[0m [36m@[0m[36m$([0m[32mhost[0m[36m:[0m[32mprocs[0m[36m|[0m[32mwhere[0m [36m{[0m[36m$name[0m [36m=[0m[36m~[0m [36m$victim[0m[36m}[0m[36m|[0m[32mselect[0m [36mpid[0m [36m|[0m [32mlist[0m[36m:[0m[32mcollect[0m[36m)[0m [36msignal[0m[36m=[0m[36mSIGKILL[0m[36m}[0m
 [33m# Kill all crush commands[0m
 [32mkillall[0m [36m^(crush)[0m
 
@@ -1445,7 +1445,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [33m# Ask the user for their name[0m
 [32mecho[0m [36m"What is your name?"[0m
-[36m$name[0m [36m:=[0m [36m$([0m[36mreadline[0m [36mprompt[0m[36m=[0m[36m"name: "[0m[36m)[0m
+[36m$name[0m [36m:=[0m [36m$([0m[32mreadline[0m [36mprompt[0m[36m=[0m[36m"name: "[0m[36m)[0m
 [32mecho[0m [36m$([0m[36m"Hello, {}!"[0m[36m:[0m[36mformat[0m [36m$name[0m[36m)[0m
 
 [32mio[0m[36m:[0m[32msplit[0m[36m:[0m[32mfrom[0m [36m[[0m[36mfiles[0m[36m=[0m[36mone_of[0m [36m$file[0m [36m$string[0m [36m$binary[0m [36m$binary_input_stream[0m [36m$glob[0m [36m$re[0m[36m...[0m[36m][0m [36mseparator[0m[36m=[0m[36mstring[0m [36m[[0m[36mtrim[0m[36m=[0m[36mstring[0m[36m][0m [36m[[0m--allow_empty[36m][0m
@@ -1561,7 +1561,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mls[0m [36m|[0m [32myaml[0m[36m:[0m[32mto[0m
 
-[32mmath[0m[36m:[0m[32mabs[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mabs[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The absolute value of number.
 
 This command accepts the following arguments:
@@ -1571,7 +1571,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mabs[0m -5
 
-[32mmath[0m[36m:[0m[32macos[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32macos[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The arc cosine of number.
 
 [4mOutput[0m
@@ -1581,7 +1581,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the value, between -1 and 1, to take the arc cosine of.
 
 
-[32mmath[0m[36m:[0m[32masin[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32masin[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The arc sine of number.
 
 [4mOutput[0m
@@ -1591,7 +1591,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the value, between -1 and 1, to take the arc sine of.
 
 
-[32mmath[0m[36m:[0m[32matan[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32matan[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The arc tangent of number.
 
 [4mOutput[0m
@@ -1601,7 +1601,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the value to take the arc tangent of.
 
 
-[32mmath[0m[36m:[0m[32mceil[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mceil[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The smallest integer larger than number.
 
 [4mOutput[0m
@@ -1611,7 +1611,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the number to round up to the nearest integer.
 
 
-[32mmath[0m[36m:[0m[32mclamp[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mmin[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mmax[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mclamp[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mmin[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mmax[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 Number restricted to the inclusive range [min, max].
 
 This command accepts the following arguments:
@@ -1623,7 +1623,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mclamp[0m [36m15[0m [36mmin[0m[36m=[0m[36m0[0m [36mmax[0m[36m=[0m[36m10[0m
 
-[32mmath[0m[36m:[0m[32mcos[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mcos[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The cosine of number.
 
 [4mOutput[0m
@@ -1635,7 +1635,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mcos[0m [36m1[0m
 
-[32mmath[0m[36m:[0m[32mfloor[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mfloor[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The largest integer smaller than number.
 
 [4mOutput[0m
@@ -1645,7 +1645,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the number to round down to the nearest integer.
 
 
-[32mmath[0m[36m:[0m[32mln[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mln[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The natural logarithm of number.
 
 [4mOutput[0m
@@ -1655,7 +1655,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the number to take the natural logarithm of.
 
 
-[32mmath[0m[36m:[0m[32mlog[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mbase[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mlog[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mbase[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The logarithm of number in base.
 
 [4mOutput[0m
@@ -1666,7 +1666,7 @@ This command accepts the following arguments:
  * [32mbase[0m   the base of the logarithm.
 
 
-[32mmath[0m[36m:[0m[32mpow[0m [36mbase[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mn[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mpow[0m [36mbase[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m [36mn[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 Raise the number to n.
 
 [4mOutput[0m
@@ -1677,7 +1677,7 @@ This command accepts the following arguments:
  * [32mn[0m    the exponent to raise the base to.
 
 
-[32mmath[0m[36m:[0m[32mround[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mround[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 Number rounded to the nearest whole number.
 
 [4mOutput[0m
@@ -1687,7 +1687,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the number to round to the nearest whole number.
 
 
-[32mmath[0m[36m:[0m[32msign[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32msign[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 -1, 0 or 1 depending on the sign of number.
 
 This command accepts the following arguments:
@@ -1697,7 +1697,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32msign[0m -5
 
-[32mmath[0m[36m:[0m[32msin[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32msin[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The sine of number.
 
 [4mOutput[0m
@@ -1709,7 +1709,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32msin[0m [36m1[0m
 
-[32mmath[0m[36m:[0m[32msqrt[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32msqrt[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The square root of number.
 
 [4mOutput[0m
@@ -1719,7 +1719,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the number to take the square root of.
 
 
-[32mmath[0m[36m:[0m[32mtan[0m [36mnumber[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mmath[0m[36m:[0m[32mtan[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The tangent of number.
 
 [4mOutput[0m
@@ -1729,7 +1729,7 @@ This command accepts the following arguments:
  * [32mnumber[0m the number to take the tangent of, in radians.
 
 
-[32mrandom[0m[36m:[0m[32mfloat[0m [36mto[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mrandom[0m[36m:[0m[32mfloat[0m [36mto[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 generate a random floating point number between 0 (inclusive) and 1 (exclusive)
 
 [4mOutput[0m
@@ -1739,7 +1739,7 @@ This command accepts the following arguments:
  * [32mto[0m (default: [32m1.0[0m) upper bound (exclusive).
 
 
-[32mrandom[0m[36m:[0m[32mfloat_stream[0m [36mto[0m[36m=[0m[36m$([0m[36mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+[32mrandom[0m[36m:[0m[32mfloat_stream[0m [36mto[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 generate a stream of random floating point numbers between 0 (inclusive) and 1 
 (exclusive)
 
@@ -1815,7 +1815,7 @@ This command accepts the following arguments:
  * [32mhost_file[0m (~/.ssh/known_hosts) known hosts file.
 
 
-[32mremote[0m[36m:[0m[32mhost[0m[36m:[0m[32mremove[0m [36m[[0m[36mhost_file[0m[36m=[0m[36mone_of[0m [36m$string[0m [36m$file[0m [36m$glob[0m [36m$re[0m[36m][0m [36m@[0m [36m$([0m[36mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m [36m@[0m [36m$([0m[36mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m
+[32mremote[0m[36m:[0m[32mhost[0m[36m:[0m[32mremove[0m [36m[[0m[36mhost_file[0m[36m=[0m[36mone_of[0m [36m$string[0m [36m$file[0m [36m$glob[0m [36m$re[0m[36m][0m [36m@[0m [36m$([0m[32mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m [36m@[0m [36m$([0m[32mone_of[0m [36m$string[0m [36m$glob[0m [36m$re[0m[36m)[0m
 Remove hosts from known_hosts file
 
 [4mOutput[0m
@@ -1873,13 +1873,13 @@ This command accepts the following arguments:
 List open TCP sockets
 
 [4mOutput[0m
-[32mtable_input_stream[0m [36mlocal_address[0m[36m=[0m[36m$string[0m [36mlocal_port[0m[36m=[0m[36m$integer[0m [36mremote_address[0m[36m=[0m[36m$string[0m [36mremote_port[0m[36m=[0m[36m$integer[0m [36mpids[0m[36m=[0m[36m$([0m[36mlist[0m [36m$integer[0m[36m)[0m [36mstate[0m[36m=[0m[36m$string[0m
+[32mtable_input_stream[0m [36mlocal_address[0m[36m=[0m[36m$string[0m [36mlocal_port[0m[36m=[0m[36m$integer[0m [36mremote_address[0m[36m=[0m[36m$string[0m [36mremote_port[0m[36m=[0m[36m$integer[0m [36mpids[0m[36m=[0m[36m$([0m[32mlist[0m [36m$integer[0m[36m)[0m [36mstate[0m[36m=[0m[36m$string[0m
 
 [32msockets[0m[36m:[0m[32mudp[0m
 List open UDP sockets
 
 [4mOutput[0m
-[32mtable_input_stream[0m [36mlocal_address[0m[36m=[0m[36m$string[0m [36mlocal_port[0m[36m=[0m[36m$integer[0m [36mpids[0m[36m=[0m[36m$([0m[36mlist[0m [36m$integer[0m[36m)[0m
+[32mtable_input_stream[0m [36mlocal_address[0m[36m=[0m[36m$string[0m [36mlocal_port[0m[36m=[0m[36m$integer[0m [36mpids[0m[36m=[0m[36m$([0m[32mlist[0m [36m$integer[0m[36m)[0m
 
 [32mstream[0m[36m:[0m[32mall_match[0m [36mcondition[0m[36m=[0m[36mcommand[0m
 True if [32mcondition[0m is true for every row of input.
@@ -2171,7 +2171,7 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mseq[0m [36m3[0m
 [33m# Prepend an index column to the output of the files command[0m
-[32mzip[0m [36m$([0m[36mseq[0m[36m)[0m [36m$([0m[36mfiles[0m[36m)[0m
+[32mzip[0m [36m$([0m[32mseq[0m[36m)[0m [36m$([0m[32mfiles[0m[36m)[0m
 
 [32mstream[0m[36m:[0m[32mskip[0m [36m[[0m[36mrows[0m[36m=[0m[36minteger[0m[36m][0m
 Skip the specified number of rows from the beginning of the stream and return 
@@ -2270,7 +2270,7 @@ This command accepts the following arguments:
  * [32mstreams[0m the streams to concatenate.
 
 [4mExamples[0m
-[32munion[0m [36m$([0m[36mseq[0m [36m0[0m [36m3[0m[36m)[0m [36m$([0m[36mseq[0m [36m10[0m [36m13[0m[36m)[0m
+[32munion[0m [36m$([0m[32mseq[0m [36m0[0m [36m3[0m[36m)[0m [36m$([0m[32mseq[0m [36m10[0m [36m13[0m[36m)[0m
 
 [32mstream[0m[36m:[0m[32muniq[0m [36m[[0m[36mfield[0m[36m=[0m[36mstring[0m[36m][0m
 Only output the first row whenever multiple rows has the same value for the 
@@ -2324,7 +2324,7 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [33m# Prepend an index column to the output of the files command[0m
-[32mzip[0m [36m$([0m[36mseq[0m[36m)[0m [36m$([0m[36mfiles[0m[36m)[0m
+[32mzip[0m [36m$([0m[32mseq[0m[36m)[0m [36m$([0m[32mfiles[0m[36m)[0m
 
 [32mtypes[0m[36m:[0m[32mclass[0m [36m[[0m[36mparent[0m[36m=[0m[36mstruct[0m[36m][0m
 Create an empty new class
@@ -2337,7 +2337,7 @@ This command accepts the following arguments:
 
 [4mExamples[0m
 [33m# Create a class that represents a point in 2D space[0m
-[36m$Point[0m [36m:=[0m [36m$([0m[36mclass[0m[36m)[0m
+[36m$Point[0m [36m:=[0m [36m$([0m[32mclass[0m[36m)[0m
 [36m$Point[0m[36m:[0m[32m__short_help__[0m [36m=[0m [36m"A point in 2D space"[0m
 [36m$Point[0m[36m:[0m[32m__signature__[0m [36m=[0m [36m"class Point"[0m
 [36m$Point[0m[36m:[0m[32m__long_help__[0m [36m=[0m [36m"Uses floating point numbers to represent the x and y coordinates"[0m
@@ -2363,7 +2363,7 @@ This command accepts the following arguments:
   [36m|[0m
   [36m([0m[36m$Point[0m[36m.[0m[36mnew[0m[36m([0m[36mx[0m[36m=[0m[36m([0m[36m$this[0m[36m.[0m[36mx[0m[36m+[0m[36m$other[0m[36m.[0m[36mx[0m[36m)[0m, [32my[0m[36m=[0m[36m([0m[36m$this[0m[36m.[0m[36my[0m[36m+[0m[36m$other[0m[36m.[0m[36my[0m[36m)[0m[36m)[0m[36m)[0m
 [36m}[0m
-[36m$p[0m [36m:=[0m [36m$([0m[36m$Point[0m[36m:[0m[36mnew[0m [36mx[0m[36m=[0m[36m1.0[0m [36my[0m[36m=[0m[36m2.0[0m[36m)[0m
+[36m$p[0m [36m:=[0m [36m$([0m[36m$Point[0m[36m:[0m[32mnew[0m [36mx[0m[36m=[0m[36m1.0[0m [36my[0m[36m=[0m[36m2.0[0m[36m)[0m
 [36m$p[0m[36m:[0m[32mlen[0m
 [36m$p2[0m [36m:=[0m [36m([0m[36m$Point[0m[36m.[0m[36mnew[0m[36m([0m[36mx[0m[36m=[0m[36m-[0m[36m1.0[0m, [32my[0m[36m=[0m[36m2.0[0m[36m)[0m[36m)[0m
 [36m$p3[0m [36m:=[0m [36m([0m[36m$p[0m [36m+[0m [36m$p2[0m[36m)[0m
@@ -2441,7 +2441,7 @@ Recursively convert all streams in io to materialized form
 
 [4mExamples[0m
 [33m# Put a table of files in the current directory into the variable $f[0m
-[36m$f[0m [36m:=[0m [36m$([0m[36mfiles[0m [36m|[0m [32mmaterialize[0m[36m)[0m
+[36m$f[0m [36m:=[0m [36m$([0m[32mfiles[0m [36m|[0m [32mmaterialize[0m[36m)[0m
 [33m# Because we materialized the table stream into a table, counting the elements is not a destructive operation.[0m
 [36m$f[0m [36m|[0m [32mcount[0m
 
