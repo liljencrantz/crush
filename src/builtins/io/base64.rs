@@ -20,7 +20,7 @@ use std::io::{BufReader, Read, Write};
     long = "If no file is specified, use the input, which must be a binary or a string.",
     long = "",
     long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",
-    example = "Will output hello, world!",
+    example = "# Will output hello, world!",
     example = "\"aGVsbG8sIHdvcmxkIQ==\" | base64:from",
 )]
 struct FromSignature {
@@ -77,7 +77,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     long = "If no file is specified, produce a binary stream as output.",
     long = "",
     long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",
-    example = "Will output aGVsbG8sIHdvcmxkIQ==",
+    example = "# Will output aGVsbG8sIHdvcmxkIQ==",
     example = "\"hello, world!\" | base64:to",
 )]
 struct To {
