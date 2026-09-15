@@ -14,9 +14,11 @@ calls, `ListNames` and `ListActivatableNames`, and each object level is a single
  */
 use crate::lang::command::OutputType::{Known, Unknown};
 use crate::lang::command::{CrushCommand, Parameter};
+use crate::lang::data::binary::FileReader;
 use crate::lang::data::dict::Dict;
 use crate::lang::data::list::List;
 use crate::lang::data::r#struct::Struct;
+use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::{CrushResult, command_error, data_error, eof_error, error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::{Scope, ScopeLoader};
@@ -24,9 +26,12 @@ use crate::lang::state::this::This;
 use crate::lang::value::{Value, ValueType};
 use dbus::Message;
 use dbus::arg::{ArgType, IterAppend};
-use dbus::blocking::{BlockingSender, Connection};
+use dbus::blocking::{BlockingSender, Connection, LocalConnection};
+use dbus::message::MatchRule;
+use dbus::strings::{BusName, Interface as InterfaceName, Member};
 use signature::signature;
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,6 +41,8 @@ use std::time::Duration;
 const INTROSPECTION_TIMEOUT: Duration = Duration::from_secs(1);
 /// Timeout for method calls and property access. Same as the D-Bus default.
 const CALL_TIMEOUT: Duration = Duration::from_secs(25);
+/// How long a signal subscription waits for a signal before checking whether it has been stopped.
+const SIGNAL_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 thread_local! {
     /// One connection per bus, per thread. Opening a connection is a round trip of its own, and
@@ -45,7 +52,8 @@ thread_local! {
 }
 
 /// Interfaces implemented by nearly every object. Their methods are not exposed as members, since
-/// introspection is done automatically and properties are exposed directly.
+/// introspection is done automatically and properties are exposed directly. Their signals, like
+/// PropertiesChanged, are.
 const HIDDEN_INTERFACES: [&str; 3] = [
     "org.freedesktop.DBus.Introspectable",
     "org.freedesktop.DBus.Peer",
@@ -53,13 +61,13 @@ const HIDDEN_INTERFACES: [&str; 3] = [
 ];
 
 /// The long help of the dbus namespace.
-const DBUS_LONG_HELP: &str = r##"D-Bus is the message bus that Linux system services and desktop applications use to talk to each other. A program that offers functionality on the bus is a service, identified by a name like `org.freedesktop.login1`. A service has objects, identified by paths like `/org/freedesktop/login1`. Each object implements one or more interfaces, made up of methods that can be called and properties that can be read and sometimes written.
+const DBUS_LONG_HELP: &str = r##"D-Bus is the message bus that Linux system services and desktop applications use to talk to each other. A program that offers functionality on the bus is a service, identified by a name like `org.freedesktop.login1`. A service has objects, identified by paths like `/org/freedesktop/login1`. Each object implements one or more interfaces, made up of methods that can be called, properties that can be read and sometimes written, and signals that are sent when something happens.
 
 There are two busses. The system bus, `dbus:system`, is shared by the whole machine and hosts services like systemd, logind and NetworkManager. The session bus, `dbus:session`, belongs to a single login session and hosts desktop services like notifications and media players. Much of what `systemctl`, `loginctl`, `hostnamectl` and `timedatectl` do, they do by calling these services, and all of it is available directly from crush.
 
 # Finding your way around
 
-A service name is split on periods, so the service `org.freedesktop.login1` is `dbus:system:org:freedesktop:login1`. A service contains its objects, with paths split on slashes, so the object `/org/freedesktop/login1` of that service is `dbus:system:org:freedesktop:login1:org:freedesktop:login1`. An object contains one member per method and property. Some services, like the bus itself, answer on the root object, in which case the methods are members of the service directly, e.g. `dbus:system:org:freedesktop:DBus:GetId`.
+A service name is split on periods, so the service `org.freedesktop.login1` is `dbus:system:org:freedesktop:login1`. A service contains its objects, with paths split on slashes, so the object `/org/freedesktop/login1` of that service is `dbus:system:org:freedesktop:login1:org:freedesktop:login1`. An object contains one member per method, property and signal. Some services, like the bus itself, answer on the root object, in which case the methods are members of the service directly, e.g. `dbus:system:org:freedesktop:DBus:GetId`.
 
 Every level can be tab completed. Levels are loaded the first time they are used, one D-Bus call per level. Services that are started on demand are listed even when they are not running, and using one starts it. Use `dir` to list the members of a level and `help` on a method to see its arguments and their types. Run `dbus:refresh` to see services and objects that appeared after a bus was first used.
 
@@ -69,7 +77,7 @@ Object paths can only contain letters, digits and underscores, so services escap
 
 Methods are called like commands. Arguments can be passed by name or by position. Services that don't name their arguments get them called `arg0`, `arg1`, and so on. A bare word containing periods or slashes, like `dbus.service` or `Europe/Stockholm`, is parsed as a file, but is accepted wherever a string is expected. A method returns nothing, a single value, or a struct with one field per return value.
 
-If more than one interface of an object has a method or property with the same name, those members are prefixed with the last part of their interface name, e.g. `Manager_ListSessions`. The methods of the standard Introspectable, Peer and Properties interfaces are not listed.
+If more than one interface of an object has a method, property or signal with the same name, those members are prefixed with the last part of their interface name, e.g. `Manager_ListSessions`. The methods of the standard Introspectable, Peer and Properties interfaces are not listed.
 
 D-Bus types map to crush types as follows:
 
@@ -81,11 +89,15 @@ D-Bus types map to crush types as follows:
 * `a{...}` is a dict. A struct is accepted too, which is convenient for the common options argument of type `a{sv}`.
 * `(...)` is a struct, which is received as a list, and can be sent as a list or a struct.
 * `v` is a variant, which is received as the value it contains. When sending, the D-Bus type is picked from the crush value, e.g. integers are sent as `x`.
-* `h` is a Unix file descriptor, which can't be sent, and is received as an empty value.
+* `h` is a Unix file descriptor. It is sent by passing a file, which is opened for reading, and received as a `binary_stream` that reads from it. The stream owns the descriptor, so it stays open for as long as the value is kept.
 
 # Properties
 
 A property is read by calling it without arguments, and written by calling it with the new value as the only argument, e.g. `$player:Volume 0.5`.
+
+# Signals
+
+A signal is subscribed to by calling it. It returns a table stream with one row per signal received, with one column per signal argument. The subscription keeps running until it is stopped, e.g. with Ctrl-C, or until a signal arrives after whatever reads the stream has stopped reading, e.g. `head`.
 
 # Permissions
 
@@ -134,6 +146,8 @@ $bus:GetId
 $bus:NameHasOwner org.freedesktop.login1
 # The process id of a service
 $bus:GetConnectionUnixProcessID org.freedesktop.login1
+# Wait for the next time a service or connection appears or disappears
+$bus:NameOwnerChanged | head 1
 ```
 
 systemd, the service manager:
@@ -189,6 +203,16 @@ $login:IdleHint
 # Suspend or power off the machine
 $login:Suspend interactive=$false
 $login:PowerOff interactive=$false
+
+# Delay suspending while a backup runs. The lock is a file descriptor, and is
+# held until the value is gone.
+$lock := $($login:Inhibit what=sleep who=crush why="Backup in progress" mode=delay)
+$login:ListInhibitors
+var:unset lock
+
+# Show sessions as they are opened, and wait for the machine to suspend
+$login:SessionNew
+$login:PrepareForSleep | head 1
 ```
 
 The host name, time and locale:
@@ -267,6 +291,15 @@ impl Bus {
         Ok(match self {
             Bus::System => Connection::new_system()?,
             Bus::Session => Connection::new_session()?,
+        })
+    }
+
+    /// A new connection, not shared with anything else. Signal subscriptions use one each, so that
+    /// their match rules go away with them.
+    fn connect_local(&self) -> CrushResult<LocalConnection> {
+        Ok(match self {
+            Bus::System => LocalConnection::new_system()?,
+            Bus::Session => LocalConnection::new_session()?,
         })
     }
 
@@ -355,6 +388,8 @@ struct Interface {
     name: String,
     methods: Vec<Method>,
     properties: Vec<Property>,
+    /// Signals are described like methods whose arguments are all outputs.
+    signals: Vec<Method>,
 }
 
 #[derive(Debug)]
@@ -397,6 +432,7 @@ fn parse_introspection(xml: &str) -> CrushResult<IntrospectedNode> {
             "interface" => {
                 let mut methods = Vec::new();
                 let mut properties = Vec::new();
+                let mut signals = Vec::new();
                 for member in child.children().filter(|n| n.is_element()) {
                     match member.tag_name().name() {
                         "method" => {
@@ -418,7 +454,7 @@ fn parse_introspection(xml: &str) -> CrushResult<IntrospectedNode> {
                                 };
                                 arguments.push(MethodArgument {
                                     name: arg.attribute("name").map(|s| s.to_string()),
-                                    signature: required_attribute(&arg, "type")?.to_string(),
+                                    signature: complete_type(required_attribute(&arg, "type")?)?,
                                     direction,
                                 });
                             }
@@ -427,9 +463,26 @@ fn parse_introspection(xml: &str) -> CrushResult<IntrospectedNode> {
                                 arguments,
                             });
                         }
+                        "signal" => {
+                            let mut arguments = Vec::new();
+                            for arg in member
+                                .children()
+                                .filter(|n| n.is_element() && n.tag_name().name() == "arg")
+                            {
+                                arguments.push(MethodArgument {
+                                    name: arg.attribute("name").map(|s| s.to_string()),
+                                    signature: complete_type(required_attribute(&arg, "type")?)?,
+                                    direction: Direction::Out,
+                                });
+                            }
+                            signals.push(Method {
+                                name: required_attribute(&member, "name")?.to_string(),
+                                arguments,
+                            });
+                        }
                         "property" => properties.push(Property {
                             name: required_attribute(&member, "name")?.to_string(),
-                            signature: required_attribute(&member, "type")?.to_string(),
+                            signature: complete_type(required_attribute(&member, "type")?)?,
                             access: required_attribute(&member, "access")?.to_string(),
                         }),
                         _ => {}
@@ -439,6 +492,7 @@ fn parse_introspection(xml: &str) -> CrushResult<IntrospectedNode> {
                     name: required_attribute(&child, "name")?.to_string(),
                     methods,
                     properties,
+                    signals,
                 });
             }
             _ => {}
@@ -481,6 +535,10 @@ fn complete_type_length(signature: &[u8], start: usize) -> CrushResult<usize> {
 
 /// Split a signature into its complete types, e.g. `sa{sv}(ii)` into `s`, `a{sv}` and `(ii)`.
 fn split_signature(signature: &str) -> CrushResult<Vec<&str>> {
+    // The D-Bus specification limits signatures to 255 bytes.
+    if signature.len() > 255 {
+        return data_error("Invalid D-Bus signature: longer than 255 bytes");
+    }
     let bytes = signature.as_bytes();
     let mut res = Vec::new();
     let mut idx = 0;
@@ -492,14 +550,47 @@ fn split_signature(signature: &str) -> CrushResult<Vec<&str>> {
     Ok(res)
 }
 
+/// The key and value types of a dict signature, e.g. `sv` for `a{sv}`.
+fn dict_entry_types(signature: &str) -> CrushResult<&str> {
+    match signature.strip_prefix("a{").and_then(|s| s.strip_suffix('}')) {
+        Some(types) => Ok(types),
+        None => data_error(format!("Invalid D-Bus dict signature `{}`", signature)),
+    }
+}
+
+/// The field types of a struct signature, e.g. `is` for `(is)`.
+fn struct_field_types(signature: &str) -> CrushResult<&str> {
+    match signature.strip_prefix('(').and_then(|s| s.strip_suffix(')')) {
+        Some(types) => Ok(types),
+        None => data_error(format!("Invalid D-Bus struct signature `{}`", signature)),
+    }
+}
+
+/// Check that a signature from introspection data is a single complete type, so that malformed
+/// data from a service is reported when the object is loaded rather than when it is used.
+fn complete_type(signature: &str) -> CrushResult<String> {
+    match split_signature(signature)?.as_slice() {
+        [_] => Ok(signature.to_string()),
+        _ => data_error(format!(
+            "Invalid D-Bus introspection data: `{}` is not a single complete type",
+            signature
+        )),
+    }
+}
+
 fn value_type_for_signature(signature: &str) -> ValueType {
     match signature.as_bytes().first() {
-        Some(b'y' | b'n' | b'q' | b'i' | b'u' | b'x' | b't' | b'h') => ValueType::Integer,
+        Some(b'y' | b'n' | b'q' | b'i' | b'u' | b'x' | b't') => ValueType::Integer,
         Some(b'b') => ValueType::Bool,
         Some(b'd') => ValueType::Float,
         Some(b's' | b'o' | b'g') => ValueType::String,
-        Some(b'a') if signature.as_bytes().get(1) == Some(&b'{') => {
-            match split_signature(&signature[2..signature.len() - 1]).as_deref() {
+        Some(b'h') => ValueType::BinaryInputStream,
+        Some(b'a') if signature == "ay" => ValueType::Binary,
+        Some(b'a') if signature.starts_with("a{") => {
+            match dict_entry_types(signature)
+                .and_then(split_signature)
+                .as_deref()
+            {
                 Ok([key, value]) => ValueType::Dict(
                     Box::from(value_type_for_signature(key)),
                     Box::from(value_type_for_signature(value)),
@@ -510,6 +601,15 @@ fn value_type_for_signature(signature: &str) -> ValueType {
         Some(b'a') => ValueType::List(Box::from(value_type_for_signature(&signature[1..]))),
         Some(b'(') => ValueType::List(Box::from(ValueType::Any)),
         _ => ValueType::Any,
+    }
+}
+
+/// The column type used for a signal argument. Containers get `any`, since the element types of a
+/// received list or dict depend on its contents.
+fn column_type_for_signature(signature: &str) -> ValueType {
+    match value_type_for_signature(signature) {
+        ValueType::List(_) | ValueType::Dict(_, _) => ValueType::Any,
+        t => t,
     }
 }
 
@@ -626,8 +726,8 @@ fn encode(iter: &mut IterAppend, signature: &str, value: Value) -> CrushResult<(
                 |i| encode(i, &inner, value.take().ok_or("Value already consumed")?),
             )?;
         }
-        Some(b'a') if signature.as_bytes().get(1) == Some(&b'{') => {
-            let types = split_signature(&signature[2..signature.len() - 1])?;
+        Some(b'a') if signature.starts_with("a{") => {
+            let types = split_signature(dict_entry_types(signature)?)?;
             let [key_type, value_type] = types.as_slice() else {
                 return data_error(format!("Invalid D-Bus dict signature `{}`", signature));
             };
@@ -667,7 +767,8 @@ fn encode(iter: &mut IterAppend, signature: &str, value: Value) -> CrushResult<(
             let elements: Vec<Value> = match value {
                 Value::List(l) => l.iter().collect(),
                 Value::Binary(b) if element_type == "y" => {
-                    b.iter().map(|b| Value::Integer(*b as i128)).collect()
+                    iter.append(b.to_vec());
+                    return Ok(());
                 }
                 v => return type_error("a list", &v),
             };
@@ -684,7 +785,7 @@ fn encode(iter: &mut IterAppend, signature: &str, value: Value) -> CrushResult<(
             )?;
         }
         Some(b'(') => {
-            let field_types = split_signature(&signature[1..signature.len() - 1])?;
+            let field_types = split_signature(struct_field_types(signature)?)?;
             let fields: Vec<Value> = match value {
                 Value::List(l) => l.iter().collect(),
                 Value::Struct(s) => s.local_elements().into_iter().map(|(_, v)| v).collect(),
@@ -712,9 +813,11 @@ fn encode(iter: &mut IterAppend, signature: &str, value: Value) -> CrushResult<(
                 },
             )?;
         }
-        Some(b'h') => {
-            return command_error("Sending Unix file descriptors over D-Bus is not supported");
-        }
+        // The descriptor is duplicated when it is appended, so the file is closed again right away.
+        Some(b'h') => match value {
+            Value::File(path) => iter.append(std::fs::File::open(&*path)?),
+            v => return type_error("a file", &v),
+        },
         _ => return data_error(format!("Invalid D-Bus signature `{}`", signature)),
     }
     Ok(())
@@ -762,6 +865,9 @@ fn decode(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
         ArgType::Signature => {
             Value::from(iter.get::<dbus::Signature>().ok_or(unexpected)?.to_string())
         }
+        ArgType::Array if &*iter.signature() == "ay" => {
+            Value::Binary(Arc::from(iter.get::<Vec<u8>>().ok_or(unexpected)?))
+        }
         ArgType::Array => {
             let mut sub = iter.recurse(ArgType::Array).ok_or(unexpected)?;
             if sub.arg_type() == ArgType::DictEntry {
@@ -794,10 +900,11 @@ fn decode(iter: &mut dbus::arg::Iter) -> CrushResult<Value> {
             List::new(ValueType::Any, values).into()
         }
         ArgType::DictEntry => return data_error("Invalid location for a D-Bus dict entry"),
-        // Crush has no way to represent a file descriptor. Decode it as an empty value rather than
-        // failing, so that e.g. the other fields of GetConnectionCredentials, which includes a
-        // process file descriptor on newer bus daemons, are still usable.
-        ArgType::UnixFd => Value::Empty,
+        // A file descriptor is received as a binary stream reading from it. The stream owns the
+        // descriptor, so e.g. an inhibitor lock from logind is held for as long as the value is.
+        ArgType::UnixFd => Value::BinaryInputStream(Box::from(FileReader::new(
+            iter.get::<std::fs::File>().ok_or(unexpected)?,
+        ))),
         ArgType::Invalid => return eof_error(),
     })
 }
@@ -934,7 +1041,7 @@ fn method_value(
                 Value::Command(<dyn CrushCommand>::command(
                     call_method,
                     true,
-                    ["global", "dbus", "method", "__call__"],
+                    ["global", "dbus", "__method__"],
                     signature,
                     format!("Call the D-Bus method {}.{}", interface, method.name),
                     Some(long_help),
@@ -1046,7 +1153,7 @@ fn property_value(
                 Value::Command(<dyn CrushCommand>::command(
                     call_property,
                     true,
-                    ["global", "dbus", "property", "__call__"],
+                    ["global", "dbus", "__property__"],
                     format!("{} [value]", member_name),
                     format!("The D-Bus property {}.{}", interface, property.name),
                     Some(long_help),
@@ -1109,6 +1216,139 @@ fn call_property(mut context: CommandContext) -> CrushResult<()> {
     }
 }
 
+fn signal_value(
+    bus: Bus,
+    service: &str,
+    path: &str,
+    interface: &str,
+    member_name: &str,
+    signal: &Method,
+) -> Value {
+    let arguments = signal.arguments.iter().collect::<Vec<_>>();
+    let names = argument_names(&arguments);
+    let columns = names
+        .iter()
+        .zip(&arguments)
+        .map(|(name, a)| {
+            ColumnType::new_from_string(name.clone(), column_type_for_signature(&a.signature))
+        })
+        .collect::<Vec<_>>();
+
+    let mut long_help = format!(
+        "Subscribes to the `{}` signal of the `{}` interface on the D-Bus object `{}` of the \
+         service `{}`.\n\n\
+         Returns a table stream with one row per signal received. It keeps running until it is \
+         stopped, e.g. with Ctrl-C, or until a signal arrives after whatever reads the stream has \
+         stopped reading, e.g. `head`.",
+        signal.name, interface, path, service
+    );
+    if !arguments.is_empty() {
+        long_help.push_str("\n\nThe stream has the following columns:\n\n");
+        for (name, a) in names.iter().zip(&arguments) {
+            long_help.push_str(&format!("* `{}` (D-Bus type `{}`)\n", name, a.signature));
+        }
+    }
+
+    Value::Struct(Struct::new(
+        vec![
+            ("bus", Value::from(bus.name())),
+            ("service", Value::from(service)),
+            ("path", Value::from(path)),
+            ("interface", Value::from(interface)),
+            ("signal", Value::from(signal.name.as_str())),
+            ("argument_names", string_list(names)),
+            (
+                "argument_signatures",
+                string_list(arguments.iter().map(|a| a.signature.clone())),
+            ),
+            (
+                "__call__",
+                Value::Command(<dyn CrushCommand>::command(
+                    call_signal,
+                    true,
+                    ["global", "dbus", "__signal__"],
+                    member_name.to_string(),
+                    format!("Subscribe to the D-Bus signal {}.{}", interface, signal.name),
+                    Some(long_help),
+                    Known(ValueType::TableInputStream(columns)),
+                    [],
+                )),
+            ),
+        ],
+        None,
+    ))
+}
+
+fn call_signal(mut context: CommandContext) -> CrushResult<()> {
+    let this = context.this.r#struct()?;
+    let bus = Bus::from_name(&string_field(&this, "bus")?)?;
+    let service = string_field(&this, "service")?;
+    let path = string_field(&this, "path")?;
+    let interface = string_field(&this, "interface")?;
+    let signal = string_field(&this, "signal")?;
+    let names = string_list_field(&this, "argument_names")?;
+    let signatures = string_list_field(&this, "argument_signatures")?;
+    if !context.remove_arguments().is_empty() {
+        return command_error("Signals take no arguments");
+    }
+
+    let columns = names
+        .iter()
+        .zip(&signatures)
+        .map(|(name, signature)| {
+            ColumnType::new_from_string(name.clone(), column_type_for_signature(signature))
+        })
+        .collect::<Vec<_>>();
+    let output = context.initialize_output(&columns)?;
+
+    let mut rule = MatchRule::new_signal(
+        InterfaceName::new(interface)?,
+        Member::new(signal.clone())?,
+    )
+    .with_sender(BusName::new(service)?);
+    // Services that answer on the root object, like the bus itself, don't necessarily emit their
+    // signals from it; the bus emits from /org/freedesktop/DBus. So signals of a root object are
+    // matched on any path.
+    if path != "/" {
+        rule = rule.with_path(dbus::Path::new(path)?);
+    }
+
+    let connection = bus.connect_local()?;
+    let received = Rc::new(RefCell::new(Vec::new()));
+    let queue = received.clone();
+    connection.add_match(
+        rule,
+        move |_: (), _: &LocalConnection, message: &Message| {
+            if let Ok(message) = message.duplicate() {
+                queue.borrow_mut().push(message);
+            }
+            true
+        },
+    )?;
+
+    loop {
+        connection.process(SIGNAL_POLL_INTERVAL)?;
+        let messages = received.borrow_mut().drain(..).collect::<Vec<_>>();
+        for message in messages {
+            let values = collect_values(&mut message.iter_init())?;
+            if values.len() != columns.len() {
+                return data_error(format!(
+                    "Received the signal {} with {} arguments, expected {}",
+                    signal,
+                    values.len(),
+                    columns.len()
+                ));
+            }
+            match output.send(Row::new(values)) {
+                // Whatever read the stream has stopped reading.
+                Err(e) if e.is_send_disconnected() => return Ok(()),
+                res => res?,
+            }
+        }
+        output.poll_control()?;
+    }
+}
+
 /// Declare the contents of the object at `path`: one lazily loaded namespace per child object,
 /// and one callable member per method and property.
 fn load_object(
@@ -1140,21 +1380,23 @@ fn load_object(
         )?;
     }
 
-    let interfaces = node
-        .interfaces
-        .iter()
-        .filter(|i| !HIDDEN_INTERFACES.contains(&i.name.as_str()))
-        .collect::<Vec<_>>();
+    let is_hidden = |interface: &Interface| HIDDEN_INTERFACES.contains(&interface.name.as_str());
+    let interfaces = node.interfaces.iter().collect::<Vec<_>>();
 
-    // A method or property name that is used by more than one interface, or that collides with a
-    // child object, is prefixed with its interface name, e.g. `Manager_ListSessions`.
+    // A member name that is used by more than one interface, or that collides with a child object,
+    // is prefixed with its interface name, e.g. `Manager_ListSessions`.
     let mut counts: HashMap<&str, usize> = HashMap::new();
     for interface in &interfaces {
-        for name in interface
-            .methods
+        let methods: &[Method] = if is_hidden(interface) {
+            &[]
+        } else {
+            &interface.methods
+        };
+        for name in methods
             .iter()
             .map(|m| m.name.as_str())
             .chain(interface.properties.iter().map(|p| p.name.as_str()))
+            .chain(interface.signals.iter().map(|s| s.name.as_str()))
         {
             *counts.entry(name).or_default() += 1;
         }
@@ -1168,7 +1410,12 @@ fn load_object(
     };
 
     for interface in &interfaces {
-        for method in &interface.methods {
+        let methods: &[Method] = if is_hidden(interface) {
+            &[]
+        } else {
+            &interface.methods
+        };
+        for method in methods {
             let name = member_name(interface, &method.name, declared);
             if declared.insert(name.clone()) {
                 env.declare(
@@ -1183,6 +1430,15 @@ fn load_object(
                 env.declare(
                     &name,
                     property_value(bus, service, path, &interface.name, &name, property),
+                )?;
+            }
+        }
+        for signal in &interface.signals {
+            let name = member_name(interface, &signal.name, declared);
+            if declared.insert(name.clone()) {
+                env.declare(
+                    &name,
+                    signal_value(bus, service, path, &interface.name, &name, signal),
                 )?;
             }
         }
@@ -1297,6 +1553,60 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             declare_bus(dbus, Bus::System)?;
             declare_bus(dbus, Bus::Session)?;
             Refresh::declare(dbus)?;
+            // The commands behind the members of D-Bus objects. Each member refers to one of these
+            // by name, which is what lets a member be serialized, e.g. when a closure that uses it
+            // is sent to another host.
+            dbus.declare(
+                "__method__",
+                Value::Command(<dyn CrushCommand>::command(
+                    call_method,
+                    true,
+                    ["global", "dbus", "__method__"],
+                    "__method__",
+                    "Call a D-Bus method",
+                    Some(
+                        "The command behind the methods of D-Bus objects, e.g. \
+                         `dbus:system:org:freedesktop:DBus:GetId`, which call it with themselves as \
+                         `this`.",
+                    ),
+                    Unknown,
+                    [],
+                )),
+            )?;
+            dbus.declare(
+                "__property__",
+                Value::Command(<dyn CrushCommand>::command(
+                    call_property,
+                    true,
+                    ["global", "dbus", "__property__"],
+                    "__property__",
+                    "Read or write a D-Bus property",
+                    Some(
+                        "The command behind the properties of D-Bus objects, e.g. \
+                         `dbus:system:org:freedesktop:systemd1:org:freedesktop:systemd1:Version`, \
+                         which call it with themselves as `this`.",
+                    ),
+                    Unknown,
+                    [],
+                )),
+            )?;
+            dbus.declare(
+                "__signal__",
+                Value::Command(<dyn CrushCommand>::command(
+                    call_signal,
+                    true,
+                    ["global", "dbus", "__signal__"],
+                    "__signal__",
+                    "Subscribe to a D-Bus signal",
+                    Some(
+                        "The command behind the signals of D-Bus objects, e.g. \
+                         `dbus:system:org:freedesktop:DBus:NameOwnerChanged`, which call it with \
+                         themselves as `this`.",
+                    ),
+                    Unknown,
+                    [],
+                )),
+            )?;
             Ok(())
         }),
     )?;
@@ -1325,6 +1635,54 @@ mod tests {
         assert!(split_signature("a{sv").is_err());
         assert!(split_signature("(i").is_err());
         assert!(split_signature("z").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn malformed_signatures_are_errors() {
+        for signature in ["", "a", "a{", "a{sv", "(", "(i", "z"] {
+            assert!(complete_type(signature).is_err(), "{}", signature);
+            assert!(round_trip(signature, Value::Integer(1)).is_err(), "{}", signature);
+            value_type_for_signature(signature);
+        }
+        // More than one complete type is only rejected when validating, since encoding is only
+        // ever given single types.
+        assert!(complete_type("ii").is_err());
+        assert!(complete_type(&"a".repeat(300)).is_err());
+        assert!(parse_introspection(
+            r#"<node><interface name="a.b"><method name="M"><arg type="a{"/></method></interface></node>"#
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn file_descriptors_are_sent_from_files_and_received_as_binary_streams() -> CrushResult<()> {
+        use std::io::Read;
+        let path = std::env::temp_dir().join(format!("crush-dbus-fd-test-{}", std::process::id()));
+        std::fs::write(&path, "hello")?;
+        let received = round_trip("h", Value::from(path.clone()));
+        std::fs::remove_file(&path)?;
+        let Value::BinaryInputStream(mut stream) = received? else {
+            panic!("expected a binary stream");
+        };
+        let mut content = String::new();
+        stream.read_to_string(&mut content)?;
+        assert_eq!(content, "hello");
+        assert!(round_trip("h", Value::from("not a file")).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn signals_are_parsed() -> CrushResult<()> {
+        let node = parse_introspection(
+            r#"<node><interface name="org.example.Manager">
+                 <signal name="Changed"><arg name="name" type="s"/><arg type="a{sv}"/></signal>
+               </interface></node>"#,
+        )?;
+        let signal = &node.interfaces[0].signals[0];
+        assert_eq!(signal.name, "Changed");
+        assert_eq!(signal.arguments.len(), 2);
+        assert_eq!(signal.arguments[1].signature, "a{sv}");
         Ok(())
     }
 
@@ -1394,8 +1752,9 @@ mod tests {
         .into();
         assert!(round_trip("ai", list.clone())? == list);
 
-        let bytes = round_trip("ay", Value::Binary(Arc::from(vec![1u8, 2])))?;
-        assert!(bytes == list);
+        let bytes = Value::Binary(Arc::from(vec![1u8, 2]));
+        assert!(round_trip("ay", bytes.clone())? == bytes);
+        assert!(round_trip("ay", list.clone())? == bytes);
 
         let fields = round_trip(
             "(isb)",

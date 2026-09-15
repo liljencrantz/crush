@@ -46,6 +46,28 @@ try { $bus:NameHasOwner 5 } catch {|$e| $errors:push "wrong type"}
 try { $bus:NameHasOwner "a" "b" } catch {|$e| $errors:push "too many arguments"}
 assert ($($errors:len) == 4)
 
+# Methods survive serialization, e.g. being sent to another host as part of a closure.
+$get_id := $bus:GetId
+$copy := $(pup:from $(val $get_id | pup:to))
+assert ($($copy) == $id)
+
+# Signals. Subscribing to NameOwnerChanged, then connecting to the bus from another process, makes
+# one arrive. Skipped when busctl isn't available to connect with.
+$has_busctl := $($(list $bool):new)
+try {
+    busctl --version
+    $has_busctl:push $true
+} catch {|$e|
+}
+if ($($has_busctl:len) > 0) {
+    $job := $($bus:NameOwnerChanged | head 1 &)
+    for i=$(seq 0 20) {
+        sleep 100ms
+        busctl --system call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetId
+    }
+    assert ($(fg $job | count) == 1)
+}
+
 # Reloading the bus namespace still finds the service.
 dbus:refresh
 assert ($($dbus:system:org:freedesktop:DBus:GetId) == $id)
