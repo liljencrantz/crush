@@ -64,7 +64,7 @@ impl ScopeLoader {
         name: &str,
         description: impl Into<String>,
         long_help: Option<String>,
-        loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
+        loader: Box<dyn Send + Fn(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
             data: Arc::from(Mutex::new(ScopeData::lazy_namespace(
@@ -185,7 +185,7 @@ pub struct ScopeData {
     is_loaded: bool,
 
     /// Lazy loading initializer
-    loader: Option<Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>>,
+    loader: Option<Box<dyn Send + Fn(&mut ScopeLoader) -> CrushResult<()>>>,
 }
 
 impl ScopeData {
@@ -220,7 +220,7 @@ impl ScopeData {
         name: Option<String>,
         description: Option<String>,
         long_help: Option<String>,
-        loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
+        loader: Box<dyn Send + Fn(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> ScopeData {
         ScopeData {
             parent_scope,
@@ -323,7 +323,7 @@ impl Scope {
         name: &str,
         description: impl Into<String>,
         long_help: Option<String>,
-        loader: Box<dyn Send + FnOnce(&mut ScopeLoader) -> CrushResult<()>>,
+        loader: Box<dyn Send + Fn(&mut ScopeLoader) -> CrushResult<()>>,
     ) -> CrushResult<Scope> {
         let res = Scope {
             data: Arc::from(Mutex::new(ScopeData::lazy_namespace(
@@ -463,18 +463,34 @@ impl Scope {
         if data.is_loaded {
             return Ok(data);
         }
-        data.is_loaded = true;
-        let loader = data.loader.take().ok_or("Missing module loader")?;
         let mut tmp = ScopeLoader {
             mapping: OrderedMap::new(),
             parent: data.calling_scope.as_ref().unwrap().clone(),
             scope: self.clone(),
         };
-        loader(&mut tmp)?;
+        // The loader is kept rather than consumed, and the scope is only marked as loaded once
+        // the loader succeeds. A loader that fails (e.g. because it talks to an external service
+        // that is temporarily unavailable) is retried the next time the scope is used, instead
+        // of leaving behind a permanently empty scope.
+        data.loader.as_ref().ok_or("Missing module loader")?(&mut tmp)?;
         tmp.copy_into(&mut data.mapping);
+        data.is_loaded = true;
         data.is_readonly = true;
 
         Ok(data)
+    }
+
+    /// Discard the contents of a lazily loaded namespace, so that the loader runs again the next
+    /// time the namespace is used. Useful for namespaces that mirror external state which may
+    /// change over time.
+    pub fn reload(&self) -> CrushResult<()> {
+        let mut data = self.data.lock()?;
+        if data.loader.is_none() {
+            return error("Only lazily loaded namespaces can be reloaded");
+        }
+        data.mapping.clear();
+        data.is_loaded = false;
+        Ok(())
     }
 
     /// Empty this scope
@@ -1005,5 +1021,57 @@ mod tests {
         let help = ns.long_help().expect("expected long help");
         assert!(help.starts_with("This scope contains the following elements:"));
         Ok(())
+    }
+
+    #[test]
+    fn failed_lazy_load_is_retried() -> CrushResult<()> {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_in_loader = calls.clone();
+        let root = Scope::create_root();
+        let ns = root.create_namespace(
+            "test_scope_failing_loader",
+            "short description",
+            None,
+            Box::new(move |env| {
+                if calls_in_loader.fetch_add(1, Ordering::SeqCst) == 0 {
+                    return error("first load fails");
+                }
+                env.declare("x", Value::from(1))
+            }),
+        )?;
+        assert!(ns.get_local("x").is_err());
+        assert!(matches!(ns.get_local("x")?, Some(Value::Integer(1))));
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn reload_runs_loader_again() -> CrushResult<()> {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_in_loader = calls.clone();
+        let root = Scope::create_root();
+        let ns = root.create_namespace(
+            "test_scope_reload",
+            "short description",
+            None,
+            Box::new(move |env| {
+                let n = calls_in_loader.fetch_add(1, Ordering::SeqCst);
+                env.declare("n", Value::from(n))
+            }),
+        )?;
+        assert!(matches!(ns.get_local("n")?, Some(Value::Integer(0))));
+        assert!(matches!(ns.get_local("n")?, Some(Value::Integer(0))));
+        ns.reload()?;
+        assert!(matches!(ns.get_local("n")?, Some(Value::Integer(1))));
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn reload_fails_for_regular_scope() {
+        let root = Scope::create_root();
+        assert!(root.reload().is_err());
     }
 }

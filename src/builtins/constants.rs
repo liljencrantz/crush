@@ -11,7 +11,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Box::new(move |env| {
             env.declare("true", Value::Bool(true))?;
             env.declare("false", Value::Bool(false))?;
-            env.declare("global", Value::Scope(root_clone))?;
+            env.declare("global", Value::Scope(root_clone.clone()))?;
             Ok(())
         }),
     )?;
