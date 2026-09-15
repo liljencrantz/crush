@@ -131,6 +131,22 @@ pub struct Ln {
 math_fun!(ln, Ln, |x: f64| x.ln());
 
 #[signature(
+    math.exp,
+    output = Known(ValueType::Float),
+    short = "e (Euler's number) raised to the power of number.",
+    long = "The same result is available as `math:pow math:e number`, but `exp` doesn't \
+    require knowing about the `e` constant, and its dedicated implementation is generally \
+    more numerically precise than going through a general-purpose `pow`.",
+    example = "# Returns 1, since e^0 is 1",
+    example = "math:exp 0",
+)]
+pub struct Exp {
+    #[description("the exponent to raise e to.")]
+    number: Number,
+}
+math_fun!(exp, Exp, |x: f64| x.exp());
+
+#[signature(
     math.log,
     output = Known(ValueType::Float),
     short = "The logarithm of number in base.")]
@@ -259,6 +275,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             ACos::declare(env)?;
             ATan::declare(env)?;
             Ln::declare(env)?;
+            Exp::declare(env)?;
             Floor::declare(env)?;
             Ceil::declare(env)?;
             Log::declare(env)?;

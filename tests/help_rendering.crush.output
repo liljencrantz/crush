@@ -1635,6 +1635,23 @@ This command accepts the following arguments:
 [4mExamples[0m
 [32mmath[0m[36m:[0m[32mcos[0m [36m1[0m
 
+[32mmath[0m[36m:[0m[32mexp[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
+e (Euler's number) raised to the power of number.
+
+[4mOutput[0m
+[32mfloat[0m
+The same result is available as [32mmath:pow math:e number[0m, but [32mexp[0m doesn't require knowing about the [32me[0m 
+constant, and its dedicated implementation is generally more numerically precise 
+than going through a general-purpose [32mpow[0m.
+
+This command accepts the following arguments:
+
+ * [32mnumber[0m the exponent to raise e to.
+
+[4mExamples[0m
+[33m# Returns 1, since e^0 is 1[0m
+[32mmath[0m[36m:[0m[32mexp[0m [36m0[0m
+
 [32mmath[0m[36m:[0m[32mfloor[0m [36mnumber[0m[36m=[0m[36m$([0m[32mone_of[0m [36m$float[0m [36m$integer[0m[36m)[0m
 The largest integer smaller than number.
 
@@ -3112,6 +3129,6 @@ creates values of.
  * [32m__call__[0m Construct a one_of value type with the specified allowed types
 
 
-=== checked 182 commands, 6 skipped ===
+=== checked 183 commands, 6 skipped ===
 
 === checked 23 types, 0 skipped ===
