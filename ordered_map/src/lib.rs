@@ -422,12 +422,14 @@ impl<K: Eq + Hash, V> OrderedMap<K, V> {
     pub fn clear(&mut self) {
         self.tombstones = 0;
         self.values.clear();
-        self.lookup.clear();
+        // Reset the buckets rather than removing them: lookups compute the bucket index modulo
+        // the number of buckets, so an empty lookup vector would panic on the next use.
+        self.lookup.fill(None);
     }
 
     pub fn drain(&mut self) -> Drain<'_, K, V> {
         self.tombstones = 0;
-        self.lookup.drain(..);
+        self.lookup.fill(None);
         Drain {
             liter: self.values.drain(..),
         }
@@ -670,6 +672,24 @@ mod tests {
             m.iter().map(|(_, v)| v.to_string()).collect::<String>(),
             "acb".to_string()
         );
+    }
+
+    #[test]
+    fn test_reuse_after_clear_and_drain() {
+        let mut m = OrderedMap::new();
+        m.insert(1, "a");
+        m.clear();
+        assert_eq!(m.len(), 0);
+        assert_eq!(m.get(&1), None);
+        m.insert(2, "b");
+        assert_eq!(m.get(&2).unwrap(), &"b");
+
+        let drained = m.drain().collect::<Vec<_>>();
+        assert_eq!(drained, vec![(2, "b")]);
+        assert_eq!(m.get(&2), None);
+        m.insert(3, "c");
+        assert_eq!(m.get(&3).unwrap(), &"c");
+        assert_eq!(m.len(), 1);
     }
 
     #[test]

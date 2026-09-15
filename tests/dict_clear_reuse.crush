@@ -1,0 +1,10 @@
+# A dict must still be usable after dict:clear. Clearing used to remove the underlying hash
+# map's buckets entirely, so the next insert panicked on a modulo by zero and took the shell
+# down with it.
+$d := $($(dict $string $integer):new)
+$d["a"] = 1
+$d:clear
+assert ($($d:len) == 0)
+$d["b"] = 2
+assert ($($d:len) == 1)
+assert ($d["b"] == 2)
