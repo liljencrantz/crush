@@ -4,7 +4,7 @@ use crate::util::html_escape;
 use markdown::mdast::Node;
 use markdown::{ParseOptions, to_mdast};
 use std::cmp::{max, min};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 static HEADER_START: &str = "\x1b[4m";
 static HEADER_END: &str = "\x1b[0m";
@@ -224,18 +224,28 @@ fn syntax_highlight_code(code: &String, state: &mut State) -> CrushResult<()> {
 /// line-wrapping and indentation, none of which HTML output needs, while
 /// HTML needs real tag nesting the terminal renderer has no reason to
 /// track.
-pub fn render_html(s: &str) -> CrushResult<String> {
+///
+/// `own_names` is the set of this command's own argument names and
+/// default/allowed values (see help.rs's call site) -- the "accepts the
+/// following arguments" list the signature macro generates backtick-wraps
+/// each one (e.g. `` `files` ``) purely for visual styling, not as a
+/// cross-reference, but a plain InlineCode node carries no way to tell
+/// that apart from a real ``` `dns:query` ``` reference written by hand.
+/// An argument happening to be named the same as some unrelated real
+/// command (`files`, matching `fs:files`) would otherwise turn into a
+/// wrong link.
+pub fn render_html(s: &str, own_names: &HashSet<String>) -> CrushResult<String> {
     let tree = to_mdast(s, &ParseOptions::default())?;
     let mut out = String::new();
-    recurse_html(tree, &mut out)?;
+    recurse_html(tree, own_names, &mut out)?;
     Ok(out)
 }
 
-fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
+fn recurse_html(node: Node, own_names: &HashSet<String>, out: &mut String) -> CrushResult<()> {
     match node {
         Node::Root(n) => {
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
         }
         Node::Blockquote(_) => {}
@@ -245,7 +255,7 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
             let tag = if n.ordered { "ol" } else { "ul" };
             out.push_str(&format!("<{tag}>\n"));
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str(&format!("</{tag}>\n"));
         }
@@ -254,21 +264,26 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
         Node::Yaml(_) => {}
         Node::Break(_) => out.push_str("<br>\n"),
         Node::InlineCode(n) => {
-            // data-ref marks this as a link candidate for the docs
-            // generator, which is the only thing that knows whether
-            // `n.value` is actually the path of a documented command --
-            // see syntax_highlight_html's doc comment for the same split.
             let escaped = html_escape(&n.value);
-            out.push_str(&format!(
-                "<code data-ref=\"{escaped}\">{escaped}</code>"
-            ));
+            if own_names.contains(&n.value) {
+                out.push_str(&format!("<code>{escaped}</code>"));
+            } else {
+                // data-ref marks this as a link candidate for the docs
+                // generator, which is the only thing that knows whether
+                // `n.value` is actually the path of a documented command
+                // -- see syntax_highlight_html's doc comment for the same
+                // split.
+                out.push_str(&format!(
+                    "<code data-ref=\"{escaped}\">{escaped}</code>"
+                ));
+            }
         }
         Node::InlineMath(_) => {}
         Node::Delete(_) => {}
         Node::Emphasis(n) => {
             out.push_str("<em>");
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str("</em>");
         }
@@ -281,7 +296,7 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
         Node::Link(n) => {
             out.push_str(&format!("<a href=\"{}\">", html_escape(&n.url)));
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str("</a>");
         }
@@ -289,7 +304,7 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
         Node::Strong(n) => {
             out.push_str("<strong>");
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str("</strong>");
         }
@@ -308,7 +323,7 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
             let level = n.depth.clamp(1, 6);
             out.push_str(&format!("<h{level}>"));
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str(&format!("</h{level}>\n"));
         }
@@ -319,7 +334,7 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
         Node::ListItem(n) => {
             out.push_str("<li>");
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str("</li>\n");
         }
@@ -327,7 +342,7 @@ fn recurse_html(node: Node, out: &mut String) -> CrushResult<()> {
         Node::Paragraph(n) => {
             out.push_str("<p>");
             for child in n.children {
-                recurse_html(child, out)?;
+                recurse_html(child, own_names, out)?;
             }
             out.push_str("</p>\n");
         }

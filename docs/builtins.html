@@ -851,7 +851,7 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <p>Evaluate files into current crush session</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> the files to source</p>
+<li><p><code>files</code> the files to source</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1422,7 +1422,7 @@ unqualified name.</p>
 </li>
 <li><p><code>no_follow_cname</code> (default: <code>false</code>) if a CNAME record is encountered, do not follow it. Show the actual CNAME record instead.</p>
 </li>
-<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
+<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1453,7 +1453,7 @@ contain one.</p>
 </li>
 <li><p><code>port</code> (default: <code>53</code>) DNS port</p>
 </li>
-<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) Connection timeout.</p>
+<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) Connection timeout.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1522,7 +1522,7 @@ the <code>--recurse</code> switch.</p>
 </li>
 <li><p><code>user</code> (default: <code>true</code>) show username</p>
 </li>
-<li><p><a href="#stream-group"><code>group</code></a> (default: <code>true</code>) show group name</p>
+<li><p><code>group</code> (default: <code>true</code>) show group name</p>
 </li>
 <li><p><code>size</code> (default: <code>true</code>) show file size</p>
 </li>
@@ -1684,13 +1684,13 @@ The grpc methods support tab completion of argument names. They also come with h
 <p>Once you are done with a gRPC connection, you should close it to free up resources. Do so by calling the close method, e.g. <code>$conn:close</code>.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#host"><code>host</code></a> the host to connect to.</p>
+<li><p><code>host</code> the host to connect to.</p>
 </li>
 <li><p><code>service</code> the service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use <code>*</code> to connect to all available services.</p>
 </li>
 <li><p><code>plaintext</code> (default: <code>false</code>) use plaintext instead of TLS to connect.</p>
 </li>
-<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) the timeout for making calls.</p>
+<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) the timeout for making calls.</p>
 </li>
 <li><p><code>port</code> (default: <code>50051</code>) the port to connect to.</p>
 </li>
@@ -1926,7 +1926,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 </li>
 <li><p><code>header</code> HTTP headers, must be on the form &quot;key:value&quot;.</p>
 </li>
-<li><p><a href="#control-timeout"><code>timeout</code></a> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
+<li><p><code>timeout</code> (default: <code>$duration:of seconds=5</code>) connection timeout.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2014,7 +2014,7 @@ any of its actual rows.</p>
 <p>The standard alphabet follows RFC 4648, and uses <code>a</code>-<code>z</code>, <code>A</code>-<code>Z</code>, <code>0</code>-<code>9</code>, <code>+</code>, and <code>/</code>. The urlsafe alphabet uses <code>a-</code>z, <code>A</code>-<code>Z</code>, <code>0</code>-<code>9</code>, <code>-</code>, and <code>.</code>. Both use <code>=</code> for padding.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> the files to read from. Read from input if no file is specified.</p>
+<li><p><code>files</code> the files to read from. Read from input if no file is specified.</p>
 </li>
 <li><p><code>alphabet</code> (default: <code>standard</code>) base64 encoding style to use.</p>
 </li>
@@ -2058,7 +2058,7 @@ any of its actual rows.</p>
 <p>If no file is specified, the input must be either binary or a string which will be converted to a binary using utf-8.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 </div>
@@ -2087,13 +2087,13 @@ any of its actual rows.</p>
 <p>Parse specified files as CSV files</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
+<li><p><code>files</code> source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
 </li>
 <li><p><code>columns</code> name and type of all columns.</p>
 </li>
 <li><p><code>separator</code> (default: <code>&#39;,&#39;</code>) column separator.</p>
 </li>
-<li><p><a href="#stream-head"><code>head</code></a> (default: <code>0</code>) skip this many lines of input from the beginning.</p>
+<li><p><code>head</code> (default: <code>0</code>) skip this many lines of input from the beginning.</p>
 </li>
 <li><p><code>trim</code> trim this character from start and end of every value.</p>
 </li>
@@ -2118,7 +2118,7 @@ any of its actual rows.</p>
 <p>If no file is specified, use the input, which must be a binary or a string.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input if no file is specified).</p>
+<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2155,7 +2155,7 @@ any of its actual rows.</p>
 <p>When deserializing a list, <a href="#io-json-from"><code>json:from</code></a> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2199,7 +2199,7 @@ any of its actual rows.</p>
 <pre><code><span class="tok-command">table_input_stream</span> <span class="tok-string_literal">line</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span></code></pre>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input if no file is specified).</p>
+<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
 </li>
 <li><p><code>skip_empty_lines</code> (default: <code>false</code>) do not emit empty lines.</p>
 </li>
@@ -2278,7 +2278,7 @@ to one component of one.</p>
 <p>Parse pup format</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2313,7 +2313,7 @@ lambdas can be serialized to this format.</p>
 <p>Read specified files (or input) as a table, split on the specified separator characters.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input if no file is specified).</p>
+<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
 </li>
 <li><p><code>separator</code> characters to split on</p>
 </li>
@@ -2339,7 +2339,7 @@ lambdas can be serialized to this format.</p>
 <p>When deserializing a list, <a href="#io-toml-from"><code>toml:from</code></a> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2381,7 +2381,7 @@ lambdas can be serialized to this format.</p>
 <p>Input can be files or the input pipe, which must be a binary input stream, split on word boundaries, trim away punctuation and discard empty &quot;words&quot;.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> the files to read from (read from input pipe if no file is specified).</p>
+<li><p><code>files</code> the files to read from (read from input pipe if no file is specified).</p>
 </li>
 </ul>
 </div>
@@ -2400,7 +2400,7 @@ lambdas can be serialized to this format.</p>
 <p>When deserializing a list, <a href="#io-yaml-from"><code>yaml:from</code></a> will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#fs-files"><code>files</code></a> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
+<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <code>string</code>, <code>binary</code> or <code>binary_stream</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2507,9 +2507,9 @@ lambdas can be serialized to this format.</p>
 <ul>
 <li><p><code>number</code> the number to clamp.</p>
 </li>
-<li><p><a href="#stream-min"><code>min</code></a> the lower bound of the allowed range.</p>
+<li><p><code>min</code> the lower bound of the allowed range.</p>
 </li>
-<li><p><a href="#stream-max"><code>max</code></a> the upper bound of the allowed range.</p>
+<li><p><code>max</code> the upper bound of the allowed range.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2731,7 +2731,7 @@ lambdas can be serialized to this format.</p>
 <h3 class="cmd-title"><code>remote:exec</code></h3>
 <div class="cmd-doc"><pre><code><a href="#remote-exec"><span class="tok-command">remote:exec</span></a> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-string_literal">command</span> <span class="tok-string_literal">host</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span> <span class="tok-operator">[</span><span class="tok-string_literal">username</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">password</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">host_file</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <span class="tok-identifier">$string</span> <span class="tok-identifier">$file</span> <span class="tok-identifier">$glob</span> <span class="tok-identifier">$re</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--ignore_host_file</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--allow_not_found</span><span class="tok-operator">]</span></code></pre>
 <p>Execute a command on a remote host</p>
-<p>Serializes <code>command</code> (a closure), sends it over SSH to <a href="#host"><code>host</code></a>, runs it there in a
+<p>Serializes <code>command</code> (a closure), sends it over SSH to <code>host</code>, runs it there in a
 fresh crush process, and returns its result. The remote host&#39;s key is checked
 against <code>host_file</code> unless <code>ignore_host_file</code> is set. Security note: setting
 <code>ignore_host_file</code> disables that check entirely (no protection against a
@@ -2742,7 +2742,7 @@ weaken protection against a machine-in-the-middle impersonating the remote host.
 <ul>
 <li><p><code>command</code> the command to execute.</p>
 </li>
-<li><p><a href="#host"><code>host</code></a> host to execute the command on.</p>
+<li><p><code>host</code> host to execute the command on.</p>
 </li>
 <li><p><code>username</code> username on remote machines.</p>
 </li>
@@ -2773,15 +2773,15 @@ weaken protection against a machine-in-the-middle impersonating the remote host.
 <p>Execute a command on a set of hosts</p>
 <h1>Output</h1>
 <pre><code><span class="tok-command">table_input_stream</span> <span class="tok-string_literal">host</span><span class="tok-operator">=</span><span class="tok-identifier">$string</span> <span class="tok-string_literal">result</span><span class="tok-operator">=</span><span class="tok-identifier">$any</span></code></pre>
-<p>Like <code>exec</code>, but runs <code>command</code> on every host listed in <a href="#host"><code>host</code></a> (up to <code>parallel</code>
+<p>Like <code>exec</code>, but runs <code>command</code> on every host listed in <code>host</code> (up to <code>parallel</code>
 of them at a time). pexec always attempts every host in the list, regardless of
 whether earlier hosts failed to connect or authenticate -- it never fails outright
 just because some, or even all, of the hosts couldn&#39;t be reached.
-A host that succeeds contributes one row (<a href="#host"><code>host</code></a>/<code>result</code> columns) to the output;
+A host that succeeds contributes one row (<code>host</code>/<code>result</code> columns) to the output;
 a host that fails contributes no row at all. Instead, the failure is logged as a
 warning (see <a href="#crush-warn-list"><code>crush:warn:list</code></a>) naming the host and the underlying error. pexec&#39;s
 own exit status stays 0 either way, so the only way to tell whether every host
-succeeded is to compare the length of the output to the length of the <a href="#host"><code>host</code></a> list
+succeeded is to compare the length of the output to the length of the <code>host</code> list
 you passed in -- fewer output rows than hosts means some connections failed.
 The same host-key verification applies independently to each host -- see <code>exec</code>
 for what <code>ignore_host_file</code>/<code>allow_not_found</code> mean for security.</p>
@@ -2789,7 +2789,7 @@ for what <code>ignore_host_file</code>/<code>allow_not_found</code> mean for sec
 <ul>
 <li><p><code>command</code> the command to execute.</p>
 </li>
-<li><p><a href="#host"><code>host</code></a> hosts to execute the command on.</p>
+<li><p><code>host</code> hosts to execute the command on.</p>
 </li>
 <li><p><code>parallel</code> (default: <code>32</code>) maximum number of hosts to run on in parallel.</p>
 </li>
@@ -2841,7 +2841,7 @@ Returns the number of host entries deleted.</p>
 <ul>
 <li><p><code>host_file</code> (~/.ssh/known_hosts) known hosts file.</p>
 </li>
-<li><p><a href="#host"><code>host</code></a> host filter.</p>
+<li><p><code>host</code> host filter.</p>
 </li>
 <li><p><code>key</code> key filter.</p>
 </li>
@@ -2972,7 +2972,7 @@ Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict
 <p>This command is does the opposite of the select command. It copies all columns except the ones specified from input to output.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#stream-drop"><code>drop</code></a> the columns to remove from the stream.</p>
+<li><p><code>drop</code> the columns to remove from the stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3057,7 +3057,7 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 <p>Join two streams together on the specified keys.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><a href="#stream-join"><code>join</code></a> Fields to join</p>
+<li><p><code>join</code> Fields to join</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3238,7 +3238,7 @@ other floats.</p>
 <ul>
 <li><p><code>field</code> the columns to sort on. Optional if input only has one column.</p>
 </li>
-<li><p><a href="#stream-reverse"><code>reverse</code></a> (default: <code>false</code>) reverse the sort order.</p>
+<li><p><code>reverse</code> (default: <code>false</code>) reverse the sort order.</p>
 </li>
 <li><p><code>case_insensitive</code> (default: <code>false</code>) ignore case when sorting textual columns.</p>
 </li>

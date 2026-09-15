@@ -6,6 +6,7 @@ use crate::lang::value::ValueType;
 use crate::state::contexts::CommandContext;
 use crate::util::highlight::highlight_colors;
 use signature::signature;
+use std::collections::HashSet;
 
 #[signature(
     control.help,
@@ -34,6 +35,29 @@ pub fn help(mut context: CommandContext) -> CrushResult<()> {
         HelpSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let map = highlight_colors(&context.scope);
+
+    // The "accepts the following arguments" list this signature macro
+    // generates backtick-wraps each argument's name and its default/
+    // allowed values purely for visual styling (see render_html's doc
+    // comment) -- collected here, before cfg.topic is consumed below, so
+    // format=html can tell those apart from a real cross-reference.
+    let own_names: HashSet<String> = match &cfg.topic {
+        Some(Value::Command(cmd)) => cmd
+            .completion_data()
+            .iter()
+            .flat_map(|p| {
+                let mut names = vec![p.name.clone()];
+                if let Some(default) = &p.default {
+                    names.push(default.to_string());
+                }
+                if let Some(allowed) = &p.allowed {
+                    names.extend(allowed.iter().map(|v| v.to_string()));
+                }
+                names
+            })
+            .collect(),
+        _ => HashSet::new(),
+    };
 
     let s = match cfg.topic {
         None => {
@@ -65,7 +89,10 @@ members of a value, write `dir <value>`.
 
     match cfg.format.as_str() {
         "markdown" => context.output.send(Value::from(s)),
-        "html" => context.output.send(Value::from(crate::util::md::render_html(s)?)),
+        "html" => context.output.send(Value::from(crate::util::md::render_html(
+            s,
+            &own_names,
+        )?)),
         "terminal" => {
             context
                 .global_state
