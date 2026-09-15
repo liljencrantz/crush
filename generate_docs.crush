@@ -167,6 +167,9 @@ $command_count := $($cmd_doc:len)
 $namespace_count := (($ns_prose:len()) - 1)
 $error_count := $($errors:len)
 
+# json:to, like every codec's :to command, produces a binary_stream (bytes
+# ready to write to disk or pipe onward) -- convert to a plain string since
+# that's what gets spliced into the page below.
 $search_json := $(convert $string $($search_items | json:to compact=$true))
 
 # Renders one namespace section (its own prose, an index of its direct
@@ -184,11 +187,8 @@ $render_ns := {
     $commands := $ns_commands[$path]
     $children := $ns_children[$path]
 
-    # Named placeholders can only be used once per :format call, so the
-    # opening and closing heading tag each get their own name even though
-    # both hold the same value.
-    $html := $("<section class=\"ns\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag_open} class=\"ns-title\"><code>{dp}</code></{tag_close}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
-        slug=$slug depth=$depth tag_open=$tag tag_close=$tag dp=$dp prose=$($ns_prose[$path]))
+    $html := $("<section class=\"ns\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
+        slug=$slug depth=$depth tag=$tag dp=$dp prose=$($ns_prose[$path]))
 
     if ((($commands:len()) > 0) or (($children:len()) > 0)) {
         $items := $($(list $string):new)
