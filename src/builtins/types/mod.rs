@@ -298,7 +298,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "types",
         "Crush built in types and type related builtins.",
-        None,
+        Some(
+            "Every value type Crush knows about, and the methods you can call on instances of \
+             it -- `string`, `integer`, `list`, `dict`, `time`, `duration`, `table`, `re`, \
+             `glob`, and the rest, each its own sub-namespace of methods (e.g. \
+             `\"hello\":upper`, `$my_list:push value`). Also home to the type system's own \
+             cross-cutting machinery: `class` (defining new types), `convert`, `typeof`, \
+             `like` (pattern matching), and `materialize`. Imported into the global scope, so \
+             both `types:string` and bare `string` refer to the same type."
+                .to_string(),
+        ),
         Box::new(move |env| {
             let root =
                 Struct::new(vec![

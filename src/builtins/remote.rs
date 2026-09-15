@@ -582,7 +582,13 @@ pub fn declare(scope: &Scope) -> CrushResult<()> {
     scope.create_namespace(
         "remote",
         "Remote code execution",
-        None,
+        Some(
+            "Commands for running code on other machines over SSH: `remote:exec` runs a \
+             closure on one host, `remote:pexec` runs it across several in parallel, and \
+             `remote:identity` lists the identities your ssh-agent has loaded. `remote:host` \
+             tracks known-hosts entries, the same trust store `ssh` itself uses."
+                .to_string(),
+        ),
         Box::new(move |remote| {
             Exec::declare(remote)?;
             Pexec::declare(remote)?;

@@ -31,7 +31,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "stream",
         "Stream handling commands",
-        None,
+        Some(
+            "Crush's pipes carry typed streams of rows, not bytes -- `stream` is where the \
+             SQL-like operations on those streams live: filtering (`where`), sorting, \
+             grouping, aggregating, joining two streams, deduplicating, and more. This \
+             namespace is imported into the global scope, so every command here works equally \
+             well as `stream:sort` or the bare word `sort` -- most Crush pipelines are built \
+             by chaining these together with `|`."
+                .to_string(),
+        ),
         Box::new(move |env| {
             count::Count::declare(env)?;
             drop::Drop::declare(env)?;

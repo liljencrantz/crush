@@ -71,7 +71,12 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "groups",
         "User group commands",
-        None,
+        Some(
+            "Commands for querying user groups on this system -- `groups:list` for every \
+             group and its gid, and lookup by name via `groups[name]`. Sibling to `users`, \
+             but for groups rather than individual accounts."
+                .to_string(),
+        ),
         Box::new(move |groups| {
             List::declare(groups)?;
             GetItem::declare(groups)?;

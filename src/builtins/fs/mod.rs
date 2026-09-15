@@ -165,7 +165,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "fs",
         "File system functionality",
-        None,
+        Some(
+            "Commands for working with the filesystem: listing and stat-ing files (`files`, \
+             `stat`), changing directory (`cd`), computing disk usage (`usage`), listing \
+             mount points (`mounts`), and watching a path for changes (`watch`). Imported \
+             into the global scope, so e.g. `fs:cd` and bare `cd` are the same command."
+                .to_string(),
+        ),
         Box::new(move |fs| {
             files::FilesSignature::declare(fs)?;
             Cd::declare(fs)?;

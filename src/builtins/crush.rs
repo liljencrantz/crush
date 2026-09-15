@@ -725,7 +725,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "crush",
         "Information about this Crush session",
-        None,
+        Some(
+            "The `crush` namespace holds state and controls for the running Crush process \
+             itself, as distinct from state about the external world (`host`) or the data \
+             flowing through a pipeline. This is where you configure the prompt and title, \
+             the warning log and syntax highlighting, read and write OS environment \
+             variables, inspect running jobs and threads, and control how the shell exits. \
+             See `docs/config.md` for a guided tour of what's configurable here."
+                .to_string(),
+        ),
         Box::new(move |crush| {
             crush.declare("pid", Value::Integer(Pid::this().as_raw() as i128))?;
             crush.declare("ppid", Value::Integer(Pid::parent().as_raw() as i128))?;

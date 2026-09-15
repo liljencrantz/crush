@@ -419,7 +419,13 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "host",
         "Information about the host this crush session is running on",
-        None,
+        Some(
+            "Information about the machine this Crush session is running on: memory, \
+             battery, uptime, process and thread tables, and (nested further) `host:os` and \
+             `host:cpu` for operating-system and CPU-specific metadata. Contrast with \
+             `crush`, which is about the Crush process itself, not the machine underneath it."
+                .to_string(),
+        ),
         Box::new(move |host| {
             Battery::declare(host)?;
             Memory::declare(host)?;

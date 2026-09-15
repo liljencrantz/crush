@@ -219,7 +219,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "io",
         "Data serialization I/O",
-        None,
+        Some(
+            "Reading and writing structured data in specific wire formats -- `json`, `yaml`, \
+             `toml`, `csv`, `hex`, `base64`, and `percent` encoding, and Crush's own native \
+             `pup` format, each its own `to`/`from` pair. Also home to a few general-purpose \
+             I/O commands that don't belong to any one format: `http`, `echo`, `readline`, \
+             and `member`/`members` for pulling data out of a struct or stream. Imported into \
+             the global scope, so e.g. `io:json:from` and bare `json:from` are the same \
+             command."
+                .to_string(),
+        ),
         Box::new(move |env| {
             bin::declare(env)?;
             csv::declare(env)?;

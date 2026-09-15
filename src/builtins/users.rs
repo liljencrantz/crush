@@ -247,7 +247,16 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "users",
         "User commands",
-        None,
+        Some(
+            "Commands for querying user accounts and login sessions on this system: \
+             `users:me` for the current user, `users:current` for everyone currently logged \
+             in (tty, login time, ...), `users:list` for every account that exists, and \
+             `users[username]` to look one up by name -- the resulting struct has a `do` \
+             method to run a closure as that user, e.g. `users[root]:do {rm foo.txt}`. This \
+             reads local system account data, not any particular authentication or identity \
+             provider."
+                .to_string(),
+        ),
         Box::new(move |users| {
             Me::declare(users)?;
             Current::declare(users)?;

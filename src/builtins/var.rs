@@ -313,7 +313,15 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
         "var",
         "Commands related to variables",
-        None,
+        Some(
+            "Commands for working with variables and scopes directly, as values rather than \
+             through `$name`/`:=`/`=` syntax: declaring, setting, unsetting, reading, and \
+             destructuring, plus `var:use`/`var:unuse` for importing a scope's contents into \
+             the current one and `var:list`/`var:local` for introspecting what's currently in \
+             scope. This namespace is imported into the global scope, so e.g. `var:let` and \
+             bare `let` are the same command."
+                .to_string(),
+        ),
         Box::new(move |ns| {
             Let::declare(ns)?;
             Set::declare(ns)?;
