@@ -24,8 +24,8 @@ a syntax geared toward both batch and interactive shell usage.
 
 ### Ubuntu dependencies
 
-* Update apt index `apt update`
-* Install dependencies `apt install build-essential git curl pkg-config libssl-dev libdbus-1-dev libsystemd-dev protobuf-compiler-grpc`
+* Update apt index `sudo apt update`
+* Install dependencies `sudo apt install build-essential git curl pkg-config libssl-dev libdbus-1-dev libsystemd-dev protobuf-compiler-grpc`
 
 ### Install Rust
 
@@ -33,9 +33,10 @@ Install Rust
 
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-Add it to your path
+The installer adds `~/.cargo/bin` to your path in new shells. To use it in the
+shell you installed it from, run
 
-    PATH=$PATH:$HOME/.cargo/bin
+    . "$HOME/.cargo/env"
 
 ### Compile and install crush
 
@@ -45,7 +46,7 @@ clone this repository,
  
 and run
 
-    cd crush && cargo build --release && cargo install --path .
+    cd crush && cargo install --path .
 
 and you should have a working binary to try out in `~/.cargo/bin`.
 That directory should already be in your path, so just write `crush` to run
