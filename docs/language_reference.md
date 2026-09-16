@@ -169,9 +169,11 @@ better as symbols than as commands. Grouped roughly by precedence, highest first
 There's no modulo/remainder *operator* -- use the `mod` (least positive residue) or
 `rem` (ordinary remainder) methods on a number instead, e.g. `7:mod 2`.
 
-A glob *literal* (e.g. `*.txt`) doesn't parse directly on the right of `=~`/`!~` inside
-expression mode; assign it to a variable first (`$g := *.txt`) and match against that,
-or use `like` in command mode instead (see [Pattern matching](#pattern-matching)).
+Glob literals (e.g. `*.txt`) only parse in command mode -- expression mode has no glob
+literal syntax at all, so `(x =~ *.txt)` fails to parse. To use a glob from within
+expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. Or use
+`like` in command mode, which takes a glob directly (see
+[Pattern matching](#pattern-matching)).
 
 ### The `@` and `@@` operators
 
