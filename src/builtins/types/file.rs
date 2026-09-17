@@ -23,6 +23,7 @@ use std::ops::{Add, Deref};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
+use crate::lang::value::Value::Empty;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -469,26 +470,32 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Create directory",
 )]
-struct MkDir {}
+struct MkDir {
+    #[description("Do not throw and error if this directory already exists.")]
+    #[default(false)]
+    ignore_existing: bool,
+}
 
-fn mkdir_recursive(path: &Path, leaf: bool) -> CrushResult<()> {
+fn mkdir_recursive(path: &Path, leaf: bool, ignore_existing: bool) -> CrushResult<()> {
     if path.exists() && path.is_dir() {
-        if leaf {
+        if leaf && !ignore_existing {
             data_error(format!("Directory `{}` already exists.", path.display()))
         } else {
             Ok(())
         }
     } else {
         if let Some(parent) = path.parent() {
-            mkdir_recursive(parent, false)?;
+            mkdir_recursive(parent, false, ignore_existing)?;
         }
         Ok(create_dir(path)?)
     }
 }
 
 fn mkdir(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = MkDir::parse(context.remove_arguments(), context.global_state.printer())?;
     let directory = context.this.file()?;
-    mkdir_recursive(&directory, true)
+    mkdir_recursive(&directory, true, cfg.ignore_existing)?;
+    context.output.send(Empty)
 }
 
 #[signature(
@@ -514,12 +521,12 @@ fn touch(mut context: CommandContext) -> CrushResult<()> {
         &TimeSpec::UTIME_NOW,
         UtimensatFlags::FollowSymlink,
     ) {
-        Ok(_) => context.output.send(Value::Empty),
+        Ok(_) => context.output.send(Empty),
         Err(Errno::ENOENT) => {
             if !cfg.no_create {
                 File::create_new(file)?;
             }
-            context.output.send(Value::Empty)
+            context.output.send(Empty)
         }
         Err(err) => error(err.to_string()),
     }

@@ -23,7 +23,7 @@
 # make direct File-valued field access on a struct behave incorrectly), just not reverted
 # since it's unrelated to what this test is actually meant to cover.
 
-./.fs_watch_test_dir:mkdir
+./.fs_watch_test_dir:mkdir --ignore_existing
 
 $schema_job := $(fs:watch ./.fs_watch_test_dir | members | materialize &)
 $schema := $(fg $schema_job)
