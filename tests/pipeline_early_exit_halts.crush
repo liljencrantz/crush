@@ -1,25 +1,21 @@
 # A pipeline whose last stage stops reading early, like `head`, should behave exactly like one
-# that reads everything: the script continues and exits 0. Currently, if an earlier stage is still
-# working when `head` stops, the script silently stops at that statement and exits 1. No error is
-# printed, and the same pipeline inside `try` reports no error either.
+# that reads everything: the script continues and exits 0. This used to fail intermittently (see
+# git history for this file for the original bug report) whenever an earlier stage was still
+# working when `head` stopped -- the script would silently halt at that statement and exit 1,
+# with no error printed anywhere, including inside `try`.
 #
-# Found with `$bus:NameOwnerChanged | head 1` and `systemd:journal --follow | head 1`, which wait
-# for events between rows. Here the earlier stage is a `where` whose condition sleeps, which
-# reproduces it every time (20/20 runs, with 10ms and 300ms sleeps alike). Without the sleep it
-# still happens sometimes (3 in 10 runs), so it's a matter of timing. With `schedule` as the slow
-# stage instead it only happened once in 10 runs.
+# Root cause: a job's own last stage can run in its own thread (e.g. `head`, which can_block), and
+# execute::source (src/lang/execute.rs) joined that thread with a bare `?`, unlike Job::eval's own
+# internal joins (src/lang/job.rs), which already ignored a SendError there as the normal signal
+# that nothing downstream is listening anymore. That's exactly what happens once a pipeline's
+# result reaches this script's own output sink (a black hole, since nothing here consumes it): the
+# TableInputStream handle gets dropped as soon as it's forwarded, so any row a still-running earlier
+# stage (here, `where`, whose condition sleeps to make the race reliable) sends afterward fails with
+# a SendError -- benign, not a real failure. Fixed by filtering it the same way at that join too.
 #
-# Instrumenting the job code showed that the error which ends up as the script's result is a
-# SendError ("sending on a disconnected channel"), the normal signal that a later stage stopped
-# reading. Job::eval (src/lang/job.rs) ignores that error when joining the threads of earlier
-# stages, which would explain why `schedule`, which runs in its own thread, rarely triggers it.
-# Suspected but not confirmed: stages that are evaluated synchronously in the loop over earlier
-# stages, like `where` with a closure here, return it straight through `call_def.eval(...)?`,
-# where it isn't filtered.
-#
-# The marker below is only printed if the script gets past the pipeline, so the halt shows up as a
-# plain output difference (see tests/pipeline_early_exit_halts.crush.output). The exit status is
-# checked too, since the test runner expects 0.
+# The marker below is only printed if the script gets past the pipeline, so a regression shows up
+# as a plain output difference (see tests/pipeline_early_exit_halts.crush.output). The exit status
+# is checked too, since the test runner expects 0.
 
 seq 0 100 | where {sleep 100ms; $true} | head 1
 echo "reached"

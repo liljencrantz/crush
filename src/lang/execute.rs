@@ -122,7 +122,17 @@ fn source(
             job_type,
         ))?;
         if let Some(id) = handle {
-            global_state.threads().join_one(id)?;
+            // Same benign case Job::eval already filters when joining an *earlier*
+            // pipeline stage's thread (see the comment there): the job's own last
+            // stage can also run in its own thread (e.g. `head`, which can_block), and
+            // joining it here can likewise surface a SendError that just means nothing
+            // ever consumed the job's output before it finished sending everything --
+            // not a real failure.
+            if let Err(e) = global_state.threads().join_one(id) {
+                if !e.is_send_disconnected() {
+                    return Err(e);
+                }
+            }
         }
 
         if global_env.is_stopped() {

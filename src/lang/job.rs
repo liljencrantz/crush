@@ -63,8 +63,16 @@ impl Job {
         let mut pending_threads = Vec::new();
         for call_def in self.commands[..last_command_idx].iter() {
             let (output, next_input) = pipe();
-            if let Some(id) = call_def.eval(context.with_io(input, output))? {
-                pending_threads.push(id);
+            match call_def.eval(context.with_io(input, output)) {
+                Ok(Some(id)) => pending_threads.push(id),
+                Ok(None) => {}
+                // Same as the join loop below: a stage running synchronously in this
+                // thread (rather than its own spawned one) can still hit a SendError
+                // while writing to a downstream stage that already stopped reading
+                // (e.g. `head`/`take` truncating the stream) -- benign, not a real
+                // failure.
+                Err(e) if e.is_send_disconnected() => return Ok(None),
+                Err(e) => return Err(e),
             }
             input = next_input;
 
