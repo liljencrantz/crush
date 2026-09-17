@@ -1,10 +1,16 @@
 # Pattern matching and try/catch, used from inside expression mode (...). Neither match
-# nor try/catch is a grammar-level keyword like if/while/for -- both are plain commands
-# that take a value and one or more blocks, using Command mode's own space-separated
-# calling convention -- so using them *from* expression mode generally means wrapping
-# the call in $(...) (which always switches back to Command mode internally), exactly
-# like any other command. =~/!~ are the one exception: real expression-mode operators,
-# usable directly with no wrapping at all.
+# nor try/catch is a grammar-level keyword like if/while/for -- both are plain commands.
+# Like any command, they work directly in expression mode using its own `name(args)`
+# calling convention -- but that has to be used *consistently*: match's arms
+# (`case`/`any`/`is`/`default`) and try's literal `catch` clause are themselves plain
+# invocations read directly off the block's raw AST (see src/builtins/control/match.rs
+# and try.rs), so they need expression-mode call syntax too (`case(2, {...})`, not
+# command mode's bare `case 2 {...}`) -- see the "directly in expression mode" sections
+# below. Wrapping the call in $(...) (which always switches back to command mode) also
+# works and is often more convenient, e.g. because match communicates its result via
+# assignment inside each arm rather than a return value, which reads more naturally with
+# command mode's plain `case 2 {...}` -- see the "via $(...)" sections. =~/!~ are the
+# one true expression-mode operator here: usable directly with no wrapping at all.
 
 ## =~/!~ operators, native to expression mode
 
@@ -41,6 +47,33 @@ assert ($($describe 7) == "between 5 and 10") "match's any arm should fire for s
 assert ($($describe "hi") == "a string") "match's is arm should fire for a type pattern"
 assert ($($describe 100) == "something else") "match's default arm should fire when nothing else matches"
 
+## match, directly in expression mode -- no $(...) needed as long as match itself and
+## every arm use expression-mode call syntax throughout. Each arm's block can then be
+## the closure's implicit return value instead of needing the assignment-inside-arm
+## trick $describe above needed for command mode's plain `case 2 {...}` syntax.
+
+$describe2 := ({|$n| match($n, {
+    case(2, {"two"})
+    any($(seq 5 10), {"between 5 and 10"})
+    is($string, {"a string"})
+    default({"something else"})
+})})
+
+assert (($describe2(2)) == "two") "match's case arm should fire directly in expression mode"
+assert (($describe2(7)) == "between 5 and 10") "match's any arm should fire directly in expression mode"
+assert (($describe2("hi")) == "a string") "match's is arm should fire directly in expression mode"
+assert (($describe2(100)) == "something else") "match's default arm should fire directly in expression mode"
+
+# `is` with a glob pattern works too -- glob literals still don't parse directly in
+# expression mode (see docs/language_reference.md), so $(...) is needed for the glob
+# itself, but not for match.
+$describe_glob := ({|$n| match($n, {
+    is($(*.md), {"markdown"})
+    is($(*.txt), {"text"})
+    default({"other"})
+})})
+assert (($describe_glob("hello.txt")) == "text") "match's is arm should accept a glob directly in expression mode"
+
 ## Custom __is__ patterns, used from like/=~ inside expression mode
 
 $Even := $(class)
@@ -68,6 +101,26 @@ try {
     $caught_message = $e:message
 }
 assert ($caught_message == "invalid digit found in string") "catch should capture the real error message for a clean (non-operator) failure"
+
+## try/catch, directly in expression mode -- no $(...) needed. try's `catch` clause is
+## itself read off the raw AST as a literal bareword (see src/builtins/control/try.rs),
+## so it has to be passed as an explicit quoted string in expression-mode call syntax.
+
+$safe_result := ({
+    try({
+        match(42, {
+            case(1, {"wrong"})
+        })
+    }, "catch", {|$e| "recovered"})
+}())
+assert ($safe_result == "recovered") "try/catch should work directly in expression mode, including around a nested match"
+
+$unsafe_result := ({
+    try({
+        "no error here"
+    }, "catch", {|$e| "recovered"})
+}())
+assert ($unsafe_result == "no error here") "try directly in expression mode should return the body's own result when nothing fails"
 
 $destructure_ok := $false
 try {
