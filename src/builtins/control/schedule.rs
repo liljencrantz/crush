@@ -1,7 +1,7 @@
 use crate::data::table::ColumnType;
 use crate::lang::command::Command;
 use crate::lang::data::table::Row;
-use crate::lang::errors::{CrushResult, terminate};
+use crate::lang::errors::CrushResult;
 use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
 use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;

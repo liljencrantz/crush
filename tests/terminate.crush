@@ -25,10 +25,13 @@ crush:pause $job_id2
 $mid := $(time:now)
 assert (($mid - $start2) < $(duration:of seconds=2)) "crush:pause should stop a running sleep from completing at its original deadline"
 
-# Resuming a paused sleep ends the wait immediately rather than counting down the
-# remaining time -- the same semantics control:schedule's own internal sleep helper
-# already established for pause/resume, matched here for consistency.
+# Resuming a paused sleep continues counting down its remaining duration, rather than
+# ending the wait immediately -- the pause itself shouldn't shorten the sleep. The pause
+# above landed well within the first 2 of the original 5 seconds, so at least a few
+# seconds should still remain; a generous upper bound below just guards against resume
+# not working at all (waiting out the rest forever).
 crush:resume $job_id2
 $(fg $job_id2)
 $end2 := $(time:now)
-assert (($end2 - $mid) < $(duration:of seconds=2)) "crush:resume should let a paused sleep finish right away, not wait out the rest of its original duration"
+assert (($end2 - $mid) > $(duration:of seconds=1)) "crush:resume should let a paused sleep continue counting down its remaining duration, not finish immediately"
+assert (($end2 - $mid) < $(duration:of seconds=6)) "crush:resume should not wait any longer than the sleep's original total duration"
