@@ -25,7 +25,6 @@ use std::cmp::min;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{Ipv6Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
-use std::time::Duration;
 
 static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("identity", ValueType::String),
@@ -242,11 +241,16 @@ fn run_remote(
 
     // A plain channel.read_to_end() here would be uninterruptible, exactly like a plain
     // std::thread::sleep() would be in `sleep` (see the comment there) -- so register a
-    // controller and poll it the same way, reading in non-blocking chunks in between
-    // instead of one single blocking read call.
+    // controller and poll it the same way, reading in short-timeout chunks in between
+    // instead of one single blocking read call. Session::set_timeout bounds libssh2's
+    // own blocking wait for data (returning io::ErrorKind::TimedOut, not real failure,
+    // once it elapses with nothing read) -- simpler than flipping the session
+    // non-blocking and handling WouldBlock ourselves, since libssh2 still does the
+    // actual waiting.
+    const POLL_INTERVAL_MS: u32 = 50;
     let (control_sender, control_receiver) = bounded(1);
     command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
-    sess.set_blocking(false);
+    sess.set_timeout(POLL_INTERVAL_MS);
     let mut out_buf = Vec::new();
     let mut chunk = [0u8; 16384];
     loop {
@@ -257,10 +261,10 @@ fn run_remote(
                 }
             }
             Ok(n) => out_buf.extend_from_slice(&chunk[..n]),
-            Err(e) if e.kind() == ErrorKind::WouldBlock => {}
+            Err(e) if e.kind() == ErrorKind::TimedOut => {}
             Err(e) => return Err(e.into()),
         }
-        match control_receiver.recv_timeout(Duration::from_millis(50)) {
+        match control_receiver.try_recv() {
             Ok(StreamControlMessage::Terminate) => return terminate(),
             Ok(StreamControlMessage::Pause) => loop {
                 match control_receiver.recv() {
@@ -273,7 +277,7 @@ fn run_remote(
             Ok(StreamControlMessage::Resume) | Err(_) => {}
         }
     }
-    sess.set_blocking(true);
+    sess.set_timeout(0);
 
     let res = deserialize(&out_buf, env)?;
     channel.wait_close()?;
