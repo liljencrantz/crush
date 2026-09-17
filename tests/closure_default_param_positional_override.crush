@@ -1,0 +1,10 @@
+# Not an expression-mode bug -- reproduces identically in plain command-mode calls
+# (`$f 5 2`) -- but found while testing expression-mode closure signatures, so
+# recorded here rather than lost. A closure parameter with a default value can be
+# omitted, and can be overridden by name, but overriding it positionally (supplying
+# every parameter, including the defaulted one, as a plain unnamed argument) fails
+# with "Stray unnamed argument" instead of binding normally.
+
+$add := {|$x $y = 10| ($x + $y)}
+$result := $($add 5 2)
+assert ($result == 7) "a positional argument should be able to override a parameter's default value"

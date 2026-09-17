@@ -1,0 +1,44 @@
+# Coverage for the control-flow keywords that ARE wired into expression mode's own
+# grammar (ExprItem in src/lang/lalrparser.lalrpop): if/else, while, loop, break and
+# continue. `for` is deliberately not covered here -- it's currently broken in
+# expression mode, see tests/expr_mode_for.crush.
+
+$classify := {|$n| if ($n > 0) { "positive" } else { if ($n < 0) { "negative" } else { "zero" } } }
+assert (($classify(5)) == "positive") "if/else-if/else should chain correctly"
+assert (($classify(-5)) == "negative")
+assert (($classify(0)) == "zero")
+
+$while_sum := ({
+    $s := 0
+    $i := 0
+    while ($i < 5) {
+        $i = ($i + 1)
+        $s = ($s + $i)
+    }
+    $s
+}())
+assert ($while_sum == 15) "while should loop until its condition is false"
+
+$loop_sum := ({
+    $s := 0
+    $i := 0
+    loop {
+        $i = ($i + 1)
+        if ($i > 5) { break }
+        $s = ($s + $i)
+    }
+    $s
+}())
+assert ($loop_sum == 15) "loop should run until an explicit break"
+
+$continue_sum := ({
+    $s := 0
+    $i := 0
+    while ($i < 10) {
+        $i = ($i + 1)
+        if (($i:mod(2)) == 0) { continue }
+        $s = ($s + $i)
+    }
+    $s
+}())
+assert ($continue_sum == 25) "continue should skip straight to the next iteration (sum of odd 1..10)"

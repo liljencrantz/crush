@@ -1,0 +1,27 @@
+# Coverage for every operator listed in docs/language_reference.md's Operators table
+# that is actually wired into expression mode's grammar as a real operator. `not` is
+# deliberately excluded -- despite being listed in that table, it currently only works
+# as a plain command (`$(not $true)`), not as an expression-mode operator; see
+# tests/expr_mode_not_operator.crush.
+
+assert ((1 + 2) == 3) "+"
+assert ((5 - 2) == 3) "-"
+assert ((3 * 4) == 12) "*"
+assert ((7 / 2) == 3) "/ (truncating for two integers)"
+assert ((-5) == (0 - 5)) "unary -"
+
+assert ((4 > 3) == $true) ">"
+assert ((4 >= 4) == $true) ">="
+assert ((3 < 4) == $true) "<"
+assert ((3 <= 3) == $true) "<="
+assert ((3 == 3) == $true) "=="
+assert ((3 != 4) == $true) "!="
+
+assert (($true and $false) == $false) "and"
+assert (($true or $false) == $true) "or"
+assert ((!$true) == $false) "! (unary bang)"
+
+assert (("abc" =~ ^(a.c)) == $true) "=~"
+assert (("abc" !~ ^(xyz)) == $true) "!~"
+
+assert (($(typeof 5)) == $integer) "typeof, via $(...) -- typeof does NOT work as a bare expression-mode operator despite being listed in the Operators table; see tests/expr_mode_typeof_operator.crush"

@@ -1,0 +1,8 @@
+# docs/language_reference.md's Operators table lists `not` as an expression-mode
+# operator ("Logical negation. Also works as an ordinary command"), but the lexer
+# never special-cases the word "not" the way it does "and"/"or" -- it's only ever
+# registered as a plain builtin command (src/builtins/comp.rs), so `(not $true)`
+# fails to parse as an expression at all; only `$(not $true)` (a command
+# substitution) works.
+
+assert ((not $true) == $false) "not should work as a bare expression-mode operator, per the Operators table"
