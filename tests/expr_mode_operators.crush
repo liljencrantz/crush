@@ -1,26 +1,36 @@
+(
+
 # Coverage for every operator in docs/language_reference.md's Operators table. `not`
 # and `typeof` are intentionally not real expression-mode operators -- they're plain
 # commands (`$(not $true)`, `$(typeof 5)`) and stay that way; see below.
+#
+# The whole file is a single expression-mode block, opened by the `(` on the first
+# line and closed by the matching `)` on the last -- expression mode isn't limited to
+# one small `(...)` at a time, it can be the entire script. Every statement below is
+# therefore already an expression, so calls use expression mode's own `name(args)`
+# syntax throughout rather than command mode's space-separated form.
 
-assert ((1 + 2) == 3) "+"
-assert ((5 - 2) == 3) "-"
-assert ((3 * 4) == 12) "*"
-assert ((7 / 2) == 3) "/ (truncating for two integers)"
-assert ((-5) == (0 - 5)) "unary -"
+assert((1 + 2) == 3, "+")
+assert((5 - 2) == 3, "-")
+assert((3 * 4) == 12, "*")
+assert((7 / 2) == 3, "/ (truncating for two integers)")
+assert((-5) == (0 - 5), "unary -")
 
-assert ((4 > 3) == $true) ">"
-assert ((4 >= 4) == $true) ">="
-assert ((3 < 4) == $true) "<"
-assert ((3 <= 3) == $true) "<="
-assert ((3 == 3) == $true) "=="
-assert ((3 != 4) == $true) "!="
+assert((4 > 3) == $true, ">")
+assert((4 >= 4) == $true, ">=")
+assert((3 < 4) == $true, "<")
+assert((3 <= 3) == $true, "<=")
+assert((3 == 3) == $true, "==")
+assert((3 != 4) == $true, "!=")
 
-assert (($true and $false) == $false) "and"
-assert (($true or $false) == $true) "or"
-assert ((!$true) == $false) "! (unary bang)"
+assert(($true and $false) == $false, "and")
+assert(($true or $false) == $true, "or")
+assert((!$true) == $false, "! (unary bang)")
 
-assert (("abc" =~ ^(a.c)) == $true) "=~"
-assert (("abc" !~ ^(xyz)) == $true) "!~"
+assert(("abc" =~ ^(a.c)) == $true, "=~")
+assert(("abc" !~ ^(xyz)) == $true, "!~")
 
-assert (($(typeof 5)) == $integer) "typeof, as a plain command"
-assert (($(not $true)) == $false) "not, as a plain command"
+assert($(typeof 5) == $integer, "typeof, as a plain command")
+assert($(not $true) == $false, "not, as a plain command")
+
+)

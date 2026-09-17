@@ -1,35 +1,43 @@
+(
+
 # Coverage for closure parameter declarations, all wired into expression mode's own
-# ExprSignature/ExprParameter grammar. Each closure literal here is wrapped in an
-# extra pair of parens so its body parses in expression mode -- see
-# tests/expr_mode_closure_body.crush for the separate bug where that wrapping
-# shouldn't be necessary.
+# ExprSignature/ExprParameter grammar.
+#
+# The whole file is a single expression-mode block, opened by the `(` on the first
+# line and closed by the matching `)` on the last, so every closure literal below
+# already gets an expression-mode body without needing an extra wrapping pair of
+# parens (unlike at a command-mode top level, which is why other test files in this
+# directory write `({|$x| ...})` instead of just `{|$x| ...}`).
 
 # plain positional parameter
-$add_one := ({|$x| $x + 1})
-assert (($add_one(5)) == 6) "a plain positional parameter should bind by position"
+$add_one := {|$x| $x + 1}
+assert($add_one(5) == 6, "a plain positional parameter should bind by position")
 
 # multiple positional parameters, space separated in the signature
-$add := ({|$x $y| $x + $y})
-assert (($add(2, 3)) == 5) "multiple positional parameters should each bind in order"
+$add := {|$x $y| $x + $y}
+assert($add(2, 3) == 5, "multiple positional parameters should each bind in order")
 
-# a default value lets a parameter be omitted...
-$add_with_default := ({|$x $y = 10| $x + $y})
-assert (($add_with_default(5)) == 15) "an omitted parameter should fall back to its default"
-# ...but see tests/closure_default_param_positional_override.crush for a bug when a
-# defaulted parameter's value IS explicitly passed positionally.
+# a default value lets a parameter be omitted, but not overridden positionally
+# (deliberately, so it never ambiguously competes with a required parameter for the
+# same positional argument -- see tests/closure_arguments.crush)
+$add_with_default := {|$x $y = 10| $x + $y}
+assert($add_with_default(5) == 15, "an omitted parameter should fall back to its default")
+assert($add_with_default(5, y=2) == 7, "naming a defaulted parameter should override the default")
 
 # a type constraint on a parameter
-$double := ({|$x: $integer| $x * 2})
-assert (($double(21)) == 42) "a type-constrained parameter should still bind normally"
+$double := {|$x: $integer| $x * 2}
+assert($double(21) == 42, "a type-constrained parameter should still bind normally")
 
 # a doc string on a parameter (purely descriptive; shouldn't affect binding)
-$identity := ({|$x "the x param"| $x})
-assert (($identity(9)) == 9) "a parameter doc string should not affect how the parameter binds"
+$identity := {|$x "the x param"| $x}
+assert($identity(9) == 9, "a parameter doc string should not affect how the parameter binds")
 
 # @ collects stray unnamed arguments into a list
-$count_unnamed := ({|@ $rest| $rest:len()})
-assert (($count_unnamed(1, 2, 3)) == 3) "@ in a signature should collect stray unnamed arguments"
+$count_unnamed := {|@ $rest| $rest:len()}
+assert($count_unnamed(1, 2, 3) == 3, "@ in a signature should collect stray unnamed arguments")
 
 # @@ collects stray named arguments into a dict
-$count_named := ({|@@ $named| $named:len()})
-assert (($count_named(x=1, y=2)) == 2) "@@ in a signature should collect stray named arguments"
+$count_named := {|@@ $named| $named:len()}
+assert($count_named(x=1, y=2) == 2, "@@ in a signature should collect stray named arguments")
+
+)

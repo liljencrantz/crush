@@ -1,14 +1,22 @@
-# Coverage for the control-flow keywords that ARE wired into expression mode's own
-# grammar (ExprItem in src/lang/lalrparser.lalrpop): if/else, while, loop, break and
-# continue. `for` is deliberately not covered here -- it's currently broken in
-# expression mode, see tests/expr_mode_for.crush.
+(
+
+# Coverage for the control-flow keywords wired into expression mode's own grammar
+# (ExprItem in src/lang/lalrparser.lalrpop): if/else, while, loop, break, continue, and
+# for.
+#
+# The whole file is a single expression-mode block, opened by the `(` on the first
+# line and closed by the matching `)` on the last. Since every statement below is
+# already inside expression mode, a closure literal like `{...}` gets an expression-mode
+# body without needing an extra wrapping pair of parens the way it would at a
+# command-mode top level -- compare to how tests/expr_mode_for.crush (a command-mode
+# file) has to write `({|$n| ...}())` instead of just `{|$n| ...}()`.
 
 $classify := {|$n| if ($n > 0) { "positive" } else { if ($n < 0) { "negative" } else { "zero" } } }
-assert (($classify(5)) == "positive") "if/else-if/else should chain correctly"
-assert (($classify(-5)) == "negative")
-assert (($classify(0)) == "zero")
+assert($classify(5) == "positive", "if/else-if/else should chain correctly")
+assert($classify(-5) == "negative")
+assert($classify(0) == "zero")
 
-$while_sum := ({
+$while_sum := {
     $s := 0
     $i := 0
     while ($i < 5) {
@@ -16,10 +24,10 @@ $while_sum := ({
         $s = ($s + $i)
     }
     $s
-}())
-assert ($while_sum == 15) "while should loop until its condition is false"
+}()
+assert($while_sum == 15, "while should loop until its condition is false")
 
-$loop_sum := ({
+$loop_sum := {
     $s := 0
     $i := 0
     loop {
@@ -28,17 +36,28 @@ $loop_sum := ({
         $s = ($s + $i)
     }
     $s
-}())
-assert ($loop_sum == 15) "loop should run until an explicit break"
+}()
+assert($loop_sum == 15, "loop should run until an explicit break")
 
-$continue_sum := ({
+$continue_sum := {
     $s := 0
     $i := 0
     while ($i < 10) {
         $i = ($i + 1)
-        if (($i:mod(2)) == 0) { continue }
+        if ($i:mod(2) == 0) { continue }
         $s = ($s + $i)
     }
     $s
-}())
-assert ($continue_sum == 25) "continue should skip straight to the next iteration (sum of odd 1..10)"
+}()
+assert($continue_sum == 25, "continue should skip straight to the next iteration (sum of odd 1..10)")
+
+$for_sum := {
+    $s := 0
+    for $i = $(seq 1 5) {
+        $s = ($s + $i)
+    }
+    $s
+}()
+assert($for_sum == 10, "for should work directly in expression mode too (seq's upper bound is exclusive: 1+2+3+4)")
+
+)
