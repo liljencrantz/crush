@@ -83,6 +83,29 @@ assert ($($lf xs=1 xs=2 xs=3) == $(list:of 1 2 3)) \
 assert ($($lf xs=$(list:of 5 6) xs=7) == $(list:of 5 6 7)) \
     "passing a list value to a list-typed named argument should append its elements, not nest the list itself"
 
+## Wrong-type errors. A missing/stray/unknown *count* mismatch is covered above; these
+## are the type-checking branches of the same push_arguments_to_env (closure.rs), each
+## with its own distinct message: a plain positional parameter given a value of the
+## wrong type, a list-typed named parameter given a single value of the wrong element
+## type, and a list-typed named parameter given a whole list whose element type doesn't
+## match.
+
+$typed := {|$n: $integer| $n}
+$wrong_positional := ""
+try { $typed "not an integer" } catch { |$e| $wrong_positional = $e:message }
+assert ($wrong_positional == "`typed`: Wrong type `string` for argument `n`, expected `integer`.") \
+    "a positional argument of the wrong type should name both the expected and actual type"
+
+$wrong_named_scalar := ""
+try { $lf xs="not an integer" } catch { |$e| $wrong_named_scalar = $e:message }
+assert ($wrong_named_scalar == "`lf`: Wrong type for argument `xs`, expected `integer`, got `string`.") \
+    "a single value of the wrong type passed to a list-typed named argument should error, not silently coerce or nest"
+
+$wrong_named_list := ""
+try { $lf xs=$(list:of "a" "b") } catch { |$e| $wrong_named_list = $e:message }
+assert ($wrong_named_list == "`lf`: List of elements of type `string` can't be inserted into list of type `integer`.") \
+    "a whole list of the wrong element type passed to a list-typed named argument should error the same way a single wrong-typed value does"
+
 ## Serializing a closure that uses collectors and a default should preserve all of that
 ## behavior across the pup round trip -- Command values have no meaningful `==`, so
 ## compare behavior instead of identity, same as the plain-closure check in

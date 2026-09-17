@@ -110,9 +110,35 @@ for t=$all_types {
 }
 $_barrier2 := "x"
 
+# `help` on a builtin command exercises `impl Help for` whatever Rust type backs it --
+# never `impl Help for Closure` (src/lang/command/closure.rs), a separate implementation
+# that reads from a closure's own parsed signature instead of a #[signature(...)]
+# macro's static metadata: ClosureType::Command's completion_data/signature/short_help/
+# long_help/name accessors, and the code that assembles a closure's long_help string out
+# of its parameters' individual doc strings plus any long_help=/example= meta
+# annotations in its signature. A user-defined closure with a rich signature is the only
+# way to reach any of that, so build one here and run it through the same check_help
+# used above. Like every other check_help call, this only proves rendering completes
+# without crashing and produces non-empty output -- not what the text says, which is
+# free to change without this test needing to change with it.
+$rich_help_closure := {
+    |
+    $x:$integer=1 "the x parameter, has a default and a doc string"
+    $y:$integer=$(seq 1 2 | count) "the y parameter, defaults via a job substitution rather than a literal"
+    $z "a plain required parameter with no type and no default"
+    @ $rest "collects extra unnamed arguments"
+    @@ $extra "collects extra named arguments"
+    long_help="A closure built solely to exercise the closure-specific half of help rendering."
+    example="rich_help_closure 5 6 7 z=9"
+    |
+    struct:of x=$x y=$y z=$z rest=$rest extra=$extra
+}
+check_help $rich_help_closure "user-defined closure with a full signature"
+$_barrier3 := "x"
+
 for f=$failed {
     echo $f
 }
 assert ($($failed:len) == 0)
 assert ($command_count > 0)
-assert ($($checked:len) == $command_count + $($all_types:len))
+assert ($($checked:len) == $command_count + $($all_types:len) + 1)

@@ -15,6 +15,31 @@ var:unset a b fff
 # Deserialize the closure and check that the variables still exists.
 $(pup:from ./.test_file) c=3 {echo 1}
 
+# The closure above only exercises a plain defaulted parameter and an unnamed one --
+# pup:to's own ClosureDefinition serializer (src/lang/command/closure.rs) has separate
+# match arms for every ParameterDefinition variant (Normal/Named/Unnamed/Meta), for a
+# parameter's optional doc string, and for a default value that is itself a job
+# substitution rather than a literal, none of which the closure above ever reaches. This
+# one is built specifically to touch all of it in a single signature.
+$rich := {
+    |
+    $x:$integer=1 "the x parameter, has a default and a doc string"
+    $y:$integer=$(seq 1 2 | count) "the y parameter, defaults via a job substitution rather than a literal"
+    $z "a plain required parameter with no type and no default"
+    @ $rest "collects extra unnamed arguments"
+    @@ $extra "collects extra named arguments"
+    long_help="A closure exercising every corner of the pup wire format for a closure's own definition: parameter defaults (including one computed via a job substitution), per-parameter docs, named/unnamed collectors, and key=\"value\" meta annotations like this one."
+    example="rich 5 6 7 z=9"
+    |
+    struct:of x=$x y=$y z=$z rest=$rest extra=$extra
+}
+$rich_before := $($rich 5 z=9 6 7 w=10)
+val $rich | pup:to ./.test_file
+$restored_rich := $(pup:from ./.test_file)
+$rich_after := $($restored_rich 5 z=9 6 7 w=10)
+assert ($rich_before == $rich_after) \
+    "a closure with a full signature (defaults incl. a job-substitution default, per-parameter docs, named/unnamed collectors, and meta annotations) should behave identically after a pup round trip"
+
 # Round-trip one example of every serializable internal type. This is a completeness
 # check as much as a correctness one -- see src/lang/value/mod.rs's own
 # value_variants_are_all_accounted_for_in_serialization_crush Rust test, an exhaustive
