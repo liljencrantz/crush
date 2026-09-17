@@ -1,10 +1,9 @@
 # `for` in expression mode desugars (see Node::for_expr in src/lang/ast/node.rs) into a
 # call to global:control:for with a named argument binding the loop variable -- the
-# expression-mode equivalent of command mode's `for i=$(seq 1 5) {...}`. But the
-# desugaring builds that named argument's target as a Node::Identifier (the `$i` form),
-# while argument compilation only accepts a bare Node::String as a named argument's
-# name -- so a `for` loop written in expression mode currently fails to even compile,
-# regardless of whether the loop variable is spelled `$i` or `i` in the source.
+# expression-mode equivalent of command mode's `for i=$(seq 1 5) {...}`. The loop
+# variable is written with a `$` sigil (the grammar requires an Identifier token
+# there), which for_expr strips before building the named argument's target, mirroring
+# how Node::identifier() strips it elsewhere.
 
 $total := ({
     $sum := 0
@@ -13,4 +12,4 @@ $total := ({
     }
     $sum
 }())
-assert ($total == 15) "for loops should work inside expression mode"
+assert ($total == 10) "for loops should work inside expression mode (seq's upper bound is exclusive: 1+2+3+4)"

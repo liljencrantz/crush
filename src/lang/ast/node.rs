@@ -683,13 +683,23 @@ impl Node {
         body: JobListNode,
     ) -> Box<Node> {
         let location = for_location.union(body.location);
+        // The loop variable's name becomes the *name* of a named argument
+        // (`name=stream`, see src/builtins/control/for.rs), which argument
+        // compilation only accepts as a bare `Node::String`, not a
+        // `Node::Identifier` -- so the `$` sigil the grammar's `Identifier`
+        // token carries has to be stripped here, mirroring `Node::identifier`.
+        let name = if id.string.starts_with('$') {
+            id.slice_to_end(1)
+        } else {
+            id
+        };
         Box::from(Node::Substitution(
             JobNode {
                 commands: vec![CommandNode {
                     expressions: vec![
                         Self::get_attr(&["global", "control", "for"], for_location),
                         Node::Assignment {
-                            target: Box::from(Node::Identifier(id)),
+                            target: Node::unquoted_string(name),
                             style: SwitchStyle::None,
                             operation: "=".to_string(),
                             value: iter,
