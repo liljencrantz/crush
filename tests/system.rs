@@ -230,4 +230,73 @@ fn stop_test_servers() {
     }
 }
 
+// Deliberately not tests/<name>.crush + test_finder!()'s auto-discovery: that mechanism
+// has no timeout, and this script currently hangs forever (see the script's own header
+// comment for the root cause). It lives in tests/fixtures/ specifically because
+// test_finder only reads direct entries of tests/ (fs::read_dir, not recursive), so a
+// subdirectory is invisible to it -- this test is the only thing that runs the script.
+//
+// Runs it under an explicit deadline instead of a plain run_system_test call, so a
+// regression here fails this test with a clear message rather than hanging `cargo test`
+// (and CI) forever.
+#[test]
+fn test_join_large_stream_does_not_deadlock() {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_crush"))
+        .arg("tests/fixtures/join_large_stream_deadlock.crush")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("failed to start crush");
+
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
+    let status = loop {
+        match child.try_wait().expect("failed to poll child") {
+            Some(status) => break status,
+            None if std::time::Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                panic!(
+                    "crush did not finish tests/fixtures/join_large_stream_deadlock.crush \
+                     within 30s -- this is the streamed-value-capture deadlock described in \
+                     that script's header comment, not a slow machine"
+                );
+            }
+        }
+    };
+
+    // try_wait() has already reaped the child above -- calling wait()/wait_with_output()
+    // again here would error, so the pipes are drained directly instead.
+    use std::io::Read;
+    let mut stdout = String::new();
+    child
+        .stdout
+        .take()
+        .expect("stdout was piped")
+        .read_to_string(&mut stdout)
+        .expect("failed to read crush's stdout");
+    let mut stderr = String::new();
+    child
+        .stderr
+        .take()
+        .expect("stderr was piped")
+        .read_to_string(&mut stderr)
+        .expect("failed to read crush's stderr");
+
+    assert!(
+        status.success(),
+        "crush exited with {:?}.\nStdout:\n{}\nStderr:\n{}",
+        status.code(),
+        stdout,
+        stderr,
+    );
+    assert_eq!(
+        stdout.trim(),
+        "ok",
+        "unexpected output; the script's own assert calls should have already caught a wrong join result"
+    );
+}
+
 test_finder!();
