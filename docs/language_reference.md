@@ -162,8 +162,6 @@ better as symbols than as commands. Grouped roughly by precedence, highest first
 | `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`  | True/false if the left value matches the right-hand pattern        |
 | `+` `-`                     | `1 + 1`, `-5`         | Addition, subtraction, and unary negation                          |
 | `*` `/`                     | `5 * 5`, `7 / 2`      | Multiplication and division (truncating for two integers)          |
-| `typeof`                    | `typeof $foo`         | The type of a value                                                |
-| `not`                       | `not $true`           | Logical negation. Also works as an ordinary command                |
 | `@` `@@`                    | see below             | Argument/parameter list spreading                                  |
 
 There's no modulo/remainder *operator* -- use the `mod` (least positive residue) or

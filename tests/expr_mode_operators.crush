@@ -1,8 +1,6 @@
-# Coverage for every operator listed in docs/language_reference.md's Operators table
-# that is actually wired into expression mode's grammar as a real operator. `not` is
-# deliberately excluded -- despite being listed in that table, it currently only works
-# as a plain command (`$(not $true)`), not as an expression-mode operator; see
-# tests/expr_mode_not_operator.crush.
+# Coverage for every operator in docs/language_reference.md's Operators table. `not`
+# and `typeof` are intentionally not real expression-mode operators -- they're plain
+# commands (`$(not $true)`, `$(typeof 5)`) and stay that way; see below.
 
 assert ((1 + 2) == 3) "+"
 assert ((5 - 2) == 3) "-"
@@ -24,4 +22,5 @@ assert ((!$true) == $false) "! (unary bang)"
 assert (("abc" =~ ^(a.c)) == $true) "=~"
 assert (("abc" !~ ^(xyz)) == $true) "!~"
 
-assert (($(typeof 5)) == $integer) "typeof, via $(...) -- typeof does NOT work as a bare expression-mode operator despite being listed in the Operators table; see tests/expr_mode_typeof_operator.crush"
+assert (($(typeof 5)) == $integer) "typeof, as a plain command"
+assert (($(not $true)) == $false) "not, as a plain command"
