@@ -6,7 +6,7 @@
 # in extra parens.
 
 $total := ({
-    [$a $b] := $(list:of 1 2)
+    [$a, $b] := $(list:of 1 2)
     $a + $b
 }())
 assert ($total == 3) "destructuring assignment should work inside expression mode"
