@@ -1,0 +1,12 @@
+# Destructuring assignment (`[$a $b] := ...`) only has a grammar production as a
+# command-mode top-level statement (see the `GetItemStart <targets: DestructureTargetList>
+# GetItemEnd ... AssignmentOperator ...` alternative under `Command` in
+# src/lang/lalrparser.lalrpop) -- there is no equivalent alternative under `Expr`/`ExprItem`,
+# so destructuring assignment can't be used inside expression mode at all, even wrapped
+# in extra parens.
+
+$total := ({
+    [$a $b] := $(list:of 1 2)
+    $a + $b
+}())
+assert ($total == 3) "destructuring assignment should work inside expression mode"
