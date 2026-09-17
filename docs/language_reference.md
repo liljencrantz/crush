@@ -567,6 +567,28 @@ string, when known -- empty otherwise). Either way, the error does not propagate
 past `try` -- with no `catch` at all, `try` just recovers silently, equivalent to
 an empty `catch`.
 
+A `catch` can filter which errors it handles, and several can be chained onto one
+`try` to handle different errors differently -- each `catch` after the first takes an
+optional pattern (a string, glob, or regex -- anything implementing `__is__`, the same
+mechanism `like`/`=~`/`match`'s `is` arm use) matched against the error's `type`:
+
+```shell script
+try {
+    risky:command
+} catch ^(Serde.*) {
+    |$e| echo ("Serialization error: {}":format($e:message))
+} catch Dns* {
+    |$e| echo ("DNS error: {}":format($e:message))
+} catch {
+    |$e| echo ("Something else went wrong: {}":format($e:message))
+}
+```
+
+Clauses are tried in order; the first whose pattern matches (or that has no pattern at
+all) runs, and the rest are skipped. If no clause's pattern matches, the error
+propagates past `try` normally, exactly as if none of its clauses could ever have
+applied to it.
+
 `try`/`catch` also works directly in expression mode, with the exact same syntax:
 
 ```shell script

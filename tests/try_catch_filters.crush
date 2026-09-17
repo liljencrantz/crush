@@ -1,0 +1,101 @@
+# Coverage for catch's optional filter and for chaining multiple catch clauses onto a
+# single try (src/builtins/control/try.rs), in command mode. See
+# tests/expr_mode_try_catch.crush for the same coverage directly in expression mode.
+
+## A bare, filter-less catch still works exactly as before.
+
+$plain := "unset"
+try {
+    convert $integer "notanumber"
+} catch {
+    |$e| $plain = $e:message
+}
+assert ($plain == "invalid digit found in string") "a catch with no filter should still catch everything, as before"
+
+## A filter picks which of several catch clauses runs, by matching the error's `type`.
+
+$picked := "unset"
+try {
+    throw "DnsTimeout" "no response"
+} catch ^(Serde) {
+    |$e| $picked = "serde"
+} catch Dns* {
+    |$e| $picked = "dns"
+} catch {
+    |$e| $picked = "other"
+}
+assert ($picked == "dns") "the first catch clause whose filter matches the error type should run"
+
+$picked2 := "unset"
+try {
+    throw "SerdeJsonError" "bad json"
+} catch ^(Serde) {
+    |$e| $picked2 = "serde"
+} catch Dns* {
+    |$e| $picked2 = "dns"
+}
+assert ($picked2 == "serde") "clauses are tried in order -- the first matching one wins, not the most specific one"
+
+## A plain string filter does an exact match, not a substring search.
+
+$string_filter := "unset"
+try {
+    throw "NotFound" "no such user"
+} catch "NotFound" {
+    |$e| $string_filter = "matched"
+}
+assert ($string_filter == "matched") "a plain string filter should exact-match the error type"
+
+$string_no_match := "unset"
+try {
+    throw "NotFoundError" "no such user"
+} catch "NotFound" {
+    |$e| $string_no_match = "matched"
+} catch {
+    |$e| $string_no_match = "fell through to catch-all"
+}
+assert ($string_no_match == "fell through to catch-all") "a plain string filter should not substring-match the error type"
+
+## If no clause's filter matches, the error propagates, same as if try had no catch
+## clauses that could ever apply.
+
+$propagated := $false
+try {
+    try {
+        throw "HttpError" "boom"
+    } catch ^(Serde) {
+        |$e| "wrong"
+    } catch Dns* {
+        |$e| "wrong"
+    }
+} catch {
+    |$e| $propagated = ($e:message == "boom")
+}
+assert $propagated "an error matching no catch clause's filter should propagate past try, not be silently swallowed"
+
+## A filter can be a variable holding a pattern, not just a literal.
+
+$pattern := ^(Dns)
+$via_variable := "unset"
+try {
+    throw "DnsTimeout" "boom"
+} catch $pattern {
+    |$e| $via_variable = "matched"
+}
+assert ($via_variable == "matched") "a catch filter can be a variable holding a pattern value"
+
+## Syntax errors in the catch clause list are reported clearly.
+
+$bad_keyword_errored := $false
+try {
+    try {
+        "no error"
+    } wat {
+        |$e| "x"
+    }
+} catch {
+    |$e| $bad_keyword_errored = $true
+}
+assert $bad_keyword_errored "a clause keyword other than `catch` should error clearly"
+
+echo "try/catch filter tests ok"

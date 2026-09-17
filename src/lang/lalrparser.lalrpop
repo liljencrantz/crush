@@ -143,7 +143,7 @@ ExprItem: Box<Node> = {
     <key:Loop> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::loop_expr(key, body),
     <key:For> <id:Identifier> Equals <iter:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::for_expr(key, id.into(), iter, body),
     <key:Match> <subject:Expr> Separators? BlockStart Separators? <arms: MatchArmList> BlockEnd <r: @R> => Node::match_expr(key, subject, arms, Location::from(r)),
-    <key:Try> <body: ExprClosureLiteral> <catch: TryOptCatch> <r: @R> => Node::try_expr(key, body, catch, Location::from(r)),
+    <key:Try> <body: ExprClosureLiteral> <catches: TryCatchList> <r: @R> => Node::try_expr(key, body, catches, Location::from(r)),
     <i: ExprItem> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: ExprItem> MemberOperator <l: String> => Box::from(Node::GetAttr(i, l.into())),
     GetItemStart <l: ExprJobList> GetItemEnd => Node::list_literal(l),
@@ -202,9 +202,33 @@ MatchArm: MatchArmNode = {
         MatchArmNode { keyword: TrackedString::new("default", kw), value: None, body, location: Location::new(l, r) },
 }
 
-TryOptCatch: Option<Box<Node>> = {
+// Zero or more `catch <filter>? {...}` clauses following a try's body.
+TryCatchList: Vec<(Option<Box<Node>>, Box<Node>)> = {
+    => vec![],
+    <mut l: TryCatchList> Catch <filter: TryOptFilter> <c: ExprClosureLiteral> => {
+        l.push((filter, c));
+        l
+    },
+}
+
+TryOptFilter: Option<Box<Node>> = {
     => None,
-    Catch <c: ExprClosureLiteral> => Some(c),
+    <f: TryFilter> => Some(f),
+}
+
+// Deliberately not full Expr/ExprItem: a filter's value never needs to be a bare
+// closure literal, and if it could be, `Catch <filter>? {...}` would be ambiguous
+// right after `Catch` the same way an omitted match arm value used to be (see
+// ExprClosureLiteral/DefaultArm above) -- a BlockStart here unambiguously means "no
+// filter, this is the catch block" instead. A filter needing anything more elaborate
+// than these can still be wrapped in `(...)`, which is itself one of the alternatives.
+TryFilter: Box<Node> = {
+    <l: Regex> => Node::regex(l),
+    <s: QuotedString> => Node::quoted_string(s),
+    <s: String> => Node::unquoted_string(s),
+    <l: Identifier> => Node::identifier(l),
+    SubStart <j: Job> SubEnd => Box::from(Node::Substitution(j.into())),
+    ExprModeStart <e: Expr> SubEnd => e,
 }
 
 ExprOptParamList: Option<Vec<Node>> = {

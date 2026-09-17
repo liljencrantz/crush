@@ -793,7 +793,7 @@ impl Node {
     pub fn try_expr(
         try_location: Location,
         body: Box<Node>,
-        catch: Option<Box<Node>>,
+        catches: Vec<(Option<Box<Node>>, Box<Node>)>,
         end_location: Location,
     ) -> Box<Node> {
         let location = try_location.union(end_location);
@@ -801,11 +801,14 @@ impl Node {
             Self::get_attr(&["global", "control", "try"], try_location),
             *body,
         ];
-        if let Some(catch_closure) = catch {
+        for (filter, catch_closure) in catches {
             expressions.push(*Node::unquoted_string(TrackedString::new(
                 "catch",
                 try_location,
             )));
+            if let Some(filter) = filter {
+                expressions.push(*filter);
+            }
             expressions.push(*catch_closure);
         }
         Box::from(Node::Substitution(

@@ -34,3 +34,36 @@ assert ($rethrown == "StillBad: invalid digit found in string") "a catch clause 
 # a catch clause with no parameters is valid too, just like command mode
 $no_param_catch := (try { convert($integer, "notanumber") } catch {"caught, no param needed"})
 assert ($no_param_catch == "caught, no param needed") "a catch clause shouldn't need to declare a parameter for the error"
+
+## Filtered and chained catch clauses -- same feature as command mode's
+## tests/try_catch_filters.crush, exercised directly in expression mode.
+
+$picked := (try {
+    throw("DnsTimeout", "no response")
+} catch ^(Serde) {|$e| "serde"} catch $(Dns*) {|$e| "dns"} catch {|$e| "other"})
+assert ($picked == "dns") "the first catch clause whose filter matches the error type should run, in expression mode too"
+
+$picked_first := (try {
+    throw("SerdeJsonError", "bad json")
+} catch ^(Serde) {|$e| "serde"} catch $(Dns*) {|$e| "dns"})
+assert ($picked_first == "serde") "clauses should be tried in order in expression mode too"
+
+$string_filter := (try {
+    throw("NotFound", "no such user")
+} catch "NotFound" {|$e| "matched"})
+assert ($string_filter == "matched") "a plain string filter should exact-match the error type in expression mode too"
+
+# a filter can be any expression that evaluates to a pattern -- here, a variable
+$pattern := ^(Dns)
+$via_variable := (try {
+    throw("DnsTimeout", "boom")
+} catch $pattern {|$e| "matched via variable"})
+assert ($via_variable == "matched via variable") "a catch filter can be a variable holding a pattern, in expression mode too"
+
+# no clause matches -> propagates to an outer try/catch, same as command mode
+$propagated := (try {
+    try {
+        throw("HttpError", "boom")
+    } catch ^(Serde) {|$e| "wrong"} catch $(Dns*) {|$e| "wrong"}
+} catch {|$e| "{}: {}":format($e:type, $e:message)})
+assert ($propagated == "HttpError: boom") "an error matching no catch clause's filter should propagate past try in expression mode too"
