@@ -185,6 +185,8 @@ ExprParam: Box<Node> = {
     ExprLogical,
     <i: String> <op: Equals> <e: ExprLogical> =>
         Box::from(Node::Assignment{target: Node::unquoted_string(i), style: SwitchStyle::None, operation: "=".to_string(), value: e}),
+    <op:Unnamed> <u: ExprUnary> => Box::from(Node::Unary(TrackedString::new("@", op), u)),
+    <op:Named>   <u: ExprUnary> => Box::from(Node::Unary(TrackedString::new("@@", op), u)),
 }
 
 
