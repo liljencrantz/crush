@@ -1,9 +1,10 @@
-# Destructuring assignment (`[$a $b] := ...`) only has a grammar production as a
-# command-mode top-level statement (see the `GetItemStart <targets: DestructureTargetList>
-# GetItemEnd ... AssignmentOperator ...` alternative under `Command` in
-# src/lang/lalrparser.lalrpop) -- there is no equivalent alternative under `Expr`/`ExprItem`,
-# so destructuring assignment can't be used inside expression mode at all, even wrapped
-# in extra parens.
+# Destructuring assignment works in expression mode, but not via a dedicated grammar
+# production the way command mode has one (`[$a $b] := ...`, space separated). Instead
+# expression mode reuses the ordinary list-literal syntax (see Node::list_literal in
+# src/lang/ast/node.rs, which always builds a Node::Destructure regardless of whether
+# it ends up used as a value or as an assignment target) as the destructuring target,
+# so its elements need to be comma separated like any other list literal: `[$a, $b]`,
+# not `[$a $b]`.
 
 $total := ({
     [$a, $b] := $(list:of 1 2)
