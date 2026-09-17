@@ -74,7 +74,7 @@ fn get_output_type(
     stream.join,
     output = Unknown,
     short = "Join two streams together on the specified keys.",
-    example = "join user=(files) name=(user:list)")]
+    example = "join user=$(files) name=$(users:list)")]
 #[allow(unused)]
 pub struct Join {
     #[named()]

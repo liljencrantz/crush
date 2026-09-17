@@ -42,20 +42,159 @@ two leading dashes, like `--foo` or `-foo`, is equivalent to `foo=$true`.
 ## Jobs and pipelines
 
 Commands accept a single value as their input and produce a single value as their
-output, in addition to their arguments. The input and output of a command are connected
-via a pipeline:
+output, in addition to their arguments. The output of one command becomes the input for
+the next command in a pipeline:
 
 ```shell script
 host:procs | sort cpu
 ```
 
-Many commands consume and produce table streams as input and output. These commands run
-concurrently, so the whole result need not be produced before the next step in the
-pipeline begins work (see [Streams](#streams) below).
+Many commands consume and produce table streams as input and output. Table streams are
+transmitted one row at a time, meaning that as soon as the first row of output is 
+produced by one command, the next command can begin processing it. This means that
+compute constrained pipelines are processed concurrently by at least as many CPU 
+cores as there are pipeline steps.
 
 The separation of concerns between arguments and input/output is that arguments
 configure *how* data should be processed, while the input is the data to process and
 the output is where the processed data ends up.
+
+## Streams
+
+### Processing streams
+
+The point of having almost everything in Crush be a table stream is that crush can
+provide you with a set of tools to manipulate these streams. These tools work the same
+on any type of stream. Here are the most important stream manipulation commands:
+
+#### head
+
+Passes through a set number of rows from the start of the stream and truncates the rest.
+
+```
+# Show the first ten lines of README.md
+lines:from README.md | head
+```
+
+#### tail
+
+Passes through a set number of rows from the end of the stream and skips the rest.
+
+```
+# Show the last ten lines of README.md
+lines:from README.md | tail
+```
+
+#### sort
+
+Sorts the stream on the specified column. 
+
+```
+# Sort the files of the current working directory by size
+files | sort size
+```
+
+#### where
+
+Only passes through rows where a given condition holds true.
+
+```
+# Show all subdirectories of current directory
+files | where {eq $type directory}
+```
+
+#### select
+
+Passes on some columns unchanged, and can add new ones computed from the others.
+
+```
+# Show only the file names, discarding every other column
+files | select file
+```
+
+#### group
+
+Groups rows that share the same value in one or more columns into a single output row
+per group, aggregating the rest of each group's rows with the given command(s).
+
+```
+# Count how many files and how many directories are in the current directory
+files | group type count={count}
+```
+
+#### count
+
+Counts the number of rows in the input.
+
+```
+# Count the number of files in the current directory
+files | count
+```
+
+#### uniq
+
+Passes through only the first row for each distinct value of the specified column,
+dropping every later row that repeats it.
+
+```
+# List one file of each type (file, directory, ...) found in the current directory
+files | uniq type
+```
+
+#### join
+
+Joins two streams together on a shared key column, producing one output row for every
+matching pair.
+
+```
+# Join two small tables together on their shared id column
+$fruit := $(csv:from "1,apple\n2,pear\n" id=$integer name=$string)
+$stock := $(csv:from "1,5\n2,3\n" id=$integer count=$integer)
+join id=$fruit id=$stock
+```
+
+#### More stream commands
+
+All stream manipulation commands in crush live in the `$stream` namespace. 
+To see them all, start crush and write `help $stream`. For help on an individual
+stream command, like `seq`, write `help $seq`.
+
+### Semi-lazy stream evaluation
+
+Assigning the output of a streaming command to a variable stores a `table_input_stream`,
+not the data itself:
+
+```shell script
+crush# $all_the_files := $(files --recurse /)
+```
+
+Control returns immediately -- `files` only produces output as its stream buffer is
+consumed. Reading the variable (`$all_the_files`) drains the whole stream at once;
+piping it through `head 1` consumes exactly one row, and can be re-run until the stream
+is empty.
+
+### Materialized data
+
+A `table_input_stream` (or `binary_stream`) can only be traversed once -- reading it a
+second time produces nothing. This is often what you want: it lets a pipeline work on
+data sets larger than memory, and lets different stages of a pipeline run concurrently.
+But sometimes you want to read the same data more than once. `materialize` converts a
+value's transient (stream) components into their reusable equivalents (`table_input_stream`
+into `table`, `binary_stream` into `binary`), recursively:
+
+```shell script
+crush# $f := $(files)
+crush# $f
+... (rows printed) ...
+crush# $f
+crush#                      # nothing -- already consumed
+
+crush# $m := $(files | materialize)
+crush# $m
+... (rows printed) ...
+crush# $m
+... (same rows printed again) ...
+```
 
 ## Literals
 
@@ -85,6 +224,87 @@ a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
 respectively -- e.g. `5s` is exactly `duration:of seconds=5`. There's no literal syntax
 for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
 duration values instead, e.g. `1h + 30m`.
+
+## Command substitutions
+
+To use the output of one command as an *argument* to another (rather than as its input),
+put the command inside dollar-parentheses (`$()`):
+
+```shell script
+"Hello, {name}":format name=$(users:me:name)
+```
+
+If the substituted command produces a stream, the outer command runs concurrently with
+it and may finish first. This example creates a table stream and assigns it to a
+variable without consuming it -- the `files` command blocks once its output buffer fills,
+since nothing is reading from it yet:
+
+```shell script
+$all_the_files := $(files --recurse /)
+$all_the_files | head 1
+```
+
+## Crush types
+
+Crush values are typed. Most commands operate on streams of tabular data, where each
+cell can be any of these types:
+
+* `list`, a mutable list of items, usually of one type,
+* `dict`, a mutable mapping between a pair of types (not every type can be a key),
+* `string`, `glob`, `re`, `file`, `binary` -- see `help $string` for how these five
+  "sequence of stuff" types relate to and differ from each other,
+* `bool`, `integer`, `float`,
+* `struct`, a mapping from name to value with a fixed set of fields,
+* `table`, essentially a list where every element is a struct with the same fields,
+* `table_input_stream`/`table_output_stream`, like a table but can only be traversed
+  once (see [Streams](#streams) below),
+* `binary_stream`, like `binary` but can only be traversed once,
+* `type`, and
+* `command`, either a closure or a builtin.
+
+`help $<type>` (e.g. `help $list`, `help $time`) documents each type's own creation syntax,
+mutability, and related types in more depth than fits here.
+
+### Creating custom types
+
+Use `struct:of` for a simple, immutable, ad-hoc mapping of names to values:
+
+```shell script
+crush# $p := $(struct:of x=1 y=2)
+crush# $p:x
+1
+```
+
+Use `class` to define a real type with methods and (optionally) inheritance:
+
+```shell script
+$Point := $(class)
+
+$Point:__init__ = {
+    |$x:$float $y:$float|
+    $this:x = $x
+    $this:y = $y
+}
+
+$Point:len = {
+    ||
+    math:sqrt (($this:x * $this:x) + ($this:y * $this:y))
+}
+
+$Point:__add__ = {
+    |$other|
+    Point:new x=($this:x + $other:x) y=($this:y + $other:y)
+}
+
+$p := $(Point:new x=1.0 y=2.0)
+$p:len
+```
+
+`class` creates a struct with a `new` method; calling `new` creates an instance and
+calls `__init__` (if defined), passing along any arguments. Add methods by assigning to
+the class; add instance fields by assigning to `$this` inside `__init__`. Pass a parent
+class to `class` for single inheritance.
+
 
 ## Expression mode
 
@@ -325,25 +545,6 @@ like 4 $even   # true
 like 5 $even   # false
 ```
 
-## Command substitutions
-
-To use the output of one command as an *argument* to another (rather than as its input),
-put the command inside dollar-parentheses (`$()`):
-
-```shell script
-"Hello, {name}":format name=$(users:me:name)
-```
-
-If the substituted command produces a stream, the outer command runs concurrently with
-it and may finish first. This example creates a table stream and assigns it to a
-variable without consuming it -- the `files` command blocks once its output buffer fills,
-since nothing is reading from it yet:
-
-```shell script
-$all_the_files := $(files --recurse /)
-$all_the_files | head 1
-```
-
 ### Assignment takes exactly one value
 
 `:=` and `=` each take exactly one value on the right-hand side. A single token -- a
@@ -434,67 +635,6 @@ Error: Unknown command name `sqrt`
 just the current one.
 
 A variable name starting with `__` is reserved for Crush's own internal use.
-
-## The type system
-
-Crush values are typed. Most commands operate on streams of tabular data, where each
-cell can be any of these types:
-
-* `list`, a mutable list of items, usually of one type,
-* `dict`, a mutable mapping between a pair of types (not every type can be a key),
-* `string`, `glob`, `re`, `file`, `binary` -- see `help $string` for how these five
-  "sequence of stuff" types relate to and differ from each other,
-* `bool`, `integer`, `float`,
-* `struct`, a mapping from name to value with a fixed set of fields,
-* `table`, essentially a list where every element is a struct with the same fields,
-* `table_input_stream`/`table_output_stream`, like a table but can only be traversed
-  once (see [Streams](#streams) below),
-* `binary_stream`, like `binary` but can only be traversed once,
-* `type`, and
-* `command`, either a closure or a builtin.
-
-`help $<type>` (e.g. `help $list`, `help $time`) documents each type's own creation syntax,
-mutability, and related types in more depth than fits here.
-
-### Creating custom types
-
-Use `struct:of` for a simple, immutable, ad-hoc mapping of names to values:
-
-```shell script
-crush# $p := $(struct:of x=1 y=2)
-crush# $p:x
-1
-```
-
-Use `class` to define a real type with methods and (optionally) inheritance:
-
-```shell script
-$Point := $(class)
-
-$Point:__init__ = {
-    |$x:$float $y:$float|
-    $this:x = $x
-    $this:y = $y
-}
-
-$Point:len = {
-    ||
-    math:sqrt (($this:x * $this:x) + ($this:y * $this:y))
-}
-
-$Point:__add__ = {
-    |$other|
-    Point:new x=($this:x + $other:x) y=($this:y + $other:y)
-}
-
-$p := $(Point:new x=1.0 y=2.0)
-$p:len
-```
-
-`class` creates a struct with a `new` method; calling `new` creates an instance and
-calls `__init__` (if defined), passing along any arguments. Add methods by assigning to
-the class; add instance fields by assigning to `$this` inside `__init__`. Pass a parent
-class to `class` for single inheritance.
 
 ## Blocks and closures
 
@@ -688,44 +828,6 @@ only way to notice one happened is to check `crush:warn:list` (or, for commands 
 report per-item this way, to compare how much output you got against how much you
 expected -- see e.g. `remote:pexec`'s own documentation).
 
-## Streams
-
-### Semi-lazy stream evaluation
-
-Assigning the output of a streaming command to a variable stores a `table_input_stream`,
-not the data itself:
-
-```shell script
-crush# $all_the_files := $(files --recurse /)
-```
-
-Control returns immediately -- `files` only produces output as its stream buffer is
-consumed. Reading the variable (`$all_the_files`) drains the whole stream at once;
-piping it through `head 1` consumes exactly one row, and can be re-run until the stream
-is empty.
-
-### Materialized data
-
-A `table_input_stream` (or `binary_stream`) can only be traversed once -- reading it a
-second time produces nothing. This is often what you want: it lets a pipeline work on
-data sets larger than memory, and lets different stages of a pipeline run concurrently.
-But sometimes you want to read the same data more than once. `materialize` converts a
-value's transient (stream) components into their reusable equivalents (`table_input_stream`
-into `table`, `binary_stream` into `binary`), recursively:
-
-```shell script
-crush# $f := $(files)
-crush# $f
-... (rows printed) ...
-crush# $f
-crush#                      # nothing -- already consumed
-
-crush# $m := $(files | materialize)
-crush# $m
-... (rows printed) ...
-crush# $m
-... (same rows printed again) ...
-```
 
 ## Calling external commands
 
