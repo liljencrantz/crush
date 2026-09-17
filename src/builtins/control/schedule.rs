@@ -10,7 +10,7 @@ use chrono::{Duration, Local};
 use crossbeam::channel::{Receiver, bounded};
 use signature::signature;
 use std::mem::swap;
-use crate::builtins::control::r#return;
+use crate::util::interruptible_sleep::interruptible_sleep;
 
 #[signature(
     control.schedule,
@@ -48,27 +48,6 @@ pub struct Schedule {
     once: bool,
 }
 
-fn sleep(duration: &Duration, control: &Receiver<StreamControlMessage>) -> CrushResult<()> {
-loop {
-    match control.recv_timeout(duration.to_std()?) {
-        Ok(msg) => match msg {
-            StreamControlMessage::Terminate => return terminate(),
-            StreamControlMessage::Pause => loop {
-                match control.recv() {
-                    Ok(StreamControlMessage::Terminate) => {
-                        return terminate();
-                    }
-                    Ok(StreamControlMessage::Resume) => return Ok(()),
-                    Ok(StreamControlMessage::Pause) => {}
-                    Err(_) => return terminate(),
-                }
-            },
-            StreamControlMessage::Resume => {},
-        },
-        Err(_) => return Ok(()),
-    }
-}
-}
 
 fn schedule(mut context: CommandContext) -> CrushResult<()> {
     let mut cfg: Schedule =
@@ -83,7 +62,8 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
     } else {
         &cfg.interval
     };
-    sleep(initial_delay, &control_receiver)?;
+
+    interruptible_sleep(initial_delay, &control_receiver)?;
 
     let mut cmd = None;
     swap(&mut cmd, &mut cfg.command);
@@ -146,7 +126,7 @@ fn run(
             last_time = last_time + cfg.interval.clone();
             let next_duration = last_time - Local::now();
             if next_duration > Duration::seconds(0) {
-                sleep(&next_duration, &control_receiver)?;
+                interruptible_sleep(&next_duration, &control_receiver)?;
             }
         }
     } else {
@@ -157,7 +137,7 @@ fn run(
             if cfg.once {
                 break;
             }
-            sleep(&cfg.interval, &control_receiver)?;
+            interruptible_sleep(&cfg.interval, &control_receiver)?;
         }
     }
     Ok(())

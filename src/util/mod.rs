@@ -17,6 +17,7 @@ pub mod temperature;
 pub mod time;
 pub mod user_map;
 pub mod env;
+pub mod interruptible_sleep;
 
 /// Escapes text for safe embedding between HTML tags or inside a
 /// double-quoted HTML attribute value.
