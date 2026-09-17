@@ -26,12 +26,13 @@ pub fn interruptible_sleep(duration: &Duration, control: &Receiver<StreamControl
                     }
                 }
             },
+            Ok(StreamControlMessage::Resume) => {
+                let sleep_duration = Local::now() - start_sleep;
+                time_left -= sleep_duration;
+            }
             // A genuine timeout (Err) means the full duration elapsed with no
-            // interruption at all -- the sleep is done. A stray Resume received
-            // while not paused isn't really meaningful, but is treated the same
-            // way the original single-shot sleep implementations did: as "done",
-            // not as a reason to keep looping with the same time_left forever.
-            Ok(StreamControlMessage::Resume) | Err(_) => return Ok(()),
+            // interruption at all -- the sleep is done.
+            Err(_) => return Ok(()),
         }
     }
 }
