@@ -176,6 +176,7 @@ impl Parser {
                 Token::Loop(_) => {}
                 Token::If(_) => {}
                 Token::Else(_) => {}
+                Token::Match(_) => {}
                 Token::Return(_) => {}
                 Token::Break(_) => {}
                 Token::Continue(_) => {}

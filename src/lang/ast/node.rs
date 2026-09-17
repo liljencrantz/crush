@@ -22,6 +22,16 @@ pub enum TextLiteralStyle {
     Unquoted,
 }
 
+/// One arm of an expression-mode `match $subject { ... }` (`case`/`any`/`is`/`default`),
+/// built directly by the grammar and consumed only by `Node::match_expr`.
+#[derive(Clone, Debug)]
+pub struct MatchArmNode {
+    pub keyword: TrackedString,
+    pub value: Option<Box<Node>>,
+    pub body: JobListNode,
+    pub location: Location,
+}
+
 /**
 A type representing a node in the abstract syntax tree that is the output of parsing a Crush script.
  */
@@ -705,6 +715,64 @@ impl Node {
                             value: iter,
                         },
                         Node::Closure(None, body, location),
+                    ],
+                    location,
+                }],
+                location,
+                is_background: false,
+            }
+            .into(),
+        ))
+    }
+
+    /// Expression mode's `match $subject { case $v {...} ... }` sugar. Desugars into a
+    /// call to the same `global:control:match` builtin command mode's `match` already
+    /// uses -- match.rs reads each arm's keyword (`case`/`any`/`is`/`default`) directly
+    /// off its body closure's raw, uncompiled AST as a bare command name, so each arm
+    /// here is built as a synthetic command invocation shaped exactly like command
+    /// mode's `case 2 {...}` would compile to: a bareword string (which compiles to a
+    /// `ValueDefinition::Identifier` in command position, see `Node::compile`'s
+    /// `Node::String`/`is_command` branch) followed by the arm's value (if any) and its
+    /// body as a closure.
+    pub fn match_expr(
+        match_location: Location,
+        subject: Box<Node>,
+        arms: Vec<MatchArmNode>,
+        end_location: Location,
+    ) -> Box<Node> {
+        let location = match_location.union(end_location);
+        let arm_jobs = arms
+            .into_iter()
+            .map(|arm| {
+                let mut expressions = vec![*Node::unquoted_string(arm.keyword)];
+                if let Some(value) = arm.value {
+                    expressions.push(*value);
+                }
+                expressions.push(Node::Closure(None, arm.body, arm.location));
+                JobNode {
+                    commands: vec![CommandNode {
+                        expressions,
+                        location: arm.location,
+                    }],
+                    location: arm.location,
+                    is_background: false,
+                }
+            })
+            .collect();
+        Box::from(Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions: vec![
+                        Self::get_attr(&["global", "control", "match"], match_location),
+                        *subject,
+                        Node::Closure(
+                            None,
+                            JobListNode {
+                                jobs: arm_jobs,
+                                location,
+                            },
+                            location,
+                        ),
                     ],
                     location,
                 }],

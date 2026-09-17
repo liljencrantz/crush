@@ -293,6 +293,25 @@ Each arm is tried in order; the first that matches runs and the rest are skipped
 
 If nothing matches and there's no `default` arm, `match` fails with an error.
 
+`match` also works directly in expression mode, with the exact same arm syntax as
+above -- unlike `like`/`try`, which need ordinary command-call syntax
+(`like(...)`/`try(...)`) when used from expression mode, `match` is real grammar there,
+the same way `if`/`while`/`for`/`loop` are:
+
+```shell script
+crush# $describe := ({|$n| match $n {
+    case 2 {"two"}
+    is $string {"a string"}
+    default {"something else"}
+}})
+crush# ($describe(2))
+two
+```
+
+A match arm's value can be any expression, but not a bare closure literal (wrap it in
+`(...)` on the rare occasion it needs to be one) -- that's the one restriction
+expression-mode `match` has that command mode's doesn't.
+
 ### Custom patterns
 
 Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any type can

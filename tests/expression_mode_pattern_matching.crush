@@ -52,12 +52,15 @@ assert ($($describe 100) == "something else") "match's default arm should fire w
 ## the closure's implicit return value instead of needing the assignment-inside-arm
 ## trick $describe above needed for command mode's plain `case 2 {...}` syntax.
 
-$describe2 := ({|$n| match($n, {
-    case(2, {"two"})
-    any($(seq 5 10), {"between 5 and 10"})
-    is($string, {"a string"})
-    default({"something else"})
-})})
+$describe2 := ({
+    |$n|
+    match $n {
+        case 2 {"two"}
+        any seq(5, 10) {"between 5 and 10"}
+        is $string {"a string"}
+        default {"something else"}
+    }
+})
 
 assert (($describe2(2)) == "two") "match's case arm should fire directly in expression mode"
 assert (($describe2(7)) == "between 5 and 10") "match's any arm should fire directly in expression mode"
@@ -67,11 +70,14 @@ assert (($describe2(100)) == "something else") "match's default arm should fire 
 # `is` with a glob pattern works too -- glob literals still don't parse directly in
 # expression mode (see docs/language_reference.md), so $(...) is needed for the glob
 # itself, but not for match.
-$describe_glob := ({|$n| match($n, {
-    is($(*.md), {"markdown"})
-    is($(*.txt), {"text"})
-    default({"other"})
-})})
+$describe_glob := ({
+    |$n|
+    match $n {
+        is $(*.md) {"markdown"}
+        is $(*.txt) {"text"}
+        default {"other"}
+    }
+})
 assert (($describe_glob("hello.txt")) == "text") "match's is arm should accept a glob directly in expression mode"
 
 ## Custom __is__ patterns, used from like/=~ inside expression mode
@@ -108,9 +114,9 @@ assert ($caught_message == "invalid digit found in string") "catch should captur
 
 $safe_result := ({
     try({
-        match(42, {
-            case(1, {"wrong"})
-        })
+        match 42 {
+            case 1 {"wrong"}
+        }
     }, "catch", {|$e| "recovered"})
 }())
 assert ($safe_result == "recovered") "try/catch should work directly in expression mode, including around a nested match"

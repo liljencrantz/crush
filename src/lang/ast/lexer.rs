@@ -609,6 +609,7 @@ impl<'input> Lexer<'input> {
                         "loop" => Some(Token::Loop(Location::new(i, end_idx + 1)).into()),
                         "if" => Some(Token::If(Location::new(i, end_idx + 1)).into()),
                         "else" => Some(Token::Else(Location::new(i, end_idx + 1)).into()),
+                        "match" => Some(Token::Match(Location::new(i, end_idx + 1)).into()),
                         "return" => Some(Token::Return(Location::new(i, end_idx + 1)).into()),
                         "break" => Some(Token::Break(Location::new(i, end_idx + 1)).into()),
                         "continue" => Some(Token::Continue(Location::new(i, end_idx + 1)).into()),

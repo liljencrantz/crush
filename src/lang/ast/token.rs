@@ -44,6 +44,7 @@ pub enum Token<'input> {
     Loop(Location),
     If(Location),
     Else(Location),
+    Match(Location),
     Return(Location),
     Break(Location),
     Continue(Location),
@@ -91,6 +92,7 @@ impl Token<'_> {
             | Token::Loop(l)
             | Token::If(l)
             | Token::Else(l)
+            | Token::Match(l)
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
@@ -140,6 +142,7 @@ impl Token<'_> {
             Token::Loop(_) => "loop",
             Token::If(_) => "if",
             Token::Else(_) => "else",
+            Token::Match(_) => "match",
             Token::Return(_) => "return",
             Token::Break(_) => "break",
             Token::Continue(_) => "continue",
@@ -220,6 +223,7 @@ mod tests {
             ("loop", Expression, Token::Loop(loc)),
             ("if", Expression, Token::If(loc)),
             ("else", Expression, Token::Else(loc)),
+            ("match", Expression, Token::Match(loc)),
             ("return", Expression, Token::Return(loc)),
             ("break", Expression, Token::Break(loc)),
             ("continue", Expression, Token::Continue(loc)),
@@ -288,6 +292,7 @@ mod tests {
                 | Token::Loop(..)
                 | Token::If(..)
                 | Token::Else(..)
+                | Token::Match(..)
                 | Token::Return(..)
                 | Token::Break(..)
                 | Token::Continue(..)
@@ -342,6 +347,7 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             | Token::Loop(l)
             | Token::If(l)
             | Token::Else(l)
+            | Token::Match(l)
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)

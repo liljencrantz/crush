@@ -123,6 +123,7 @@ impl From<Token<'_>> for TrackedString {
             | Token::Loop(l)
             | Token::If(l)
             | Token::Else(l)
+            | Token::Match(l)
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
