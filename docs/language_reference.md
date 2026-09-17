@@ -418,6 +418,23 @@ is_dir file
 true   .
 ```
 
+**`var:use`** widens unqualified name resolution to also search a namespace directly,
+so its members no longer need the `namespace:` prefix -- **`var:unuse`** reverses it:
+
+```shell script
+crush# var:use $math
+crush# sqrt 2
+1.4142135623730951
+crush# var:unuse $math
+crush# sqrt 2
+Error: Unknown command name `sqrt`
+```
+
+`unuse` recursively removes the given scope from the entire parent-scope chain, not
+just the current one.
+
+A variable name starting with `__` is reserved for Crush's own internal use.
+
 ## The type system
 
 Crush values are typed. Most commands operate on streams of tabular data, where each
@@ -559,7 +576,18 @@ Error: custom failure message
 ```
 
 Unlike some languages, there's no separate "exception object" hierarchy to catch by
-type -- there's just the one struct shape above, regardless of what failed.
+type -- there's just the one struct shape above. `type` is normally a fixed name tied to
+whatever failed internally (e.g. `IOError`, `InvalidArgument`), but **`throw`** lets a
+script raise its own error with a custom `type` instead, so a script or library can
+define and catch its own error categories:
+
+```shell script
+try {
+    throw "NotFound" "no such user"
+} catch {
+    |$e| assert ($e:type == "NotFound")
+}
+```
 
 ## Background jobs
 
@@ -572,6 +600,11 @@ $job_id := $(sleep $(duration:of seconds=2) &)
 # ... do other work while it runs ...
 fg $job_id
 ```
+
+Only a *synchronous* failure to even start a backgrounded job (e.g. a bad argument)
+surfaces immediately -- any error during its real work is deferred into the background
+job registry and only reported once you `fg` it. A backgrounded job that fails and is
+never `fg`'d has its failure go unreported.
 
 `fg` waits for and returns a backgrounded job's result. `crush:jobs` lists every
 currently running job (including nested ones, like command substitutions running as
@@ -680,3 +713,13 @@ Two shortcuts make external commands nicer to call:
   `git commit message="hello"` becomes `git commit --message "hello"`.
 * A named argument with value `$true` becomes a flag with no value -- `git commit
   a=$true` becomes `git commit -a`.
+
+A path written directly in command position runs as an external command too, without
+needing to be found on `$PATH` first -- e.g. `./configure` or `~/bin/some-script`. If
+the path is a directory and no arguments are given, it's `cd`'d into instead of
+executed, the same as running `cd` directly. This only happens when the path is written
+literally in command position (or referenced through a plain variable, e.g. `$f` where
+`$f := ./configure`) -- a file path that merely *results* from evaluating something
+else in that position (member access like `$s:script`, a dict/struct field read some
+other way) is never executed, so reading a value that happens to hold a path can't
+accidentally run it as a subprocess.
