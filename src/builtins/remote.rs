@@ -3,26 +3,29 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::completion::Completion;
 use crate::lang::completion::parse::{LastArgument, PartialCommandResult};
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushError, CrushResult, CrushResultExtra, error};
+use crate::lang::errors::{CrushError, CrushResult, CrushResultExtra, error, terminate};
+use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
 use crate::lang::state::global_state::GlobalState;
 use crate::lang::serialization::{deserialize, serialize};
 use crate::lang::signature::files::Files;
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
+use crate::lang::state::handles::CommandHandle;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use crate::util::escape::{escape, escape_without_quotes};
 use crate::util::file::home;
 use crate::util::user_map::get_current_username;
-use crossbeam::channel::unbounded;
+use crossbeam::channel::{bounded, unbounded};
 use signature::signature;
 use ssh2::KnownHostFileKind;
 use ssh2::{CheckResult, KnownHostKeyFormat, Session};
 use std::cmp::min;
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::net::{Ipv6Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
+use std::time::Duration;
 
 static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("identity", ValueType::String),
@@ -188,6 +191,7 @@ fn run_remote(
     host_file: &PathBuf,
     ignore_host_file: bool,
     allow_not_found: bool,
+    command_handle: &CommandHandle,
 ) -> CrushResult<Value> {
     let (host, username, port) = parse(host, &default_username)?;
 
@@ -235,8 +239,42 @@ fn run_remote(
     channel.exec("crush --pup")?;
     channel.write(cmd)?;
     channel.send_eof()?;
+
+    // A plain channel.read_to_end() here would be uninterruptible, exactly like a plain
+    // std::thread::sleep() would be in `sleep` (see the comment there) -- so register a
+    // controller and poll it the same way, reading in non-blocking chunks in between
+    // instead of one single blocking read call.
+    let (control_sender, control_receiver) = bounded(1);
+    command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
+    sess.set_blocking(false);
     let mut out_buf = Vec::new();
-    channel.read_to_end(&mut out_buf)?;
+    let mut chunk = [0u8; 16384];
+    loop {
+        match channel.read(&mut chunk) {
+            Ok(0) => {
+                if channel.eof() {
+                    break;
+                }
+            }
+            Ok(n) => out_buf.extend_from_slice(&chunk[..n]),
+            Err(e) if e.kind() == ErrorKind::WouldBlock => {}
+            Err(e) => return Err(e.into()),
+        }
+        match control_receiver.recv_timeout(Duration::from_millis(50)) {
+            Ok(StreamControlMessage::Terminate) => return terminate(),
+            Ok(StreamControlMessage::Pause) => loop {
+                match control_receiver.recv() {
+                    Ok(StreamControlMessage::Terminate) => return terminate(),
+                    Ok(StreamControlMessage::Resume) => break,
+                    Ok(StreamControlMessage::Pause) => {}
+                    Err(_) => return terminate(),
+                }
+            },
+            Ok(StreamControlMessage::Resume) | Err(_) => {}
+        }
+    }
+    sess.set_blocking(true);
+
     let res = deserialize(&out_buf, env)?;
     channel.wait_close()?;
     Ok(res)
@@ -351,6 +389,7 @@ fn exec(mut context: CommandContext) -> CrushResult<()> {
         &host_file,
         cfg.ignore_host_file,
         cfg.allow_not_found,
+        context.command_handle(),
     )?)
 }
 
@@ -437,11 +476,14 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
         let my_ignore_host_file = cfg.ignore_host_file;
         let my_allow_not_found = cfg.allow_not_found;
         let my_global_state = context.global_state.clone();
+        let my_command_handle = context.next_command_handle();
+        let thread_command_handle = my_command_handle.clone();
 
         context.global_state.threads().spawn(
             "remote:pexec",
-            &context.next_command_handle(),
+            &my_command_handle,
             move || {
+                let my_command_handle = thread_command_handle;
                 while let Ok(host) = my_recv.recv() {
                     // A failure here must not propagate via `?`: that would unwind this
                     // whole worker thread out of its loop, permanently pulling it out of
@@ -457,6 +499,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
                         &my_host_file,
                         my_ignore_host_file,
                         my_allow_not_found,
+                        &my_command_handle,
                     ) {
                         Ok(res) => my_send.send((host, res))?,
                         Err(err) => warn_connect_failure(&my_global_state, &host, err),
