@@ -42,8 +42,23 @@ const TEST_PASSWORD: &str = "crushtest-password";
 const BIND_ADDR: &str = "127.0.0.1";
 const BIND_PORT: u16 = 2849;
 
+// See dns-service/src/main.rs's install_graceful_shutdown for why this is needed: a
+// server killed by a plain SIGTERM never gets to flush coverage-instrumentation data
+// via Rust's normal atexit path, so it always reports 0% coverage under `cargo
+// llvm-cov` regardless of what actually ran.
+fn install_graceful_shutdown() {
+    std::thread::spawn(|| {
+        let mut signals = signal_hook::iterator::Signals::new([signal_hook::consts::SIGTERM])
+            .expect("failed to register SIGTERM handler");
+        signals.forever().next();
+        std::process::exit(0);
+    });
+}
+
 #[tokio::main]
 async fn main() {
+    install_graceful_shutdown();
+
     let crush_bin = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "./target/debug/crush".to_string());

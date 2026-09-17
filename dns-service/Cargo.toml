@@ -7,3 +7,4 @@ publish = false
 
 [dependencies]
 trust-dns-proto = "0.23.2"
+signal-hook = "0.3.18"

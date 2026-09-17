@@ -62,12 +62,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anstyle"
-version = "1.0.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
-
-[[package]]
 name = "anyhow"
 version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -86,21 +80,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef1e3e699d84ab1b0911a1010c5c106aa34ae89aeac103be5ce0c3859db1e891"
 dependencies = [
  "term",
-]
-
-[[package]]
-name = "assert_cmd"
-version = "2.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2aa3a22042e45de04255c7bf3626e239f450200fd0493c1e382263544b20aea6"
-dependencies = [
- "anstyle",
- "bstr",
- "libc",
- "predicates",
- "predicates-core",
- "predicates-tree",
- "wait-timeout",
 ]
 
 [[package]]
@@ -388,17 +367,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bstr"
-version = "1.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bb31b46c14244e20ee9984b11bf5c992b91fb6939fea616e3512c8baecdbe5f"
-dependencies = [
- "memchr",
- "regex-automata",
- "serde_core",
-]
-
-[[package]]
 name = "build-env"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -683,7 +651,6 @@ checksum = "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
 name = "crush"
 version = "0.1.0"
 dependencies = [
- "assert_cmd",
  "base64 0.23.1",
  "battery",
  "bytes",
@@ -693,7 +660,6 @@ dependencies = [
  "ctor",
  "dbus",
  "dirs",
- "escargot",
  "float-ord",
  "hex",
  "http",
@@ -859,12 +825,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "difflib"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -922,6 +882,7 @@ dependencies = [
 name = "dns-service"
 version = "0.1.0"
 dependencies = [
+ "signal-hook",
  "trust-dns-proto",
 ]
 
@@ -1054,17 +1015,6 @@ name = "error-code"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b5343afd4a8365a643ac588dab4cf234a190c7f6c88c9f6dd6ffe00837661b7"
-
-[[package]]
-name = "escargot"
-version = "0.5.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11c3aea32bc97b500c9ca6a72b768a26e558264303d101d3409cf6d57a9ed0cf"
-dependencies = [
- "log",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "fastrand"
@@ -1343,6 +1293,7 @@ name = "grpc-service"
 version = "0.1.0"
 dependencies = [
  "prost 0.13.5",
+ "signal-hook",
  "tokio",
  "tokio-stream",
  "tonic 0.12.3",
@@ -2816,33 +2767,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
-name = "predicates"
-version = "3.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ada8f2932f28a27ee7b70dd6c1c39ea0675c55a36879ab92f3a715eaa1e63cfe"
-dependencies = [
- "anstyle",
- "difflib",
- "predicates-core",
-]
-
-[[package]]
-name = "predicates-core"
-version = "1.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cad38746f3166b4031b1a0d39ad9f954dd291e7854fcc0eed52ee41a0b50d144"
-
-[[package]]
-name = "predicates-tree"
-version = "1.0.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0de1b847b39c8131db0467e9df1ff60e6d0562ab8e9a16e568ad0fdb372e2f2"
-dependencies = [
- "predicates-core",
- "termtree",
-]
-
-[[package]]
 name = "prettyplease"
 version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3835,6 +3759,7 @@ dependencies = [
  "async-trait",
  "ed25519-dalek",
  "russh",
+ "signal-hook",
  "tokio",
 ]
 
@@ -4009,12 +3934,6 @@ dependencies = [
  "libc",
  "numtoa",
 ]
-
-[[package]]
-name = "termtree"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 
 [[package]]
 name = "test_finder"
@@ -4590,15 +4509,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "wait-timeout"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09ac3b126d3914f9849036f826e054cbabdc8519970b8998ddaf3b5bd3c65f11"
-dependencies = [
- "libc",
-]
 
 [[package]]
 name = "walkdir"

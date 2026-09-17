@@ -91,8 +91,6 @@ mach2 = "0.4.1"
 libproc = "0.14.10"
 
 [dev-dependencies]
-assert_cmd = "2.2.2"
-escargot = "0.5.15"
 ctor = "0.2"
 
 [[test]]

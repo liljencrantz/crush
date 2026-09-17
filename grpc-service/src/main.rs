@@ -93,8 +93,23 @@ impl Reverser for MyReverser {
 
 }
 
+// See dns-service/src/main.rs's install_graceful_shutdown for why this is needed: a
+// server killed by a plain SIGTERM never gets to flush coverage-instrumentation data
+// via Rust's normal atexit path, so it always reports 0% coverage under `cargo
+// llvm-cov` regardless of what actually ran.
+fn install_graceful_shutdown() {
+    std::thread::spawn(|| {
+        let mut signals = signal_hook::iterator::Signals::new([signal_hook::consts::SIGTERM])
+            .expect("failed to register SIGTERM handler");
+        signals.forever().next();
+        std::process::exit(0);
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    install_graceful_shutdown();
+
     let addr = "[::1]:50051".parse()?;
     let reverser = MyReverser::default();
 

@@ -131,7 +131,25 @@ fn handle_tcp(mut stream: TcpStream) {
 /// sides just agree on this one ahead of time (matching grpc-service's fixed 50051).
 const BIND_PORT: u16 = 20053;
 
+/// This server runs forever, so it only ever stops via an external SIGTERM (see
+/// tests/system.rs's stop_test_servers). The default disposition for SIGTERM
+/// terminates the process without running Rust's atexit-registered cleanup, which is
+/// what a coverage-instrumented build relies on to flush its profiling data -- so under
+/// `cargo llvm-cov`, a SIGTERM-killed server always reports 0% coverage regardless of
+/// what actually ran. Catching the signal on a dedicated thread and exiting normally via
+/// `std::process::exit` runs that cleanup instead.
+fn install_graceful_shutdown() {
+    std::thread::spawn(|| {
+        let mut signals = signal_hook::iterator::Signals::new([signal_hook::consts::SIGTERM])
+            .expect("failed to register SIGTERM handler");
+        signals.forever().next();
+        std::process::exit(0);
+    });
+}
+
 fn main() {
+    install_graceful_shutdown();
+
     let udp =
         UdpSocket::bind(("127.0.0.1", BIND_PORT)).expect("failed to bind UDP socket");
     let tcp =

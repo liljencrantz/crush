@@ -4,8 +4,9 @@ use std::process::{Child, Command};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use test_finder::test_finder;
-use assert_cmd::prelude::*;
 use ctor::{ctor, dtor};
+use nix::sys::signal::{Signal, kill};
+use nix::unistd::Pid;
 
 fn run_system_test(name: &Path) {
     let output = Command::new(env!("CARGO_BIN_EXE_crush"))
@@ -106,37 +107,86 @@ fn wait_for_port(addr: &str) {
     }
 }
 
-fn build_and_spawn(package: &str, extra_args: &[&str]) -> Child {
-    let run = escargot::CargoBuild::new()
-        .bin(package)
-        .package(package)
-        .run()
-        .unwrap_or_else(|e| panic!("Failed to build {} binary: {}", package, e));
-    Command::new(run.path())
+fn spawn(path: &str, extra_args: &[&str]) -> Child {
+    Command::new(path)
         .args(extra_args)
         .spawn()
-        .unwrap_or_else(|e| panic!("Failed to start {}: {}", package, e))
+        .unwrap_or_else(|e| panic!("Failed to start {}: {}", path, e))
+}
+
+// dns-service/grpc-service/ssh-service are workspace members with their own [[bin]]
+// targets, not dependencies of this crate -- so unlike `crush` itself, Cargo has no
+// CARGO_BIN_EXE_<name> env var for them (that mechanism only covers binaries of the
+// *current* package), and neither `cargo test --workspace` nor `cargo llvm-cov
+// --workspace` builds them on their own: both restrict target selection to test
+// harnesses (`cargo test`'s underlying invocation passes `--tests`), so a package with
+// only a plain `[[bin]]` and no tests of its own is never built as a side effect.
+//
+// So this builds them itself, once, on demand, with an explicit `cargo build -p ...`
+// targeting the exact directory `CARGO_BIN_EXE_crush` was itself built into -- plain
+// target/debug for `cargo test`, target/llvm-cov-target/debug for `cargo llvm-cov
+// --workspace`. Because this runs as a genuine child process of that same (possibly
+// RUSTC_WRAPPER-wrapped) cargo invocation, it inherits the wrapper/coverage env vars
+// automatically, so the resulting binaries end up instrumented exactly like `crush`
+// itself under `cargo llvm-cov` -- confirmed by checking for __llvm_profile symbols in
+// the resulting binaries. (An earlier attempt at this via the `escargot` crate appeared
+// to produce uninstrumented binaries no matter how it was pointed; that was actually a
+// stale-fingerprint artifact from these two packages not having been rebuilt in days --
+// Cargo's fingerprint doesn't treat RUSTC_WRAPPER as a cache-invalidating input, so it
+// silently relinked old unwrapped object files. `cargo clean -p dns-service -p
+// ssh-service` followed by a fresh build resolved it; a real dependency on the crate
+// wasn't the fix and was reverted.)
+fn build_siblings_and_locate(name: &str) -> std::path::PathBuf {
+    let crush_bin = std::path::Path::new(env!("CARGO_BIN_EXE_crush"));
+    // .../<target-dir>/debug/crush -> .../<target-dir>
+    let target_dir = crush_bin
+        .parent()
+        .and_then(Path::parent)
+        .expect("CARGO_BIN_EXE_crush should be two levels under the target dir");
+
+    let status = Command::new("cargo")
+        .args(["build", "-p", "dns-service", "-p", "grpc-service", "-p", "ssh-service"])
+        .arg("--target-dir")
+        .arg(target_dir)
+        .status()
+        .expect("failed to invoke cargo to build dns-service/grpc-service/ssh-service");
+    assert!(
+        status.success(),
+        "cargo build -p dns-service -p grpc-service -p ssh-service failed"
+    );
+
+    crush_bin.with_file_name(name)
 }
 
 #[ctor]
 fn start_test_servers() {
     let mut children = Vec::new();
 
-    children.push(build_and_spawn("dns-service", &[]));
+    // A single `cargo build -p ...` call builds all three siblings; only the first
+    // call's path is used directly here, the other two are cheap same-directory lookups
+    // once the build above has already happened.
+    let dns_service = build_siblings_and_locate("dns-service");
+    let target_dir = dns_service
+        .parent()
+        .expect("dns-service path should have a parent directory")
+        .to_path_buf();
+    let grpc_service = target_dir.join("grpc-service");
+    let ssh_service = target_dir.join("ssh-service");
+
+    children.push(spawn(dns_service.to_str().unwrap(), &[]));
     wait_for_port("127.0.0.1:20053");
 
-    children.push(build_and_spawn("grpc-service", &[]));
+    children.push(spawn(grpc_service.to_str().unwrap(), &[]));
     wait_for_port("[::1]:50051");
 
     // ssh-service defaults to spawning "./target/debug/crush" for each exec channel's
     // `crush --pup` if not told otherwise -- the same stale-path problem
-    // CARGO_BIN_EXE_crush fixed for this test binary itself, just one process further
-    // out. Left as the default, this would silently run whatever plain debug binary
-    // happens to already exist under `cargo llvm-cov test` (a separate, uninstrumented
-    // build lives there too), so the pup wire round trip these tests are meant to
-    // exercise would never show up in coverage. Pass the real one explicitly.
-    children.push(build_and_spawn(
-        "ssh-service",
+    // CARGO_BIN_EXE_crush fixes here, just one process further out. Pass the real one
+    // explicitly, so the pup wire round trip these tests are meant to exercise reaches
+    // the actual instrumented crush binary rather than whatever debug build happens to
+    // already exist on disk.
+    children.push(spawn(
+        ssh_service.to_str().unwrap(),
         &[env!("CARGO_BIN_EXE_crush")],
     ));
     wait_for_port("127.0.0.1:2849");
@@ -146,13 +196,36 @@ fn start_test_servers() {
         .unwrap_or_else(|_| panic!("start_test_servers ran more than once"));
 }
 
+// A plain SIGKILL (std::process::Child::kill's only option on Unix) gives coverage
+// instrumentation's atexit-based profraw flush no chance to run, so an
+// instrumented-but-SIGKILLed service binary always reports 0% coverage regardless of
+// what its own tests actually exercised -- confirmed by comparing report output before
+// and after switching this to SIGTERM. SIGTERM lets each service's normal signal
+// handling (or, absent one, the default terminate-after-atexit-hooks-run behavior) exit
+// it cleanly; a short grace period with a SIGKILL fallback keeps this from hanging if a
+// service doesn't respond to SIGTERM.
 #[dtor]
 fn stop_test_servers() {
     if let Some(m) = TEST_SERVERS.get() {
         let mut children = m.lock().unwrap();
         for child in children.iter_mut() {
-            let _ = child.kill();
-            let _ = child.wait();
+            let _ = kill(Pid::from_raw(child.id() as i32), Signal::SIGTERM);
+        }
+        for child in children.iter_mut() {
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            loop {
+                match child.try_wait() {
+                    Ok(Some(_)) => break,
+                    Ok(None) if std::time::Instant::now() < deadline => {
+                        std::thread::sleep(Duration::from_millis(20));
+                    }
+                    _ => {
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        break;
+                    }
+                }
+            }
         }
     }
 }

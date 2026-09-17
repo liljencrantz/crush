@@ -11,6 +11,7 @@ prost = "0.13"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tonic-reflection = "0.12"
 tokio-stream = { version = "0.1", features = ["net"] }
+signal-hook = "0.3.18"
 
 [build-dependencies]
 tonic-build = "0.12"
