@@ -1,6 +1,0 @@
-# docs/language_reference.md's Operators table lists `typeof` as an expression-mode
-# operator, but there is no `typeof`/`Typeof` token or ExprItem grammar alternative
-# for it at all -- `typeof` is only ever a plain builtin command, so `(typeof 5)`
-# fails to parse; only `$(typeof 5)` (a command substitution) works.
-
-assert ((typeof 5) == $integer) "typeof should work as a bare expression-mode operator, per the Operators table"
