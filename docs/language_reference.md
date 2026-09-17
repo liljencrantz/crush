@@ -308,9 +308,8 @@ crush# ($describe(2))
 two
 ```
 
-A match arm's value can be any expression, but not a bare closure literal (wrap it in
-`(...)` on the rare occasion it needs to be one) -- that's the one restriction
-expression-mode `match` has that command mode's doesn't.
+A match arm's value can be any expression, with no restrictions beyond what command
+mode's arms already have.
 
 ### Custom patterns
 

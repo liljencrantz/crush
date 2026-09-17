@@ -124,6 +124,7 @@ impl From<Token<'_>> for TrackedString {
             | Token::If(l)
             | Token::Else(l)
             | Token::Match(l)
+            | Token::Default(l)
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)

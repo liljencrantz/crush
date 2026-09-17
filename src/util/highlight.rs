@@ -350,8 +350,8 @@ fn get_category(
         },
         Background(_) => None,
         Separator(_, _) => None,
-        For(_) | While(_) | Loop(_) | If(_) | Else(_) | Match(_) | Return(_) | Break(_)
-        | Continue(_) => Some("keyword"),
+        For(_) | While(_) | Loop(_) | If(_) | Else(_) | Match(_) | Default(_) | Return(_)
+        | Break(_) | Continue(_) => Some("keyword"),
     }
 }
 
@@ -416,6 +416,7 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
         Token::If(_) => None,
         Token::Else(_) => None,
         Token::Match(_) => None,
+        Token::Default(_) => None,
         Token::Return(_) => None,
         Token::Break(_) => None,
         Token::Continue(_) => None,

@@ -177,6 +177,7 @@ impl Parser {
                 Token::If(_) => {}
                 Token::Else(_) => {}
                 Token::Match(_) => {}
+                Token::Default(_) => {}
                 Token::Return(_) => {}
                 Token::Break(_) => {}
                 Token::Continue(_) => {}

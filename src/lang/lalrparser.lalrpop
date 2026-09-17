@@ -169,58 +169,6 @@ ExprItem: Box<Node> = {
     <l: @L> BlockStart Separators? <signature: ExprSignature> <jobs: ExprJobListWithoutSeparator> BlockEnd <r: @R> => Box::from(Node::Closure(signature, jobs, Location::new(l, r))),
 }
 
-// Identical to ExprItem, minus the bare `{...}` closure-literal alternative. Needed
-// specifically for a match arm's value (see MatchArm below): a match arm can omit its
-// value entirely (`default {...}`) and go straight from the keyword to its own body
-// block, so right after the keyword, seeing a `{` is ambiguous between "no value, this
-// `{` starts the arm's body" and "the value is itself a bare closure literal" -- since
-// realistically a match arm's value is never actually a closure (wrap it in `(...)` on
-// the rare occasion it needs to be), excluding that one alternative here removes the
-// ambiguity without losing any real expressiveness.
-ExprItemNoClosure: Box<Node> = {
-    ExprModeStart <e:Expr> SubEnd => e,
-    SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j.into())),
-    <l: Identifier> => Node::identifier(l),
-    <l: Regex> => Node::regex(l),
-    <l:QuotedFile> => Node::file(l, Quoted),
-    <s:QuotedString> => Node::quoted_string(s),
-    <s:String> => Node::unquoted_string(s),
-    <i:Integer> => Node::integer(i),
-    <f:Float> => Node::float(f),
-    <d:Duration> => Node::duration(d),
-    <e:Return> => Node::return_expr(e),
-    <e:Break> => Node::break_expr(e),
-    <e:Continue> => Node::continue_expr(e),
-    <key:If> <condition:Expr> Separators? BlockStart <true_body: ExprJobList> BlockEnd <false_body: ExprOptFalseBody> => Node::if_expr(key, condition, true_body, false_body),
-    <key:While> <condition:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::while_expr(key, condition, body),
-    <key:Loop> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::loop_expr(key, body),
-    <key:For> <id:Identifier> Equals <iter:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::for_expr(key, id.into(), iter, body),
-    <key:Match> <subject:Expr> Separators? BlockStart Separators? <arms: MatchArmList> BlockEnd <r: @R> => Node::match_expr(key, subject, arms, Location::from(r)),
-    <i: ExprItemNoClosure> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
-    <i: ExprItemNoClosure> MemberOperator <l: String> => Box::from(Node::GetAttr(i, l.into())),
-    GetItemStart <l: ExprJobList> GetItemEnd => Node::list_literal(l),
-    <i: ExprItemNoClosure> ExprModeStart <ov: ExprOptParamList> SubEnd => {
-        let l = i.location();
-        let mut v = match ov {
-            Some(vv) => vv,
-            None => vec![],
-        };
-                v.insert(0, *i);
-                let c = CommandNode {
-                    expressions: v,
-                    location: l,
-                };
-
-                Box::from(Node::Substitution(
-                    JobNode{
-                        commands: vec![c],
-                        location: l,
-                        is_background: false,
-                    }.into()
-                ))
-        },
-}
-
 MatchArmList: Vec<MatchArmNode> = {
     <a: MatchArm> Separators? => vec![a],
     <mut l: MatchArmList> <a: MatchArm> Separators? => {
@@ -229,11 +177,19 @@ MatchArmList: Vec<MatchArmNode> = {
     },
 }
 
+// `default` gets its own token (see Token::Default) rather than being just another
+// bareword `String` keyword like `case`/`any`/`is`: a match arm's value is optional
+// (only `default` omits one), and if the "no value" alternative were keyed off a
+// generic `String` token the same way the "has a value" one is, the two alternatives
+// would be ambiguous right after the keyword -- an omitted value and a value that
+// happens to be a bare closure literal both start with `{`. Splitting `default` off as
+// its own token disambiguates purely on token type, one token of lookahead, so arm
+// values can stay full, unrestricted `Expr`s (closures included).
 MatchArm: MatchArmNode = {
-    <l: @L> <kw: String> <val: ExprItemNoClosure> BlockStart Separators? <body: ExprJobListWithoutSeparator> BlockEnd <r: @R> =>
+    <l: @L> <kw: String> <val: Expr> BlockStart Separators? <body: ExprJobListWithoutSeparator> BlockEnd <r: @R> =>
         MatchArmNode { keyword: kw.into(), value: Some(val), body, location: Location::new(l, r) },
-    <l: @L> <kw: String> BlockStart Separators? <body: ExprJobListWithoutSeparator> BlockEnd <r: @R> =>
-        MatchArmNode { keyword: kw.into(), value: None, body, location: Location::new(l, r) },
+    <l: @L> <kw: DefaultArm> BlockStart Separators? <body: ExprJobListWithoutSeparator> BlockEnd <r: @R> =>
+        MatchArmNode { keyword: TrackedString::new("default", kw), value: None, body, location: Location::new(l, r) },
 }
 
 ExprOptParamList: Option<Vec<Node>> = {
@@ -450,6 +406,11 @@ extern {
         If => Token::If(<Location>),
         Else => Token::Else(<Location>),
         Match => Token::Match(<Location>),
+        // Named DefaultArm, not Default, to avoid colliding with the existing
+        // `Default` *nonterminal* (a closure parameter's default value) declared
+        // elsewhere in this grammar -- LALRPOP terminal and nonterminal names share
+        // one namespace.
+        DefaultArm => Token::Default(<Location>),
         Return => Token::Return(<Location>),
         Break => Token::Break(<Location>),
         Continue => Token::Continue(<Location>),
