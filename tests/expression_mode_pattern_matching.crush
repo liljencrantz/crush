@@ -108,25 +108,25 @@ try {
 }
 assert ($caught_message == "invalid digit found in string") "catch should capture the real error message for a clean (non-operator) failure"
 
-## try/catch, directly in expression mode -- no $(...) needed. try's `catch` clause is
-## itself read off the raw AST as a literal bareword (see src/builtins/control/try.rs),
-## so it has to be passed as an explicit quoted string in expression-mode call syntax.
+## try/catch, directly in expression mode -- no $(...) needed. Like match, try/catch is
+## real grammar in expression mode (ExprItem in src/lang/lalrparser.lalrpop), desugaring
+## into a call to the same global:control:try command mode's own `try {...} catch {...}`
+## already uses.
 
-$safe_result := ({
-    try({
-        match 42 {
-            case 1 {"wrong"}
-        }
-    }, "catch", {|$e| "recovered"})
-}())
+$safe_result := (try {
+    match 42 {
+        case 1 {"wrong"}
+    }
+} catch {|$e| "recovered"})
 assert ($safe_result == "recovered") "try/catch should work directly in expression mode, including around a nested match"
 
-$unsafe_result := ({
-    try({
-        "no error here"
-    }, "catch", {|$e| "recovered"})
-}())
+$unsafe_result := (try {
+    "no error here"
+} catch {|$e| "recovered"})
 assert ($unsafe_result == "no error here") "try directly in expression mode should return the body's own result when nothing fails"
+
+$no_catch_result := (try { "no catch clause needed either" })
+assert ($no_catch_result == "no catch clause needed either") "try without a catch clause should work directly in expression mode too"
 
 $destructure_ok := $false
 try {

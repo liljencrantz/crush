@@ -1,0 +1,36 @@
+# Coverage for try/catch as real expression-mode grammar (ExprItem in
+# src/lang/lalrparser.lalrpop), desugaring (Node::try_expr) into a call to the same
+# global:control:try command mode's own `try {...} catch {...}` already uses.
+
+$recovered := (try { convert($integer, "notanumber") } catch {|$e| -1})
+assert ($recovered == -1) "catch should run and receive the error when the body fails"
+
+$unrecovered := (try { "no error here" } catch {|$e| -1})
+assert ($unrecovered == "no error here") "try should return the body's own result when nothing fails"
+
+$no_catch_ok := (try { "fine" })
+assert ($no_catch_ok == "fine") "a catch clause should be optional, just like in command mode"
+
+$no_catch_recovers := (try { convert($integer, "notanumber") })
+$another_empty := (try { convert($integer, "alsobad") })
+assert ($no_catch_recovers == $another_empty) "with no catch clause, a failing body should recover silently to an empty result, just like in command mode"
+
+# try/catch around a nested match, all directly in expression mode
+$nested_match := (try {
+    match 42 {
+        case 1 {"wrong"}
+    }
+} catch {|$e| "recovered"})
+assert ($nested_match == "recovered") "try/catch should work directly around a nested match in expression mode"
+
+# nested try/catch, and throw re-raising a different error type from the inner catch
+$rethrown := (try {
+    try {
+        convert($integer, "notanumber")
+    } catch {|$inner| throw("StillBad", $inner:message)}
+} catch {|$e| "{}: {}":format($e:type, $e:message)})
+assert ($rethrown == "StillBad: invalid digit found in string") "a catch clause should be able to re-throw as a different, custom error type"
+
+# a catch clause with no parameters is valid too, just like command mode
+$no_param_catch := (try { convert($integer, "notanumber") } catch {"caught, no param needed"})
+assert ($no_param_catch == "caught, no param needed") "a catch clause shouldn't need to declare a parameter for the error"

@@ -783,6 +783,44 @@ impl Node {
         ))
     }
 
+    /// Expression mode's `try {...} catch {...}` sugar. Desugars into a call to the
+    /// same `global:control:try` builtin command mode's `try` already uses. try.rs
+    /// reads its second, literal argument as a plain bareword string and validates it
+    /// equals "catch" (see Try's `r#catch` field in src/builtins/control/mod.rs) --
+    /// that's how command mode's own `try {...} catch {...}` avoids needing any
+    /// dedicated grammar at all -- so this only needs to synthesize that same literal
+    /// "catch" argument between the two closures when a catch clause is present.
+    pub fn try_expr(
+        try_location: Location,
+        body: Box<Node>,
+        catch: Option<Box<Node>>,
+        end_location: Location,
+    ) -> Box<Node> {
+        let location = try_location.union(end_location);
+        let mut expressions = vec![
+            Self::get_attr(&["global", "control", "try"], try_location),
+            *body,
+        ];
+        if let Some(catch_closure) = catch {
+            expressions.push(*Node::unquoted_string(TrackedString::new(
+                "catch",
+                try_location,
+            )));
+            expressions.push(*catch_closure);
+        }
+        Box::from(Node::Substitution(
+            JobNode {
+                commands: vec![CommandNode {
+                    expressions,
+                    location,
+                }],
+                location,
+                is_background: false,
+            }
+            .into(),
+        ))
+    }
+
     fn get_attr(path: &[&str], location: Location) -> Node {
         if path.len() == 1 {
             Node::Identifier(TrackedString::from((path[0], location)))

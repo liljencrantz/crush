@@ -294,9 +294,9 @@ Each arm is tried in order; the first that matches runs and the rest are skipped
 If nothing matches and there's no `default` arm, `match` fails with an error.
 
 `match` also works directly in expression mode, with the exact same arm syntax as
-above -- unlike `like`/`try`, which need ordinary command-call syntax
-(`like(...)`/`try(...)`) when used from expression mode, `match` is real grammar there,
-the same way `if`/`while`/`for`/`loop` are:
+above -- unlike `like`, which needs ordinary command-call syntax (`like(...)`) when used
+from expression mode, `match` (like `try`/`catch`, below) is real grammar there, the
+same way `if`/`while`/`for`/`loop` are:
 
 ```shell script
 crush# $describe := ({|$n| match $n {
@@ -566,6 +566,14 @@ given) runs instead, receiving a struct describing the error as its argument:
 string, when known -- empty otherwise). Either way, the error does not propagate
 past `try` -- with no `catch` at all, `try` just recovers silently, equivalent to
 an empty `catch`.
+
+`try`/`catch` also works directly in expression mode, with the exact same syntax:
+
+```shell script
+crush# ($x := (try { convert($integer, "notanumber") } catch {|$e| -1}))
+crush# $x
+-1
+```
 
 **`assert`** is the simplest way to raise an error deliberately, e.g. inside a script or
 a closure's own validation:

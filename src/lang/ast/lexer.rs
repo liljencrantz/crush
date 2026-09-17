@@ -611,6 +611,8 @@ impl<'input> Lexer<'input> {
                         "else" => Some(Token::Else(Location::new(i, end_idx + 1)).into()),
                         "match" => Some(Token::Match(Location::new(i, end_idx + 1)).into()),
                         "default" => Some(Token::Default(Location::new(i, end_idx + 1)).into()),
+                        "try" => Some(Token::Try(Location::new(i, end_idx + 1)).into()),
+                        "catch" => Some(Token::Catch(Location::new(i, end_idx + 1)).into()),
                         "return" => Some(Token::Return(Location::new(i, end_idx + 1)).into()),
                         "break" => Some(Token::Break(Location::new(i, end_idx + 1)).into()),
                         "continue" => Some(Token::Continue(Location::new(i, end_idx + 1)).into()),

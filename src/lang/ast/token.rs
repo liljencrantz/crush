@@ -46,6 +46,8 @@ pub enum Token<'input> {
     Else(Location),
     Match(Location),
     Default(Location),
+    Try(Location),
+    Catch(Location),
     Return(Location),
     Break(Location),
     Continue(Location),
@@ -95,6 +97,8 @@ impl Token<'_> {
             | Token::Else(l)
             | Token::Match(l)
             | Token::Default(l)
+            | Token::Try(l)
+            | Token::Catch(l)
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)
@@ -146,6 +150,8 @@ impl Token<'_> {
             Token::Else(_) => "else",
             Token::Match(_) => "match",
             Token::Default(_) => "default",
+            Token::Try(_) => "try",
+            Token::Catch(_) => "catch",
             Token::Return(_) => "return",
             Token::Break(_) => "break",
             Token::Continue(_) => "continue",
@@ -228,6 +234,8 @@ mod tests {
             ("else", Expression, Token::Else(loc)),
             ("match", Expression, Token::Match(loc)),
             ("default", Expression, Token::Default(loc)),
+            ("try", Expression, Token::Try(loc)),
+            ("catch", Expression, Token::Catch(loc)),
             ("return", Expression, Token::Return(loc)),
             ("break", Expression, Token::Break(loc)),
             ("continue", Expression, Token::Continue(loc)),
@@ -298,6 +306,8 @@ mod tests {
                 | Token::Else(..)
                 | Token::Match(..)
                 | Token::Default(..)
+                | Token::Try(..)
+                | Token::Catch(..)
                 | Token::Return(..)
                 | Token::Break(..)
                 | Token::Continue(..)
@@ -354,6 +364,8 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             | Token::Else(l)
             | Token::Match(l)
             | Token::Default(l)
+            | Token::Try(l)
+            | Token::Catch(l)
             | Token::Return(l)
             | Token::Break(l)
             | Token::Continue(l)

@@ -143,6 +143,7 @@ ExprItem: Box<Node> = {
     <key:Loop> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::loop_expr(key, body),
     <key:For> <id:Identifier> Equals <iter:Expr> Separators? BlockStart <body: ExprJobList> BlockEnd => Node::for_expr(key, id.into(), iter, body),
     <key:Match> <subject:Expr> Separators? BlockStart Separators? <arms: MatchArmList> BlockEnd <r: @R> => Node::match_expr(key, subject, arms, Location::from(r)),
+    <key:Try> <body: ExprClosureLiteral> <catch: TryOptCatch> <r: @R> => Node::try_expr(key, body, catch, Location::from(r)),
     <i: ExprItem> GetItemStart <e: Assignment> GetItemEnd => Box::from(Node::GetItem(i, e)),
     <i: ExprItem> MemberOperator <l: String> => Box::from(Node::GetAttr(i, l.into())),
     GetItemStart <l: ExprJobList> GetItemEnd => Node::list_literal(l),
@@ -166,6 +167,15 @@ ExprItem: Box<Node> = {
                     }.into()
                 ))
         },
+    ExprClosureLiteral,
+}
+
+// A closure literal, split out of ExprItem as its own nonterminal so a grammar
+// position that needs a literal `{...}` specifically (rather than any general
+// ExprItem, which can be extended further via `.x`/`[...]`/`(...)`) can require this
+// exactly, with no ambiguity about how far the extension should reach. Used both as
+// ExprItem's own closure-literal alternative and by `try`'s body/catch (see below).
+ExprClosureLiteral: Box<Node> = {
     <l: @L> BlockStart Separators? <signature: ExprSignature> <jobs: ExprJobListWithoutSeparator> BlockEnd <r: @R> => Box::from(Node::Closure(signature, jobs, Location::new(l, r))),
 }
 
@@ -190,6 +200,11 @@ MatchArm: MatchArmNode = {
         MatchArmNode { keyword: kw.into(), value: Some(val), body, location: Location::new(l, r) },
     <l: @L> <kw: DefaultArm> BlockStart Separators? <body: ExprJobListWithoutSeparator> BlockEnd <r: @R> =>
         MatchArmNode { keyword: TrackedString::new("default", kw), value: None, body, location: Location::new(l, r) },
+}
+
+TryOptCatch: Option<Box<Node>> = {
+    => None,
+    Catch <c: ExprClosureLiteral> => Some(c),
 }
 
 ExprOptParamList: Option<Vec<Node>> = {
@@ -411,6 +426,8 @@ extern {
         // elsewhere in this grammar -- LALRPOP terminal and nonterminal names share
         // one namespace.
         DefaultArm => Token::Default(<Location>),
+        Try => Token::Try(<Location>),
+        Catch => Token::Catch(<Location>),
         Return => Token::Return(<Location>),
         Break => Token::Break(<Location>),
         Continue => Token::Continue(<Location>),
