@@ -24,6 +24,13 @@ use signature::signature;
     example = "    is $string {echo \"$x is a string\"}",
     example = "    default {echo \"I don't know what $x is\"}",
     example = "}",
+    example = "# match is real grammar in expression mode too, with the exact same syntax",
+    example = "assert ((match $x {",
+    example = "    case 2 {\"two\"}",
+    example = "    any $(seq 5 10) {\"between 5 and 10\"}",
+    example = "    is $string {\"a string\"}",
+    example = "    default {\"something else\"}",
+    example = "}) == \"two\")",
 )]
 pub struct Match {
     #[description("the value to match against.")]

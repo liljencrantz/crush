@@ -22,6 +22,16 @@ use signature::signature;
     example = "for i=$(seq to=10) {",
     example = "  echo $(\"Lap #{}\":format $i)",
     example = "}",
+    example = "# for is real grammar in expression mode too -- the loop variable is written",
+    example = "# with a $ sigil there (`for $i = ...`), not the bareword `name=stream` form",
+    example = "# command mode uses",
+    example = "assert (({",
+    example = "    $sum := 0",
+    example = "    for $i = $(seq 1 5) {",
+    example = "        $sum = ($sum + $i)",
+    example = "    }",
+    example = "    $sum",
+    example = "}()) == 10)",
 )]
 pub struct For {
     #[named()]

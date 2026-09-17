@@ -14,6 +14,8 @@ use signature::signature;
     example = "} else {",
     example = "  echo small",
     example = "}",
+    example = "# if is real grammar in expression mode too, with the exact same syntax",
+    example = "assert ((if ($a > 10) { \"big\" } else { \"small\" }) == \"big\")",
 )]
 pub struct If {
     #[description("the condition to filter on.")]

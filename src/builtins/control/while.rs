@@ -15,6 +15,17 @@ use signature::signature;
     short = "Repeatedly execute the body for as long the condition is met.",
     long = "The loop body is optional. If not specified, the condition is executed until it returns false. This effectively means that the condition becomes the body, and the loop break check comes at the end of the loop.",
     example = "while {./some_file:exists} {echo \"hello\"}",
+    example = "# while is real grammar in expression mode too -- the condition is a bare",
+    example = "# expression there, not wrapped in its own {...} block like in command mode",
+    example = "assert (({",
+    example = "    $i := 0",
+    example = "    $sum := 0",
+    example = "    while ($i < 5) {",
+    example = "        $sum = ($sum + $i)",
+    example = "        $i = ($i + 1)",
+    example = "    }",
+    example = "    $sum",
+    example = "}()) == 10)",
 )]
 pub struct While {
     #[description("the condition.")]

@@ -17,6 +17,17 @@ use signature::signature;
     example = "  }",
     example = "  echo Working",
     example = "}",
+    example = "# loop is real grammar in expression mode too, with the exact same syntax",
+    example = "assert (({",
+    example = "    $i := 0",
+    example = "    $sum := 0",
+    example = "    loop {",
+    example = "        if ($i >= 5) { break }",
+    example = "        $sum = ($sum + $i)",
+    example = "        $i = ($i + 1)",
+    example = "    }",
+    example = "    $sum",
+    example = "}()) == 10)",
 )]
 pub struct Loop {
     #[description("the command to repeatedly invoke.")]
