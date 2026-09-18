@@ -228,13 +228,38 @@ impl GlobalState {
     /// Every thread under `job_id` is joined immediately, without deferring to that
     /// later drain, if `recv()` itself fails (meaning the job's last stage exited
     /// without ever producing a value at all -- by then every one of them has already
-    /// exited, that's *why* the channel disconnected, so the join is immediate) or if an
-    /// opportunistic non-blocking check right after a successful `recv()` finds one of
-    /// them *already* failed for real (the common case for a small/quick job, and not
-    /// something a later stream drain would ever get the chance to catch if this
-    /// succeeded value isn't a stream at all). Either way this recovers the job's real
-    /// error instead of the generic channel-disconnection one `recv()` alone would
-    /// otherwise surface.
+    /// exited, that's *why* the channel disconnected, so the join is immediate) or if
+    /// the value received is a plain, non-stream one *and* `job_id` isn't a background
+    /// job. A job's output travels over a channel bounded to exactly one value (`pipe()`
+    /// in `crate::lang::pipe`), and a job sends its one top-level value exactly once --
+    /// so once a plain value has been received, the thread that sent *that value* is
+    /// provably done with every channel it could ever block on; all that's left of it is
+    /// bounded, CPU-only teardown (return through its call frames, unregister). Blocking
+    /// on `join_job` here cannot deadlock and resolves in microseconds regardless of
+    /// system load, and doing so (rather than the non-blocking check used to use)
+    /// matters: something checking "is any other job still live" right after this call
+    /// (e.g. `crush:exit`'s refusal to exit with jobs running) needs a real answer, not a
+    /// best-effort one that can still say "yes" for a thread that has, in every way that
+    /// matters, already finished.
+    ///
+    /// The background-job check is essential, not an edge case: `Job::eval`'s
+    /// `is_background` branch (`job &`) sends back a plain job-id value the moment it has
+    /// registered the *real* pipeline with `add_background_job` -- but that real
+    /// pipeline's own stages keep running, deliberately unjoined, under this exact same
+    /// `job_id`, for as long as it takes (a `fs:watch` producer can run forever). Blindly
+    /// `join_job`-ing on receipt of that job-id value would defeat the entire point of
+    /// `&`, blocking here until the backgrounded work finishes instead of returning
+    /// immediately. `job_id`'s presence in `is_background_job` is race-free to check:
+    /// `add_background_job` always runs, in the same thread, strictly before the value
+    /// announcing it is sent, so by the time it's been received here the registration is
+    /// already visible. A *streaming* result is the other case that keeps this
+    /// non-blocking, since its producer can legitimately still be doing real, unbounded
+    /// work (e.g. `files / --recurse` still walking a large tree) well after handing back
+    /// its stream handle -- exactly the case where a caller like `crush:exit` must keep
+    /// seeing it as live for as long as that's true, same as a background job.
+    ///
+    /// Either way, joining also recovers the job's real error instead of the generic
+    /// channel-disconnection one `recv()` alone would otherwise surface.
     pub fn recv_job_result(&self, job: &JobHandle, last_input: &ValueReceiver) -> CrushResult<Value> {
         match last_input.recv() {
             Ok(Value::TableInputStream(stream)) => {
@@ -249,7 +274,11 @@ impl GlobalState {
                 Ok(Value::BinaryInputStream(reader))
             }
             Ok(v) => {
-                self.threads().try_join_job(job.id())?;
+                if self.is_background_job(job.id()) {
+                    self.threads().try_join_job(job.id())?;
+                } else {
+                    self.threads().join_job(job.id())?;
+                }
                 Ok(v)
             }
             Err(recv_err) => {
@@ -417,6 +446,17 @@ impl GlobalState {
     pub fn add_background_job(&self, job_id: JobId, value: ValueReceiver) {
         let mut data = self.data.lock().unwrap();
         data.background_jobs.push(BackgroundJob { job_id, value });
+    }
+
+    /// True if `job_id` is currently registered as a background job (started with a
+    /// trailing `&`, not yet `fg`'d). See `recv_job_result`'s doc comment for why this
+    /// matters: a background job's own real work is deliberately left running, unjoined,
+    /// under this same `job_id` even after the wrapper value announcing it has already
+    /// been delivered -- so, unlike an ordinary plain value, receiving that announcement
+    /// must never be treated as "this job_id has nothing left to do".
+    pub fn is_background_job(&self, job_id: JobId) -> bool {
+        let data = self.data.lock().unwrap();
+        data.background_jobs.iter().any(|job| job.job_id == job_id)
     }
 
     /// Remove and return the named background job's receiver, if one is registered.
