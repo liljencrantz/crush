@@ -140,20 +140,20 @@ impl PrettyPrinter {
 
     pub fn print_value(&self, cell: Value, format: &ColumnFormat) {
         match cell {
-            Value::TableInputStream(mut output) => {
-                let local_pp = self.clone();
-                let t = thread::Builder::new()
-                    .name("output-formater-stream".to_string())
-                    .spawn(move || local_pp.print_table_stream(&mut output, 0));
-                self.printer.handle_error(t.map_err(|e| e.into()));
-            }
-            Value::BinaryInputStream(mut b) => {
-                let local_pp = self.clone();
-                let t = thread::Builder::new()
-                    .name("output-formater-stream".to_string())
-                    .spawn(move || local_pp.print_binary(b.as_mut(), 0));
-                self.printer.handle_error(t.map_err(|e| e.into()));
-            }
+            // Printed synchronously, on the calling thread, same as every other branch
+            // here -- not on a separate spawned thread. A caller (e.g. `echo`) that reads
+            // a single stream value and hands it to `print_value` relies on this call not
+            // returning until the stream is actually fully printed: `echo`'s own
+            // evaluation isn't tracked by Crush's ThreadStore/job-handle machinery (it's a
+            // can_block=false command, so it runs synchronously in whatever thread invoked
+            // it), so a detached, unjoined thread here would let the caller (and, through
+            // it, `Job::eval` and `source()`'s top-level statement loop) consider this
+            // statement finished before the stream was actually done printing -- letting
+            // the *next* statement's own output run concurrently with this one and race it
+            // on the single shared Printer channel. See git history for the regression this
+            // fixed if this comment ever needs more detail.
+            Value::TableInputStream(mut output) => self.print_table_stream(&mut output, 0),
+            Value::BinaryInputStream(mut b) => self.print_binary(b.as_mut(), 0),
             Value::Table(rows) => self.print_table_stream(&mut TableReader::new(rows), 0),
             Value::Empty => {}
             Value::Struct(data) => self.print_struct(data, 0),
