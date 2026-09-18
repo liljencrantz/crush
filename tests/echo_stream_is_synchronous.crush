@@ -1,0 +1,18 @@
+# Regression test: `echo`'s printing of a table_input_stream value used to happen on a
+# raw, untracked std::thread::Builder thread (src/lang/pretty.rs's PrettyPrinter::print_value)
+# that was spawned and never joined. Because that thread wasn't registered with
+# ThreadStore, `echo`'s own CommandContext::eval() call returned as soon as the thread was
+# spawned rather than once it actually finished printing, so `Job::eval` (and therefore
+# execute.rs's `source()` statement loop) considered the statement complete while the
+# stream was still being printed in the background. The next top-level statement then
+# started running -- and printing its own output -- concurrently with the still-running
+# background thread from the previous statement, racing on the single global Printer
+# channel and producing interleaved/out-of-order stdout.
+#
+# `zip $(seq 3000) $(seq 3000) | echo` produces enough rows (and enough print-batches,
+# since the pretty printer flushes every ~29 rows) to give the race a wide, reliable
+# window; the very next statement, `echo "after"`, reliably lands in the middle of the
+# stream's output instead of after it when the bug is present.
+
+zip $(seq 3000) $(seq 3000) | echo
+echo "after"
