@@ -1,4 +1,7 @@
-rm ./.toml_test_file
+# Use a filename unique to this process so that concurrently running instances of
+# this same script (e.g. several `cargo test` runs in parallel, all sharing the crate
+# root as their working directory) never collide on the same file.
+$toml_test_file := $(convert $file $(".toml_test_file_{}":format $(random:integer 1000000000)))
 
 # A struct round-trips through toml:to/toml:from cleanly, since a struct is the one
 # crush shape that maps directly onto TOML's own required document root (a table).
@@ -73,9 +76,9 @@ assert $table_errored "a crush Table can't be a TOML document root and should er
 # File-based round trip, matching the documented `toml:from Cargo.toml` calling
 # convention -- toml:to with a file argument writes there directly instead of
 # returning a binary stream.
-val $s | toml:to ./.toml_test_file
-$file_back := $(toml:from ./.toml_test_file)
+val $s | toml:to $toml_test_file
+$file_back := $(toml:from $toml_test_file)
 assert ($file_back:a == 1) "a file-based toml round trip should preserve an integer field"
 assert ($file_back:b == "hello") "a file-based toml round trip should preserve a string field"
 
-rm ./.toml_test_file
+rm $toml_test_file
