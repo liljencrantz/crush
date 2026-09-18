@@ -1,0 +1,34 @@
+# Regression test for a race where a plain (non-stream) command substitution's job
+# could still show up in crush:jobs for a brief moment after its value had already been
+# delivered -- the thread that sent it had finished sending but not yet been reaped from
+# bookkeeping. Anything that immediately checked "is anything else still running" right
+# after such a substitution (most visibly `crush:exit`, which refuses while jobs are
+# running) could see that spurious, already-finished job and refuse incorrectly.
+# Reproduced directly as `$x := $(host:os:name); crush:exit`, which failed roughly 1 in
+# 150-200 runs before the fix. See GlobalState::recv_job_result's doc comment
+# (src/lang/state/global_state.rs) for the fix itself: a plain-valued substitution's job
+# is now joined synchronously (blocking, but provably fast -- see that comment for why
+# this can never deadlock) instead of with a best-effort, non-blocking check.
+#
+# Exercised as a loop checking crush:jobs's own count, not crush:exit directly: the race
+# was probabilistic, so a single iteration wouldn't reliably catch a regression, and
+# looping around crush:exit itself isn't possible since a successful call terminates the
+# process. If the race were present, at least one iteration would see an extra, leftover
+# job the previous iteration's substitution left behind, so the count would grow past its
+# very first, otherwise-stable value.
+$max := 0
+$min := 999999
+$i := 0
+while {($i < 300)} {
+    $x := $(host:os:name)
+    $count := $(crush:jobs | count)
+    if ($count > $max) {
+        $max = $count
+    }
+    if ($count < $min) {
+        $min = $count
+    }
+    $i = ($i + 1)
+}
+assert ($max == $min) $("expected a stable job count across iterations (no job lingering after a plain substitution), but saw it range from {} to {}":format $min $max)
+echo "ok"

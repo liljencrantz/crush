@@ -1,0 +1,30 @@
+# crush:exit must still correctly refuse to exit while a job captured via $(...) is
+# genuinely still running -- e.g. a stream whose producer hasn't finished yet -- matching
+# ordinary job-control semantics (crush.rs's Exit command's own doc comment). This is
+# deliberately unaffected by the sibling exit_no_spurious_running_jobs.crush fix:
+# GlobalState::recv_job_result only skips the blocking join for a *streaming* result (or
+# a backgrounded job) specifically because its producer can legitimately still be doing
+# real, unbounded work after handing back its stream/job handle -- see that function's
+# own doc comment. 1,000,000 rows is comfortably past the row channel's 128-row buffer
+# (streams() in src/lang/pipe.rs), so the producer is provably still working when the
+# first crush:exit attempt below runs. seq's upper bound is exclusive, hence 1000001.
+$a := $(seq 1 1000001)
+$refused := $false
+$msg := ""
+try {
+    crush:exit
+} catch {|$e|
+    $refused = $true
+    $msg = $e:message
+}
+assert $refused "crush:exit should refuse while a captured stream's producer is still running"
+assert $(like $msg *running*jobs*) ("expected a running-jobs error, got: {}":format($msg))
+
+# Draining the stream lets its producer finish and be properly joined (see
+# TableInputStream::recv's own doc comment on resolving a producer's real error/status at
+# end of stream), so a subsequent crush:exit should now succeed.
+$count := $($a | count)
+assert ($count == 1000000) "the stream should still be fully readable after the earlier refused exit attempt"
+
+echo "ok"
+crush:exit
