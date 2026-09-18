@@ -61,10 +61,34 @@ fn tee(mut context: CommandContext) -> CrushResult<()> {
     }
 
     while let Some(row) = input.next_row()? {
-        for branch_output in &branch_outputs {
-            branch_output.send(row.clone())?;
+        // A branch can finish (successfully or not) well before this loop is done
+        // feeding it rows -- e.g. a branch whose command doesn't even exist fails on
+        // its very first step, before ever reading any input, and its receiver is
+        // dropped the moment its thread exits. Sending it another row then hits a
+        // disconnected channel: entirely expected, exactly like a live `head`/`take`
+        // truncating its own upstream elsewhere in the codebase, and not this branch's
+        // real failure -- that's still recovered below, once its thread is actually
+        // joined. Stop feeding *that* branch and keep going with the others; only a
+        // genuine (non-disconnection) send error is this loop's own problem to report.
+        let mut i = 0;
+        while i < branch_outputs.len() {
+            match branch_outputs[i].send(row.clone()) {
+                Ok(()) => i += 1,
+                Err(e) if e.is_send_disconnected() => {
+                    branch_outputs.remove(i);
+                }
+                Err(e) => return Err(e),
+            }
         }
-        output.send(row)?;
+
+        // Same idea for tee's own passthrough output: if whatever comes next in the
+        // pipeline has already stopped reading (e.g. a downstream `head`), that's
+        // benign too -- stop producing output nobody wants instead of failing.
+        match output.send(row) {
+            Ok(()) => {}
+            Err(e) if e.is_send_disconnected() => break,
+            Err(e) => return Err(e),
+        }
     }
 
     // Dropping every branch's output stream closes its channel, which is how a
