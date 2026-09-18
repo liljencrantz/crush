@@ -1,6 +1,7 @@
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use test_finder::test_finder;
@@ -83,35 +84,42 @@ fn run_system_test(name: &Path) {
 // hook Rust's test harness offers for "run once before/after every test in this
 // binary" -- test_finder!()-generated tests have no body of their own to start a
 // server from, and cargo test's own generated `main()` isn't something this crate can
-// edit. All three servers use fixed ports and (for ssh-service) a fixed, committed host
-// key specifically so the test scripts that talk to them never need a value injected at
-// run time; see each service's own src/main.rs for why that's safe here.
+// edit. All three servers bind an OS-assigned port (so several instances -- e.g.
+// concurrent `cargo test` runs -- never collide over the same port) and announce it as
+// the first line of their own stdout; see spawn_and_read_port below for how that's
+// turned into DNS_PORT/GRPC_PORT/SSHD_PORT for test scripts to read via
+// `crush:env[...]`. ssh-service additionally uses a fixed, committed host key (see its
+// own src/main.rs for why that's safe here) so the known_hosts fixtures the ssh_exec*
+// tests verify against can stay plain, self-contained literals.
 static TEST_SERVERS: OnceLock<Mutex<Vec<Child>>> = OnceLock::new();
 
-fn wait_for_port(addr: &str) {
-    let start = std::time::Instant::now();
-    let max_wait = Duration::from_secs(60);
-    let mut backoff = Duration::from_millis(1);
-    loop {
-        if std::net::TcpStream::connect(addr).is_ok() {
-            return;
-        }
-        let elapsed = start.elapsed();
-        assert!(
-            elapsed < max_wait,
-            "test server never started listening on {} within 60s",
-            addr
-        );
-        std::thread::sleep(backoff.min(max_wait - elapsed));
-        backoff = (backoff * 2).min(max_wait);
-    }
-}
-
-fn spawn(path: &str, extra_args: &[&str]) -> Child {
-    Command::new(path)
+/// Spawns `path` with its stdout piped, and blocks until it writes its first line --
+/// by convention (see each of dns-service/grpc-service/ssh-service's own src/main.rs)
+/// that line is the port number it bound to, printed right after binding and before
+/// accepting any connections, so this doubles as both "read the chosen port" and "wait
+/// for the server to be ready" -- no separate polling loop needed. None of the three
+/// ever write anything else to stdout afterward, so it's safe to stop reading right
+/// after this one line.
+fn spawn_and_read_port(path: &str, extra_args: &[&str]) -> (Child, u16) {
+    let mut child = Command::new(path)
         .args(extra_args)
+        .stdout(Stdio::piped())
         .spawn()
-        .unwrap_or_else(|e| panic!("Failed to start {}: {}", path, e))
+        .unwrap_or_else(|e| panic!("Failed to start {}: {}", path, e));
+
+    let stdout = child.stdout.take().expect("child was spawned with a piped stdout");
+    let mut line = String::new();
+    BufReader::new(stdout)
+        .read_line(&mut line)
+        .unwrap_or_else(|e| panic!("failed to read the port {} announced on stdout: {}", path, e));
+    let port: u16 = line.trim().parse().unwrap_or_else(|_| {
+        panic!(
+            "expected {} to announce its bound port as the first line of stdout, got {:?}",
+            path, line
+        )
+    });
+
+    (child, port)
 }
 
 // dns-service/grpc-service/ssh-service are workspace members with their own [[bin]]
@@ -173,11 +181,11 @@ fn start_test_servers() {
     let grpc_service = target_dir.join("grpc-service");
     let ssh_service = target_dir.join("ssh-service");
 
-    children.push(spawn(dns_service.to_str().unwrap(), &[]));
-    wait_for_port("127.0.0.1:20053");
+    let (dns_child, dns_port) = spawn_and_read_port(dns_service.to_str().unwrap(), &[]);
+    children.push(dns_child);
 
-    children.push(spawn(grpc_service.to_str().unwrap(), &[]));
-    wait_for_port("[::1]:50051");
+    let (grpc_child, grpc_port) = spawn_and_read_port(grpc_service.to_str().unwrap(), &[]);
+    children.push(grpc_child);
 
     // ssh-service defaults to spawning "./target/debug/crush" for each exec channel's
     // `crush --pup` if not told otherwise -- the same stale-path problem
@@ -185,11 +193,24 @@ fn start_test_servers() {
     // explicitly, so the pup wire round trip these tests are meant to exercise reaches
     // the actual instrumented crush binary rather than whatever debug build happens to
     // already exist on disk.
-    children.push(spawn(
+    let (ssh_child, ssh_port) = spawn_and_read_port(
         ssh_service.to_str().unwrap(),
         &[env!("CARGO_BIN_EXE_crush")],
-    ));
-    wait_for_port("127.0.0.1:2849");
+    );
+    children.push(ssh_child);
+
+    // SAFETY: start_test_servers runs as a #[ctor], i.e. before main() and before the
+    // test harness spawns any test threads -- there is no concurrent access to the
+    // environment yet. Every test-server-dependent test script reads these back via
+    // `crush:env["..."]` (see e.g. tests/dns_query.crush, tests/grpc_mirror.crush,
+    // tests/ssh_exec.crush) instead of a hardcoded port, since each server now binds an
+    // OS-assigned one specifically so that running several instances of this test
+    // binary at once never collides over a fixed port.
+    unsafe {
+        std::env::set_var("DNS_PORT", dns_port.to_string());
+        std::env::set_var("GRPC_PORT", grpc_port.to_string());
+        std::env::set_var("SSHD_PORT", ssh_port.to_string());
+    }
 
     TEST_SERVERS
         .set(Mutex::new(children))

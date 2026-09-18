@@ -3,10 +3,10 @@
 # remote.rs's run_remote(). The connection should still succeed, and the server's real
 # key should end up pinned into the known_hosts file afterwards.
 
-$host_file := $(convert $file "./.ssh_known_hosts_allow_not_found")
+$host_file := $(convert $file $(".ssh_known_hosts_allow_not_found_{}":format $(random:integer 1000000000)))
 bin:from "" | bin:to $host_file
 
-$r := $(remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$host_file allow_not_found=$true)
+$r := $(remote:exec {(1 + 1)} $("127.0.0.1:{}":format $(crush:env["SSHD_PORT"])) username="crushtest" password="crushtest-password" host_file=$host_file allow_not_found=$true)
 assert ($r == 2) "remote:exec should still succeed and return its result when allow_not_found pins a new key"
 
 $pinned := $(bin:from $host_file | materialize | convert $string)

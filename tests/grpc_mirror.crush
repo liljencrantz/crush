@@ -7,7 +7,7 @@
 # This exercises the crush gRPC client's encoder and decoder (src/builtins/grpc/client.rs)
 # against a real server, rather than just the individual type-conversion functions.
 
-$conn := $(grpc:connect host="localhost" service="reverse.Reverser" plaintext=$true)
+$conn := $(grpc:connect host="localhost" service="reverse.Reverser" plaintext=$true port=$(convert $integer $(crush:env["GRPC_PORT"])))
 
 $child1 := $(struct:of child_id="c1" display_name="Child One")
 $child2 := $(struct:of child_id="c2" display_name="Child Two")

@@ -40,7 +40,6 @@ const TEST_USER: &str = "crushtest";
 const TEST_PASSWORD: &str = "crushtest-password";
 
 const BIND_ADDR: &str = "127.0.0.1";
-const BIND_PORT: u16 = 2849;
 
 // See dns-service/src/main.rs's install_graceful_shutdown for why this is needed: a
 // server killed by a plain SIGTERM never gets to flush coverage-instrumentation data
@@ -70,11 +69,28 @@ async fn main() {
         ..Default::default()
     });
 
+    // Bind to an OS-assigned free port rather than a fixed one, so several instances of
+    // this server (e.g. concurrent `cargo test` runs) never collide over the same port.
+    let socket = tokio::net::TcpListener::bind((BIND_ADDR, 0))
+        .await
+        .expect("failed to bind ssh test server socket");
+    let port = socket
+        .local_addr()
+        .expect("failed to read local address")
+        .port();
+
+    // The one and only thing ever written to stdout: tests/system.rs reads exactly this
+    // one line to learn which port got chosen and to know the socket is bound and ready
+    // to accept connections.
+    println!("{}", port);
+    use std::io::Write;
+    std::io::stdout().flush().expect("failed to flush stdout");
+
     let mut server = SshTestServer {
         crush_bin: Arc::new(crush_bin),
     };
     server
-        .run_on_address(config, (BIND_ADDR, BIND_PORT))
+        .run_on_socket(config, &socket)
         .await
         .expect("ssh test server failed");
 }

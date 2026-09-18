@@ -126,11 +126,6 @@ fn handle_tcp(mut stream: TcpStream) {
     }
 }
 
-/// Fixed rather than OS-assigned: tests/dns_query.crush is a plain, auto-discovered
-/// golden test with no custom Rust wiring to hand it a dynamically chosen port, so both
-/// sides just agree on this one ahead of time (matching grpc-service's fixed 50051).
-const BIND_PORT: u16 = 20053;
-
 /// This server runs forever, so it only ever stops via an external SIGTERM (see
 /// tests/system.rs's stop_test_servers). The default disposition for SIGTERM
 /// terminates the process without running Rust's atexit-registered cleanup, which is
@@ -150,10 +145,25 @@ fn install_graceful_shutdown() {
 fn main() {
     install_graceful_shutdown();
 
-    let udp =
-        UdpSocket::bind(("127.0.0.1", BIND_PORT)).expect("failed to bind UDP socket");
+    // Bind to an OS-assigned free port (UDP first) rather than a fixed one, so several
+    // instances of this server (e.g. concurrent `cargo test` runs) never collide over
+    // the same port -- then bind TCP explicitly to that same port number, since DNS
+    // clients (and dns.rs's own `port` argument) expect one port to serve both
+    // transports. The chosen port is announced on stdout (see main's own comment on the
+    // print below) for tests/system.rs to read and hand to test scripts via DNS_PORT.
+    let udp = UdpSocket::bind(("127.0.0.1", 0)).expect("failed to bind UDP socket");
+    let port = udp
+        .local_addr()
+        .expect("failed to read UDP socket's local address")
+        .port();
     let tcp =
-        TcpListener::bind(("127.0.0.1", BIND_PORT)).expect("failed to bind TCP socket");
+        TcpListener::bind(("127.0.0.1", port)).expect("failed to bind TCP socket");
+
+    // The one and only thing ever written to stdout: tests/system.rs reads exactly this
+    // one line to learn which port got chosen and to know the sockets are bound and
+    // ready to accept connections.
+    println!("{}", port);
+    std::io::stdout().flush().expect("failed to flush stdout");
 
     std::thread::spawn(move || serve_tcp(tcp));
 

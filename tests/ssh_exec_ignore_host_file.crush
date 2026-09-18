@@ -4,10 +4,10 @@
 # connection must still succeed here, which can only happen if verification was
 # actually skipped, not coincidentally passed.
 
-$host_file := $(convert $file "./.ssh_known_hosts_ignore")
+$host_file := $(convert $file $(".ssh_known_hosts_ignore_{}":format $(random:integer 1000000000)))
 bin:from "127.0.0.1 ssh-ed25519 XXXXXXNzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
 
-$r := $(remote:exec {(1 + 1)} "127.0.0.1:2849" username="crushtest" password="crushtest-password" host_file=$host_file ignore_host_file=$true)
+$r := $(remote:exec {(1 + 1)} $("127.0.0.1:{}":format $(crush:env["SSHD_PORT"])) username="crushtest" password="crushtest-password" host_file=$host_file ignore_host_file=$true)
 assert ($r == 2) "remote:exec with ignore_host_file should succeed even against a mismatched known_hosts entry"
 
 $host_file:remove

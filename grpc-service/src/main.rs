@@ -110,7 +110,10 @@ fn install_graceful_shutdown() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     install_graceful_shutdown();
 
-    let addr = "[::1]:50051".parse()?;
+    // Bind to an OS-assigned free port rather than a fixed one, so several instances of
+    // this server (e.g. concurrent `cargo test` runs) never collide over the same port.
+    let listener = tokio::net::TcpListener::bind("[::1]:0").await?;
+    let port = listener.local_addr()?.port();
     let reverser = MyReverser::default();
 
     // Use the path relative to the manifest directory
@@ -121,12 +124,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register_encoded_file_descriptor_set(descriptor_set)
         .build()?;
 
-    println!("ReverserServer listening on {}", addr);
+    // The one and only thing ever written to stdout: tests/system.rs reads exactly this
+    // one line to learn which port got chosen and to know the socket is bound and ready
+    // to accept connections.
+    println!("{}", port);
+    use std::io::Write;
+    std::io::stdout().flush()?;
 
     Server::builder()
         .add_service(ReverserServer::new(reverser))
         .add_service(reflection_service)
-        .serve(addr)
+        .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(listener))
         .await?;
 
     Ok(())

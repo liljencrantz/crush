@@ -7,10 +7,10 @@
 # setup): one unreachable host mixed in with reachable ones, with parallel=1 so a single
 # worker thread must survive the failure and keep draining the queue by itself.
 
-$host_file := $(convert $file "./.ssh_known_hosts_pexec")
+$host_file := $(convert $file $(".ssh_known_hosts_pexec_{}":format $(random:integer 1000000000)))
 bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
 
-$addr := "127.0.0.1:2849"
+$addr := $("127.0.0.1:{}":format $(crush:env["SSHD_PORT"]))
 $bad_addr := "127.0.0.1:1"
 $user := "crushtest"
 $pass := "crushtest-password"

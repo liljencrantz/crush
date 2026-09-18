@@ -1,14 +1,15 @@
 # Happy-path remote:exec/remote:pexec against the local ssh-service test server (see
 # ssh-service/), started once for the whole test binary via tests/system.rs's ctor-based
-# setup and always using a fixed, committed host key (see ssh-service/src/main.rs) -- so
-# the known_hosts line below never needs generating at test time. ssh-service spawns the
-# real local `crush --pup` binary for every exec channel, so this exercises a genuine
-# pup wire round trip, not a reimplementation of it.
+# setup (on an OS-assigned port passed on as SSHD_PORT) and always using a fixed,
+# committed host key (see ssh-service/src/main.rs) -- so the known_hosts line below
+# never needs generating at test time. ssh-service spawns the real local `crush --pup`
+# binary for every exec channel, so this exercises a genuine pup wire round trip, not a
+# reimplementation of it.
 
-$host_file := $(convert $file "./.ssh_known_hosts_exec")
+$host_file := $(convert $file $(".ssh_known_hosts_exec_{}":format $(random:integer 1000000000)))
 bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
 
-$addr := "127.0.0.1:2849"
+$addr := $("127.0.0.1:{}":format $(crush:env["SSHD_PORT"]))
 $user := "crushtest"
 $pass := "crushtest-password"
 
