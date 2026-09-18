@@ -34,6 +34,7 @@ impl JobControl for ChannelBasedController {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum StreamControlMessage {
     Terminate,
     Pause,

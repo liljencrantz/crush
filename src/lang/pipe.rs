@@ -179,6 +179,28 @@ impl TableOutputStream {
             Box::from(ChannelBasedController::new(control_sender)),
         )
     }
+
+    /// This stream's own control channel, if any -- a clone of the `Receiver` half, not
+    /// a new subscription. A plain `TableOutputStream::clone()` (as when fanning a
+    /// single interruptible stream out across several worker threads, the way
+    /// `stream:group` does) clones this along with everything else, and a crossbeam
+    /// `Receiver` clone is another handle onto the *same* queue, not a broadcast
+    /// subscription -- a control message sent once is only ever delivered to whichever
+    /// one clone's `select!`/`try_recv()` claims it first, never to every clone. A
+    /// caller that needs every one of several concurrent consumers to see every message
+    /// needs its own fan-out (see `stream::group`'s `spawn_control_fanout`), built from
+    /// this getter plus `with_control`.
+    pub fn control(&self) -> Option<Receiver<StreamControlMessage>> {
+        self.control.clone()
+    }
+
+    /// Replaces this stream's control channel -- the write-side counterpart of
+    /// `control()`, for handing a clone its own dedicated receiver (e.g. one leg of a
+    /// fan-out) instead of the shared one an ordinary `clone()` would have given it.
+    pub fn with_control(mut self, control: Receiver<StreamControlMessage>) -> Self {
+        self.control = Some(control);
+        self
+    }
 }
 
 #[derive(Clone)]
@@ -529,3 +551,45 @@ impl TableStreamReader for TableInputStream {
 }
 
 pub type Stream = Box<dyn TableStreamReader + Send>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Documents a permanent, deliberate limitation this crate's own code has to route
+    // around -- see `control`/`with_control`'s doc comments and stream::group's
+    // spawn_control_fanout for the actual fix built on top of them. A plain
+    // TableOutputStream::clone() is derived, so `control`'s Receiver gets cloned along
+    // with everything else -- but a crossbeam Receiver clone is another handle onto the
+    // *same* queue, not a broadcast subscription: a message sent once through the one
+    // registered JobController is only ever delivered to whichever one clone's
+    // `try_recv()`/`select!` claims it, never to every clone. This is why
+    // stream:group's worker pool (16 threads, all needing to react to the same job's
+    // pause/terminate, all originally sharing a plain clone of one interruptible
+    // TableOutputStream) could only ever pause/terminate one of its sixteen workers.
+    //
+    // Deliberately synchronous and deterministic, no threads or timing: calling
+    // poll_control() on `output` first is what "whichever clone claims it first" means
+    // here, so this doesn't need a race to demonstrate the behavior.
+    #[test]
+    fn plain_clone_of_an_interruptible_table_output_stream_does_not_broadcast_control() {
+        let (output, controller) = unlimited_streams(vec![]).0.interruptible();
+        let output2 = output.clone();
+
+        controller.terminate().unwrap();
+
+        let first_saw_terminate = output.poll_control().is_err();
+        let second_saw_terminate = output2.poll_control().is_err();
+
+        assert!(
+            first_saw_terminate && !second_saw_terminate,
+            "expected only the first clone polled to observe the one Terminate sent \
+             (first={}, second={}) -- if this ever changes, TableOutputStream::clone() \
+             itself must have started broadcasting control messages, which would make \
+             stream::group's own fan-out workaround redundant (harmless, but worth \
+             simplifying away) rather than necessary",
+            first_saw_terminate,
+            second_saw_terminate,
+        );
+    }
+}
