@@ -36,7 +36,8 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let output = context.initialize_output(&OUTPUT_TYPE)?;
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
+    let command_handle = context.command_handle().clone();
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input, &command_handle)?);
     let mut line = String::new();
 
     loop {

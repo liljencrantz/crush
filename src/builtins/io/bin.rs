@@ -24,8 +24,9 @@ struct From {
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let command_handle = context.command_handle().clone();
     context.output.send(Value::BinaryInputStream(
-        cfg.files.to_reader(context.input)?,
+        cfg.files.to_reader(context.input, &command_handle)?,
     ))
 }
 

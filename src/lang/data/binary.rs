@@ -1,7 +1,9 @@
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushError, CrushResult, terminate};
+use crate::lang::job_control::StreamControlMessage;
 use crate::lang::state::handles::JobHandle;
 use crate::lang::threads::ThreadStore;
 use crossbeam::channel::{Receiver, Sender, bounded};
+use crossbeam::select;
 use std::cmp::min;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
@@ -29,6 +31,10 @@ struct ChannelReader {
     /// `Value::BinaryInputStream`) keeps its own copy of the `JobHandle` alive forever,
     /// even after another clone has fully, successfully drained the same bytes.
     producer: Arc<Mutex<Option<(JobHandle, ThreadStore)>>>,
+    /// The job-control channel registered via `register_control`, if any -- see that
+    /// method's own doc comment. `None` (the default) means a blocked `read()` behaves
+    /// exactly as before: no control message can ever interrupt it.
+    control: Option<Receiver<StreamControlMessage>>,
 }
 
 impl Debug for ChannelReader {
@@ -37,24 +43,77 @@ impl Debug for ChannelReader {
     }
 }
 
+/// The two ways `ChannelReader::recv_next` can fail to produce a chunk of bytes.
+enum RecvFailure {
+    /// The data channel itself disconnected -- ordinary end of stream, or the producer
+    /// failed; `read`'s own caller resolves which via the `producer` tag.
+    Disconnected,
+    /// A real, unrecoverable error: a `Terminate` control message, or (mirroring
+    /// `TableOutputStream::send`'s identical choice) the control channel itself
+    /// unexpectedly disconnecting. Smuggled through the `io::Error` this ultimately
+    /// becomes -- see `read`'s own comment on why, and `CrushError`'s
+    /// `From<std::io::Error>` for the matching unwrap.
+    Interrupted(CrushError),
+}
+
 impl BinaryReader for ChannelReader {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync> {
         Box::from(ChannelReader {
             receiver: self.receiver.clone(),
             buff: None,
             producer: self.producer.clone(),
+            control: self.control.clone(),
         })
     }
 
     fn set_producer_job(&mut self, job: JobHandle, threads: ThreadStore) {
         *self.producer.lock().unwrap() = Some((job, threads));
     }
+
+    fn register_control(&mut self, control: Receiver<StreamControlMessage>) {
+        self.control = Some(control);
+    }
+}
+
+impl ChannelReader {
+    /// Blocks for the next chunk of bytes, racing against `self.control` (if any) the
+    /// same way `TableOutputStream::send`/`InterruptibleTableInputStream::read` already
+    /// race their own data channel against a control one: `Pause` blocks right here,
+    /// looping on the control channel alone, until `Resume` or `Terminate` arrives;
+    /// `Terminate` ends the read now instead of leaving it blocked forever on a producer
+    /// that may never send anything.
+    fn recv_next(&self) -> Result<Box<[u8]>, RecvFailure> {
+        let Some(control) = &self.control else {
+            return self.receiver.recv().map_err(|_| RecvFailure::Disconnected);
+        };
+        select! {
+            recv(self.receiver) -> r => r.map_err(|_| RecvFailure::Disconnected),
+            recv(control) -> msg => match msg {
+                Ok(StreamControlMessage::Terminate) => Err(RecvFailure::Interrupted(terminate::<()>().unwrap_err())),
+                Ok(StreamControlMessage::Resume) => self.recv_next(),
+                Ok(StreamControlMessage::Pause) => {
+                    loop {
+                        match control.recv() {
+                            Ok(StreamControlMessage::Terminate) => {
+                                return Err(RecvFailure::Interrupted(terminate::<()>().unwrap_err()));
+                            }
+                            Ok(StreamControlMessage::Resume) => break,
+                            Ok(StreamControlMessage::Pause) => {}
+                            Err(e) => return Err(RecvFailure::Interrupted(e.into())),
+                        }
+                    }
+                    self.recv_next()
+                }
+                Err(e) => Err(RecvFailure::Interrupted(e.into())),
+            },
+        }
+    }
 }
 
 impl Read for ChannelReader {
     fn read(&mut self, mut dst: &mut [u8]) -> Result<usize, Error> {
         match &self.buff {
-            None => match self.receiver.recv() {
+            None => match self.recv_next() {
                 Ok(b) => {
                     if b.len() == 0 {
                         self.read(dst)
@@ -77,13 +136,19 @@ impl Read for ChannelReader {
                 // unwraps it back out). The tag is taken (cleared), not just read, so
                 // every clone of this reader sees it resolved afterward too -- see the
                 // `producer` field's own doc comment for why that sharing is essential.
-                Err(_) => match self.producer.lock().unwrap().take() {
+                Err(RecvFailure::Disconnected) => match self.producer.lock().unwrap().take() {
                     Some((job, threads)) => match threads.join_job(job.id()) {
                         Ok(()) => Ok(0),
                         Err(real_err) => Err(Error::other(real_err)),
                     },
                     None => Ok(0),
                 },
+
+                // A `Terminate` control message (or, matching `TableOutputStream::send`'s
+                // own choice, an unexpectedly disconnected control channel) -- smuggled
+                // through as an io::Error the same way a real producer error already is,
+                // just above.
+                Err(RecvFailure::Interrupted(e)) => Err(Error::other(e)),
             },
             Some(src) => {
                 if dst.len() >= src.len() {
@@ -126,6 +191,15 @@ pub trait BinaryReader: Read + Debug + Send + Sync {
     /// Most readers (a plain file, an in-memory buffer, ...) have no such notion of an
     /// in-flight producer and just ignore this.
     fn set_producer_job(&mut self, _job: JobHandle, _threads: ThreadStore) {}
+
+    /// Registers the job-control channel a paused/terminated job's `crush:pause`/
+    /// `crush:terminate` sends `StreamControlMessage`s through, so a `read()` blocked
+    /// waiting on this reader's own producer can be interrupted instead of hanging
+    /// forever -- mirrors `TableOutputStream`'s existing `control` field and
+    /// `InterruptibleTableInputStream`'s existing `select!` against it. Most readers (a
+    /// plain file, an in-memory buffer, ...) can never block waiting on a producer in
+    /// the first place and just ignore this; only a channel-backed reader needs it.
+    fn register_control(&mut self, _control: Receiver<StreamControlMessage>) {}
 }
 
 pub struct FileReader {
@@ -191,6 +265,7 @@ pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>)
             receiver: r,
             buff: None,
             producer: Arc::new(Mutex::new(None)),
+            control: None,
         }),
     )
 }
@@ -266,5 +341,50 @@ impl Read for BinaryVecReader {
 impl Debug for BinaryVecReader {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         f.write_str("<vec reader>")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossbeam::channel::unbounded;
+    use std::time::Duration;
+
+    // A blocked ChannelReader::read() must respect a Terminate control message the way
+    // TableOutputStream::send/InterruptibleTableInputStream::read already do -- otherwise
+    // a job stuck reading a binary_stream whose producer never sends anything (or hangs)
+    // can never be interrupted via crush:terminate, only killed at the process level.
+    // Run on a background thread with a bounded wait, not directly: a real hang here
+    // must fail this test with a clear message, not hang the whole test binary.
+    #[test]
+    fn channel_reader_read_is_interrupted_by_terminate() {
+        let (_writer, mut reader) = binary_channel();
+        // Never write anything to _writer -- reader.read() would block on the channel
+        // forever without a working control message.
+        let (control_sender, control_receiver) = unbounded();
+        reader.register_control(control_receiver);
+
+        let (done_tx, done_rx) = crossbeam::channel::bounded(1);
+        std::thread::spawn(move || {
+            let mut buf = [0u8; 16];
+            let result = reader.read(&mut buf);
+            let _ = done_tx.send(result.is_err());
+        });
+
+        // Give the spawned thread a moment to actually reach the blocking recv().
+        std::thread::sleep(Duration::from_millis(100));
+        control_sender.send(StreamControlMessage::Terminate).expect(
+            "control_receiver was already dropped -- register_control() isn't keeping it alive",
+        );
+
+        match done_rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(was_err) => assert!(
+                was_err,
+                "a read() interrupted by Terminate should return an error, not Ok"
+            ),
+            Err(_) => panic!(
+                "ChannelReader::read() did not respect a Terminate control message within 5s -- it's still blocked on the channel"
+            ),
+        }
     }
 }

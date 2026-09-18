@@ -81,7 +81,7 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
     }
 
     if let Some(body) = cfg.form {
-        let mut reader = binary_input::input_reader(body)?;
+        let mut reader = binary_input::input_reader(body, context.command_handle())?;
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf)?;
         request = request.body(buf);

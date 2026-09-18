@@ -98,7 +98,8 @@ struct FromSignature {
 fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
+    let command_handle = context.command_handle().clone();
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input, &command_handle)?);
     let mut v = Vec::new();
 
     reader.read_to_end(&mut v)?;

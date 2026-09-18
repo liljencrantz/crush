@@ -46,7 +46,8 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let output = context.initialize_output(&[ColumnType::new("token", ValueType::String)])?;
     let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
 
-    let mut reader = BufReader::new(cfg.files.to_reader(context.input)?);
+    let command_handle = context.command_handle().clone();
+    let mut reader = BufReader::new(cfg.files.to_reader(context.input, &command_handle)?);
 
     let mut buf = Vec::<u8>::new();
     let mut token = String::new();

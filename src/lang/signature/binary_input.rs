@@ -1,15 +1,30 @@
 use crate::lang::data::binary::BinaryReader;
 use crate::lang::errors::{CrushError, CrushResult, command_error};
+use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::ValueReceiver;
+use crate::lang::state::handles::CommandHandle;
 use crate::lang::value::{BinaryInputStream, Value};
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use crate::util::regex::RegexFileMatcher;
+use crossbeam::channel::unbounded;
 use regex::Regex;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
+
+/// Registers a fresh job-control channel with `command_handle` and wires it into
+/// `reader`, so a blocked read on it (only meaningful for a channel-backed reader --
+/// see `BinaryReader::register_control`'s own doc comment, everything else ignores this)
+/// can be interrupted by `crush:pause`/`crush:terminate` instead of hanging forever on a
+/// producer that never sends anything. Mirrors `CommandContext::input_stream`'s
+/// identical wiring for table streams (`TableInputStream::interruptible`).
+fn register_control(reader: &mut Box<dyn BinaryReader + Send + Sync>, command_handle: &CommandHandle) {
+    let (control_sender, control_receiver) = unbounded();
+    command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
+    reader.register_control(control_receiver);
+}
 
 /// A type representing a value with a binary representation. It is used in the signature of builtin commands that
 /// accept any type of binary value as arguments.
@@ -43,18 +58,25 @@ impl TryFrom<Value> for BinaryInput {
 }
 
 pub trait ToReader {
-    fn to_reader(self, fallback: ValueReceiver)
-    -> CrushResult<Box<dyn BinaryReader + Send + Sync>>;
+    fn to_reader(
+        self,
+        fallback: ValueReceiver,
+        command_handle: &CommandHandle,
+    ) -> CrushResult<Box<dyn BinaryReader + Send + Sync>>;
 }
 
 impl ToReader for Vec<BinaryInput> {
     fn to_reader(
         mut self,
         fallback: ValueReceiver,
+        command_handle: &CommandHandle,
     ) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
         if self.is_empty() {
             match fallback.recv()? {
-                Value::BinaryInputStream(b) => Ok(b),
+                Value::BinaryInputStream(mut b) => {
+                    register_control(&mut b, command_handle);
+                    Ok(b)
+                }
                 Value::Binary(b) => Ok(<dyn BinaryReader>::vec(&b)),
                 Value::String(s) => Ok(<dyn BinaryReader>::vec(s.as_bytes())),
                 v => command_error(format!(
@@ -69,7 +91,10 @@ impl ToReader for Vec<BinaryInput> {
                     BinaryInput::File(p) => readers.push(Box::from(
                         crate::lang::data::binary::FileReader::new(File::open(p)?),
                     )),
-                    BinaryInput::BinaryInputStream(s) => readers.push(Box::from(s)),
+                    BinaryInput::BinaryInputStream(mut s) => {
+                        register_control(&mut s, command_handle);
+                        readers.push(Box::from(s));
+                    }
                     BinaryInput::Binary(b) => readers.push(<dyn BinaryReader>::vec(&b)),
                     BinaryInput::String(s) => readers.push(<dyn BinaryReader>::vec(&s.as_bytes())),
                     BinaryInput::Glob(g) => {
@@ -99,13 +124,19 @@ impl ToReader for Vec<BinaryInput> {
     }
 }
 
-pub fn input_reader(input: BinaryInput) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
+pub fn input_reader(
+    input: BinaryInput,
+    command_handle: &CommandHandle,
+) -> CrushResult<Box<dyn BinaryReader + Send + Sync>> {
     let mut readers: Vec<Box<dyn BinaryReader + Send + Sync>> = Vec::new();
     match input {
         BinaryInput::File(p) => readers.push(Box::from(
             crate::lang::data::binary::FileReader::new(File::open(p)?),
         )),
-        BinaryInput::BinaryInputStream(s) => readers.push(Box::from(s)),
+        BinaryInput::BinaryInputStream(mut s) => {
+            register_control(&mut s, command_handle);
+            readers.push(Box::from(s));
+        }
         BinaryInput::Binary(b) => readers.push(<dyn BinaryReader>::vec(&b)),
         BinaryInput::String(s) => readers.push(<dyn BinaryReader>::vec(&s.as_bytes())),
         BinaryInput::Glob(g) => {

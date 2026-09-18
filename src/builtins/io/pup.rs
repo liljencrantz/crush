@@ -44,8 +44,9 @@ struct From {
 
 fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: From = From::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let command_handle = context.command_handle().clone();
     context.output.send(deserialize_reader(
-        &mut cfg.files.to_reader(context.input)?,
+        &mut cfg.files.to_reader(context.input, &command_handle)?,
         &context.scope,
     )?)
 }

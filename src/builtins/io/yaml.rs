@@ -146,7 +146,8 @@ struct FromSignature {
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
     let cfg: FromSignature =
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let reader = BufReader::new(cfg.files.to_reader(context.input)?);
+    let command_handle = context.command_handle().clone();
+    let reader = BufReader::new(cfg.files.to_reader(context.input, &command_handle)?);
     let serde_value = serde_yaml::from_reader(reader)?;
     let crush_value = from_yaml(&serde_value)?;
     context.output.send(crush_value)
