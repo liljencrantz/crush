@@ -9,11 +9,72 @@ use ctor::{ctor, dtor};
 use nix::sys::signal::{Signal, kill};
 use nix::unistd::Pid;
 
+/// Every system test's budget for actually finishing. `run_system_test` used to run the
+/// child via `Command::output()`, which waits forever -- fine for a script that's just
+/// wrong, but a script that *hangs* (a real deadlock, not a bug in this specific test)
+/// took the whole suite and CI down with it. `test_join_large_stream_does_not_deadlock`
+/// used to work around that with its own bespoke, non-auto-discovered test outside
+/// tests/*.crush + test_finder!() entirely; this timeout is what let that one-off be
+/// deleted and its script (see tests/join_large_stream_deadlock.crush) become a normal,
+/// auto-discovered golden test like every other one -- the regular mechanism adapted to
+/// cover this case, rather than another special case added alongside it.
+const TEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+fn drain_to_string(mut pipe: impl std::io::Read) -> String {
+    let mut buf = String::new();
+    let _ = pipe.read_to_string(&mut buf);
+    buf
+}
+
 fn run_system_test(name: &Path) {
-    let output = Command::new(env!("CARGO_BIN_EXE_crush"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_crush"))
         .args(&[name.to_str().unwrap()])
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .expect("failed to execute process");
+
+    // Drain stdout/stderr on their own threads, concurrently with the wait loop below,
+    // not just after it: the OS pipe buffer is small (order 64KB), and a child that
+    // fills it (test_help_rendering's generate_docs.crush, printing every builtin's
+    // full help text, easily does) blocks trying to write more with nothing reading --
+    // try_wait() below would then just spin seeing "still running" until the timeout
+    // killed it, misreporting an ordinary slow-but-fine test as a hang. This is exactly
+    // the kind of "must drain concurrently or deadlock" bug this whole test suite exists
+    // to catch in crush itself; the harness can't be the one committing it.
+    let stdout_pipe = child.stdout.take().expect("stdout was piped");
+    let stderr_pipe = child.stderr.take().expect("stderr was piped");
+    let stdout_reader = std::thread::spawn(move || drain_to_string(stdout_pipe));
+    let stderr_reader = std::thread::spawn(move || drain_to_string(stderr_pipe));
+
+    let deadline = std::time::Instant::now() + TEST_TIMEOUT;
+    let status = loop {
+        match child.try_wait().expect("failed to poll child") {
+            Some(status) => break status,
+            None if std::time::Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            None => {
+                let _ = child.kill();
+                let _ = child.wait();
+                let stdout = stdout_reader.join().unwrap_or_default();
+                let stderr = stderr_reader.join().unwrap_or_default();
+                panic!(
+                    "crush did not finish running {} within {:?} -- likely a hang, not \
+                     just a slow machine.\nStdout so far:\n{}\nStderr so far:\n{}",
+                    name.to_str().unwrap(),
+                    TEST_TIMEOUT,
+                    stdout,
+                    stderr,
+                );
+            }
+        }
+    };
+
+    // The child has already exited, so both reader threads are at (or immediately
+    // reaching) EOF -- this is not an extra wait on top of the loop above.
+    let actual_string = stdout_reader.join().expect("stdout reader thread panicked");
+    let stderr = stderr_reader.join().expect("stderr reader thread panicked");
 
     let status_name = name.with_extension("crush.status");
     let expected_status: i32 = match fs::read_to_string(&status_name) {
@@ -27,14 +88,14 @@ fn run_system_test(name: &Path) {
         Err(_) => 0,
     };
     assert_eq!(
-        output.status.code(),
+        status.code(),
         Some(expected_status),
         "Wrong exit status while running file {}. Expected {}, got {:?}.\nStdout:\n{}\nStderr:\n{}",
         name.to_str().unwrap(),
         expected_status,
-        output.status.code(),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
+        status.code(),
+        actual_string,
+        stderr,
     );
 
     // A test with no .crush.output file skips the output comparison entirely -- it's
@@ -46,7 +107,6 @@ fn run_system_test(name: &Path) {
         Err(_) => return,
     };
     let expected_lines = expected_output.lines().collect::<Vec<&str>>();
-    let actual_string = String::from_utf8_lossy(&output.stdout);
     let actual_lines = actual_string.lines().collect::<Vec<&str>>();
 
     for (idx, (expected, actual)) in expected_lines.iter().zip(actual_lines.iter()).enumerate() {
@@ -249,75 +309,6 @@ fn stop_test_servers() {
             }
         }
     }
-}
-
-// Deliberately not tests/<name>.crush + test_finder!()'s auto-discovery: that mechanism
-// has no timeout, and this script currently hangs forever (see the script's own header
-// comment for the root cause). It lives in tests/fixtures/ specifically because
-// test_finder only reads direct entries of tests/ (fs::read_dir, not recursive), so a
-// subdirectory is invisible to it -- this test is the only thing that runs the script.
-//
-// Runs it under an explicit deadline instead of a plain run_system_test call, so a
-// regression here fails this test with a clear message rather than hanging `cargo test`
-// (and CI) forever.
-#[test]
-fn test_join_large_stream_does_not_deadlock() {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_crush"))
-        .arg("tests/fixtures/join_large_stream_deadlock.crush")
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .expect("failed to start crush");
-
-    let deadline = std::time::Instant::now() + Duration::from_secs(30);
-    let status = loop {
-        match child.try_wait().expect("failed to poll child") {
-            Some(status) => break status,
-            None if std::time::Instant::now() < deadline => {
-                std::thread::sleep(Duration::from_millis(50));
-            }
-            None => {
-                let _ = child.kill();
-                let _ = child.wait();
-                panic!(
-                    "crush did not finish tests/fixtures/join_large_stream_deadlock.crush \
-                     within 30s -- this is the streamed-value-capture deadlock described in \
-                     that script's header comment, not a slow machine"
-                );
-            }
-        }
-    };
-
-    // try_wait() has already reaped the child above -- calling wait()/wait_with_output()
-    // again here would error, so the pipes are drained directly instead.
-    use std::io::Read;
-    let mut stdout = String::new();
-    child
-        .stdout
-        .take()
-        .expect("stdout was piped")
-        .read_to_string(&mut stdout)
-        .expect("failed to read crush's stdout");
-    let mut stderr = String::new();
-    child
-        .stderr
-        .take()
-        .expect("stderr was piped")
-        .read_to_string(&mut stderr)
-        .expect("failed to read crush's stderr");
-
-    assert!(
-        status.success(),
-        "crush exited with {:?}.\nStdout:\n{}\nStderr:\n{}",
-        status.code(),
-        stdout,
-        stderr,
-    );
-    assert_eq!(
-        stdout.trim(),
-        "ok",
-        "unexpected output; the script's own assert calls should have already caught a wrong join result"
-    );
 }
 
 test_finder!();
