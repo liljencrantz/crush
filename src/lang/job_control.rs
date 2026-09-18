@@ -82,4 +82,17 @@ impl<T> InterruptibleJoinHandle<T> {
             },
         }
     }
+
+    /// Like `join`, but never blocks: `None` means the thread hasn't finished (or sent a
+    /// control message) yet, in which case nothing was consumed and a later `join`/
+    /// `try_join` call can still observe it.
+    pub fn try_join(&self) -> Option<CrushResult<Either<T, StreamControlMessage>>> {
+        if let Ok(res) = self.result_receiver.try_recv() {
+            return Some(Ok(Either::Left(res)));
+        }
+        if let Ok(msg) = self.control_receiver.try_recv() {
+            return Some(Ok(Either::Right(msg)));
+        }
+        None
+    }
 }

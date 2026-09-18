@@ -10,6 +10,7 @@ use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, J
 use crate::lang::state::id::JobId;
 use crate::lang::state::warning::Warning;
 use crate::lang::threads::ThreadStore;
+use crate::lang::value::Value;
 use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
 use num_format::{Grouping, SystemLocale};
@@ -201,6 +202,61 @@ impl GlobalState {
 
     pub fn threads(&self) -> &ThreadStore {
         &self.threads
+    }
+
+    /// Waits for a job's captured output value without first waiting for every thread
+    /// it spawned (a 5-stage pipeline can have up to 5, all sharing `job_id` -- see
+    /// `ThreadStore::join_job`) to fully exit -- the job's own last stage still needs to
+    /// actually finish producing that value, but nothing here needs the whole job to
+    /// have finished *everything* by then. A job that streams its result (e.g. any
+    /// table-producing command) keeps sending rows into that stream's own bounded row
+    /// channel (see `streams()` in `crate::lang::pipe`) after handing back the stream
+    /// handle itself; joining first -- waiting for every stage to fully exit -- before
+    /// ever reading that handle would mean nobody drains that channel until the join
+    /// returns, so once the row count exceeds the channel's capacity the producer blocks
+    /// forever waiting for a reader that can only ever be unblocked by the join it's
+    /// blocking. This mirrors how an explicitly backgrounded job (`job &`) already
+    /// behaves: `fg` on it also only `recv()`s the job's output, never joins its thread.
+    ///
+    /// A stream can still fail *after* successfully handing back its handle -- e.g.
+    /// `uniq` sends its output stream immediately, then only discovers a non-hashable
+    /// value once it actually reads a row -- so a returned `Value::TableInputStream` is
+    /// tagged with `job_id`; `TableInputStream::recv()` joins it once the stream is
+    /// actually drained to the end, surfacing that failure as a real trailing error
+    /// instead of silently treating early termination as clean end-of-stream.
+    ///
+    /// Every thread under `job_id` is joined immediately, without deferring to that
+    /// later drain, if `recv()` itself fails (meaning the job's last stage exited
+    /// without ever producing a value at all -- by then every one of them has already
+    /// exited, that's *why* the channel disconnected, so the join is immediate) or if an
+    /// opportunistic non-blocking check right after a successful `recv()` finds one of
+    /// them *already* failed for real (the common case for a small/quick job, and not
+    /// something a later stream drain would ever get the chance to catch if this
+    /// succeeded value isn't a stream at all). Either way this recovers the job's real
+    /// error instead of the generic channel-disconnection one `recv()` alone would
+    /// otherwise surface.
+    pub fn recv_job_result(&self, job: &JobHandle, last_input: &ValueReceiver) -> CrushResult<Value> {
+        match last_input.recv() {
+            Ok(Value::TableInputStream(stream)) => {
+                self.threads().try_join_job(job.id())?;
+                Ok(Value::TableInputStream(
+                    stream.with_producer_job(job.clone(), self.threads().clone()),
+                ))
+            }
+            Ok(Value::BinaryInputStream(mut reader)) => {
+                self.threads().try_join_job(job.id())?;
+                reader.set_producer_job(job.clone(), self.threads().clone());
+                Ok(Value::BinaryInputStream(reader))
+            }
+            Ok(v) => {
+                self.threads().try_join_job(job.id())?;
+                Ok(v)
+            }
+            Err(recv_err) => {
+                self.threads().join_job(job.id())?;
+                Err(recv_err)
+            }
+        }
     }
 
     pub fn printer(&self) -> &Printer {

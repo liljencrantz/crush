@@ -1,6 +1,7 @@
 use crate::lang::argument::Argument;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushError, CrushResult, command_error};
+use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeType;
 use crate::lang::value::Value;
@@ -128,15 +129,25 @@ fn r#try(mut context: CommandContext) -> CrushResult<()> {
     let body_env = context
         .scope
         .create_child(&context.scope, ScopeType::Conditional);
-    let body_result = cfg.body.eval(
-        context
-            .empty()
-            .with_scope(body_env)
-            .with_output(context.output.clone()),
-    );
+    // Captured through `try`'s own pipe() rather than handed straight through to
+    // `context.output`: `try`'s entire point is to catch any error the body produces,
+    // including one only discoverable once a streamed result is actually read (e.g.
+    // `uniq` sends its output stream successfully, then only discovers a non-hashable
+    // value once it reads a row) -- see GlobalState::recv_job_result's and
+    // TableInputStream::recv's doc comments for why that can happen at all. Nothing else
+    // is guaranteed to ever read this result to find that out, so `try`, whose whole job
+    // is to know whether the body failed, has to be the one to do it: `.materialize()`
+    // below forces exactly that read, surfacing a real trailing error instead of `try`
+    // wrongly declaring success just because the body handed back a stream handle.
+    let (sender, receiver) = pipe();
+    let body_result = cfg
+        .body
+        .eval(context.empty().with_scope(body_env).with_output(sender))
+        .and_then(|()| receiver.recv())
+        .and_then(|v| v.materialize());
 
     let err = match body_result {
-        Ok(()) => return Ok(()),
+        Ok(v) => return context.output.send(v),
         Err(e) => e,
     };
 

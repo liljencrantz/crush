@@ -645,30 +645,48 @@ impl Closure {
                     empty_channel()
                 };
                 let (sender, receiver) = pipe();
-                let job = job_definition.eval(JobContext::new_nested(
+                let job_context = JobContext::new_nested(
                     input,
                     sender,
                     env.clone(),
                     context.global_state.clone(),
                     context.job_type,
                     parent_job_id,
-                ))?;
-
-                if let Some(id) = job {
-                    context.global_state.threads().join_one(id)?;
-                }
+                );
+                let job = job_context.handle.clone();
+                job_definition.eval(job_context)?;
 
                 if env.is_stopped() {
+                    // A bare `return` (no explicit value) falls back to *this*
+                    // statement's own output as the closure's result -- so, same as the
+                    // `last` branch below, this can't wait for this statement's job (its
+                    // threads, if any -- a single statement can itself be a multi-stage
+                    // pipeline, see `ThreadStore::join_job`) to fully exit before
+                    // receiving from `receiver`: a statement that streams more rows than
+                    // its stream's own bounded row channel holds (see `streams()` in
+                    // `crate::lang::pipe`) would otherwise deadlock the exact same way a
+                    // `$(...)` substitution capturing a large stream does -- see
+                    // GlobalState::recv_job_result's doc comment.
                     let return_value = match env.take_return_value() {
-                        None => receiver.recv()?,
+                        None => context.global_state.recv_job_result(&job, &receiver)?,
                         Some(v) => v,
                     };
                     return context.output.send(return_value);
+                } else if last {
+                    // The closure's own final result -- same reasoning as above.
+                    let v = context.global_state.recv_job_result(&job, &receiver)?;
+                    context.output.send(v)?;
                 } else {
-                    if last {
-                        let v = receiver.recv()?;
-                        context.output.send(v)?;
-                    }
+                    // An intermediate statement whose value is simply discarded: ordinary
+                    // sequential "the next statement doesn't start until this one's job
+                    // has fully exited" semantics apply here, same as top-level script
+                    // execution -- `receiver` is never read, matching the original
+                    // behavior (dropping a stream unread here is the same benign
+                    // SendError pattern used elsewhere, e.g. `head`/`take` truncating a
+                    // stream early). join_job, not just the statement's own last stage,
+                    // so an earlier stage of a multi-stage intermediate statement can't
+                    // silently leak or lose a real error either.
+                    context.global_state.threads().join_job(job.id())?;
                 }
             }
         }

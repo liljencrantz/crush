@@ -27,8 +27,8 @@ $right1 := $(seq 1 1001 | rename value=id)
 $joined1 := $(join id=$left1 id=$right1 | count)
 assert ($joined1 == 1000) "joining two 1000-row streams should produce 1000 matching rows"
 
-$left2 := $(seq 500 1501 | rename value=id)
-$right2 := $(seq 500 1501 | rename value=id)
+$left2 := $(seq 500 1500 | rename value=id)
+$right2 := $(seq 500 1500 | rename value=id)
 $joined2 := $(join id=$left2 id=$right2 | count)
 assert ($joined2 == 1000) "a second, independent 1000-row join should also complete and produce the correct row count"
 

@@ -261,8 +261,32 @@ impl From<CrushErrorType> for CrushError {
     }
 }
 
+impl std::fmt::Display for CrushError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message())
+    }
+}
+
+/// Lets a `CrushError` be smuggled through an `io::Error` via `io::Error::other` --
+/// see `ChannelReader::read` in `crate::lang::data::binary` and this file's own
+/// `From<std::io::Error>` impl, which unwraps it back out again.
+impl std::error::Error for CrushError {}
+
 impl From<std::io::Error> for CrushError {
     fn from(e: std::io::Error) -> Self {
+        // A read from a BinaryReader backed by a still-running producer job (see
+        // BinaryReader::set_producer_job) smuggles a real CrushError through here rather
+        // than reporting a genuine I/O failure -- unwrap it back out instead of
+        // reporting the generic IOError it would otherwise become, exactly like
+        // TableInputStream::recv already does for its own equivalent case.
+        if e.get_ref().map(|inner| inner.is::<CrushError>()).unwrap_or(false) {
+            if let Some(boxed) = e.into_inner() {
+                if let Ok(real) = boxed.downcast::<CrushError>() {
+                    return *real;
+                }
+            }
+            return GenericError("lost a smuggled CrushError while unwrapping an io::Error".to_string()).into();
+        }
         IOError(e).into()
     }
 }

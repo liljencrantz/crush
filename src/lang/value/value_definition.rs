@@ -69,10 +69,13 @@ impl ValueDefinition {
             ValueDefinition::JobDefinition(def) => {
                 let first_input = empty_channel();
                 let (last_output, last_input) = pipe();
-                if let Some(id) = def.eval(context.job_context(first_input, last_output))? {
-                    context.global_state.threads().join_one(id)?;
-                }
-                (None, last_input.recv()?)
+                let job_context = context.job_context(first_input, last_output);
+                let job = job_context.handle.clone();
+                def.eval(job_context)?;
+                (
+                    None,
+                    context.global_state.recv_job_result(&job, &last_input)?,
+                )
             }
             ValueDefinition::JobListDefinition(defs, _) => {
                 for def in defs[..defs.len() - 1].iter() {
@@ -80,10 +83,13 @@ impl ValueDefinition {
                 }
                 let (last_output, last_input) = pipe();
                 let last_def = &defs[defs.len() - 1];
-                if let Some(id) = last_def.eval(context.job_context(empty_channel(), last_output))? {
-                    context.global_state.threads().join_one(id)?;
-                }
-                (None, last_input.recv()?)
+                let job_context = context.job_context(empty_channel(), last_output);
+                let job = job_context.handle.clone();
+                last_def.eval(job_context)?;
+                (
+                    None,
+                    context.global_state.recv_job_result(&job, &last_input)?,
+                )
             }
 
             ValueDefinition::ClosureDefinition {

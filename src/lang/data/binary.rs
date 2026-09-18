@@ -1,4 +1,6 @@
 use crate::lang::errors::CrushResult;
+use crate::lang::state::handles::JobHandle;
+use crate::lang::threads::ThreadStore;
 use crossbeam::channel::{Receiver, Sender, bounded};
 use std::cmp::min;
 use std::collections::VecDeque;
@@ -10,6 +12,14 @@ use std::path::PathBuf;
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,
     buff: Option<Box<[u8]>>,
+    /// The job (if any) still responsible for producing these bytes, tagged by
+    /// `GlobalState::recv_job_result` when it hands back a `Value::BinaryInputStream`
+    /// without waiting for that job to fully finish first. Checked once the channel
+    /// disconnects -- see `read`'s own comment, and `TableInputStream`'s `producer`
+    /// field doc comment (in `crate::lang::pipe`) for why this holds a full, cloned
+    /// `JobHandle` rather than just its `JobId` -- a bare id can be recycled and
+    /// reassigned to an unrelated later job the moment nothing else references it.
+    producer: Option<(JobHandle, ThreadStore)>,
 }
 
 impl Debug for ChannelReader {
@@ -23,7 +33,12 @@ impl BinaryReader for ChannelReader {
         Box::from(ChannelReader {
             receiver: self.receiver.clone(),
             buff: None,
+            producer: self.producer.clone(),
         })
+    }
+
+    fn set_producer_job(&mut self, job: JobHandle, threads: ThreadStore) {
+        self.producer = Some((job, threads));
     }
 }
 
@@ -40,7 +55,24 @@ impl Read for ChannelReader {
                     }
                 }
 
-                Err(_) => Ok(0),
+                Err(_) => match &self.producer {
+                    // A disconnected channel looks identical whether the producer
+                    // finished cleanly or failed partway through, after already having
+                    // handed back this reader (see GlobalState::recv_job_result's doc
+                    // comment for why that handoff can happen before the producer is
+                    // actually done). If tagged with the job still producing it, join
+                    // every thread under that job now -- by construction the channel
+                    // only disconnects once they've all actually exited, so this never
+                    // blocks on anything that isn't already finished -- and, if a real
+                    // error turns up, smuggle it through as an io::Error rather than
+                    // reporting clean EOF (see this file's own `Read` impl callers and
+                    // CrushError's `From<std::io::Error>`, which unwraps it back out).
+                    Some((job, threads)) => match threads.join_job(job.id()) {
+                        Ok(()) => Ok(0),
+                        Err(real_err) => Err(Error::other(real_err)),
+                    },
+                    None => Ok(0),
+                },
             },
             Some(src) => {
                 if dst.len() >= src.len() {
@@ -76,6 +108,13 @@ impl Write for ChannelWriter {
 
 pub trait BinaryReader: Read + Debug + Send + Sync {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync>;
+
+    /// Tags this reader with the job still producing its bytes, so that once its
+    /// underlying source disconnects, a real trailing error can be recovered instead of
+    /// silently being reported as clean EOF -- see `ChannelReader`'s own `Read` impl.
+    /// Most readers (a plain file, an in-memory buffer, ...) have no such notion of an
+    /// in-flight producer and just ignore this.
+    fn set_producer_job(&mut self, _job: JobHandle, _threads: ThreadStore) {}
 }
 
 pub struct FileReader {
@@ -140,6 +179,7 @@ pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>)
         Box::from(ChannelReader {
             receiver: r,
             buff: None,
+            producer: None,
         }),
     )
 }

@@ -11,6 +11,8 @@ use crate::lang::data::table::Row;
 use crate::lang::errors::{CrushError, CrushResult, error, terminate};
 use crate::lang::job_control::{ChannelBasedController, JobController, StreamControlMessage};
 use crate::lang::pipe::SenderType::{BlackHole, LastElement, Pipeline, Printer};
+use crate::lang::state::handles::JobHandle;
+use crate::lang::threads::ThreadStore;
 use crate::lang::value::Value;
 use chrono::Duration;
 use crossbeam::channel::{Receiver, Select, Sender, bounded, unbounded};
@@ -178,13 +180,63 @@ impl TableOutputStream {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TableInputStream {
     receiver: Receiver<Row>,
     types: Vec<ColumnType>,
+    /// The job (if any) still responsible for producing this stream's rows, tagged by
+    /// `GlobalState::recv_job_result` when it hands back a `Value::TableInputStream`
+    /// without waiting for that job to fully finish first. Checked once the stream is
+    /// actually drained to the end -- see `resolve_end_of_stream_error`.
+    ///
+    /// A *cloned `JobHandle`*, not just its bare `JobId`: `JobId` numbers are recycled
+    /// (`GlobalState`'s `next_id` hands out the smallest currently-unused one) the moment
+    /// nothing still holds a strong reference to that job's `JobHandle` -- which, once
+    /// this same producer job's threads finish and get joined (removing their
+    /// `ThreadData`, the only other thing keeping it alive), would otherwise be *this
+    /// tag itself*. If the id got recycled and reassigned to some unrelated later job
+    /// before this stream is ever drained, joining "by id" would wait on the wrong job
+    /// entirely -- confirmed in practice as a real, reproducible deadlock where a job's
+    /// own recycled id got reassigned to the very job trying to read its result. Holding
+    /// the handle keeps the id reserved for as long as this tag can still reference it.
+    producer: Option<(JobHandle, ThreadStore)>,
 }
 
 impl TableInputStream {
+    /// Tags this stream with the job still producing it, so a later real read-to-the-end
+    /// can join that job's threads and surface a trailing error instead of silently
+    /// treating early termination as clean end-of-stream -- see
+    /// `GlobalState::recv_job_result`'s doc comment for the full explanation of why this
+    /// is deferred rather than done eagerly, and this struct's own `producer` field doc
+    /// for why a full `JobHandle` is held rather than just its `JobId`.
+    pub fn with_producer_job(mut self, job: JobHandle, threads: ThreadStore) -> Self {
+        self.producer = Some((job, threads));
+        self
+    }
+
+    /// A disconnected channel looks identical whether the producer finished cleanly or
+    /// failed partway through, after already having handed back this stream's handle
+    /// (see `GlobalState::recv_job_result`'s doc comment for why that handoff can happen
+    /// before the producer is actually done). If this stream was tagged with the job
+    /// still producing it, and `err` really is a disconnection (not e.g. `recv_timeout`
+    /// simply running out of time with the producer still legitimately running -- joining
+    /// here would incorrectly block on that instead of just reporting the timeout), join
+    /// every thread under that job now -- by construction a genuine disconnection only
+    /// happens once they've all actually exited, so this never blocks on anything that
+    /// isn't already finished -- and surface a real error from any of them instead of
+    /// `err`, the generic disconnection one `err` would otherwise be.
+    fn resolve_end_of_stream_error(&self, err: CrushError) -> CrushError {
+        if !err.is_disconnected() {
+            return err;
+        }
+        if let Some((job, threads)) = &self.producer {
+            if let Err(real_err) = threads.join_job(job.id()) {
+                return real_err;
+            }
+        }
+        err
+    }
+
     pub fn get(&self, idx: i128) -> CrushResult<Row> {
         let mut i = 0i128;
         loop {
@@ -215,14 +267,14 @@ impl TableInputStream {
     pub fn recv(&self) -> CrushResult<Row> {
         match self.receiver.recv() {
             Ok(row) => self.validate(row),
-            Err(err) => Err(err.into()),
+            Err(err) => Err(self.resolve_end_of_stream_error(err.into())),
         }
     }
 
     pub fn recv_timeout(&self, timeout: Duration) -> CrushResult<Row> {
         match self.receiver.recv_timeout(timeout.to_std().unwrap()) {
             Ok(row) => self.validate(row),
-            Err(err) => Err(err.into()),
+            Err(err) => Err(self.resolve_end_of_stream_error(err.into())),
         }
     }
 
@@ -380,6 +432,7 @@ pub fn streams(signature: Vec<ColumnType>) -> CrushResult<(TableOutputStream, Ta
         TableInputStream {
             receiver: input,
             types: signature,
+            producer: None,
         },
     ))
 }
@@ -395,6 +448,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, Tabl
         TableInputStream {
             receiver: input,
             types: signature,
+            producer: None,
         },
     )
 }

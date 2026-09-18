@@ -585,8 +585,19 @@ impl Value {
         Ok(match self {
             Value::TableInputStream(output) => {
                 let mut rows = Vec::new();
-                while let Ok(r) = output.recv() {
-                    rows.push(r.materialize()?);
+                // `while let Ok(r) = output.recv()` would silently treat *any* Err --
+                // including a real, late-discovered error a producer job only reports
+                // once the stream is actually drained this far (see
+                // TableInputStream::recv's own doc comment) -- as if it were just clean
+                // end-of-stream, discarding it. `is_disconnected()` is what tells the two
+                // apart: recv() only reports a genuine disconnection that way, never a
+                // real command error it recovered instead of that generic disconnection.
+                loop {
+                    match output.recv() {
+                        Ok(r) => rows.push(r.materialize()?),
+                        Err(e) if e.is_disconnected() => break,
+                        Err(e) => return Err(e),
+                    }
                 }
                 Value::Table(Table::from((
                     ColumnType::materialize(output.types())?,

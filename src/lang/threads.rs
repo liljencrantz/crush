@@ -168,6 +168,90 @@ impl ThreadStore {
         Ok(())
     }
 
+    /// Non-blocking: if `id`'s thread has *already* finished (a real result, not just a
+    /// job-control message), removes and returns its result; a `Pause` control message
+    /// is handled exactly as `join_one` handles it (left registered, for the same
+    /// pause/resume machinery to find later) and, like anything still running, reported
+    /// back as `None`. Never blocks and never touches any thread other than `id`.
+    fn try_join_one(&self, id: ThreadId) -> Option<CrushResult<()>> {
+        let mut data = self.data.lock().unwrap();
+        let idx = (0..data.threads.len()).find(|&idx| data.threads[idx].handle.id() == id)?;
+        match data.threads[idx].handle.try_join() {
+            None => None,
+            Some(Ok(Either::Left(res))) => {
+                data.threads.remove(idx);
+                Some(res)
+            }
+            Some(Ok(Either::Right(StreamControlMessage::Pause))) => None,
+            Some(Ok(Either::Right(_))) => None,
+            Some(Err(err)) => {
+                data.threads.remove(idx);
+                Some(Err(err))
+            }
+        }
+    }
+
+    fn thread_ids_for_job(&self, job_id: JobId) -> Vec<ThreadId> {
+        let data = self.data.lock().unwrap();
+        data.threads
+            .iter()
+            .filter(|t| t.job_id == job_id)
+            .map(|t| t.handle.id())
+            .collect()
+    }
+
+    /// Block the calling thread until every thread currently tracked under `job_id` has
+    /// exited. There's no need to keep watching for new ones to appear here: by the
+    /// time a caller has a reason to call this, `job_id`'s own `Job::eval` has already
+    /// returned, so no further thread can still be spawned under it. Every one of them
+    /// still gets joined even after finding a real error, so none of them leak, but
+    /// only the first real (non-benign-`SendError`) error found is returned -- the same
+    /// single-error contract `join_one` has for one thread, just widened to cover every
+    /// stage of a job (a 5-stage pipeline can have up to 5 of these) instead of one
+    /// specific thread.
+    pub fn join_job(&self, job_id: JobId) -> CrushResult<()> {
+        let mut first_error = None;
+        for id in self.thread_ids_for_job(job_id) {
+            if let Err(e) = self.join_one(id) {
+                if !e.is_send_disconnected() && first_error.is_none() {
+                    first_error = Some(e);
+                }
+            }
+        }
+        match first_error {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
+    }
+
+    /// Like `join_job`, but never blocks: only touches threads under `job_id` that have
+    /// *already* finished, leaving any still-running ones exactly as they were for a
+    /// later `join_job`/`try_join_job` call to find. Safe to call speculatively on a job
+    /// another caller might still be responsible for: unlike a broader sweep (there is
+    /// deliberately no "reap whatever else has exited too, for any job" variant of
+    /// this), it can never remove a thread under a *different* job_id out from under a
+    /// caller who's about to `join_job` it for a real error -- which is exactly what
+    /// made an earlier version of this cleanup (a plain global `reap()` call in the same
+    /// spots) unsafe: `reap()` has no way to leave a specific still-wanted job's threads
+    /// alone, so it could -- and demonstrably did -- silently swallow a real command
+    /// failure by printing (rather than propagating) whichever thread it happened to
+    /// reap first, including ones a concurrently-running `join_job`/`join_one` was about
+    /// to legitimately claim.
+    pub fn try_join_job(&self, job_id: JobId) -> CrushResult<()> {
+        let mut first_error = None;
+        for id in self.thread_ids_for_job(job_id) {
+            if let Some(Err(e)) = self.try_join_one(id) {
+                if !e.is_send_disconnected() && first_error.is_none() {
+                    first_error = Some(e);
+                }
+            }
+        }
+        match first_error {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
+    }
+
     pub fn current_threads(&self) -> CrushResult<Vec<ThreadDescription>> {
         let data = self.data.lock().unwrap();
         let res = Ok(data
