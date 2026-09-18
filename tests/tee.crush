@@ -2,7 +2,11 @@
 # discarding the branch's own output -- a branch is only useful for its side effects
 # -- while tee's own output is the original stream, untouched, so it composes directly
 # into a larger pipeline.
-rm ./.tee_test.json
+
+# Use a filename unique to this process so that concurrently running instances of this
+# same script (e.g. several `cargo test` runs in parallel, all sharing the crate root as
+# their working directory) never collide on the same file.
+$tee_test_file := $(convert $file $(".tee_test_{}.json":format $(random:integer 1000000000)))
 
 # The passthrough is unaffected by having one or more branches attached.
 $sum := $(seq 1 6 | tee {count} | fold {($acc + $value)} initial=0)
@@ -10,10 +14,10 @@ assert ($sum == 15) "tee's passthrough output should be the untouched original s
 
 # Multiple branches all run, and one of them can have a real side effect (writing a
 # file) without disturbing the others or the passthrough.
-$sum2 := $(seq 1 6 | tee {json:to ./.tee_test.json} {count} | fold {($acc + $value)} initial=0)
+$sum2 := $(seq 1 6 | tee {json:to $tee_test_file} {count} | fold {($acc + $value)} initial=0)
 assert ($sum2 == 15) "tee's passthrough should be unaffected by a branch that writes a file"
 
-$restored := $(json:from ./.tee_test.json | fold {($acc + $value)} initial=0)
+$restored := $(json:from $tee_test_file | fold {($acc + $value)} initial=0)
 assert ($restored == 15) "the branch's own file should contain a full, correct copy of the stream"
 
 # A failing branch is reported to crush:warn:list rather than aborting tee or the
@@ -35,4 +39,4 @@ try {
 }
 assert $errored "tee with no branches at all should error"
 
-rm ./.tee_test.json
+rm $tee_test_file
