@@ -77,7 +77,8 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let mut input = context.input_stream()?;
-    let mut out = crate::lang::signature::files::writer(cfg.file, context.output)?;
+    let command_handle = context.command_handle().clone();
+    let mut out = crate::lang::signature::files::writer(cfg.file, context.output, &command_handle)?;
     if input.types().len() != 1 || input.types()[0].cell_type != ValueType::String {
         return data_error("Expected an input iterator containing a single column of type string.");
     }

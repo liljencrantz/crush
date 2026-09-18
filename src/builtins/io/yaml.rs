@@ -170,7 +170,8 @@ struct To {
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = files::writer(cfg.file, context.output)?;
+    let command_handle = context.command_handle().clone();
+    let mut writer = files::writer(cfg.file, context.output, &command_handle)?;
     let value = context.input.recv()?;
     let yaml_value = to_yaml(value)?;
     writer.write(serde_yaml::to_string(&yaml_value)?.as_bytes())?;

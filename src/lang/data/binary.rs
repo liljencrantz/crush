@@ -168,19 +168,78 @@ impl Read for ChannelReader {
 
 struct ChannelWriter {
     sender: Sender<Box<[u8]>>,
+    /// See `BinaryWriter::register_control`'s doc comment.
+    control: Option<Receiver<StreamControlMessage>>,
 }
 
 impl Write for ChannelWriter {
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
-        let boxed_slice: Box<[u8]> = buf.into();
-        let _ = self.sender.send(boxed_slice);
-        Ok(buf.len())
+        let Some(control) = &self.control else {
+            let _ = self.sender.send(buf.into());
+            return Ok(buf.len());
+        };
+        // Races the (possibly blocking, on a full bounded(32) channel) send against
+        // `control`, the same way TableOutputStream::send already races its own send --
+        // Pause blocks right here, looping on the control channel alone, until Resume or
+        // Terminate; Resume/a post-Pause Resume retries the whole write via a recursive
+        // call rather than a manual loop, so `buf` (never consumed unless the send arm
+        // itself is actually chosen) is simply reused as-is. Disconnection of the *data*
+        // channel is left exactly as before -- silently ignored, matching a downstream
+        // reader that's simply stopped reading early.
+        select! {
+            send(self.sender, buf.into()) -> res => {
+                let _ = res;
+                Ok(buf.len())
+            }
+            recv(control) -> msg => match msg {
+                Ok(StreamControlMessage::Terminate) => Err(Error::other(terminate::<()>().unwrap_err())),
+                Ok(StreamControlMessage::Resume) => self.write(buf),
+                Ok(StreamControlMessage::Pause) => {
+                    loop {
+                        match control.recv() {
+                            Ok(StreamControlMessage::Terminate) => {
+                                return Err(Error::other(terminate::<()>().unwrap_err()));
+                            }
+                            Ok(StreamControlMessage::Resume) => break,
+                            Ok(StreamControlMessage::Pause) => {}
+                            Err(e) => return Err(Error::other(CrushError::from(e))),
+                        }
+                    }
+                    self.write(buf)
+                }
+                Err(e) => Err(Error::other(CrushError::from(e))),
+            },
+        }
     }
 
     fn flush(&mut self) -> Result<(), Error> {
         Ok(())
     }
 }
+
+/// A writer that can be handed back as a binary_stream's producer, with an optional
+/// job-control hookup -- the writer-side counterpart of `BinaryReader`. Every existing
+/// caller of `binary_channel`/`files::writer` used to get a plain `Box<dyn Write>`; this
+/// narrow, `Write`-extending trait lets a channel-backed writer additionally respond to
+/// `crush:pause`/`crush:terminate` without changing how any of those callers use it (all
+/// the `Write` methods stay directly callable through the supertrait bound).
+pub trait BinaryWriter: Write + Send {
+    /// Registers the job-control channel a paused/terminated job's `crush:pause`/
+    /// `crush:terminate` sends `StreamControlMessage`s through, so a `write()` blocked
+    /// because nothing is draining this writer's channel can be interrupted instead of
+    /// hanging forever -- see `BinaryReader::register_control`'s identical doc comment
+    /// for the read-side counterpart. A plain file has no reader to wait on and just
+    /// ignores this.
+    fn register_control(&mut self, _control: Receiver<StreamControlMessage>) {}
+}
+
+impl BinaryWriter for ChannelWriter {
+    fn register_control(&mut self, control: Receiver<StreamControlMessage>) {
+        self.control = Some(control);
+    }
+}
+
+impl BinaryWriter for File {}
 
 pub trait BinaryReader: Read + Debug + Send + Sync {
     fn clone(&self) -> Box<dyn BinaryReader + Send + Sync>;
@@ -257,10 +316,10 @@ impl dyn BinaryReader {
     }
 }
 
-pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>) {
+pub fn binary_channel() -> (Box<dyn BinaryWriter>, Box<dyn BinaryReader + Send + Sync>) {
     let (s, r) = bounded(32);
     (
-        Box::from(ChannelWriter { sender: s }),
+        Box::from(ChannelWriter { sender: s, control: None }),
         Box::from(ChannelReader {
             receiver: r,
             buff: None,
@@ -384,6 +443,47 @@ mod tests {
             ),
             Err(_) => panic!(
                 "ChannelReader::read() did not respect a Terminate control message within 5s -- it's still blocked on the channel"
+            ),
+        }
+    }
+
+    // Writer-side counterpart of the read test above: a ChannelWriter::write() blocked
+    // because nothing is draining the (bounded) channel must also respect Terminate,
+    // not just hang until the process is killed. Fill the channel's own bounded(32)
+    // capacity first so the write under test is provably blocked on backpressure, not
+    // merely slow.
+    #[test]
+    fn channel_writer_write_is_interrupted_by_terminate() {
+        let (sender, _receiver) = bounded(32);
+        let mut writer = ChannelWriter { sender: sender.clone(), control: None };
+        for _ in 0..32 {
+            sender.send(Box::from([0u8])).expect("failed to pre-fill the bounded channel");
+        }
+        // _receiver is kept alive (never dropped) but never drained, so the 33rd send
+        // below genuinely blocks on backpressure rather than on a disconnected channel.
+
+        let (control_sender, control_receiver) = unbounded();
+        writer.register_control(control_receiver);
+
+        let (done_tx, done_rx) = crossbeam::channel::bounded(1);
+        std::thread::spawn(move || {
+            let result = writer.write(&[0u8]);
+            let _ = done_tx.send(result.is_err());
+        });
+
+        // Give the spawned thread a moment to actually reach the blocking send().
+        std::thread::sleep(Duration::from_millis(100));
+        control_sender.send(StreamControlMessage::Terminate).expect(
+            "control_receiver was already dropped -- register_control() isn't keeping it alive",
+        );
+
+        match done_rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(was_err) => assert!(
+                was_err,
+                "a write() interrupted by Terminate should return an error, not Ok"
+            ),
+            Err(_) => panic!(
+                "ChannelWriter::write() did not respect a Terminate control message within 5s -- it's still blocked on the channel"
             ),
         }
     }

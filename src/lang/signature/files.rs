@@ -1,14 +1,16 @@
-use crate::lang::data::binary::binary_channel;
+use crate::lang::data::binary::{BinaryWriter, binary_channel};
 use crate::lang::errors::{CrushError, CrushResult, command_error};
+use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::ValueSender;
+use crate::lang::state::handles::CommandHandle;
 use crate::lang::value::Value;
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use crate::util::regex::RegexFileMatcher;
+use crossbeam::channel::unbounded;
 use regex::Regex;
 use std::convert::TryFrom;
 use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -69,10 +71,10 @@ pub fn into_paths(files: Vec<Files>) -> CrushResult<Vec<PathBuf>> {
     Ok(res)
 }
 
-impl TryInto<Box<dyn Write>> for Files {
+impl TryInto<Box<dyn BinaryWriter>> for Files {
     type Error = CrushError;
 
-    fn try_into(self) -> Result<Box<dyn Write>, Self::Error> {
+    fn try_into(self) -> Result<Box<dyn BinaryWriter>, Self::Error> {
         let vec: Vec<_> = self.try_into()?;
         match vec.len() {
             0 => command_error("No write target specified."),
@@ -85,10 +87,25 @@ impl TryInto<Box<dyn Write>> for Files {
     }
 }
 
-pub fn writer(files: Option<Files>, output: ValueSender) -> CrushResult<Box<dyn Write>> {
+/// Same job-control wiring as `binary_input::register_control`, for the write side --
+/// see that function's doc comment. Only a channel-backed writer does anything with it;
+/// a plain file has no reader to wait on and just ignores this via `BinaryWriter`'s
+/// default no-op.
+fn register_control(writer: &mut Box<dyn BinaryWriter>, command_handle: &CommandHandle) {
+    let (control_sender, control_receiver) = unbounded();
+    command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
+    writer.register_control(control_receiver);
+}
+
+pub fn writer(
+    files: Option<Files>,
+    output: ValueSender,
+    command_handle: &CommandHandle,
+) -> CrushResult<Box<dyn BinaryWriter>> {
     match files {
         None => {
-            let (w, r) = binary_channel();
+            let (mut w, r) = binary_channel();
+            register_control(&mut w, command_handle);
             output.send(Value::BinaryInputStream(r))?;
             Ok(w)
         }

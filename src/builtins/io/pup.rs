@@ -25,7 +25,8 @@ struct To {
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = files::writer(cfg.file, context.output)?;
+    let command_handle = context.command_handle().clone();
+    let mut writer = files::writer(cfg.file, context.output, &command_handle)?;
     let value = context.input.recv()?;
     serialize_writer(&value, &mut writer)
 }

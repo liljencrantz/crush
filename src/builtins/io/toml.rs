@@ -182,7 +182,8 @@ struct To {
 
 fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut writer = files::writer(cfg.file, context.output)?;
+    let command_handle = context.command_handle().clone();
+    let mut writer = files::writer(cfg.file, context.output, &command_handle)?;
     let serde_value = context.input.recv()?;
     let toml_value = to_toml(serde_value)?;
     // toml::Value's own Display renders as a value literal (an inline table for

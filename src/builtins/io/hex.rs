@@ -61,7 +61,8 @@ struct To {
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg = To::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let mut out = files::writer(cfg.file, context.output)?;
+    let command_handle = context.command_handle().clone();
+    let mut out = files::writer(cfg.file, context.output, &command_handle)?;
     match context.input.recv()? {
         Value::String(str) => {
             let input = str.as_bytes();

@@ -43,10 +43,11 @@ struct To {
 
 pub fn to(mut context: CommandContext) -> CrushResult<()> {
     let cfg: To = To::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let command_handle = context.command_handle().clone();
 
     match context.input.recv()? {
         Value::BinaryInputStream(mut input) => {
-            let mut out = files::writer(cfg.file, context.output)?;
+            let mut out = files::writer(cfg.file, context.output, &command_handle)?;
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
