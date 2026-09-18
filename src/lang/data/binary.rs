@@ -8,6 +8,7 @@ use std::fmt::{Debug, Formatter};
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 struct ChannelReader {
     receiver: Receiver<Box<[u8]>>,
@@ -19,7 +20,15 @@ struct ChannelReader {
     /// field doc comment (in `crate::lang::pipe`) for why this holds a full, cloned
     /// `JobHandle` rather than just its `JobId` -- a bare id can be recycled and
     /// reassigned to an unrelated later job the moment nothing else references it.
-    producer: Option<(JobHandle, ThreadStore)>,
+    ///
+    /// Shared (`Arc<Mutex<...>>`), not a plain field, for the same reason
+    /// `TableInputStream::producer` (in `crate::lang::pipe`) is: `clone()` below can
+    /// produce another `ChannelReader` reading the same underlying bytes, and every
+    /// clone must see the tag cleared once any one of them resolves it -- otherwise a
+    /// clone that's never read again (e.g. a script variable still holding the original
+    /// `Value::BinaryInputStream`) keeps its own copy of the `JobHandle` alive forever,
+    /// even after another clone has fully, successfully drained the same bytes.
+    producer: Arc<Mutex<Option<(JobHandle, ThreadStore)>>>,
 }
 
 impl Debug for ChannelReader {
@@ -38,7 +47,7 @@ impl BinaryReader for ChannelReader {
     }
 
     fn set_producer_job(&mut self, job: JobHandle, threads: ThreadStore) {
-        self.producer = Some((job, threads));
+        *self.producer.lock().unwrap() = Some((job, threads));
     }
 }
 
@@ -55,18 +64,20 @@ impl Read for ChannelReader {
                     }
                 }
 
-                Err(_) => match &self.producer {
-                    // A disconnected channel looks identical whether the producer
-                    // finished cleanly or failed partway through, after already having
-                    // handed back this reader (see GlobalState::recv_job_result's doc
-                    // comment for why that handoff can happen before the producer is
-                    // actually done). If tagged with the job still producing it, join
-                    // every thread under that job now -- by construction the channel
-                    // only disconnects once they've all actually exited, so this never
-                    // blocks on anything that isn't already finished -- and, if a real
-                    // error turns up, smuggle it through as an io::Error rather than
-                    // reporting clean EOF (see this file's own `Read` impl callers and
-                    // CrushError's `From<std::io::Error>`, which unwraps it back out).
+                // A disconnected channel looks identical whether the producer finished
+                // cleanly or failed partway through, after already having handed back
+                // this reader (see GlobalState::recv_job_result's doc comment for why
+                // that handoff can happen before the producer is actually done). If
+                // tagged with the job still producing it, join every thread under that
+                // job now -- by construction the channel only disconnects once they've
+                // all actually exited, so this never blocks on anything that isn't
+                // already finished -- and, if a real error turns up, smuggle it through
+                // as an io::Error rather than reporting clean EOF (see this file's own
+                // `Read` impl callers and CrushError's `From<std::io::Error>`, which
+                // unwraps it back out). The tag is taken (cleared), not just read, so
+                // every clone of this reader sees it resolved afterward too -- see the
+                // `producer` field's own doc comment for why that sharing is essential.
+                Err(_) => match self.producer.lock().unwrap().take() {
                     Some((job, threads)) => match threads.join_job(job.id()) {
                         Ok(()) => Ok(0),
                         Err(real_err) => Err(Error::other(real_err)),
@@ -179,7 +190,7 @@ pub fn binary_channel() -> (Box<dyn Write>, Box<dyn BinaryReader + Send + Sync>)
         Box::from(ChannelReader {
             receiver: r,
             buff: None,
-            producer: None,
+            producer: Arc::new(Mutex::new(None)),
         }),
     )
 }

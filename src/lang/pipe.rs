@@ -6,6 +6,7 @@ between threads inside of a single process. The most important use case is to se
 of the type TableInputStream.
  */
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::Row;
 use crate::lang::errors::{CrushError, CrushResult, error, terminate};
@@ -199,7 +200,17 @@ pub struct TableInputStream {
     /// entirely -- confirmed in practice as a real, reproducible deadlock where a job's
     /// own recycled id got reassigned to the very job trying to read its result. Holding
     /// the handle keeps the id reserved for as long as this tag can still reference it.
-    producer: Option<(JobHandle, ThreadStore)>,
+    ///
+    /// Shared (`Arc<Mutex<...>>`), not a plain field: `TableInputStream` is `Clone`, and
+    /// a stream captured into a variable (e.g. `$a := $(...)`) commonly gets cloned again
+    /// for actual reading (`Value::stream()`'s `interruptible()` wrapper clones it) --
+    /// every one of those clones must see the *same* tag, and in particular must all see
+    /// it cleared once resolved. A plain, per-clone `Option` would let the reading
+    /// clone's own copy resolve (and get reaped) while `$a`'s own separate copy keeps
+    /// holding its own `JobHandle` clone forever, keeping the job's `JobControlData`
+    /// alive and reporting it as still live (e.g. to `crush:exit`) even though its
+    /// stream had already been fully, successfully drained.
+    producer: Arc<Mutex<Option<(JobHandle, ThreadStore)>>>,
 }
 
 impl TableInputStream {
@@ -209,8 +220,8 @@ impl TableInputStream {
     /// `GlobalState::recv_job_result`'s doc comment for the full explanation of why this
     /// is deferred rather than done eagerly, and this struct's own `producer` field doc
     /// for why a full `JobHandle` is held rather than just its `JobId`.
-    pub fn with_producer_job(mut self, job: JobHandle, threads: ThreadStore) -> Self {
-        self.producer = Some((job, threads));
+    pub fn with_producer_job(self, job: JobHandle, threads: ThreadStore) -> Self {
+        *self.producer.lock().unwrap() = Some((job, threads));
         self
     }
 
@@ -225,11 +236,16 @@ impl TableInputStream {
     /// happens once they've all actually exited, so this never blocks on anything that
     /// isn't already finished -- and surface a real error from any of them instead of
     /// `err`, the generic disconnection one `err` would otherwise be.
+    ///
+    /// The tag is taken (cleared), not just read, so this only ever joins once even if
+    /// several clones of this same stream all reach end-of-stream (harmless but
+    /// pointless to repeat), and so every clone sees it gone afterward -- see the
+    /// `producer` field's own doc comment for why that sharing is essential.
     fn resolve_end_of_stream_error(&self, err: CrushError) -> CrushError {
         if !err.is_disconnected() {
             return err;
         }
-        if let Some((job, threads)) = &self.producer {
+        if let Some((job, threads)) = self.producer.lock().unwrap().take() {
             if let Err(real_err) = threads.join_job(job.id()) {
                 return real_err;
             }
@@ -345,7 +361,18 @@ impl TableStreamReader for InterruptibleTableInputStream {
     fn read(&mut self) -> CrushResult<Row> {
         loop {
             select! {
-                recv(self.input.receiver) -> r => return Ok(r?),
+                // Delegating to self.input's own validate()/resolve_end_of_stream_error()
+                // (rather than a raw `Ok(r?)`, which used to be here) matters for the
+                // same reason TableInputStream::recv() does it: a disconnection here must
+                // still be checked against this stream's tagged producer job, to recover
+                // a real trailing error instead of reporting clean EOF, and to actually
+                // join (and so reap) that job now that it's genuinely done -- otherwise a
+                // stream consumed this way (e.g. by `count`, via `Value::stream()`) never
+                // triggers either, leaving the producer's job registered as live forever.
+                recv(self.input.receiver) -> r => return match r {
+                    Ok(row) => self.input.validate(row),
+                    Err(err) => Err(self.input.resolve_end_of_stream_error(err.into())),
+                },
                 recv(self.control) -> msg => {
                     match msg {
                         Ok(StreamControlMessage::Terminate) => { return terminate();}
@@ -380,7 +407,12 @@ impl TableStreamReader for InterruptibleTableInputStream {
         match oper {
             Err(e) => Err(e.into()),
             Ok(oper) => match oper.index() {
-                i if i == oper1 => Ok(oper.recv(&self.input.receiver)?),
+                // See read()'s own comment on why this goes through validate()/
+                // resolve_end_of_stream_error() rather than a raw `Ok(...?)`.
+                i if i == oper1 => match oper.recv(&self.input.receiver) {
+                    Ok(row) => self.input.validate(row),
+                    Err(err) => Err(self.input.resolve_end_of_stream_error(err.into())),
+                },
                 i if i == oper2 => terminate(),
                 _ => unreachable!(),
             },
@@ -432,7 +464,7 @@ pub fn streams(signature: Vec<ColumnType>) -> CrushResult<(TableOutputStream, Ta
         TableInputStream {
             receiver: input,
             types: signature,
-            producer: None,
+            producer: Arc::new(Mutex::new(None)),
         },
     ))
 }
@@ -448,7 +480,7 @@ pub fn unlimited_streams(signature: Vec<ColumnType>) -> (TableOutputStream, Tabl
         TableInputStream {
             receiver: input,
             types: signature,
-            producer: None,
+            producer: Arc::new(Mutex::new(None)),
         },
     )
 }
