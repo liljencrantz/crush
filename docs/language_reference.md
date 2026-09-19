@@ -305,6 +305,22 @@ calls `__init__` (if defined), passing along any arguments. Add methods by assig
 the class; add instance fields by assigning to `$this` inside `__init__`. Pass a parent
 class to `class` for single inheritance.
 
+### The `@` and `@@` operators
+
+`@` spreads a list as a sequence of unnamed arguments, and `@@` spreads a dict as a
+sequence of named arguments -- both at call sites and in a closure's own parameter list,
+where they instead *collect* stray arguments:
+
+```shell script
+# @args collects every unnamed argument into a list; @@kwargs collects every named
+# argument not otherwise bound in the parameter list into a dict.
+$print_everything := {|@ $unnamed @@ $named| echo "Named" $named "Unnamed" $unnamed}
+$print_everything 1 2 x=3 y=4
+
+# The mirrored use, at a call site: spread a list/dict back out into arguments. This
+# defines an `ls` that forwards whatever it's given to `files`, then selects one column.
+$ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs | select file}
+```
 
 ## Expression mode
 
@@ -357,58 +373,71 @@ result of calling it -- the same distinction
 [Assignment takes exactly one value](#assignment-takes-exactly-one-value) shows further
 down for `$string:upper`.
 
-`and`/`or` work as infix operators in expression mode; in command mode they're ordinary
-commands taking two values (`or $false $true`):
+### Syntactic sugar in expression mode
 
-```shell script
-crush# ($false or $true)
-true
+In regular command mode, `for`, `while`, `if`/`else`, `try`/`catch` and `match` are simple builtin commands.
+If they were to work in the same way in expression mode, the syntax would become clumsy, with many unwanted parenthesis.
+Instead, the language has added some syntactic sugar to make these work identically to how they work in command mode:
+
+```
+(
+
+for $i=seq(5) {
+  echo($i)
+}
+
+while condition_test() {
+  ...
+}
+
+if ($a > 10) { 
+  "big"
+} else { 
+  "small" 
+}
+
+try {
+    throw("DnsTimeout", "no response")
+} catch ^(Serde) {
+    |$e| "serde"
+} catch $(Dns*) {
+    |$e| "dns"
+}
+
+match $x {
+    case 2 {"two"}
+    any $(seq 5 10) {"between 5 and 10"}
+    is $string {"a string"}
+    default {"something else"}
+}
+
+)
 ```
 
-A bare expression at the very start of a script statement (with nothing enclosing it)
-doesn't parse reliably today -- wrap it in parentheses, even when nesting it as another
-command's argument, e.g. `assert (1 == 1)` rather than `assert 1 == 1`.
+### Operators in expression mode
 
-## Operators
-
-Crush provides operators for arithmetic, comparison, and a few other things that read
+In expression mode, Crush provides operators for arithmetic, comparison, and a few other things that read
 better as symbols than as commands. Grouped roughly by precedence, highest first:
 
-| Operator                    | Example              | Description                                                     |
-|------------------------------|-----------------------|-------------------------------------------------------------------|
-| `:=` `=`                    | `$foo := 7`           | Declare a new variable, or reassign an existing one                |
-| `and` `or`                  | `$a and $b`           | Logical operators. Also work as ordinary commands: `or $a $b`      |
-| `==` `!=` `>` `>=` `<` `<=` | `$foo > 5`            | Compare two values                                                 |
-| `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`  | True/false if the left value matches the right-hand pattern        |
-| `+` `-`                     | `1 + 1`, `-5`         | Addition, subtraction, and unary negation                          |
-| `*` `/`                     | `5 * 5`, `7 / 2`      | Multiplication and division (truncating for two integers)          |
-| `@` `@@`                    | see below             | Argument/parameter list spreading                                  |
+| Operator                    | Example                                                          | Description                                                     |
+|------------------------------|------------------------------------------------------------------|-------------------------------------------------------------------|
+| `:=` `=`                    | `$foo := 7`                                                      | Declare a new variable, or reassign an existing one                |
+| `and` `or`                  | `$a and $b`                                                      | Logical operators. Also work as ordinary commands: `or $a $b`      |
+| `==` `!=` `>` `>=` `<` `<=` | `$foo > 5`                                                       | Compare two values                                                 |
+| `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`                                             | True/false if the left value matches the right-hand pattern        |
+| `+` `-`                     | `1 + 1`, `-5`                                                    | Addition, subtraction, and unary negation                          |
+| `*` `/`                     | `5 * 5`, `7 / 2`                                                 | Multiplication and division (truncating for two integers)          |
+| `@` `@@`                    | see the separate section on these operators for more information | Argument/parameter list spreading                                  |
 
 There's no modulo/remainder *operator* -- use the `mod` (least positive residue) or
 `rem` (ordinary remainder) methods on a number instead, e.g. `7:mod 2`.
 
+### Globs in expression mode
+
 Glob literals (e.g. `*.txt`) only parse in command mode -- expression mode has no glob
-literal syntax at all, so `(x =~ *.txt)` fails to parse. To use a glob from within
-expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. Or use
-`like` in command mode, which takes a glob directly (see
-[Pattern matching](#pattern-matching)).
-
-### The `@` and `@@` operators
-
-`@` spreads a list as a sequence of unnamed arguments, and `@@` spreads a dict as a
-sequence of named arguments -- both at call sites and in a closure's own parameter list,
-where they instead *collect* stray arguments:
-
-```shell script
-# @args collects every unnamed argument into a list; @@kwargs collects every named
-# argument not otherwise bound in the parameter list into a dict.
-$print_everything := {|@ $unnamed @@ $named| echo "Named" $named "Unnamed" $unnamed}
-$print_everything 1 2 x=3 y=4
-
-# The mirrored use, at a call site: spread a list/dict back out into arguments. This
-# defines an `ls` that forwards whatever it's given to `files`, then selects one column.
-$ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs | select file}
-```
+literal syntax at all, so `(x =~ *.txt)` fails to parse. This is because of the clash of the `*`
+symbol as both the multiplication operator and a glob wildcard. To use a glob from within
+expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. 
 
 ### Destructuring assignment
 
