@@ -96,9 +96,11 @@ struct Echo {
 
 fn echo(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Echo = Echo::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let pretty = PrettyPrinter::new(
+    let pretty = PrettyPrinter::new_tracked(
         context.global_state.printer().clone(),
         context.global_state.format_data(),
+        context.global_state.threads().clone(),
+        context.command_handle().clone(),
     );
     if cfg.values.is_empty() {
         pretty.print_value(context.input.recv()?, &ColumnFormat::None);

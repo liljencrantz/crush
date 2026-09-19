@@ -60,12 +60,10 @@ impl Job {
         context.set_name(self.to_string());
         let mut input = context.input.clone();
         let last_command_idx = self.commands.len() - 1;
-        let mut pending_threads = Vec::new();
         for call_def in self.commands[..last_command_idx].iter() {
             let (output, next_input) = pipe();
             match call_def.eval(context.with_io(input, output)) {
-                Ok(Some(id)) => pending_threads.push(id),
-                Ok(None) => {}
+                Ok(_) => {}
                 // Same as the join loop below: a stage running synchronously in this
                 // thread (rather than its own spawned one) can still hit a SendError
                 // while writing to a downstream stage that already stopped reading
@@ -114,12 +112,21 @@ impl Job {
             context.output.send(v)?;
         }
 
-        // Join every non-last stage's thread now that the pipeline has finished, so a
-        // genuine failure (not just the expected "downstream stopped reading early",
-        // e.g. a `head`/`take` truncating a stream) surfaces as this job's own failure
-        // instead of vanishing on a thread nobody ever joined. Joined after computing
-        // `res`/forwarding the last stage's output, not before, so pipeline stages
-        // still run concurrently rather than blocking on each other in sequence.
+        // Join every thread still registered under this job now that the pipeline has
+        // finished, so a genuine failure (not just the expected "downstream stopped
+        // reading early", e.g. a `head`/`take` truncating a stream) surfaces as this
+        // job's own failure instead of vanishing on a thread nobody ever joined, and so
+        // this statement isn't considered done -- letting a caller like `source()` move
+        // on to whatever comes next -- while a stage is still producing output. Every
+        // stage of this job shares one `job_id` (see `with_io`, which always clones
+        // `handle` rather than creating a new one), and a command can register more
+        // threads under it beyond the ones `Job::eval` itself spawned -- e.g. `echo`
+        // prints a stream value on a thread of its own (see `PrettyPrinter::spawn_print`)
+        // that must finish before `echo`'s statement is considered complete, same as any
+        // other stage. `join_job` catches all of them, not just the ones this function
+        // spawned directly. Joined after computing `res`/forwarding the last stage's
+        // output, not before, so pipeline stages still run concurrently rather than
+        // blocking on each other in sequence.
         //
         // Only done when `context.output` isn't itself a pipeline sender, i.e. when this
         // job's result is going straight to something already being drained live (a
@@ -132,36 +139,26 @@ impl Job {
         // has started reading the substitution's overall result yet -- the caller who
         // will eventually drain it hasn't even gotten it back. Waiting here would mean
         // waiting on a thread that can only be unblocked by a reader this code is itself
-        // blocking. Left unjoined in that case: every stage of this job, `pending_threads`
-        // included, shares one `job_id` (see `with_io`, which always clones `handle`
-        // rather than creating a new one), and it's exactly that `job_id` the eventual
-        // caller (e.g. `GlobalState::recv_job_result`) uses to join every thread under it
-        // -- immediately if the capture itself fails, or later, once a returned stream is
-        // actually drained to the end, if it doesn't (see that function's and
+        // blocking. Left unjoined in that case: it's exactly this job's `job_id` the
+        // eventual caller (e.g. `GlobalState::recv_job_result`) uses to join every thread
+        // under it -- immediately if the capture itself fails, or later, once a returned
+        // stream is actually drained to the end, if it doesn't (see that function's and
         // `TableInputStream::recv`'s own doc comments). Nothing is lost here, just
         // deferred to whoever is actually able to safely wait for it.
-        if !context.output.is_pipeline() {
-            for id in pending_threads {
-                if let Err(e) = context.global_state.threads().join_one(id) {
-                    if !e.is_send_disconnected() {
-                        return Err(e);
-                    }
-                }
-            }
-        } else if res.is_err() {
-            // `res` (the last stage's own dispatch/synchronous-run result) is already a
-            // failure. If the last stage is synchronous (e.g. `echo`, can_block=false)
-            // and an *earlier* async stage is the real reason -- its own input simply
-            // disconnected once that earlier stage errored out and stopped sending, e.g.
-            // `median | echo` when `median` hits a NaN -- `res` here is only echo's
-            // generic disconnection error, not median's real one, and nothing above ever
-            // routes this through GlobalState::recv_job_result for job_id to be checked.
-            // Check it now: by the time the last stage could even observe a
-            // disconnection, any earlier stage that was going to fail must have already
-            // finished, so this is never a blocking wait on something still legitimately
-            // running. Only overrides `res` if a real (non-benign) error is actually
-            // found; otherwise `res` -- e.g. a real, unrelated failure in the last stage
-            // itself -- is returned unchanged.
+        //
+        // The one exception is a failing capture: if `res` (the last stage's own
+        // dispatch/synchronous-run result) is already an error, join now even though
+        // `context.output` is a pipeline sender. If the last stage is synchronous (e.g.
+        // `echo`, can_block=false) and an *earlier* async stage is the real reason --
+        // its own input simply disconnected once that earlier stage errored out and
+        // stopped sending, e.g. `median | echo` when `median` hits a NaN -- `res` here
+        // is only echo's generic disconnection error, not median's real one, and nothing
+        // above ever routes this through GlobalState::recv_job_result for job_id to be
+        // checked. Check it now: by the time the last stage could even observe a
+        // disconnection, any earlier stage that was going to fail must have already
+        // finished, so this is never a blocking wait on something still legitimately
+        // running.
+        if !context.output.is_pipeline() || res.is_err() {
             context.global_state.threads().join_job(context.handle.id())?;
         }
 

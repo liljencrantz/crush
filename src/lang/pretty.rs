@@ -13,6 +13,8 @@ use crate::lang::errors::CrushErrorType;
 use crate::lang::pipe::{TableInputStream, TableStreamReader, ValueSender, printer_pipe};
 use crate::lang::printer::Printer;
 use crate::lang::state::global_state::GlobalState;
+use crate::lang::state::handles::CommandHandle;
+use crate::lang::threads::ThreadStore;
 use crate::lang::value::Alignment;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
@@ -40,6 +42,7 @@ pub fn create_pretty_printer(printer: Printer, global_state: &GlobalState) -> Va
                 let mut pp = PrettyPrinter {
                     printer,
                     format_data: global_state.format_data(),
+                    job: None,
                 };
                 while let Ok(val) = i.recv() {
                     pp.format_data = global_state.format_data();
@@ -71,6 +74,10 @@ impl Width for &str {
 pub struct PrettyPrinter {
     printer: Printer,
     format_data: FormatData,
+    // When set, a stream printed via `print_value` is spawned as a tracked thread
+    // registered under this job (see `spawn_print`) instead of a bare, unjoined one --
+    // see that method's doc comment for why this matters.
+    job: Option<(ThreadStore, CommandHandle)>,
 }
 
 fn is_printable(v: u8) -> bool {
@@ -131,10 +138,59 @@ fn is_text(buff: &[u8]) -> bool {
 }
 
 impl PrettyPrinter {
-    pub fn new(printer: Printer, format_data: FormatData) -> PrettyPrinter {
+    /**
+        Like `new`, but the returned printer's job is tracked: a stream value handed to
+        `print_value` is printed on a thread registered under `command_handle`'s job (via
+        `threads`) rather than an untracked one. Use this when the caller's own job needs
+        to be able to wait for the stream to finish printing before considering itself
+        done (see `Job::eval`) -- e.g. `echo`, so a foreground `zip ... | echo` finishes
+        printing before the next top-level statement starts and races it on the shared
+        `Printer` channel.
+    */
+    pub fn new_tracked(
+        printer: Printer,
+        format_data: FormatData,
+        threads: ThreadStore,
+        command_handle: CommandHandle,
+    ) -> PrettyPrinter {
         PrettyPrinter {
             printer,
             format_data,
+            job: Some((threads, command_handle)),
+        }
+    }
+
+    /**
+        Print a value that may take a while (a live/potentially infinite stream) on its
+        own thread rather than blocking the calling thread -- a stream sourced from a
+        background job (e.g. `seq | schedule {} | echo`) may trickle in at one row a
+        second or never end at all, and the calling thread (e.g. one dispatching a
+        backgrounded `&` job) must not be stuck waiting on it forever.
+
+        When this printer was made with `new_tracked`, the thread is registered with
+        `ThreadStore` under the owning job, so a caller that *does* need to wait for it
+        (a foreground job, via `Job::eval`'s `join_job` call) still can; a caller that
+        must not wait (a backgrounded job) simply never asks. When made with plain `new`
+        (no job to register under), the thread is spawned bare, exactly as before.
+    */
+    fn spawn_print(&self, f: impl FnOnce() + Send + 'static) {
+        match &self.job {
+            Some((threads, command_handle)) => {
+                self.printer.handle_error(
+                    threads
+                        .spawn("output-formater-stream", command_handle, move || {
+                            f();
+                            Ok(())
+                        })
+                        .map(|_| ()),
+                );
+            }
+            None => {
+                let t = thread::Builder::new()
+                    .name("output-formater-stream".to_string())
+                    .spawn(f);
+                self.printer.handle_error(t.map_err(|e| e.into()));
+            }
         }
     }
 
@@ -142,17 +198,11 @@ impl PrettyPrinter {
         match cell {
             Value::TableInputStream(mut output) => {
                 let local_pp = self.clone();
-                let t = thread::Builder::new()
-                    .name("output-formater-stream".to_string())
-                    .spawn(move || local_pp.print_table_stream(&mut output, 0));
-                self.printer.handle_error(t.map_err(|e| e.into()));
+                self.spawn_print(move || local_pp.print_table_stream(&mut output, 0));
             }
             Value::BinaryInputStream(mut b) => {
                 let local_pp = self.clone();
-                let t = thread::Builder::new()
-                    .name("output-formater-stream".to_string())
-                    .spawn(move || local_pp.print_binary(b.as_mut(), 0));
-                self.printer.handle_error(t.map_err(|e| e.into()));
+                self.spawn_print(move || local_pp.print_binary(b.as_mut(), 0));
             }
             Value::Table(rows) => self.print_table_stream(&mut TableReader::new(rows), 0),
             Value::Empty => {}
