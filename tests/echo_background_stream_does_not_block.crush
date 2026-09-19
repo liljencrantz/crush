@@ -11,26 +11,23 @@
 #
 # `schedule`'s default initial delay equals its interval, so the very first row isn't
 # available for 2 seconds -- comfortably longer than the few milliseconds this script
-# needs to reach crush:exit --force, which cleanly stops the still-running background
-# job. If echo's stream printing ever becomes synchronous again, dispatching the `&`
-# job below blocks for the entire (never-ending) stream instead of returning
-# immediately, and this test times out under run_system_test's own 30s limit instead of
-# completing in about two seconds.
+# needs to reach crush:exit below. If echo's stream printing ever becomes synchronous
+# again, dispatching the `&` job blocks for the entire (never-ending) stream instead of
+# returning immediately, and this test times out under run_system_test's own 30s limit
+# instead of completing in about two seconds.
 #
-# crush:exit's own refusal to exit while a job is still running (see the sibling test
-# exit_refuses_while_stream_running.crush) doubles as confirmation that the backgrounded
-# job is genuinely still active, not just fast -- the assert would fail immediately, not
-# time out, on a job that had (incorrectly) already finished or never started.
+# No echo/golden output needed: crush:exit refuses while any job is still running (see
+# the sibling test exit_refuses_while_stream_running.crush), which doubles as
+# confirmation that the backgrounded job is genuinely still active, not just fast or
+# never started -- if it ever isn't, the first crush:exit below succeeds outright,
+# ending the process with the default status 0 rather than ever reaching the
+# unconditional crush:exit --force 1 that follows, which the sibling .crush.status file
+# checks for.
 
 seq 1 1000001 | schedule $(duration:of seconds=2) | echo &
 
-$refused := $false
 try {
     crush:exit
 } catch {|$e|
-    $refused = $true
 }
-assert $refused "crush:exit should refuse while a backgrounded echo of a stream is still running"
-
-echo "ok"
-crush:exit --force
+crush:exit --force 1
