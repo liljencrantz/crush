@@ -16,6 +16,7 @@ use crate::util::temperature::Temperature;
 use num_format::{Grouping, SystemLocale};
 use rustyline::Editor;
 use rustyline::history::DefaultHistory;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -425,19 +426,49 @@ impl GlobalState {
         res
     }
 
+    /// Terminates `jid`, and every job nested inside it (see `descendant_job_ids`'s doc
+    /// comment) -- so terminating a job that's currently running a closure (e.g. one of
+    /// `stream:tee`'s branches) also reaches whatever that closure's own body is doing,
+    /// not just `jid`'s own directly-registered controllers.
     pub fn terminate(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
-        get_job(&mut data, jid, false)?.lock()?.terminate()
+        let res = get_job(&mut data, jid, false)?.lock()?.terminate();
+        for id in descendant_job_ids(&data, jid) {
+            if let Ok(job) = get_job(&mut data, id, false) {
+                if let Ok(mut guard) = job.lock() {
+                    let _ = guard.terminate();
+                }
+            }
+        }
+        res
     }
 
+    /// Like `terminate`, but pauses `jid` and every job nested inside it.
     pub fn pause(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
-        get_job(&mut data, jid, true)?.lock()?.pause()
+        let res = get_job(&mut data, jid, true)?.lock()?.pause();
+        for id in descendant_job_ids(&data, jid) {
+            if let Ok(job) = get_job(&mut data, id, false) {
+                if let Ok(mut guard) = job.lock() {
+                    let _ = guard.pause();
+                }
+            }
+        }
+        res
     }
 
+    /// Like `terminate`, but resumes `jid` and every job nested inside it.
     pub fn resume(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
-        get_job(&mut data, jid, true)?.lock()?.resume()
+        let res = get_job(&mut data, jid, true)?.lock()?.resume();
+        for id in descendant_job_ids(&data, jid) {
+            if let Ok(job) = get_job(&mut data, id, false) {
+                if let Ok(mut guard) = job.lock() {
+                    let _ = guard.resume();
+                }
+            }
+        }
+        res
     }
 
     /// Register a job started in the background (i.e. `Job::eval()` saw its
@@ -538,6 +569,49 @@ fn get_job(
         }
     }
     command_error(format!("Unknown job `{}`", target_id))
+}
+
+/// Every currently-live job nested (directly or transitively) inside `jid` -- e.g. a
+/// closure/block body being evaluated as part of a job somewhere under `jid`, however
+/// many levels deep -- found by walking `parent` links (see `JobData::parent` and
+/// `create_nested_job_handle`), not including `jid` itself.
+///
+/// `Job::eval`'s own `is_background`/foreground join logic, `ThreadStore::join_job`, and
+/// everything else that tracks a *job's own threads* already works correctly without
+/// this: a closure's body shares the thread-tracking `CommandHandle`/`ThreadStore`
+/// machinery of whichever job dispatched it, so joining/waiting still sees those
+/// threads. What a nested job gets that's genuinely its *own* is a fresh
+/// `JobControlData` (`create_nested_job_handle`), which is what `crush:terminate`/
+/// `crush:pause`/`crush:resume` (`GlobalState::terminate`/`pause`/`resume`) actually
+/// send a message to -- so without this, telling a job to stop would leave anything
+/// still running inside a closure it's currently evaluating completely unreachable,
+/// e.g. a `stream:tee` branch's own command never seeing termination even after tee
+/// itself does.
+///
+/// Guards against revisiting an id: `JobId`s are recycled (`next_id` hands out the
+/// smallest currently-unused one) the moment a job's own entry is pruned, and a fast
+/// enough producer of short-lived nested jobs (e.g. a busy `while` loop dispatching a
+/// trivial condition/body closure on every single iteration) can make a *snapshot* of
+/// `data.jobs` -- taken once, up front, while this whole function holds the lock, so it
+/// can't itself change mid-scan -- contain parent links that trace a cycle purely from
+/// id reuse across what were, at different real moments, entirely unrelated jobs (e.g.
+/// `0`'s recorded parent is `3`, `3`'s is `1`, `1`'s is `0`). Without a visited set, that
+/// cycle sends this into an infinite loop -- confirmed directly: a `while {$true} {}`
+/// stream:tee branch reproduced exactly this shape and hung here.
+fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
+    let mut visited = HashSet::new();
+    visited.insert(jid);
+    let mut result = Vec::new();
+    let mut frontier = vec![jid];
+    while let Some(current) = frontier.pop() {
+        for jd in &data.jobs {
+            if jd.parent == Some(current) && visited.insert(jd.id) {
+                result.push(jd.id);
+                frontier.push(jd.id);
+            }
+        }
+    }
+    result
 }
 
 fn remove_finished_jobs(data: &mut MutexGuard<StateData>) {

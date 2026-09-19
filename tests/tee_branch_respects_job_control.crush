@@ -1,23 +1,32 @@
 # Regression test: stream:tee gives each branch its own output stream via
 # `branch_sender.initialize(&types)?` (a plain pipe(), not `context.initialize_output`),
-# so unlike tee's own passthrough output, a branch's stream never gets a control
-# receiver wired up (see TableOutputStream::control's and stream:group's own
-# broadcast_control's doc comments for why a plain, uncontrolled TableOutputStream can't
-# respond to crush:pause/crush:terminate at all). A branch that doesn't drain its input
-# (here, an infinite loop that never reads it) fills that stream's bounded row buffer,
-# and tee's own row-feeding loop blocks forever trying to send it more -- with no way
-# for a job-control message sent to the job to ever reach that specific blocked send and
-# unstick it.
+# so unlike tee's own passthrough output, a branch's stream never got a control receiver
+# wired up (see TableOutputStream::control's and stream:group's own broadcast_control's
+# doc comments for why a plain, uncontrolled TableOutputStream can't respond to
+# crush:pause/crush:terminate at all). A branch that never reads its own input (here, an
+# unconditional `while` loop) fills that stream's bounded row buffer, and tee's own
+# row-feeding loop used to block forever on a plain, uncontrolled send trying to feed it
+# more.
 #
-# 10,000 rows is comfortably past the row channel's buffer, so the branch is provably
-# still being fed (and tee's own loop provably still blocked on it) once the background
-# dispatch above returns.
+# Fixing that alone isn't enough to observe cleanly, though: a closure's body runs as its
+# own nested job (see GlobalState::descendant_job_ids' doc comment), which never used to
+# inherit crush:terminate/crush:pause sent to the outer job -- so even with tee's own
+# send fixed, this script's process would still hang forever at exit, stuck joining the
+# `while` branch's own permanently-running thread. Both fixes landed together: tee's
+# branch streams are now wired for control, and GlobalState::terminate (along with
+# pause/resume) now also reaches every job nested inside the one it's told to stop.
+#
+# No fancy assertions needed: if either fix regresses, this script hangs, and
+# run_system_test's own 30s timeout fails the test -- exactly the same "let a real hang
+# fail the test" approach as join_large_stream_deadlock.crush and
+# echo_background_stream_does_not_block.crush. 10,000 rows is comfortably past the row
+# channel's buffer, so the `while` branch is provably still being fed (and tee's own loop
+# provably still blocked on it) once the background dispatch above returns. The other two
+# branches (`count`, `materialize`) exercise the same fan-out across multiple branches at
+# once, the same class of bug stream:group had before its own fix (only one of several
+# workers ever actually seeing a pause/terminate).
 
-$job_id := $(seq 1 10000 | tee {while {$true} {}} | count &)
-$start := $(time:now)
+$job_id := $(seq 1 10000 | tee {while {$true} {}} {count} {materialize} | count &)
+sleep $(duration:of milliseconds=300)
 crush:terminate $job_id
-$result := $(fg $job_id)
-$end := $(time:now)
-assert (($end - $start) < $(duration:of seconds=5)) "crush:terminate should stop a tee job whose branch is blocked on its own uncontrolled output stream almost immediately, not leave it stuck forever"
-
 echo "ok"
