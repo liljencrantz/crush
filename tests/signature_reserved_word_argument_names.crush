@@ -1,0 +1,30 @@
+# Regression test: the #[signature(...)] macro (signature/src/lib.rs and signature.rs)
+# declares an argument's Rust struct field directly from the name written in the
+# #[signature] block, e.g. `type: bool`. When that name is a Rust reserved word, the
+# field must be declared as a raw identifier (`r#type: bool`) to compile -- but that's a
+# purely-Rust concern. Several places in the macro turned the field's `Ident` into a
+# string via a plain `.to_string()`, which -- for a raw identifier -- includes the `r#`
+# prefix verbatim. That leaked into everything crush-facing: the runtime string used to
+# match a user-supplied named argument (so `files type=...` failed with "Unexpected
+# argument named type"), the one-line usage/signature text `help` shows, and the
+# argument's own description bullet (which is what surfaced this: `help $files` showing
+# `r#type` instead of `type`, or `help $if` showing `r#else` instead of `else`).
+#
+# `fs:files`' own `type` argument (toggles the `type` output column) and `control:if`'s
+# `else` argument (its "else"-clause keyword name) are the two reserved-word argument
+# names that currently exist in the codebase.
+
+# The argument must actually be usable under its real, unescaped name -- this was
+# broken outright, not just a cosmetic help-text issue.
+files type=$false | count
+echo "ok"
+
+$files_doc := $(help topic=$files format="markdown")
+$files_doc_leaks_raw_ident := $(like $files_doc $(glob:new "*r#type*"))
+assert $(not $files_doc_leaks_raw_ident) "files' help text must not leak the raw identifier escape r#type"
+assert $(like $files_doc $(glob:new "*`type`*")) "files' help text should describe the `type` argument by its real name"
+
+$if_doc := $(help topic=$control:if format="markdown")
+$if_doc_leaks_raw_ident := $(like $if_doc $(glob:new "*r#else*"))
+assert $(not $if_doc_leaks_raw_ident) "if's help text must not leak the raw identifier escape r#else"
+assert $(like $if_doc $(glob:new "*[else=string]*")) "if's help text should show the else argument in its usage line by its real name"

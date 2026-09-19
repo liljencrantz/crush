@@ -113,6 +113,19 @@ struct Metadata {
     path: Vec<String>,
 }
 
+/// Strip a raw identifier's `r#` prefix, if present -- e.g. turns the Rust field name
+/// `r#type` (raw because `type` is a reserved word) back into the crush-facing argument
+/// name `type`. Used everywhere a field's `Ident` is turned into a string for crush to
+/// see (argument matching, help text, usage strings) rather than re-emitted as a token
+/// in generated Rust code, where the raw form is required to stay valid.
+pub(crate) fn unraw(ident: &Ident) -> String {
+    let s = ident.to_string();
+    match s.strip_prefix("r#") {
+        Some(rest) => rest.to_string(),
+        None => s,
+    }
+}
+
 fn unescape(s: &str) -> String {
     let mut res = "".to_string();
     let mut was_backslash = false;
@@ -158,14 +171,8 @@ fn parse_full_name(
     }
 
     let i = res.pop().unwrap();
-    let as_str = i.to_string();
-    let mut ch = as_str.chars();
-    if as_str.starts_with("r#") {
-        ch.next();
-        ch.next();
-    }
     return Ok((
-        ch.as_str().to_string(),
+        unraw(i),
         i.clone(),
         res.iter().map(|id| id.to_string()).collect(),
     ));
@@ -428,7 +435,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                 }
                 field.attrs = Vec::new();
                 let name = &field.ident.clone().unwrap();
-                let name_string = Literal::string(&name.to_string());
+                let name_string = Literal::string(&unraw(name));
 
                 let type_data = Signature::new(
                     &field.ty,
@@ -466,7 +473,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     }
                     long_description.push(format!(
                         "* `{}`{} {}",
-                        name.to_string(),
+                        unraw(name),
                         default_help,
                         description
                     ));

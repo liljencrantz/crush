@@ -1,4 +1,4 @@
-use crate::{SignatureResult, SimpleSignature};
+use crate::{SignatureResult, SimpleSignature, unraw};
 use proc_macro2::{Ident, Literal, Span, TokenStream, TokenTree};
 use quote::{quote, quote_spanned};
 use std::convert::TryFrom;
@@ -59,6 +59,17 @@ impl Signature {
         })
     }
 
+    /// The crush-facing argument name, e.g. `type` for a field declared `r#type` because
+    /// `type` is a Rust reserved word. Use this (not `self.name.to_string()`/`self.name`
+    /// directly) anywhere a plain string is built for crush to see -- argument-matching
+    /// literals, usage/signature text, generated error messages -- since those must
+    /// never contain the `r#` prefix. `self.name` itself (substituted as `#name` into
+    /// generated Rust code, e.g. a struct field or local variable) still needs to stay
+    /// the raw identifier to remain valid Rust.
+    fn name_str(&self) -> String {
+        unraw(&self.name)
+    }
+
     pub fn type_data(self) -> SignatureResult<TypeData> {
         match &self.signature_type {
             SignatureType::Simple(simple_type) => self.simple_type_data(simple_type),
@@ -74,10 +85,10 @@ impl Signature {
     fn simple_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
         let native_type = simple_type.ident(self.span);
         let allowed_values_name =
-            allowed_values_name(&self.allowed_values, &self.name.to_string(), self.span);
+            allowed_values_name(&self.allowed_values, &self.name_str(), self.span);
         let mutator = simple_type.mutator(&allowed_values_name);
         let value_type = simple_type.value();
-        let name_literal = Literal::string(&self.name.to_string());
+        let name_literal = Literal::string(&self.name_str());
         let type_name = simple_type.name();
         let name = &self.name;
 
@@ -86,7 +97,7 @@ impl Signature {
             signature: if self.default.is_none() {
                 format!(
                     "{}={}",
-                    self.name.to_string(),
+                    self.name_str(),
                     simple_type.description().to_string().to_lowercase()
                 )
             } else {
@@ -94,9 +105,9 @@ impl Signature {
                     && self.default.is_some()
                     && self.default.as_ref().unwrap().to_string() == "(false)"
                 {
-                    format!("[--{}]", self.name)
+                    format!("[--{}]", self.name_str())
                 } else {
-                    format!("[{}={}]", self.name.to_string(), simple_type.description())
+                    format!("[{}={}]", self.name_str(), simple_type.description())
                 }
             },
             initialize: match &self.allowed_values {
@@ -156,7 +167,7 @@ impl Signature {
     }
 
     fn number_type_data(&self) -> SignatureResult<TypeData> {
-        let name_literal = Literal::string(&self.name.to_string());
+        let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         Ok(TypeData {
             allowed_values: None,
@@ -164,7 +175,7 @@ impl Signature {
                 crate::lang::value::ValueType::Integer,
                 crate::lang::value::ValueType::Float,
             ])},
-            signature: format!("{}=$(one_of $float $integer)", self.name.to_string()),
+            signature: format!("{}=$(one_of $float $integer)", self.name_str()),
             initialize: quote! { let mut #name = None; },
             mappings: quote! {
                 (Some(#name_literal), crate::lang::value::Value::Float(_value)) => #name = Some(Number::Float(_value)),
@@ -224,7 +235,7 @@ impl Signature {
     }
 
     fn text_type_data(&self) -> SignatureResult<TypeData> {
-        let name_literal = Literal::string(&self.name.to_string());
+        let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         Ok(TypeData {
             allowed_values: None,
@@ -232,7 +243,7 @@ impl Signature {
                 crate::lang::value::ValueType::String,
                 crate::lang::value::ValueType::File,
             ])},
-            signature: format!("{}=$(one_of $string $file)", name.to_string()),
+            signature: format!("{}=$(one_of $string $file)", self.name_str()),
             initialize: quote! { let mut #name = None; },
             mappings: quote! {
                 (Some(#name_literal), crate::lang::value::Value::String(_value)) => #name = Some(Text::String(_value)),
@@ -291,7 +302,7 @@ impl Signature {
     }
 
     fn patterns_type_data(&self) -> SignatureResult<TypeData> {
-        let name_literal = Literal::string(&self.name.to_string());
+        let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         Ok(TypeData {
             allowed_values: None,
@@ -343,7 +354,7 @@ impl Signature {
     }
 
     fn option_type_data(&self, simple_type: &SimpleSignature) -> SignatureResult<TypeData> {
-        let name_literal = Literal::string(&self.name.to_string());
+        let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         let sub_type = simple_type.literal();
         let mutator = simple_type.mutator(&None);
@@ -353,7 +364,7 @@ impl Signature {
             allowed_values: None,
             signature: format!(
                 "[{}={}]",
-                name.to_string(),
+                self.name_str(),
                 simple_type.description().to_string().to_lowercase()
             ),
             initialize: quote! { let mut #name = None; },
@@ -418,7 +429,7 @@ impl Signature {
         let dump_all = Ident::new(simple_type.dump_list(), self.span.clone());
         let value_type = simple_type.value();
         let sub_type = simple_type.value_type();
-        let name_literal = proc_macro2::Literal::string(&self.name.to_string());
+        let name_literal = proc_macro2::Literal::string(&self.name_str());
         let type_name = simple_type.name();
 
         Ok(TypeData {
@@ -426,7 +437,7 @@ impl Signature {
             crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
             signature: format!(
                 "[{}={}...]",
-                self.name.to_string(),
+                self.name_str(),
                 simple_type.description().to_string().to_lowercase()
             ),
             initialize: quote! { let mut #name = Vec::new(); },
