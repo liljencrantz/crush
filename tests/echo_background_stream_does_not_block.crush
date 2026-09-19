@@ -1,0 +1,36 @@
+# Regression test for a wrong fix that was tried (and reverted) while fixing the race
+# behind echo_stream_is_synchronous.crush: PrettyPrinter::print_value's internal thread
+# spawn for a stream value (src/lang/pretty.rs) exists specifically so that printing a
+# live or effectively infinite stream doesn't block the calling thread -- e.g. a
+# backgrounded `seq | schedule {} | echo &`, where the stream can arrive at one row a
+# second or never end. Job::eval's `is_background` branch still dispatches the last
+# stage's eval() synchronously before returning (only the *waiting* is skipped, not the
+# dispatch), so if `echo` printed a stream synchronously, a backgrounded job ending in
+# `echo` of a stream would block the dispatching thread forever instead of actually
+# running in the background.
+#
+# `schedule`'s default initial delay equals its interval, so the very first row isn't
+# available for 2 seconds -- comfortably longer than the few milliseconds this script
+# needs to reach crush:exit --force, which cleanly stops the still-running background
+# job. If echo's stream printing ever becomes synchronous again, dispatching the `&`
+# job below blocks for the entire (never-ending) stream instead of returning
+# immediately, and this test times out under run_system_test's own 30s limit instead of
+# completing in about two seconds.
+#
+# crush:exit's own refusal to exit while a job is still running (see the sibling test
+# exit_refuses_while_stream_running.crush) doubles as confirmation that the backgrounded
+# job is genuinely still active, not just fast -- the assert would fail immediately, not
+# time out, on a job that had (incorrectly) already finished or never started.
+
+seq 1 1000001 | schedule $(duration:of seconds=2) | echo &
+
+$refused := $false
+try {
+    crush:exit
+} catch {|$e|
+    $refused = $true
+}
+assert $refused "crush:exit should refuse while a backgrounded echo of a stream is still running"
+
+echo "ok"
+crush:exit --force

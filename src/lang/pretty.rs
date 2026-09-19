@@ -139,11 +139,11 @@ fn is_text(buff: &[u8]) -> bool {
 
 impl PrettyPrinter {
     /**
-        Like `new`, but the returned printer's job is tracked: a stream value handed to
-        `print_value` is printed on a thread registered under `command_handle`'s job (via
-        `threads`) rather than an untracked one. Use this when the caller's own job needs
-        to be able to wait for the stream to finish printing before considering itself
-        done (see `Job::eval`) -- e.g. `echo`, so a foreground `zip ... | echo` finishes
+        Build a printer whose job is tracked: a stream value handed to `print_value` is
+        printed on a thread registered under `command_handle`'s job (via `threads`)
+        rather than an untracked one. Use this when the caller's own job needs to be
+        able to wait for the stream to finish printing before considering itself done
+        (see `Job::eval`) -- e.g. `echo`, so a foreground `zip ... | echo` finishes
         printing before the next top-level statement starts and races it on the shared
         `Printer` channel.
     */
@@ -170,8 +170,9 @@ impl PrettyPrinter {
         When this printer was made with `new_tracked`, the thread is registered with
         `ThreadStore` under the owning job, so a caller that *does* need to wait for it
         (a foreground job, via `Job::eval`'s `join_job` call) still can; a caller that
-        must not wait (a backgrounded job) simply never asks. When made with plain `new`
-        (no job to register under), the thread is spawned bare, exactly as before.
+        must not wait (a backgrounded job) simply never asks. When there's no job to
+        register under (e.g. `create_pretty_printer`'s own standalone formatter, not
+        tied to any one job), the thread is spawned bare, exactly as before.
     */
     fn spawn_print(&self, f: impl FnOnce() + Send + 'static) {
         match &self.job {
