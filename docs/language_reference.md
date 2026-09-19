@@ -103,6 +103,8 @@ Only passes through rows where a given condition holds true.
 files | where {eq $type directory}
 ```
 
+The `eq` command tests for equality, there are other comparison commands, check `help $comp` for the full list.
+
 #### select
 
 Passes on some columns unchanged, and can add new ones computed from the others.
@@ -110,6 +112,15 @@ Passes on some columns unchanged, and can add new ones computed from the others.
 ```
 # Show only the file names, discarding every other column
 files | select file
+```
+
+#### count
+
+Counts the number of rows in the input.
+
+```
+# Count the number of files in the current directory
+files | count
 ```
 
 #### group
@@ -120,15 +131,6 @@ per group, aggregating the rest of each group's rows with the given command(s).
 ```
 # Count how many files and how many directories are in the current directory
 files | group type count={count}
-```
-
-#### count
-
-Counts the number of rows in the input.
-
-```
-# Count the number of files in the current directory
-files | count
 ```
 
 #### uniq

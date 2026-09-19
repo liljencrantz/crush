@@ -96,7 +96,7 @@ fn spawn_control_fanout(
     example = "# Group files in current tree by the number of hardlinks pointing to them, show",
     example = "# the number of files and the sum total file size for each link count. Sort results",
     example = "# by size.",
-    example = "files --recurse | group links file_count={count} size={sum size} | sort size",
+    example = "files --recurse | group links file_count=$count size={sum size} | sort size",
 )]
 pub struct Group {
     #[unnamed()]
@@ -104,7 +104,7 @@ pub struct Group {
     group_by: Vec<String>,
     #[named()]
     #[description(
-        "create these additional columns by aggregating the grouped rows using the supplied aggregation command."
+        "create additional columns by aggregating the grouped rows using the supplied aggregation command. The supplied command will be called once for each group, with a table_input_stream containing all rows within that group. Whatever the command outputs will be the value for the specified column for that group."
     )]
     command: OrderedStringMap<Command>,
 }
