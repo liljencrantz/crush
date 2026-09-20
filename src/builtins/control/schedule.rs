@@ -1,13 +1,13 @@
 use crate::data::table::ColumnType;
 use crate::lang::command::Command;
 use crate::lang::data::table::Row;
-use crate::lang::errors::CrushResult;
+use crate::lang::errors::{CrushResult, terminate};
 use crate::lang::job_control::{ChannelBasedController, StreamControlMessage};
 use crate::lang::pipe::pipe;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ValueType;
 use chrono::{Duration, Local};
-use crossbeam::channel::{Receiver, bounded};
+use crossbeam::channel::{Receiver, bounded, select};
 use signature::signature;
 use std::mem::swap;
 use crate::util::interruptible_sleep::interruptible_sleep;
@@ -91,18 +91,72 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             let output = context.initialize_output(&[ColumnType::new("value", ValueType::Any)])?;
             let base_context = context.empty();
             let env = context.scope.clone();
-            let (sender, receiver) = pipe();
             run(cfg, &control_receiver, || {
-                cmd.eval(
-                    base_context
-                        .clone()
-                        .with_scope(env.clone())
-                        .with_output(sender.clone()),
+                // Run this heartbeat's invocation on its own tracked thread rather than
+                // calling cmd.eval(...) directly here: that used to block this thread --
+                // the same one that otherwise checks `control_receiver` between
+                // heartbeats via interruptible_sleep -- for the invocation's entire
+                // duration, with no way for crush:pause/crush:terminate to reach it
+                // until it finished on its own. Spawning it under context's own
+                // CommandHandle (next_command_handle) keeps it under this job's own
+                // job_id, so a message sent to this job already reaches it directly --
+                // and, if `cmd` is itself a closure, its own body's nested job (see
+                // GlobalState::descendant_job_ids) is reachable the same way.
+                let (sender, receiver) = pipe();
+                let local_cmd = cmd.clone();
+                let local_context = base_context
+                    .clone()
+                    .with_scope(env.clone())
+                    .with_output(sender);
+                let (done_sender, done_receiver) = bounded(1);
+                context.global_state.threads().spawn(
+                    "schedule:command",
+                    &context.next_command_handle(),
+                    move || {
+                        let res = local_cmd.eval(local_context);
+                        let _ = done_sender.send(res);
+                        Ok(())
+                    },
                 )?;
+                wait_for_command(&done_receiver, &control_receiver)?;
                 output.send(Row::new(vec![receiver.recv()?]))?;
                 Ok(true)
             })
         }
+    }
+}
+
+/// Blocks until `done` produces the spawned command's result, while still reacting to
+/// `control` the same way `interruptible_sleep` does: Pause blocks this thread (not the
+/// spawned command's own thread, which keeps running) until Resume or Terminate, and
+/// Terminate aborts immediately without waiting for the command to actually finish. This
+/// keeps schedule's own loop thread responsive to job control even while the command it
+/// dispatched may still be running (or stuck) on its own thread.
+fn wait_for_command(
+    done: &Receiver<CrushResult<()>>,
+    control: &Receiver<StreamControlMessage>,
+) -> CrushResult<()> {
+    select! {
+        recv(done) -> res => match res {
+            Ok(inner) => inner,
+            Err(err) => Err(err.into()),
+        },
+        recv(control) -> message => match message {
+            Ok(StreamControlMessage::Terminate) => terminate(),
+            Ok(StreamControlMessage::Resume) => wait_for_command(done, control),
+            Ok(StreamControlMessage::Pause) => {
+                loop {
+                    match control.recv() {
+                        Ok(StreamControlMessage::Terminate) => return terminate(),
+                        Ok(StreamControlMessage::Resume) => break,
+                        Ok(StreamControlMessage::Pause) => {}
+                        Err(_) => return terminate(),
+                    }
+                }
+                wait_for_command(done, control)
+            }
+            Err(err) => Err(err.into()),
+        },
     }
 }
 
