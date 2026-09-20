@@ -1,0 +1,44 @@
+# Regression test: control:schedule's `command=` invocation (schedule.rs) runs
+# `cmd.eval(...)` directly, synchronously, on schedule's own loop thread -- the same
+# thread that otherwise checks its own control channel between heartbeats via
+# interruptible_sleep. Once a heartbeat fires and the command starts running, that
+# invocation isn't wired to the control channel at all: schedule's own thread is simply
+# blocked inside `cmd.eval(...)`, unable to reach its own next control check until the
+# command finishes on its own. A command that never finishes on its own (here, an
+# unconditional `while` loop) leaves schedule permanently stuck.
+#
+# A short initial_delay gets the first heartbeat -- and therefore the stuck command --
+# running quickly; the long interval just avoids a second heartbeat ever mattering.
+#
+# crush:exit --force 1, not a plain crush:terminate, is the actual test here: terminate
+# alone can look like it "works" even when schedule itself is still stuck, because
+# ThreadStore::spawn registers its own wrapper-level controller for every thread
+# (including schedule's own), and an *external* waiter (join_one, or main()'s own final
+# shutdown join) can stop waiting on that alone without the underlying thread actually
+# finishing -- confirmed directly: an earlier, simpler version of this test using plain
+# crush:terminate followed by echo "ok" passed even against the unfixed code, for
+# exactly this reason. crush:exit --force's own loop instead keeps re-checking
+# crush:jobs until the job's own JobControlData is actually gone (every thread holding a
+# strong reference to it has actually exited), which schedule being genuinely stuck
+# prevents -- and, confirmed directly via thread sampling, blocking crush:terminate's
+# own call to schedule's job-wide control channel (a bounded(1) channel schedule's own,
+# now-permanently-stuck thread never drains) is what actually hangs --force's loop, not
+# just its own 2-second timeout elapsing.
+#
+# No echo/golden output needed, same reasoning as the sibling
+# echo_background_stream_does_not_block.crush: if crush:exit ever stops refusing while
+# the background job is still running, the first crush:exit below succeeds outright,
+# ending the process with the default status 0 rather than ever reaching the explicit 1
+# that follows, which the sibling .crush.status file checks for. If schedule's own
+# command= invocation is stuck (the regression this guards against), crush:exit --force
+# never manages to actually finish either, and run_system_test's own 30s timeout fails
+# the test.
+
+$job_id := $(schedule $(duration:of seconds=100) initial_delay=$(duration:of milliseconds=100) command={while {$true} {}} &)
+sleep $(duration:of milliseconds=300)
+
+try {
+    crush:exit
+} catch {|$e|
+}
+crush:exit --force 1
