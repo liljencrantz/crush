@@ -1,0 +1,33 @@
+# Regression test: control:cmd (cmd.rs) spawns a real external OS process and used to
+# simply block its worker thread on `child.wait()`, with no control channel registered
+# at all -- crush:pause/crush:terminate on this job had nothing to reach: the external
+# process itself kept running (or, for pause, kept executing instead of actually
+# suspending) regardless of what crush's own job control did, and the worker thread
+# stayed blocked until the process exited on its own.
+#
+# crush:exit --force 1, not a plain crush:terminate, is the actual test here, for the
+# same reason as the sibling schedule_command_respects_job_control.crush: ThreadStore::
+# spawn registers its own wrapper-level controller for every worker thread (including
+# this one), so an *external* waiter can stop waiting on a plain crush:terminate without
+# the underlying thread -- and the external process it's blocked on -- actually exiting.
+# crush:exit --force's own loop instead keeps re-checking crush:jobs until the job's own
+# JobControlData is actually gone (every thread holding a strong reference to it has
+# actually exited), which a still-running `sleep 100` child process, if not actually
+# signaled, prevents forever.
+#
+# No echo/golden output needed, same reasoning as the sibling tests: if crush:exit ever
+# stops refusing while the background job is still running, the first crush:exit below
+# succeeds outright, ending the process with the default status 0 rather than ever
+# reaching the explicit 1 that follows, which the sibling .crush.status file checks for.
+# If cmd's spawned child process is not actually signaled on terminate, crush:exit
+# --force never manages to finish either, and run_system_test's own 30s timeout fails
+# the test.
+
+$job_id := $(cmd sleep 100 &)
+sleep $(duration:of milliseconds=300)
+
+try {
+    crush:exit
+} catch {|$e|
+}
+crush:exit --force 1
