@@ -42,11 +42,13 @@ two leading dashes, like `--foo` or `-foo`, is equivalent to `foo=$true`.
 ## Jobs and pipelines
 
 Commands accept a single value as their input and produce a single value as their
-output, in addition to their arguments. The output of one command becomes the input for
-the next command in a pipeline:
+output, in addition to their arguments. Commands can be chained together into a 
+pipeline by using the `|` pipeline operator. The output of one command becomes the input
+for the next command in a pipeline:
 
 ```shell script
-host:procs | sort cpu
+# Sort list of processes by cumulative CPU usage. Only print the top ten.
+host:procs | sort cpu | head
 ```
 
 Many commands consume and produce table streams as input and output. Table streams are
@@ -56,8 +58,8 @@ compute constrained pipelines are processed concurrently by at least as many CPU
 cores as there are pipeline steps.
 
 The separation of concerns between arguments and input/output is that arguments
-configure *how* data should be processed, while the input is the data to process and
-the output is where the processed data ends up.
+are meant to configure *how* data is processed, while the input is the data to 
+process and the output is where the processed data ends up.
 
 ## Streams
 
@@ -65,9 +67,13 @@ the output is where the processed data ends up.
 
 The point of having almost everything in Crush be a table stream is that crush can
 provide you with a set of tools to manipulate these streams. These tools work the same
-on any type of stream. Here are the most important stream manipulation commands:
+on any type of stream. 
 
-#### head
+Some stream commands are described below. Stream manipulation commands in crush 
+live in the `$stream` namespace. To list them, start crush and write `help $stream`.
+For help on an individual stream command, like `seq`, write `help $seq`.
+
+#### `head`
 
 Passes through a set number of rows from the start of the stream and truncates the rest.
 
@@ -76,7 +82,7 @@ Passes through a set number of rows from the start of the stream and truncates t
 lines:from README.md | head
 ```
 
-#### tail
+#### `tail`
 
 Passes through a set number of rows from the end of the stream and skips the rest.
 
@@ -85,7 +91,7 @@ Passes through a set number of rows from the end of the stream and skips the res
 lines:from README.md | tail
 ```
 
-#### sort
+#### `sort`
 
 Sorts the stream on the specified column. 
 
@@ -94,7 +100,7 @@ Sorts the stream on the specified column.
 files | sort size
 ```
 
-#### where
+#### `where`
 
 Only passes through rows where a given condition holds true.
 
@@ -105,7 +111,7 @@ files | where {eq $type directory}
 
 The `eq` command tests for equality, there are other comparison commands, check `help $comp` for the full list.
 
-#### select
+#### `select`
 
 Passes on some columns unchanged, and can add new ones computed from the others.
 
@@ -114,16 +120,7 @@ Passes on some columns unchanged, and can add new ones computed from the others.
 files | select file
 ```
 
-#### count
-
-Counts the number of rows in the input.
-
-```
-# Count the number of files in the current directory
-files | count
-```
-
-#### group
+#### `group`
 
 Groups rows that share the same value in one or more columns into a single output row
 per group, aggregating the rest of each group's rows with the given command(s).
@@ -133,7 +130,7 @@ per group, aggregating the rest of each group's rows with the given command(s).
 files | group type count={count}
 ```
 
-#### uniq
+#### `uniq`
 
 Passes through only the first row for each distinct value of the specified column,
 dropping every later row that repeats it.
@@ -143,7 +140,7 @@ dropping every later row that repeats it.
 files | uniq type
 ```
 
-#### join
+#### `join`
 
 Joins two streams together on a shared key column, producing one output row for every
 matching pair.
@@ -155,13 +152,49 @@ $stock := $(csv:from "1,5\n2,3\n" id=$integer count=$integer)
 join id=$fruit id=$stock
 ```
 
-#### More stream commands
+#### Aggregation commands
 
-All stream manipulation commands in crush live in the `$stream` namespace. 
-To see them all, start crush and write `help $stream`. For help on an individual
-stream command, like `seq`, write `help $seq`.
+Some commands operate on a stream and instead of producing a new stream, aggregate that
+stream into a single value.
 
-### Semi-lazy stream evaluation
+Commands like `count`, `sum`, `median`, `avg`, `min`, and `max` operate on a column of a stream 
+and return a single value:
+
+```shell
+# Calculate the number of files in the current directory
+files | count
+
+# Calculate the file size of all files in the current directory
+files | sum size
+
+# Find the CPU usage of the process that has used the most CPU
+host:procs | max cpu
+
+```
+
+Another type of aggregation are the `list:collect` and `dict:collect` commands, that
+collect all the values of a stream into either a list or a dict:
+
+```shell
+# Collect all the names of all the files in the current directory into a list
+files | list:collect
+
+# Create a dict mapping from process id to command name for all currently running processes
+host:procs | dict:collect pid name
+```
+
+Aggregation commands are often used together with the `group` command. When you create a new
+column using a command in `group`, you often use this to aggregate values:
+
+```shell
+# Calculate accumulated CPU usage per-user
+host:procs | group user total_cpu_usage={sum cpu}
+
+# Calculate median memory usage (resident set size) per-user
+host:procs |group user total_cpu_usage={median rss}
+```
+
+### Lazy stream evaluation
 
 Assigning the output of a streaming command to a variable stores a `table_input_stream`,
 not the data itself:
@@ -169,18 +202,20 @@ not the data itself:
 ```shell script
 crush# $all_the_files := $(files --recurse /)
 ```
+
 The command finishes and control returns to the shell immediately. The `files` command 
 will begin writing rows to its output buffer in the background, but because the buffer 
 is bounded it will start blocking once it is full. If you read the value of the variable 
 (for example by simply typing `$all_the_files`), you will drain the whole stream to the 
 screen which will take a very long time. If you instead pipe it through 
-`head 1` (`$all_the_files | head 1`), you will consume exactly one row. This command can
-be repeated over and over  until the stream is empty.
+`head 1` (i.e. `$all_the_files | head 1`), you will consume exactly one row. This command can
+be repeated over and over  until the stream is empty, and every time you do so one new
+line will be returned.
 
 ### Materialized data
 
-A `table_input_stream` (or `binary_stream`) can only be traversed once -- reading it a
-second time produces nothing. This is often what you want: it lets a pipeline work on
+A `table_input_stream` (or `binary_stream`) can only be traversed once - consuming it a
+second time produces an empty stream. This is often what you want: it lets a pipeline work on
 data sets larger than memory, and lets different stages of a pipeline run concurrently.
 But sometimes you want to read the same data more than once. `materialize` converts a
 value's transient (stream) components into their reusable equivalents (`table_input_stream`
@@ -505,7 +540,7 @@ print `$e:type` -- it's always the authoritative name to match against.
 
 There's no separate "exception object" hierarchy to catch by type -- there's just the
 one struct shape described above. `type` is normally a fixed name tied to whatever
-failed internally, but **`throw`** lets a script raise its own error with a custom
+failed internally, but `throw` lets a script raise its own error with a custom
 `type` instead, so a script or library can define and catch its own error categories:
 
 ```shell script
