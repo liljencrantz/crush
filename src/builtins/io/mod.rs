@@ -2,7 +2,7 @@ use crate::data::table::ColumnFormat;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::list::List;
 use crate::lang::data::table::{ColumnType, Row};
-use crate::lang::errors::{CrushResult, data_error};
+use crate::lang::errors::CrushResult;
 use crate::lang::interactive::config_dir;
 use crate::lang::pretty::PrettyPrinter;
 use crate::lang::state::contexts::CommandContext;
@@ -50,20 +50,37 @@ pub fn val(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.dir,
     can_block = false,
-    short = "List members of value",
+    short = "List the member names of a value.",
     output = Known(ValueType::List(Box::from(ValueType::String))),
-    example = "dir .")]
+    long = "Works on any value -- a struct's own fields, a scope's local variables, or",
+    long = "(for anything else, including a type value like `$float`) the methods its",
+    long = "type declares. If `dir`'s input is a pipeline, `dir` lists the members of the",
+    long = "value in the pipeline. Otherwise, `dir` requires a value to be provided as an",
+    long = "argument and lists the members of that value.",
+    long = "",
+    long = "Pair with `member` to fetch one of the listed names -- `member`'s own name",
+    long = "argument, unlike the `:` operator, can be a runtime value instead of a fixed",
+    long = "word in the source, so the two together let you enumerate and read members",
+    long = "whose names aren't known ahead of time.",
+    example = "dir .",
+    example = "# The full help text of every method float has",
+    example = "dir $float | each {|$name| help ($float | member $name)}",
+)]
 struct Dir {
     #[description("the value to list the members of.")]
-    value: Value,
+    value: Option<Value>,
 }
 
 pub fn dir(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Dir = Dir::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let value = match cfg.value {
+        Some(value) => value,
+        None => context.input.recv()?,
+    };
     context.output.send(
         List::new(
             ValueType::String,
-            cfg.value
+            value
                 .fields()
                 .drain(..)
                 .map(|n| Value::from(n))
@@ -119,9 +136,16 @@ fn echo(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.member,
     can_block = false,
-    short = "Extract one member from the input struct.",
+    short = "Extract one named member from the input value.",
+    long = "Works like the `:` member operator, except the member name is a runtime",
+    long = "value (e.g. a variable) rather than a fixed word in the source -- use this",
+    long = "when the name to look up isn't known until the script runs. Pair with `dir`",
+    long = "to discover a value's member names first.",
     example = "$uri := \"https://raw.githubusercontent.com/liljencrantz/crush/refs/heads/master/example_data/dinosaurs.json\"",
-    example = "http $uri | member body | json:from"
+    example = "http $uri | member body | json:from",
+    example = "# dir lists a value's member names; member fetches one by name -- together",
+    example = "# they let you enumerate members whose names aren't known ahead of time",
+    example = "for name=$(dir 5) { echo (5 | member $name) }",
 )]
 struct Member {
     #[description("the member to extract.")]
@@ -130,13 +154,15 @@ struct Member {
 
 fn member(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.remove_arguments(), &context.global_state.printer())?;
-    match context.input.recv()? {
-        Value::Struct(s) => context.output.send(
-            s.get(&cfg.field)
-                .ok_or(format!("Struct does not have a field named `{}`", cfg.field).as_str())?,
-        ),
-        _ => data_error("Expected a struct"),
-    }
+    let value = context.input.recv()?;
+    let result = value.field(&cfg.field)?.ok_or_else(|| {
+        format!(
+            "Missing field `{}` in value of type `{}`",
+            cfg.field,
+            value.value_type()
+        )
+    })?;
+    context.output.send(result)
 }
 
 static MEMBERS_OUTPUT_TYPE: [ColumnType; 2] = [

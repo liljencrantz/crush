@@ -1,0 +1,50 @@
+# dir and member used to only work on structs and struct-shaped values -- dir listed a
+# struct's fields (or a scope's variables, or, for anything else, its type's methods),
+# and member could only extract a named field from a struct. types:fields filled the
+# remaining gap (getting at a *type's* own methods as real command values, e.g. to call
+# help on one), but that made three overlapping commands for one job. member is now
+# generalized to work on any value (not just structs), which lets dir + member replace
+# types:fields entirely: dir lists a value's member names, member fetches one of them by
+# a name that -- unlike the `:` operator -- can be a runtime value instead of a fixed
+# word in the source.
+
+# dir works on a non-struct value, both as an argument and via a pipe, and both list the
+# same member names.
+$names_arg := $(dir 5)
+$names_pipe := $(5 | dir)
+assert ($names_arg == $names_pipe) "dir should give the same result as an argument or via a pipe"
+$count := $($names_arg | count)
+assert ($count > 0) "dir on an integer should list at least one member"
+
+# member fetches a method off a non-struct value by (runtime) name, matching what the
+# `:` operator would give for the same, fixed name.
+$fetched := $(5 | member __neg__)
+$fetched_type := $(typeof $fetched)
+assert ($fetched_type == $command) "member should return the method as a command value"
+
+# member still works on structs, its original behavior. `val` here isn't specific to
+# member -- it's needed any time a bare struct value would otherwise sit at the head of
+# a pipeline, since a struct is checked for callability there the same as any other job
+# head, and $s alone isn't.
+$s := $(struct:of a=1 b=2)
+$a_value := $(val $s | member a)
+assert ($a_value == 1) "member should still work on structs"
+
+# member errors clearly on an unknown member name, for any type.
+$errored := $false
+try {
+    5 | member no_such_member
+} catch {|$e|
+    $errored = $true
+    $starts := $($e:message:starts_with("Missing field"))
+    assert $starts "member's error should name the missing field"
+}
+assert $errored "member should error on an unknown member name"
+
+# dir + member together can enumerate a type's own methods dynamically -- what
+# types:fields used to be the one way to do.
+$methods := $($(dir $float) | each {|$name| $float | member $name})
+$method_count := $($methods | count)
+assert ($method_count > 0) "dir + member should be able to enumerate a type's methods"
+
+echo "ok"

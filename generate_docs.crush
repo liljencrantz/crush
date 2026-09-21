@@ -246,34 +246,38 @@ $crawl := {
                                 # list:len, ...) are exactly as
                                 # documentable as a namespace's commands --
                                 # there's no $val["name"] lookup for a type
-                                # the way there is for a scope
-                                # ($val["is_nan"] errors, "Missing field
-                                # __getitem__"), so types:fields is the one
-                                # way to reach them as real Command values.
-                                # Landing them in $cmd_doc means they get
-                                # every existing command resolution pass
+                                # the way there is for a scope ($val["is_nan"]
+                                # errors, "Missing field __getitem__") -- so
+                                # dir (list the type's member names) combined
+                                # with member (fetch one of them as a real
+                                # Command value, by a name that's a runtime
+                                # value rather than a fixed word in the
+                                # source) is the way to reach them. Landing
+                                # them in $cmd_doc means they get every
+                                # existing command resolution pass
                                 # (bare/compound aliasing included) for
                                 # free -- list being bare-aliased to
                                 # types:list already makes list:len resolve
                                 # the same way json:to does.
                                 $my_methods := $($(list $string):new)
                                 try {
-                                    for entry=$(types:fields $val) {
-                                        $method_full_name := $("{}:{}":format $full_name $entry:key)
+                                    for entry=$(dir $val) {
+                                        $method_full_name := $("{}:{}":format $full_name $entry)
                                         try {
-                                            $cmd_doc[$method_full_name] = $(help $entry:value format=html)
+                                            $method_val := $($val | member $entry)
+                                            $cmd_doc[$method_full_name] = $(help $method_val format=html)
                                             $my_methods:push $method_full_name
                                             $search_items:push $(struct:of \
                                                 path=$(display_path $method_full_name) \
                                                 anchor=$(slugify $method_full_name) \
-                                                short=$(short_of $entry:value) \
+                                                short=$(short_of $method_val) \
                                                 kind="command")
                                         } catch {|$e|
                                             $errors:push $("{} (method help failed)":format $method_full_name)
                                         }
                                     }
                                 } catch {|$e|
-                                    $errors:push $("{} (types:fields failed)":format $full_name)
+                                    $errors:push $("{} (dir failed)":format $full_name)
                                 }
                                 $type_methods[$full_name] = $($my_methods | sort | list:collect value)
                             } catch {|$e|

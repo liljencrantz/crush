@@ -21,8 +21,8 @@ Unquoted character sequences containing only letters, digits and underscore are 
 strings, e.g. `user` or `hat`.
 
 An unquoted character sequence containing a wildcard character (`*` or `?`) is a
-**glob**, an object used for pattern-matching against text -- see
-[Pattern matching](#pattern-matching) below.
+**glob**, an object used for matching against text, see
+[matching](#matching) below.
 
 A character sequence enclosed in single quotes is a **file** literal, e.g.
 `'Cargo.toml'`. An unquoted sequence that contains a dot (`.`) or a slash (`/`), or that

@@ -313,7 +313,7 @@ fn token_tree_to_markdown(tree: &TokenTree) -> String {
     } else if s.starts_with("Number::Float(") && s.ends_with(")") {
         s[14..s.len() - 1].to_string()
     } else if s.starts_with("Duration::seconds(") && s.ends_with(")") {
-        format!("$duration:of seconds={}", &s[18..s.len() - 1])
+        format!("{}s", &s[18..s.len() - 1])
     } else if s.starts_with("\"") && s.ends_with("\"") && is_alnum(&s[1..s.len() - 1]) {
         s[1..s.len() - 1].to_string()
     } else if s == "i128::max_value()" {
