@@ -334,6 +334,8 @@ fn get_category(
         | Minus(_)
         | Star(_)
         | Slash(_)
+        | Mod(_)
+        | Rem(_)
         | MemberOperator(_)
         | ExprModeStart(_)
         | SubStart(_)
@@ -377,6 +379,8 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
         Token::Minus(_) => None,
         Token::Star(_) => None,
         Token::Slash(_) => None,
+        Token::Mod(_) => None,
+        Token::Rem(_) => None,
         Token::QuotedString(_, _) => Some(ValueType::String),
         Token::Comment(_, _) => None,
         Token::Identifier(id, _) => match scope {

@@ -157,7 +157,7 @@ fn __div__(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.integer.rem,
+    types.integer.__rem__,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Remainder after integer division",
@@ -170,7 +170,7 @@ struct Rem {
 }
 
 // Not implemented via binary_op! for the same reason as __div__ above: `a % 0` panics.
-fn rem(mut context: CommandContext) -> CrushResult<()> {
+fn __rem__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let this = context.this.integer()?;
     match context.arguments.value(0)? {
@@ -188,7 +188,7 @@ fn rem(mut context: CommandContext) -> CrushResult<()> {
 }
 
 #[signature(
-    types.integer.r#mod,
+    types.integer.__mod__,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Least positive residue after integer division",
@@ -202,7 +202,7 @@ struct Mod {
 
 // Not implemented via binary_op! for the same reason as __div__ above: `a % 0` (which
 // this is built on) panics.
-fn r#mod(mut context: CommandContext) -> CrushResult<()> {
+fn __mod__(mut context: CommandContext) -> CrushResult<()> {
     context.arguments.check_len(1)?;
     let this = context.this.integer()?;
     match context.arguments.value(0)? {

@@ -134,6 +134,8 @@ impl Parser {
                 | Token::Minus(_)
                 | Token::Star(_)
                 | Token::Slash(_)
+                | Token::Mod(_)
+                | Token::Rem(_)
                 | Token::Bang(_)
                 | Token::Equals(_)
                 | Token::Declare(_)

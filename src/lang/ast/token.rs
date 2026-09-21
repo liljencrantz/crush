@@ -13,6 +13,8 @@ pub enum Token<'input> {
     Minus(Location),
     Star(Location),
     Slash(Location),
+    Mod(Location),
+    Rem(Location),
     QuotedString(&'input str, Location),
     Comment(&'input str, Location),
     Identifier(&'input str, Location),
@@ -90,6 +92,8 @@ impl Token<'_> {
             | Token::Minus(l)
             | Token::Star(l)
             | Token::Slash(l)
+            | Token::Mod(l)
+            | Token::Rem(l)
             | Token::For(l)
             | Token::While(l)
             | Token::Loop(l)
@@ -143,6 +147,8 @@ impl Token<'_> {
             Token::Minus(_) => "-",
             Token::Star(_) => "*",
             Token::Slash(_) => "/",
+            Token::Mod(_) => "mod",
+            Token::Rem(_) => "rem",
             Token::For(_) => "for",
             Token::While(_) => "while",
             Token::Loop(_) => "loop",
@@ -201,6 +207,8 @@ mod tests {
             ("-", Expression, Token::Minus(loc)),
             ("*", Expression, Token::Star(loc)),
             ("/", Expression, Token::Slash(loc)),
+            ("mod", Expression, Token::Mod(loc)),
+            ("rem", Expression, Token::Rem(loc)),
             ("\"hi\"", Command, Token::QuotedString("", loc)),
             ("# hi", Command, Token::Comment("", loc)),
             ("$foo", Command, Token::Identifier("", loc)),
@@ -273,6 +281,8 @@ mod tests {
                 | Token::Minus(..)
                 | Token::Star(..)
                 | Token::Slash(..)
+                | Token::Mod(..)
+                | Token::Rem(..)
                 | Token::QuotedString(..)
                 | Token::Comment(..)
                 | Token::Identifier(..)
@@ -357,6 +367,8 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             | Token::Minus(l)
             | Token::Star(l)
             | Token::Slash(l)
+            | Token::Mod(l)
+            | Token::Rem(l)
             | Token::For(l)
             | Token::While(l)
             | Token::Loop(l)

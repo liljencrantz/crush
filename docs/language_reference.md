@@ -4,7 +4,7 @@ This document describes Crush's syntax and core language features in depth. If y
 new to Crush, read [the overview](overview.md) first for a narrative tour; come back here
 for the details it doesn't have room for.
 
-## Commands
+## Commands and jobs
 
 The structure of a Crush command is a space separated list. The first element of the
 list is the command, the remaining elements are the arguments:
@@ -13,6 +13,35 @@ list is the command, the remaining elements are the arguments:
 echo 5
 git commit message="This commit is amazing"
 ```
+
+### Literals
+
+A character sequence enclosed in double quotes is a string literal, e.g. `"hello"`.
+Unquoted character sequences containing only letters, digits and underscore are also
+strings, e.g. `user` or `hat`.
+
+An unquoted character sequence containing a wildcard character (`*` or `?`) is a
+**glob**, an object used for pattern-matching against text -- see
+[Pattern matching](#pattern-matching) below.
+
+A character sequence enclosed in single quotes is a **file** literal, e.g.
+`'Cargo.toml'`. An unquoted sequence that contains a dot (`.`) or a slash (`/`), or that
+begins with a tilde (`~`), is also interpreted as a file literal, e.g. `Cargo.toml` or
+`~/.ssh`. This matters beyond just picking a type: a command argument that looks like a
+file (because it contains a dot) is a `file` value, not a `string`, even if the command
+expects a string -- e.g. `like foo.txt *.txt` fails because `foo.txt` parses as a file,
+and `like`'s argument must be a string; `like "foo.txt" *.txt` (explicitly quoted) works.
+
+A character sequence starting with a dollar sign (`$`) is a variable lookup. The first
+word of a command (i.e. the command name) is interpreted as a variable lookup even
+without the leading `$` -- commands live in the same namespace as all other variables,
+which is why `$echo` and `echo` refer to the same value.
+
+A whole number immediately followed (no space) by one of `ns`, `ms`, `m`, `h`, or `s` is
+a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
+respectively -- e.g. `5s` is exactly `duration:of seconds=5`. There's no literal syntax
+for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
+duration values instead, e.g. `1h + 30m`.
 
 ### Named and unnamed arguments
 
@@ -30,16 +59,19 @@ Argument mapping works as follows:
 
 * First, all named arguments are assigned.
 * Then, each unnamed argument is assigned to the first parameter that doesn't already
-  have a value.
+  have a value or a default value. (Note that this means that the only way to set an argument
+  with a default value is using a named argument.)
 
 A command can also declare that stray named or stray unnamed arguments (the ones left
 over after normal assignment) should be collected into a dict or list instead of being
 rejected -- see [`@`/`@@`](#the--and--operators) below.
 
-It's common to want to pass a boolean argument, so Crush has a shorthand for it: one or
-two leading dashes, like `--foo` or `-foo`, is equivalent to `foo=$true`.
+Boolean arguments are very common, so Crush has a shorthand for them: Adding one or
+two leading dashes to an argument name sets that boolean argument to true. So the
+following invocations are all equivalent: `files --recurse`, `files -recurse`, and 
+`files recurse=$true`.
 
-## Jobs and pipelines
+### Jobs and pipelines
 
 Commands accept a single value as their input and produce a single value as their
 output, in addition to their arguments. Commands can be chained together into a 
@@ -47,7 +79,8 @@ pipeline by using the `|` pipeline operator. The output of one command becomes t
 for the next command in a pipeline:
 
 ```shell script
-# Sort list of processes by cumulative CPU usage. Only print the top ten.
+# This pipeline has three steps, first, list all processes, then sort the list by CPU usage,
+# finally truncate the list to ten elements.
 host:procs | sort cpu | head
 ```
 
@@ -66,16 +99,18 @@ process and the output is where the processed data ends up.
 ### Processing streams
 
 The point of having almost everything in Crush be a table stream is that crush can
-provide you with a set of tools to manipulate these streams. These tools work the same
-on any type of stream. 
+provide you with a powerful toolbox of general purpose tools to manipulate streams.
+Learning these tools once let you operate on any type of stream.
 
-Some stream commands are described below. Stream manipulation commands in crush 
-live in the `$stream` namespace. To list them, start crush and write `help $stream`.
-For help on an individual stream command, like `seq`, write `help $seq`.
+Some of the most commonly used stream commands are described below. Most stream 
+manipulation commands in crush live in the `$stream` namespace. To list the full
+contents of the `$stream` namespace, start crush and write `help $stream`. 
+For help on an individual command, like `seq`, write `help $seq`.
 
 #### `head`
 
-Passes through a set number of rows from the start of the stream and truncates the rest.
+Passes through a set number of rows from the start of the stream and truncates 
+the rest. Defaults to showing ten rows.
 
 ```
 # Show the first ten lines of README.md
@@ -85,6 +120,7 @@ lines:from README.md | head
 #### `tail`
 
 Passes through a set number of rows from the end of the stream and skips the rest.
+Defaults to showing ten rows.
 
 ```
 # Show the last ten lines of README.md
@@ -93,7 +129,7 @@ lines:from README.md | tail
 
 #### `sort`
 
-Sorts the stream on the specified column. 
+Sorts the stream on the specified column.
 
 ```
 # Sort the files of the current working directory by size
@@ -109,7 +145,10 @@ Only passes through rows where a given condition holds true.
 files | where {eq $type directory}
 ```
 
-The `eq` command tests for equality, there are other comparison commands, check `help $comp` for the full list.
+The where command evaluates a block of code once for each row of data.
+Blocks are written using the [block syntax](blocks-and-closures).
+The example above uses the `eq` command to test for equality. There 
+are other comparison commands, check `help $comp` for the full list.
 
 #### `select`
 
@@ -150,6 +189,16 @@ matching pair.
 $fruit := $(csv:from "1,apple\n2,pear\n" id=$integer name=$string)
 $stock := $(csv:from "1,5\n2,3\n" id=$integer count=$integer)
 join id=$fruit id=$stock
+```
+
+#### `sample`
+
+Reservoir-samples a fixed number of random rows out of the stream, without ever having
+to read the whole thing into memory first.
+
+```
+# Pick one random file from the current directory
+files | sample 1
 ```
 
 #### Aggregation commands
@@ -234,35 +283,6 @@ crush# $m
 crush# $m
 ... (same rows printed again) ...
 ```
-
-## Literals
-
-A character sequence enclosed in double quotes is a string literal, e.g. `"hello"`.
-Unquoted character sequences containing only letters, digits and underscore are also
-strings, e.g. `user` or `hat`.
-
-An unquoted character sequence containing a wildcard character (`*` or `?`) is a
-**glob**, an object used for pattern-matching against text -- see
-[Pattern matching](#pattern-matching) below.
-
-A character sequence enclosed in single quotes is a **file** literal, e.g.
-`'Cargo.toml'`. An unquoted sequence that contains a dot (`.`) or a slash (`/`), or that
-begins with a tilde (`~`), is also interpreted as a file literal, e.g. `Cargo.toml` or
-`~/.ssh`. This matters beyond just picking a type: a command argument that looks like a
-file (because it contains a dot) is a `file` value, not a `string`, even if the command
-expects a string -- e.g. `like foo.txt *.txt` fails because `foo.txt` parses as a file,
-and `like`'s argument must be a string; `like "foo.txt" *.txt` (explicitly quoted) works.
-
-A character sequence starting with a dollar sign (`$`) is a variable lookup. The first
-word of a command (i.e. the command name) is interpreted as a variable lookup even
-without the leading `$` -- commands live in the same namespace as all other variables,
-which is why `$echo` and `echo` refer to the same value.
-
-A whole number immediately followed (no space) by one of `ns`, `ms`, `m`, `h`, or `s` is
-a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
-respectively -- e.g. `5s` is exactly `duration:of seconds=5`. There's no literal syntax
-for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
-duration values instead, e.g. `1h + 30m`.
 
 ## Command substitutions
 
@@ -380,7 +400,7 @@ outside of any loop at all is an error:
 
 ```shell script
 for i=$(seq 1 10) {
-    if ($i:mod(2) == 0) {
+    if ($i mod 2 == 0) {
         continue
     }
     if ($i > 7) {
@@ -755,10 +775,8 @@ better as symbols than as commands. Grouped roughly by precedence, highest first
 | `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`                                             | True/false if the left value matches the right-hand pattern        |
 | `+` `-`                     | `1 + 1`, `-5`                                                    | Addition, subtraction, and unary negation                          |
 | `*` `/`                     | `5 * 5`, `7 / 2`                                                 | Multiplication and division (truncating for two integers)          |
+| `mod` `rem`                  | `-7 mod 2`, `-7 rem 2`                                           | Same precedence as `*`/`/`. `mod` is the least positive residue (always `>= 0`); `rem` is the ordinary, truncating remainder (`-7 mod 2` is `1`, `-7 rem 2` is `-1`) |
 | `@` `@@`                    | see the separate section on these operators for more information | Argument/parameter list spreading                                  |
-
-There's no modulo/remainder *operator* -- use the `mod` (least positive residue) or
-`rem` (ordinary remainder) methods on a number instead, e.g. `7:mod 2`.
 
 ### Globs in expression mode
 
@@ -843,7 +861,7 @@ be used as a pattern by implementing it:
 
 ```shell script
 $Even := $(class)
-$Even:__is__ = {|$needle| ($needle:mod(2) == 0)}
+$Even:__is__ = {|$needle| ($needle mod 2 == 0)}
 $even := $(Even:new)
 
 like 4 $even   # true
@@ -980,16 +998,34 @@ A variable name starting with `__` is reserved for Crush's own internal use.
 
 ## Blocks and closures
 
-Braces (`{}`) create a block of code. Named arguments passed at invocation are added to
+By wrapping a set of commands within braces (`{}`), you create a block of code. Many commands,
+such as `if`, `where` and `remote:exec` take a block of code as an argument:
+
+```shell
+if $true {echo "Yes!"}
+```
+
+You can also create a new command by assigning a
+block of code to a variable name:
+
+```shell script
+# Create a new command
+$greet := {echo "Greetings"}
+# This will print Greetings
+greet
+```
+
+Named arguments passed at invocation are added to
 the block's local scope:
 
 ```shell script
-crush# $print_a := {echo $a}
-crush# print_a a="Greetings"
-Greetings
+# Create a new command
+$greet_person := {echo "Greetings," $person_name}
+# This will print Greetings, Philip
+greet_person person_name="Philip"
 ```
 
-The output value of the last command to be executed in a block becomes the output value
+The output value of the last command of a block becomes the output value
 of the entire block.
 
 ```shell script
@@ -1001,16 +1037,17 @@ files | where {
 
 ### Closures
 
-A block with a list of allowed input parameters at the top is called a **closure**. Closures add several features not 
-found in regular blocks:
+A block with a list of allowed input parameters at the top is called a **closure**.
+Closures add several features not found in regular blocks:
 
 * parameter validation,
-* named positional parameters, 
 * collectors for extra named and unnamed arguments, and
 * early termination of the block.
 
 #### Closure parameter lists
-To make a closure into a block, list the names of the expected parameters between pipes (`|`) at the top of the block:
+
+To make a closure into a block, list the names of all expected parameters between
+pipes (`|`) at the top of the block:
 
 ```shell script
 # Create a closure that expects to input parameters named a and b
@@ -1023,8 +1060,9 @@ add a=3 b=4
 
 A closure that expects no parameters looks like `{|| ...}`.
 
-You can declare the expected type of a parameterer using the syntax `: $type`, and a default value using 
-the syntax` = $value`. Both can be combined, in which case the type must come before the default value.
+You can declare the expected type of a parameterer using the syntax `: $type`, and a 
+default value using the syntax` = $value`. Both can be combined, in which case the 
+type must come before the default value.
 
 ```shell script
 # Create a closure that expects input parameters named a and b, both integers. b has a default value of 1.

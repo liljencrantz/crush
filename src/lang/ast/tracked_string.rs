@@ -117,6 +117,8 @@ impl From<Token<'_>> for TrackedString {
             | Token::Minus(l)
             | Token::Star(l)
             | Token::Slash(l)
+            | Token::Mod(l)
+            | Token::Rem(l)
             | Token::Bang(l)
             | Token::For(l)
             | Token::While(l)

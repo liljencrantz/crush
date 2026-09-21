@@ -1,19 +1,19 @@
-seq 0 10 | select num={(value*5):mod 7} | group num | sort num | echo
-seq 0 1000 | select num={(value*5):mod 7} | group num c={count} | sort num | materialize | echo
-seq 0 1000 | select num={(value*5):mod 7} | group num c={count} s={sum} | sort num | materialize | echo
+seq 0 10 | select num={(value*5 mod 7)} | group num | sort num | echo
+seq 0 1000 | select num={(value*5 mod 7)} | group num c={count} | sort num | materialize | echo
+seq 0 1000 | select num={(value*5 mod 7)} | group num c={count} s={sum} | sort num | materialize | echo
 # An aggregator name that collides with a group-by column name must be auto-renamed
 # rather than making group fail with a duplicate-column error.
-seq 0 10 | select num={(value*5):mod 7} | group num num={count} | sort num | materialize | echo
+seq 0 10 | select num={(value*5 mod 7)} | group num num={count} | sort num | materialize | echo
 
 # Grouping by more than one column.
-seq 0 20 | select a={($value):mod 2} b={($value):mod 3} | group a b | sort a b | materialize | echo
+seq 0 20 | select a={($value mod 2)} b={($value mod 3)} | group a b | sort a b | materialize | echo
 
 # Grouping an empty stream must not crash or hang -- it should just produce an empty
 # output stream.
-seq 0 0 | select a={($value):mod 2} | group a c={count} | materialize | echo
+seq 0 0 | select a={($value mod 2)} | group a c={count} | materialize | echo
 
 # If an aggregator command fails for one group's rows, that group's row is silently
 # dropped from the output entirely (the error is printed, but `group` itself doesn't
 # fail) -- other groups whose aggregation succeeds are unaffected. Here group "b"'s
 # `val` column is always a non-numeric string, so `sum val` fails only for that group.
-seq 0 6 | select m={($value):mod 3} | select key={if ($m == 0) {"a"} else {if ($m == 1) {"b"} else {"c"}}} val={if ($m == 1) {"bad"} else {($m)}} | group key c={sum val} | sort key | materialize | echo
+seq 0 6 | select m={($value mod 3)} | select key={if ($m == 0) {"a"} else {if ($m == 1) {"b"} else {"c"}}} val={if ($m == 1) {"bad"} else {($m)}} | group key c={sum val} | sort key | materialize | echo

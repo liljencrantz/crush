@@ -111,6 +111,12 @@ ExprFactor: Box<Node> = {
     <l: @L> <lt:ExprFactor> <op:Slash> <rt:ExprUnary> <r: @R> => {
         operator_method("__div__", op, lt, rt)
     },
+    <l: @L> <lt:ExprFactor> <op:Mod> <rt:ExprUnary> <r: @R> => {
+        operator_method("__mod__", op, lt, rt)
+    },
+    <l: @L> <lt:ExprFactor> <op:Rem> <rt:ExprUnary> <r: @R> => {
+        operator_method("__rem__", op, lt, rt)
+    },
 }
 
 ExprUnary: Box<Node> = {
@@ -415,6 +421,8 @@ extern {
         ComparisonOperator=> Token::ComparisonOperator(<&'input str>, <Location>),
         Slash=> Token::Slash(<Location>),
         Star=> Token::Star(<Location>),
+        Mod=> Token::Mod(<Location>),
+        Rem=> Token::Rem(<Location>),
         Plus=> Token::Plus(<Location>),
         Minus=> Token::Minus(<Location>),
         QuotedString=> Token::QuotedString(<&'input str>, <Location>),

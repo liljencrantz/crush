@@ -8,7 +8,7 @@
 # it -- its row is dropped from group's own output (a separate, already-documented
 # behavior), but the failure is no longer invisible.
 
-$result := $(seq 0 6 | select m={($value):mod 3} | select key={if ($m == 0) {"a"} else {if ($m == 1) {"b"} else {"c"}}} val={if ($m == 1) {"bad"} else {($m)}} | group key c={sum val} | sort key | materialize)
+$result := $(seq 0 6 | select m={($value mod 3)} | select key={if ($m == 0) {"a"} else {if ($m == 1) {"b"} else {"c"}}} val={if ($m == 1) {"bad"} else {($m)}} | group key c={sum val} | sort key | materialize)
 $row_count := $($result | count)
 assert ($row_count == 2) "group b's aggregator should have failed, dropping its row from the output"
 
@@ -55,14 +55,14 @@ assert ($last_source_file == "tests/warnings.crush") "the fs:files warning's sou
 # where's per-row predicate failure is reported the same way -- the offending row is
 # simply dropped from the output (where's normal filtering behavior), continuing to
 # the rest, rather than aborting the whole pipeline.
-$where_row_count := $($(seq 0 3) | select m={($value):mod 3} | where {if ($m == 0) {convert $integer "notanumber"} else {$true}} | materialize | count)
+$where_row_count := $($(seq 0 3) | select m={($value mod 3)} | where {if ($m == 0) {convert $integer "notanumber"} else {$true}} | materialize | count)
 assert ($where_row_count == 2) "where should drop just the row whose predicate failed, not abort the pipeline"
 $w1 := $($(crush:warn:list | materialize) | count)
 assert ($w1 == 3) "a failing where predicate should add a third warning"
 
 # each's per-row command failure is reported too, rather than aborting the pipeline
 # after the first bad row.
-$(seq 0 3) | select m={($value):mod 3} | each {if ($m == 0) {convert $integer "notanumber"} else {}}
+$(seq 0 3) | select m={($value mod 3)} | each {if ($m == 0) {convert $integer "notanumber"} else {}}
 $w2 := $($(crush:warn:list | materialize) | count)
 assert ($w2 == 4) "a failing each body should add a fourth warning"
 

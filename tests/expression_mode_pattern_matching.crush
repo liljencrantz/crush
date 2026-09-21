@@ -83,7 +83,7 @@ assert (($describe_glob("hello.txt")) == "text") "match's is arm should accept a
 ## Custom __is__ patterns, used from like/=~ inside expression mode
 
 $Even := $(class)
-$Even:__is__ = {|$needle| ($needle:mod(2) == 0)}
+$Even:__is__ = {|$needle| ($needle mod 2 == 0)}
 $even := $(Even:new)
 assert $(like 4 $even) "like should accept a custom type implementing __is__"
 assert (!$(like 5 $even)) "like should correctly reject via a custom __is__ implementation"

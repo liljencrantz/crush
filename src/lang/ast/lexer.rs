@@ -604,6 +604,8 @@ impl<'input> Lexer<'input> {
                         "or" => {
                             Some(Token::LogicalOperator(s, Location::new(i, end_idx + 1)).into())
                         }
+                        "mod" => Some(Token::Mod(Location::new(i, end_idx + 1)).into()),
+                        "rem" => Some(Token::Rem(Location::new(i, end_idx + 1)).into()),
                         "for" => Some(Token::For(Location::new(i, end_idx + 1)).into()),
                         "while" => Some(Token::While(Location::new(i, end_idx + 1)).into()),
                         "loop" => Some(Token::Loop(Location::new(i, end_idx + 1)).into()),
