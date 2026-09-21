@@ -471,9 +471,10 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                         long_description.push("".to_string());
                         had_field_description = true;
                     }
+                    let bullet_name = type_data.bullet_name.unwrap_or_else(|| unraw(name));
                     long_description.push(format!(
                         "* `{}`{} {}",
-                        unraw(name),
+                        bullet_name,
                         default_help,
                         description
                     ));

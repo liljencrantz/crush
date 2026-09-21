@@ -536,6 +536,39 @@ fn create_long_help(signature: &Vec<ParameterDefinition>) -> String {
                         .unwrap_or("".to_string())
                 ));
             }
+            // `@ $name`: collects every stray unnamed argument into a list, exactly
+            // like a #[unnamed()] `Vec<T>` field on a regular command (e.g. `files`'s
+            // `directory`) -- both have one fixed name of their own, so showing that
+            // name plainly (the same as a Normal parameter) isn't misleading.
+            ParameterDefinition::Unnamed { name, description } => {
+                param_help.push(format!(
+                    " * `{}` {}",
+                    &name.string,
+                    description
+                        .as_ref()
+                        .map(|d| unescape(&d.string))
+                        .unwrap_or(Ok("<Invalid help string>".to_string()))
+                        .unwrap_or("".to_string())
+                ));
+            }
+            // `@@ $name`: collects every stray named argument into a dict, exactly
+            // like a #[named()] `OrderedStringMap<T>` field on a regular command (e.g.
+            // csv:from's `columns`). Unlike `@` above, showing `name` here would be
+            // actively misleading -- `name=value` isn't how you set this, any key not
+            // otherwise bound is -- so it's rendered `<any>=$any` instead, the same
+            // placeholder a regular command's own `<any>=$type` uses (always `$any`
+            // rather than a declared type, since a closure has no way to restrict the
+            // type of values `@@` collects).
+            ParameterDefinition::Named { name: _, description } => {
+                param_help.push(format!(
+                    " * `<any>=$any` {}",
+                    description
+                        .as_ref()
+                        .map(|d| unescape(&d.string))
+                        .unwrap_or(Ok("<Invalid help string>".to_string()))
+                        .unwrap_or("".to_string())
+                ));
+            }
             ParameterDefinition::Meta(key, value) => match key.string.as_ref() {
                 "long_help" => {
                     long_help.push(
@@ -550,7 +583,6 @@ fn create_long_help(signature: &Vec<ParameterDefinition>) -> String {
                 }
                 _ => {}
             },
-            _ => {}
         }
     }
 

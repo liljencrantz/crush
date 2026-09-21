@@ -619,7 +619,7 @@ foreground the way <a href="#control-fg"><code>fg</code></a> would.</p>
 <ul>
 <li><p><code>command</code> The file path to the command to execute</p>
 </li>
-<li><p><code>switches</code> Switches to pass in to the command. The name will be prepended with a double dash &#39;--&#39;, unless it is a single character name, in which case a single dash &#39;-&#39; will be prepended</p>
+<li><p><code>&lt;any&gt;=$any</code> Switches to pass in to the command. The name will be prepended with a double dash &#39;--&#39;, unless it is a single character name, in which case a single dash &#39;-&#39; will be prepended</p>
 </li>
 <li><p><code>arguments</code> Arguments to pass in to the command</p>
 </li>
@@ -664,7 +664,7 @@ eventual result for later retrieval; <a href="#control-fg"><code>fg</code></a> w
 <p>Execute a command once for each element in a stream.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>iterator</code> the name to bind each element to, as <code>name=stream</code> (exactly one pair).</p>
+<li><p><code>&lt;any&gt;=$any</code> the name to bind each element to, as <code>name=stream</code> (exactly one pair).</p>
 </li>
 <li><p><code>body</code> the block to execute once per element, with the bound name available as a variable.</p>
 </li>
@@ -2155,7 +2155,7 @@ any of its actual rows.</p>
 <ul>
 <li><p><code>files</code> source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
 </li>
-<li><p><code>columns</code> name and type of all columns.</p>
+<li><p><code>&lt;any&gt;=$type</code> name and type of all columns.</p>
 </li>
 <li><p><code>separator</code> (default: <code>&#39;,&#39;</code>) column separator.</p>
 </li>
@@ -3113,7 +3113,7 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 <ul>
 <li><p><code>group_by</code> the column(s) to group by and copy into the output stream.</p>
 </li>
-<li><p><code>command</code> create additional columns by aggregating the grouped rows using the supplied aggregation command. The supplied command will be called once for each group, with a table_input_stream containing all rows within that group. Whatever the command outputs will be the value for the specified column for that group.</p>
+<li><p><code>&lt;any&gt;=$command</code> create additional columns by aggregating the grouped rows using the supplied aggregation command. The supplied command will be called once for each group, with a table_input_stream containing all rows within that group. Whatever the command outputs will be the value for the specified column for that group.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3142,7 +3142,7 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 <p>Join two streams together on the specified keys.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>join</code> Fields to join</p>
+<li><p><code>&lt;any&gt;=$any</code> Fields to join</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3221,7 +3221,7 @@ The column type must be numeric.</p>
 new name to give it. Columns not mentioned pass through unchanged.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>renames</code> mapping from current column name to new column name.</p>
+<li><p><code>&lt;any&gt;=$string</code> mapping from current column name to new column name.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3878,7 +3878,7 @@ the same key appears in more than one row, the last row wins.</p>
 <ul>
 <li><p><code>elements</code> alternating keys and values, for non-string keys. Must not be combined with <code>values</code>.</p>
 </li>
-<li><p><code>values</code> named key/value pairs, for string keys. Must not be combined with <code>elements</code>.</p>
+<li><p><code>&lt;any&gt;=$any</code> named key/value pairs, for string keys. Must not be combined with <code>elements</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5080,7 +5080,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <pre><code><a href="#types-string"><span class="tok-command">string</span></a></code></pre>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>named</code> The named parameters to format into the pattern string</p>
+<li><p><code>&lt;any&gt;=$any</code> The named parameters to format into the pattern string</p>
 </li>
 <li><p><code>unnamed</code> The unnamed parameters to format into the pattern string</p>
 </li>
@@ -5361,7 +5361,7 @@ columns from more than one source, applied here to struct members instead.</p>
 <ul>
 <li><p><code>unnamed</code> unnamed values.</p>
 </li>
-<li><p><code>named</code> named values.</p>
+<li><p><code>&lt;any&gt;=$any</code> named values.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5389,7 +5389,7 @@ methods for adding, removing, or replacing rows. The most similar type is
 <pre><code><a href="#types-type"><span class="tok-command">type</span></a></code></pre>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>columns</code> return the table type with the specified column signature.</p>
+<li><p><code>&lt;any&gt;=$type</code> return the table type with the specified column signature.</p>
 </li>
 </ul>
 </div>
@@ -5440,7 +5440,7 @@ the writable counterpart of the same rows.</p>
 <p>You usually do this in order to create a pipe specialized to a specific column signature.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>columns</code> the columns of the stream.</p>
+<li><p><code>&lt;any&gt;=$type</code> the columns of the stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5532,7 +5532,7 @@ is <a href="#types-table_input_stream"><code>table_input_stream</code></a>, its 
 <pre><code><a href="#types-type"><span class="tok-command">type</span></a></code></pre>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>columns</code> the columns of the stream.</p>
+<li><p><code>&lt;any&gt;=$type</code> the columns of the stream.</p>
 </li>
 </ul>
 </div>
@@ -5893,7 +5893,7 @@ name of the variable you want to get.</p>
 <p>The let builtin is not normally called directly, but via the syntactic sugar of the := operator.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>variables</code> the variables to declare. The value you supply will be the initial value of the variable.</p>
+<li><p><code>&lt;any&gt;=$any</code> the variables to declare. The value you supply will be the initial value of the variable.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5952,7 +5952,7 @@ the <code>set</code> builtin, or an error will result.</p>
 operator.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>variables</code> the variables to reassign. The value you supply will be the new value of the variable.</p>
+<li><p><code>&lt;any&gt;=$any</code> the variables to reassign. The value you supply will be the new value of the variable.</p>
 </li>
 </ul>
 <h1>Examples</h1>

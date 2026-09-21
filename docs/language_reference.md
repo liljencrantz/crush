@@ -1191,13 +1191,17 @@ command's own repeated long = "...".
 
 This command accepts the following arguments:
 
- * name     the name to greet
- * greeting (Hello) the greeting to use
+ * name       the name to greet
+ * greeting   (Hello) the greeting to use
+ * extra      any further unnamed arguments -- ignored
+ * <any>=$any any further named arguments -- ignored
 ```
 
-`help`'s argument list only covers a closure's plain positional/named parameters this
-way -- the doc strings attached to `@ $extra`/`@@ $options` above are valid, parsed
-syntax, but aren't printed as part of this list.
+`@ $extra` is documented the same way a plain parameter is -- it has one fixed name of
+its own, so showing it plainly isn't misleading. `@@ $options` instead renders as
+`` `<any>=$any` ``, the same placeholder a built-in command's own dynamically-named
+argument (e.g. `csv:from`'s `columns`) uses -- `options=...` isn't how you'd actually
+set it; any key not otherwise bound by another parameter is.
 
 One or more `example="..."` entries add a syntax-highlighted "Examples" section after
 the argument list, the same as a built-in command's own repeated `example = "..."`:
@@ -1239,7 +1243,9 @@ currently being called, and however many blocks are being executed inside that c
 ```
 
 The output value of a closure that ends through a call to `return` is the value passed 
-in to `return`. If none was given, the output value is `$empty`.
+in to `return`. If none was given, the output value is `$empty`. If a closure does not
+have a return command, the output will be the output of the last command, just like in
+a regular block.
 
 ## Background jobs
 

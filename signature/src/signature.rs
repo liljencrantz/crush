@@ -19,6 +19,17 @@ pub struct TypeData {
     pub crush_internal_type: TokenStream,
     pub signature: String,
     pub allowed_values: Option<Vec<TokenTree>>,
+    /// Overrides the `` `name` `` shown at the start of this field's bullet in the
+    /// argument-description list (see `long_description.push(format!("* \`{}\`...", ...))`
+    /// in `signature/src/lib.rs`). `None` for every field that has one fixed, literal
+    /// argument name -- the field's own (unraw'd) name is exactly right there. Only
+    /// `ordered_string_map_type_data` sets this: a `#[named()]` `OrderedStringMap<T>`
+    /// field has no single fixed name at all -- every distinct key the caller writes
+    /// becomes its own named argument -- so showing the Rust field's own name (e.g.
+    /// `columns`) would wrongly suggest `columns=...` is itself a real argument to pass.
+    /// `<any>=$type` (matching the synopsis line's own `[<any>=type...]`) makes that
+    /// arbitrary-key nature explicit instead.
+    pub bullet_name: Option<String>,
 }
 
 pub enum SignatureType {
@@ -93,6 +104,7 @@ impl Signature {
         let name = &self.name;
 
         Ok(TypeData {
+            bullet_name: None,
             crush_internal_type: simple_type.value_type(),
             signature: if self.default.is_none() {
                 format!(
@@ -170,6 +182,7 @@ impl Signature {
         let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         Ok(TypeData {
+            bullet_name: None,
             allowed_values: None,
             crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
                 crate::lang::value::ValueType::Integer,
@@ -238,6 +251,7 @@ impl Signature {
         let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         Ok(TypeData {
+            bullet_name: None,
             allowed_values: None,
             crush_internal_type: quote! {crate::lang::value::ValueType::one_of(vec![
                 crate::lang::value::ValueType::String,
@@ -305,6 +319,7 @@ impl Signature {
         let name_literal = Literal::string(&self.name_str());
         let name = &self.name;
         Ok(TypeData {
+            bullet_name: None,
             allowed_values: None,
             signature: format!("@ $(one_of $string $glob $re)"),
             initialize: quote! { let mut #name = crate::lang::signature::patterns::Patterns::new(); },
@@ -361,6 +376,7 @@ impl Signature {
         let value_type = simple_type.value();
         let span = self.span;
         Ok(TypeData {
+            bullet_name: None,
             allowed_values: None,
             signature: format!(
                 "[{}={}]",
@@ -407,6 +423,7 @@ impl Signature {
         let sub_type = simple_type.value_type();
 
         Ok(TypeData {
+            bullet_name: Some(format!("<any>=${}", simple_type.description())),
             allowed_values: None,
             signature: format!(
                 "[<any>={}...]",
@@ -433,6 +450,7 @@ impl Signature {
         let type_name = simple_type.name();
 
         Ok(TypeData {
+            bullet_name: None,
             allowed_values: None,
             crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
             signature: format!(
