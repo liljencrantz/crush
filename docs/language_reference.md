@@ -71,6 +71,52 @@ two leading dashes to an argument name sets that boolean argument to true. So th
 following invocations are all equivalent: `files --recurse`, `files -recurse`, and 
 `files recurse=$true`.
 
+#### Passing arguments from a list or dict
+
+`@` and `@@` (introduced in full under [The `@` and `@@`
+operators](#the--and--operators)) also work directly at a call site, spreading a
+list's elements as unnamed arguments and a dict's entries as named arguments. This is
+how to call a command whose arguments aren't known until runtime.
+
+`files` takes both kinds of argument: an unnamed list of paths, and a long list of
+named boolean flags controlling which columns to show. Both can come from a list/dict
+instead of being written out individually, and combine freely with ordinary arguments
+in the same call:
+
+```shell script
+$paths := $(list:of "src" "docs")
+$flags := $(dict:of recurse=$true inode=$true)
+files @ $paths @@ $flags permissions=$false
+```
+
+is exactly the same call as writing out:
+
+```shell script
+files "src" "docs" recurse=$true inode=$true permissions=$false
+```
+
+`@`/`@@` can appear anywhere in the argument list, any number of times, mixed freely
+with ordinary named/unnamed arguments and with each other. Each instance of `@`/`@@` 
+is simply expanded, in place, into the arguments it produces. If the same named 
+argument ends up given more than once this way -- whether from two literal `name=value`
+arguments, two spreads that both set the same key, or one of each -- there's no error:
+whichever one comes *last* in the written call is the one that takes effect.
+
+```shell script
+# recurse ends up $false: the @@ spread comes after the literal recurse=$true, so
+# it's the one that wins.
+files . recurse=$true @@ $(dict:of recurse=$false)
+```
+
+`csv:from`'s `columns` argument -- one named argument per column, mapping its name to
+its type -- is a good example of arguments that are naturally built up as a dict rather
+than known in advance, e.g. when the columns themselves come from another data source:
+
+```shell script
+$column_types := $(dict:of id=$integer name=$string age=$integer)
+csv:from "1,Alice,30\n2,Bob,25\n" @@ $column_types
+```
+
 ### Jobs and pipelines
 
 Commands accept a single value as their input and produce a single value as their
@@ -1100,6 +1146,81 @@ push
 
 The `@`/`@@` operators work in a closure's own parameter list, to collect stray arguments -- see
 the section on [The `@` and `@@` operators](#the--and--operators).
+
+##### Documenting a closure
+
+A closure's parameter list can carry documentation too, and `help` renders it the same
+way it renders a built-in command's. Two different things can go inside the `|...|`
+list:
+
+* A quoted string written directly after a parameter -- including after an `@ $name`
+  or `@@ $name` collector -- documents that one parameter.
+* A bare `key="..."` entry, written like a named argument but not attached to any one
+  parameter, documents the closure as a whole. `short_help="..."` sets the one-line
+  summary; one or more `long_help="..."` entries build the longer description.
+
+```shell script
+$greet := {
+    |$name: $string "the name to greet"
+     $greeting: $string = "Hello" "the greeting to use"
+     @ $extra "any further unnamed arguments -- ignored"
+     @@ $options "any further named arguments -- ignored"
+     short_help="Greets a person by name"
+     long_help="Prints a greeting message to standard output."
+     long_help=""
+     long_help="Consecutive long_help=\"...\" entries are joined into one flowing,"
+     long_help="word-wrapped paragraph -- an empty long_help=\"\" starts a new one,"
+     long_help="exactly like a built-in command's own repeated long = \"...\"."|
+    echo ("{}, {}!":format($greeting, $name))
+}
+help $greet
+```
+
+which renders as:
+
+```
+greet $name: $string $greeting: $string = Hello @ $extra @@ $options
+
+Greets a person by name
+
+Prints a greeting message to standard output.
+
+Consecutive long_help="..." entries are joined into one flowing, word-wrapped
+paragraph -- an empty long_help="" starts a new one, exactly like a built-in
+command's own repeated long = "...".
+
+This command accepts the following arguments:
+
+ * name     the name to greet
+ * greeting (Hello) the greeting to use
+```
+
+`help`'s argument list only covers a closure's plain positional/named parameters this
+way -- the doc strings attached to `@ $extra`/`@@ $options` above are valid, parsed
+syntax, but aren't printed as part of this list.
+
+One or more `example="..."` entries add a syntax-highlighted "Examples" section after
+the argument list, the same as a built-in command's own repeated `example = "..."`:
+
+```shell script
+$greet := {
+    |$name: $string "the name to greet"
+     example="greet \"World\""|
+    echo ("Hello, {}!":format($name))
+}
+help $greet
+```
+
+```
+greet $name: $string
+
+This command accepts the following arguments:
+
+ * name the name to greet
+
+Examples
+greet "World"
+```
 
 #### Closure early termination using the `return` command
 
