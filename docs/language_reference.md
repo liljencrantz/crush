@@ -169,11 +169,13 @@ not the data itself:
 ```shell script
 crush# $all_the_files := $(files --recurse /)
 ```
-
-Control returns immediately -- `files` only produces output as its stream buffer is
-consumed. Reading the variable (`$all_the_files`) drains the whole stream at once;
-piping it through `head 1` consumes exactly one row, and can be re-run until the stream
-is empty.
+The command finishes and control returns to the shell immediately. The `files` command 
+will begin writing rows to its output buffer in the background, but because the buffer 
+is bounded it will start blocking once it is full. If you read the value of the variable 
+(for example by simply typing `$all_the_files`), you will drain the whole stream to the 
+screen which will take a very long time. If you instead pipe it through 
+`head 1` (`$all_the_files | head 1`), you will consume exactly one row. This command can
+be repeated over and over  until the stream is empty.
 
 ### Materialized data
 
@@ -244,6 +246,295 @@ since nothing is reading from it yet:
 ```shell script
 $all_the_files := $(files --recurse /)
 $all_the_files | head 1
+```
+
+## Flow control (`if`/`else`, `while`, `for`, `try`/`catch`, `and`, `or` and `match`)
+
+Crush has several built-in commands that take one or more blocks of code (written as
+`{...}`) and decide whether, how many times, or under what conditions to run them. Like
+any other command, they all work in both command mode and expression mode -- the
+examples below are written in command mode; see [Expression
+mode](#expression-mode) for the (mostly cosmetic) differences.
+
+### `if`/`else`
+
+`if` takes a boolean condition and a block to run when it's true, with an optional
+`else` clause -- the literal word `else`, not just any second block -- for when it's
+false:
+
+```shell script
+$a := 15
+if ($a > 10) {
+    echo big
+} else {
+    echo small
+}
+```
+
+With no `else` clause, a false condition simply makes `if` does nothing.
+
+### `while`
+
+`while` takes a condition block and a body block. Unlike `if`'s condition, `while`'s
+condition is itself a block (not a plain boolean), because it's re-evaluated before
+every lap:
+
+```shell script
+$i := 0
+while {lt $i 5} {
+    echo $i
+    $i = ($i + 1)
+}
+```
+
+The body is optional. Without one, the condition block is both the loop's test *and*
+its work -- it keeps running for as long as it returns `$true`, so the loop's exit check
+effectively happens at the end of each lap instead of the start:
+
+```shell script
+$i := 0
+while {
+    $i = ($i + 1)
+    echo $("lap {}":format $i)
+    ($i <= 3)
+}
+```
+
+### `for`
+
+`for` runs a block once per row of an input stream, binding each row to a name given as
+`name=stream`:
+
+```shell script
+for i=$(seq 1 5) {
+    echo $i
+}
+```
+
+When the stream has more than one column, each row is bound as a struct instead of a
+bare value, so its columns are reachable by name:
+
+```shell script
+for row=$(csv:from "1,apple\n2,pear\n" id=$integer name=$string) {
+    echo ("{}: {}":format($row:id, $row:name))
+}
+```
+
+### `loop`
+
+`loop` repeats its body forever, until stopped with `break`:
+
+```shell script
+$n := 0
+loop {
+    if ($n >= 3) {
+        break
+    }
+    echo ("lap {}":format($n))
+    $n = ($n + 1)
+}
+```
+
+### `break` and `continue`
+
+`break` stops the nearest enclosing loop (`while`, `for`, or `loop`) immediately;
+`continue` skips the rest of the current lap and moves straight to the next one. Both
+look outward through any nested `if`, `try`, or other non-loop block to find that
+enclosing loop, so they work from arbitrarily deep inside one -- and calling either one
+outside of any loop at all is an error:
+
+```shell script
+for i=$(seq 1 10) {
+    if ($i:mod(2) == 0) {
+        continue
+    }
+    if ($i > 7) {
+        break
+    }
+    echo $i
+}
+```
+
+### `and`/`or`
+
+`and` and `or` combine several conditions, short-circuiting as soon as the result is
+known -- `and` stops at the first `$false`, `or` stops at the first `$true`, and neither
+evaluates anything after that. Each argument can be a plain boolean or a block that
+produces one, mixed freely:
+
+```shell script
+assert ($true and {1 == 1})    # every condition true -> true
+assert ($false or {1 == 1})    # at least one condition true -> true
+```
+
+In expression mode, `and`/`or` are also available as infix operators of the same name:
+`$a and $b`, `$a or $b`.
+
+### `match`
+
+`match` branches on a value against a sequence of typed arms -- see [Pattern
+matching](#pattern-matching) below for the full syntax and semantics. A quick example:
+
+```shell script
+match $x {
+    case 2 {echo "two"}
+    is $string {echo "a string"}
+    default {echo "something else"}
+}
+```
+
+### `try`/`catch`
+
+By default, a command that fails aborts the rest of the script -- there's no implicit
+"print an error and keep going." `try`/`catch` runs a block and recovers from any error
+it produces:
+
+```shell script
+try {
+    risky:command
+} catch {
+    |$error| echo ("Recovered: {}":format($error:message))
+}
+```
+
+If `body` fails, execution of `body` stops at the failing statement, and `catch` (if
+given) runs instead, receiving a struct describing the error as its argument: `message`
+(the error text), `type` (the error's category -- see below), and `command` (the failing
+command's name, as a string, when known -- empty otherwise). Either way, the error does
+not propagate past `try` -- with no `catch` at all, `try` just recovers silently,
+equivalent to an empty `catch`.
+
+#### Conditional `catch` clauses
+
+A `catch` can filter which errors it handles, and several can be chained onto one `try`
+to handle different errors differently. Each `catch` after the first takes an optional
+*filter* -- a string, glob, or regex, anything implementing `__is__` (the same mechanism
+`like`/`=~`/`match`'s `is` arm use) -- matched against the error's `type`:
+
+```shell script
+try {
+    risky:command
+} catch ^(Serde.*) {
+    |$e| echo ("Serialization error: {}":format($e:message))
+} catch Dns* {
+    |$e| echo ("DNS error: {}":format($e:message))
+} catch {
+    |$e| echo ("Something else went wrong: {}":format($e:message))
+}
+```
+
+Clauses are tried in order; the first whose filter matches (or that has no filter at
+all) runs, and the rest are skipped. If no clause's filter matches, the error
+propagates past `try` normally, exactly as if none of its clauses could ever have
+applied to it.
+
+#### Built-in error types
+
+An error's `type` is normally a fixed name tied to whatever failed internally. These are
+the ones you're most likely to see and filter `catch` on, grouped by what usually
+triggers them:
+
+**General**
+
+| Type | Meaning |
+|---|---|
+| `GenericError` | A failure with no more specific category. |
+| `InvalidArgument` | A command was called with arguments it can't accept -- also what `assert` raises on failure. |
+| `InvalidData` | A value was correctly typed but held a bad or unexpected value. |
+| `InvalidJump` | `break`, `continue`, or `return` was used somewhere it doesn't apply. |
+| `Terminate` | Raised internally when `crush:terminate` is sent to a job. Avoid filtering `catch` on this -- catching it defeats job control. |
+
+**Parsing and conversion**
+
+| Type | Meaning |
+|---|---|
+| `ParseError`, `LexicalError` | Crush's own parser or lexer rejected a piece of syntax. |
+| `ParseIntError`, `ParseFloatError`, `ParseBoolError` | Converting a string to a number or boolean failed, e.g. via `convert`. |
+| `ChronoParseError` | Parsing a date/time string failed. |
+| `TryFromIntError`, `CharTryFromError` | A numeric or character conversion didn't fit its target type. |
+| `OutOfRangeError` | A duration or similar value fell outside its representable range. |
+
+**I/O and the system**
+
+| Type | Meaning |
+|---|---|
+| `IOError` | Reading, writing, or otherwise touching the filesystem or a pipe failed. |
+| `EOFError` | A stream ended before enough data was available. |
+| `Utf8Error`, `FromUtf8Error` | Bytes read from somewhere weren't valid UTF-8. |
+| `VarError` | Reading an environment variable failed. |
+| `ByteUnitError` | Parsing a byte-size value (e.g. `"5MB"`) failed. |
+| `MountpointsError` | Reading the system's mount table failed. |
+| `BatteryError` | Reading battery information failed. |
+| `NixError` | A POSIX system call failed (permissions, no such process, etc.). |
+| `NotifyError` | Setting up or reading from a filesystem watch (`fs:watch`) failed. |
+| `ReadlineError` | The interactive line editor reported an error. |
+
+**Serialization**
+
+| Type | Meaning |
+|---|---|
+| `SerdeJsonError`, `SerdeTomlError`, `SerdeTomlSerError`, `SerdeYamlError` | Decoding or encoding JSON/TOML/YAML failed. |
+| `SerializationError` | Crush's own internal (`pup`) serialization format failed. |
+| `RegexError` | A regular expression was malformed. |
+| `NumFormatError` | Formatting a number failed. |
+| `FromHexError` | Decoding hex-encoded data failed. |
+
+**Networking and remote execution**
+
+| Type | Meaning |
+|---|---|
+| `ReqwestError` | An HTTP request failed. |
+| `AddrParseError`, `InvalidUri`, `ToStrError` | Parsing a network address, URI, or header failed. |
+| `DnsProtoError`, `DnsClientError`, `ResolveConfParseError` | A DNS lookup or its configuration failed. |
+| `SSH2Error` | An SSH operation (`ssh:*`) failed. |
+| `LoginsError` | Resolving user login/credential information failed. |
+| `Netstat2Error` | Reading network connection/socket tables failed. |
+| `GrpcError`, `TonicTransportError`, `ProstDecodeError`, `ProstDescriptorError` | A gRPC call or its message encoding failed. |
+| `DbusError`, `Roxmltree` | A D-Bus call, or XML parsing related to one, failed. Linux only. |
+
+**Internal**
+
+| Type | Meaning |
+|---|---|
+| `SendError`, `RecvError`, `RecvTimeoutError`, `SelectTimeoutError`, `PoisonError` | Crush's own internal plumbing between pipeline stages broke down -- almost always because something downstream (e.g. `head`) stopped reading early, not a real failure. |
+
+When in doubt about which type an error actually has, catch it without a filter and
+print `$e:type` -- it's always the authoritative name to match against.
+
+#### Custom errors with `throw`
+
+There's no separate "exception object" hierarchy to catch by type -- there's just the
+one struct shape described above. `type` is normally a fixed name tied to whatever
+failed internally, but **`throw`** lets a script raise its own error with a custom
+`type` instead, so a script or library can define and catch its own error categories:
+
+```shell script
+try {
+    throw "NotFound" "no such user"
+} catch NotFound {
+    |$e| echo ("custom: {}":format($e:message))
+}
+```
+
+Internally, a thrown error's `type` field holds exactly the string given to `throw` --
+`"NotFound"` above -- not a fixed variant name the way every other error in the table
+above has; that's what lets a script define an open-ended set of its own error
+categories instead of being limited to the built-in ones.
+
+**`assert`** is the simplest way to raise an error deliberately, e.g. inside a script or
+a closure's own validation -- it raises `InvalidArgument`:
+
+```shell script
+crush# assert $false "custom failure message"
+Error: custom failure message
+```
+
+`try`/`catch` also works directly in expression mode, with the exact same syntax:
+
+```shell script
+crush# ($x := (try { convert($integer, "notanumber") } catch {|$e| -1}))
+crush# $x
+-1
 ```
 
 ## Crush types
@@ -441,7 +732,7 @@ literal syntax at all, so `(x =~ *.txt)` fails to parse. This is because of the 
 symbol as both the multiplication operator and a glob wildcard. To use a glob from within
 expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. 
 
-### Destructuring assignment
+## Destructuring assignment
 
 A bracketed list of names on the left of `:=`/`=` splits a list, struct, or dict on the
 right into one variable per name, positionally. Struct fields and dict entries are both
@@ -465,9 +756,9 @@ crush# $y
 `:=` still requires that none of the names already exist in the local scope, and `=`
 still requires that all of them do -- both exactly as for a single-target `:=`/`=`.
 
-## Pattern matching
+## Matching
 
-Pattern matching in Crush is built on one mechanism: any value can act as a *pattern*
+Matching in Crush is built on one mechanism: any value can act as a *pattern*
 by implementing an `__is__` method (and, for negation, `__is_not__`), which takes a
 value to test and returns a bool. Strings, globs, regular expressions, and types all
 implement it, and so can your own custom types -- see the end of this section. These
@@ -486,7 +777,7 @@ crush# like abbbbbc ^(ab+c)
 true
 ```
 
-A pattern can be a **glob** (shell-style wildcards -- `*` for any run of characters,
+A pattern can be a **glob** (shell-style wildcards `*` for any run of characters,
 `?` for a single character, `**` to recurse into subdirectories; the type most shell
 users already know from filename expansion), a **regular expression** (usual regex
 syntax, constructed with `^(...)`), a plain **string** (exact match -- not a substring
@@ -495,7 +786,7 @@ aren't automatically expanded against the filesystem -- a glob is a value in its
 right, passed to whatever command receives it, which decides what to match it against.
 
 The value being tested against a glob, regex, or string pattern can itself be either a
-`string` or a `file` -- `like foo.txt *.txt` works the same as `like "foo.txt" *.txt`.
+`string` or a `file` -- `like 'foo.txt' *.txt` works the same as `like "foo.txt" *.txt`.
 
 In expression mode, a single pattern can be checked with the **`=~`**/**`!~`**
 operators instead, which read more naturally there:
@@ -510,25 +801,31 @@ true
 (`=~ y` and `!~ y` desugar to calling `y`'s own `__is__`/`__is_not__` method, which is
 why the pattern goes on the right.)
 
-Regular expressions also support replacement via `replace` (first match) and
-`replace_all`:
+### Matching against a custom class
+
+Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any type can
+be used as a pattern by implementing it:
 
 ```shell script
-crush# ^(a+):replace baalaa a
-balaa
-crush# ^(a+):replace_all baalaa a
-bala
+$Even := $(class)
+$Even:__is__ = {|$needle| ($needle:mod(2) == 0)}
+$even := $(Even:new)
+
+like 4 $even   # true
+like 5 $even   # false
 ```
 
-**`match`** branches on a value against a sequence of arms -- useful when you'd
+## Pattern matching
+
+The `match` command branches a value against a sequence of arms, useful when you'd
 otherwise write a chain of `if`/`else if`:
 
 ```shell script
 match $x {
     case 2 {echo "$x is 2"}
     any $(seq 5 10) {echo "$x is between 5 and 10"}
-    is $string {echo "$x is a string"}
     is *.txt {echo "$x looks like a text file"}
+    is $string {echo "$x is a string"}
     default {echo "I don't know what $x is"}
 }
 ```
@@ -544,10 +841,8 @@ Each arm is tried in order; the first that matches runs and the rest are skipped
 
 If nothing matches and there's no `default` arm, `match` fails with an error.
 
-`match` also works directly in expression mode, with the exact same arm syntax as
-above -- unlike `like`, which needs ordinary command-call syntax (`like(...)`) when used
-from expression mode, `match` (like `try`/`catch`, below) is real grammar there, the
-same way `if`/`while`/`for`/`loop` are:
+`match` also works in expression mode, with the exact same arm syntax as
+above:
 
 ```shell script
 crush# $describe := ({|$n| match $n {
@@ -562,21 +857,7 @@ two
 A match arm's value can be any expression, with no restrictions beyond what command
 mode's arms already have.
 
-### Custom patterns
-
-Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any type can
-be used as a pattern by implementing it:
-
-```shell script
-$Even := $(class)
-$Even:__is__ = {|$needle| ($needle:mod(2) == 0)}
-$even := $(Even:new)
-
-like 4 $even   # true
-like 5 $even   # false
-```
-
-### Assignment takes exactly one value
+## Assignment takes exactly one value
 
 `:=` and `=` each take exactly one value on the right-hand side. A single token -- a
 literal, a `$variable`, or a bare `$value:member` reference with no arguments of its
@@ -602,8 +883,7 @@ Error: Stray arguments
 ```
 
 Wrap the right-hand side in `$(...)` to run it as its own job and substitute the single
-result -- exactly command substitution's usual role, just used on the right of an
-assignment:
+result:
 
 ```shell script
 crush# $x := $("{}":format "hi")
@@ -615,10 +895,6 @@ crush# $level := $(if ($score > 90) {"A"} else {"B"})
 crush# $level
 A
 ```
-
-This only applies to an *explicit* `:=`/`=`. A bare job as the last statement in a
-closure body -- its implicit return value -- needs no such wrapping; that's a different
-mechanism, unrelated to assignment.
 
 ## Namespaces, members and methods
 
@@ -678,117 +954,98 @@ crush# print_a a="Greetings"
 Greetings
 ```
 
-A block with a declared parameter list is a **closure**, which adds type safety and
-named positional parameters:
+The output value of the last command to be executed in a block becomes the output value
+of the entire block.
 
 ```shell script
-crush# $add := {|$a $b| $a + $b}
-crush# $add 1 2
-3
+files | where {
+  $full_user_info := $(users[$user])
+  lte $($full_user_info:uid) 500
+}
 ```
 
-Closures can return early with the `return` command, which unwinds the entire closure
-(not just the innermost block):
+### Closures
+
+A block with a list of allowed input parameters at the top is called a **closure**. Closures add several features not 
+found in regular blocks:
+
+* parameter validation,
+* named positional parameters, 
+* collectors for extra named and unnamed arguments, and
+* early termination of the block.
+
+#### Closure parameter lists
+To make a closure into a block, list the names of the expected parameters between pipes (`|`) at the top of the block:
+
+```shell script
+# Create a closure that expects to input parameters named a and b
+$add := {|$a $b| ($a + $b)}
+# Outputs 3
+add 1 2
+# Outputs 7
+add a=3 b=4
+```
+
+A closure that expects no parameters looks like `{|| ...}`.
+
+You can declare the expected type of a parameterer using the syntax `: $type`, and a default value using 
+the syntax` = $value`. Both can be combined, in which case the type must come before the default value.
+
+```shell script
+# Create a closure that expects input parameters named a and b, both integers. b has a default value of 1.
+$add := {|$a :$integer $b :$integer = 1| ($a + $b)}
+# Outputs 3
+add 1 2
+# Outputs 6
+add 5
+# Outputs 7
+add a=6
+# Error, no argument supplied for a
+add b=3
+# Error, wrong type flost for argument a
+add 1.0
+```
+
+The type can be a simple value such as `$integer` or `$string`, or it can be a command substitution that returns a type,
+such as `one_of $integer $float`. If the value provided is not a type, an error is emitted.
+
+A parameter with a default can only be overridden by naming it (`$f 1 b=2`) -- a second
+*positional* argument does not fill it in.
+
+The default value of an argument is evaluated once, at the construction of the closure. This means that in this example,
+every call to the closure adds a new element to the list `$l`.
+
+```shell script
+$push := {|$list = $(list:of 1)| $list:push 1; return $list}
+# Returns a list with two elements
+push 
+# Returns a list with three elements
+push 
+# Returns a list with four elements
+push 
+```
+
+The `@`/`@@` operators work in a closure's own parameter list, to collect stray arguments -- see
+the section on [The `@` and `@@` operators](#the--and--operators).
+
+#### Closure early termination using the `return` command
+
+Closures can return early with the `return` command, which unwinds the innermost closure 
+currently being called, and however many blocks are being executed inside that closure.
 
 ```shell script
 {
     ||
     if $(check_early_exit) {
-        return
+        return $false
     }
     ...
+    $true
 }
 ```
 
-A parameter can declare a type and/or a default value:
-
-```shell script
-# $b must be an integer, defaulting to 7 if not given
-$f := {|$a $b: $integer = 7| echo $a $b}
-$f 1
-```
-
-A parameter with a default can only be overridden by naming it (`$f 1 b=2`) -- a second
-*positional* argument does not fill it in.
-
-`@`/`@@` also work in a closure's own parameter list, to collect stray arguments -- see
-[The `@` and `@@` operators](#the--and--operators) above.
-
-## Error handling
-
-By default, a command that fails aborts the rest of the script -- there's no implicit
-"print an error and keep going." A script that runs several independent steps and wants
-to survive one failing needs to handle that explicitly.
-
-**`try`/`catch`** runs a block, recovering from any error it produces:
-
-```shell script
-try {
-  risky:command
-} catch {
-  |$error| echo ("Recovered: {}":format($error:message))
-}
-```
-
-If `body` fails, execution of `body` stops at the failing statement and `catch` (if
-given) runs instead, receiving a struct describing the error as its argument:
-`message` (the error text), `type` (the internal error variant's name, e.g.
-`IOError` or `InvalidArgument`), and `command` (the failing command's name, as a
-string, when known -- empty otherwise). Either way, the error does not propagate
-past `try` -- with no `catch` at all, `try` just recovers silently, equivalent to
-an empty `catch`.
-
-A `catch` can filter which errors it handles, and several can be chained onto one
-`try` to handle different errors differently -- each `catch` after the first takes an
-optional pattern (a string, glob, or regex -- anything implementing `__is__`, the same
-mechanism `like`/`=~`/`match`'s `is` arm use) matched against the error's `type`:
-
-```shell script
-try {
-    risky:command
-} catch ^(Serde.*) {
-    |$e| echo ("Serialization error: {}":format($e:message))
-} catch Dns* {
-    |$e| echo ("DNS error: {}":format($e:message))
-} catch {
-    |$e| echo ("Something else went wrong: {}":format($e:message))
-}
-```
-
-Clauses are tried in order; the first whose pattern matches (or that has no pattern at
-all) runs, and the rest are skipped. If no clause's pattern matches, the error
-propagates past `try` normally, exactly as if none of its clauses could ever have
-applied to it.
-
-`try`/`catch` also works directly in expression mode, with the exact same syntax:
-
-```shell script
-crush# ($x := (try { convert($integer, "notanumber") } catch {|$e| -1}))
-crush# $x
--1
-```
-
-**`assert`** is the simplest way to raise an error deliberately, e.g. inside a script or
-a closure's own validation:
-
-```shell script
-crush# assert $false "custom failure message"
-Error: custom failure message
-```
-
-Unlike some languages, there's no separate "exception object" hierarchy to catch by
-type -- there's just the one struct shape above. `type` is normally a fixed name tied to
-whatever failed internally (e.g. `IOError`, `InvalidArgument`), but **`throw`** lets a
-script raise its own error with a custom `type` instead, so a script or library can
-define and catch its own error categories:
-
-```shell script
-try {
-    throw "NotFound" "no such user"
-} catch {
-    |$e| assert ($e:type == "NotFound")
-}
-```
+The output value of a closure that ends through a call to `return` is the value passed 
+in to `return`. If none was given, the output value is `$empty`.
 
 ## Background jobs
 
