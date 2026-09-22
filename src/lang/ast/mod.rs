@@ -249,7 +249,10 @@ fn home_as_string(user: &str) -> CrushResult<String> {
         .to_string())
 }
 
-fn expand_user(s: &str) -> CrushResult<String> {
+/// `pub(crate)` (rather than private) so `util::highlight` can resolve a `File`/
+/// `QuotedFile` token's real path the same way `Node::File`'s own evaluation does above,
+/// e.g. to check whether a bare `~/bin/mytool` used as a command actually exists.
+pub(crate) fn expand_user(s: &str) -> CrushResult<String> {
     if !s.starts_with('~') {
         Ok(s.to_string())
     } else {

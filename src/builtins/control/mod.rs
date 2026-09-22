@@ -3,7 +3,7 @@ use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
-use crate::lang::errors::{CrushResult, command_error, throw_error};
+use crate::lang::errors::{CrushResult, assertion_error, command_error, throw_error};
 use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::{empty_channel, pipe};
 use crate::lang::signature::binary_input::BinaryInput;
@@ -91,9 +91,13 @@ fn r#continue(context: CommandContext) -> CrushResult<()> {
     short = "Error out if the condition is false.",
     output = Known(ValueType::Empty),
     long = "Unlike assertions in some other languages, crush assert simply stops execution through",
-    long = "by erroring out. This can be caught using a `try`-command.",
+    long = "by erroring out. This can be caught using a `try`-command; the error's `type` (as",
+    long = "seen via `catch {|$e| ...}`'s `$e:type`) is always `AssertionError`, so a `catch`",
+    long = "clause can filter on it specifically with `catch AssertionError {...}` (see `try`'s",
+    long = "own help for more on catch filters).",
     example = "assert (1 + 1 == 2)",
     example = "assert ($x > 0) \"x must be positive\"",
+    example = "try { assert ($x > 0) } catch AssertionError {|$e| echo (\"not positive: {}\":format($e:message))}",
 )]
 struct Assert {
     #[description("the condition to check.")]
@@ -108,7 +112,7 @@ fn assert(mut context: CommandContext) -> CrushResult<()> {
     if cfg.condition {
         context.output.empty()
     } else {
-        command_error(cfg.message)
+        assertion_error(cfg.message)
     }
 }
 

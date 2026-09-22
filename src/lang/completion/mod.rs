@@ -967,4 +967,65 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "\"\":format ");
     }
+
+    // The interactive REPL never completes directly against the scope commands are
+    // declared into -- `main.rs` declares every builtin into a root scope, then hands
+    // completion a *child* of that scope (`root_scope.create_child(&root_scope,
+    // Namespace)`), the same way the top-level session scope always works, so that
+    // session-local variables/closures don't pollute the read-only builtins registry.
+    // Every test above completes directly against the declaring scope, which is why
+    // none of them caught this: name *resolution* (`Scope::get`, used to actually run
+    // a typed command) already walks up through `parent_scope`, but name *enumeration*
+    // (`Value::fields()`, used for completion) used `Scope::dump_local()`, which
+    // doesn't -- so completing from a child scope silently found nothing declared in
+    // any ancestor, i.e. no completions at all for a fresh interactive session.
+    fn scope_with_command_in_parent() -> Scope {
+        let root = Scope::create_root();
+        root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
+            .unwrap();
+        root.declare("my_var", Value::Empty).unwrap();
+        root.create_child(&root, crate::lang::state::scope::ScopeType::Namespace)
+    }
+
+    #[test]
+    fn check_command_completion_from_child_scope() {
+        let line = "my_c";
+        let cursor = line.len();
+
+        let s = scope_with_command_in_parent();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "my_cmd ");
+    }
+
+    #[test]
+    fn check_variable_completion_from_child_scope() {
+        let line = "$my_v";
+        let cursor = line.len();
+
+        let s = scope_with_command_in_parent();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "$my_var ");
+    }
+
+    /// End-to-end regression test against the real builtins tree, set up exactly the way
+    /// `main.rs` does for an interactive session (`declare` into a root scope, then hand
+    /// completion a *child* of it) -- so this fails the same way the reported bug did if
+    /// the root-scope-vs-child-scope distinction above is ever reintroduced.
+    #[test]
+    fn check_builtin_command_completion_from_real_interactive_session_scope() {
+        let root = Scope::create_root();
+        crate::builtins::declare(&root).unwrap();
+        let session_scope = root.create_child(&root, crate::lang::state::scope::ScopeType::Namespace);
+
+        let line = "wh";
+        let cursor = line.len();
+        let completions = complete(line, cursor, &session_scope, &parser(), &empty_lister()).unwrap();
+        assert!(
+            !completions.is_empty(),
+            "expected at least one builtin command completing `wh` (e.g. `which`)"
+        );
+        assert!(completions.iter().any(|c| c.display() == "which"));
+    }
 }

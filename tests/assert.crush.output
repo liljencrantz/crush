@@ -6,4 +6,11 @@ Assertion failed
 a custom message can be given
 caught:
 custom message here
+a catch clause can filter specifically on AssertionError, since that's a failed
+assertion's error type
+caught by type filter:
+custom message here
+a catch clause filtered on a different type does not catch an AssertionError -- it
+falls through to the next clause
+fell through to the catch-all clause
 done

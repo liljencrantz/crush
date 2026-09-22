@@ -449,9 +449,17 @@ impl Value {
         match self {
             Value::Struct(s) => res.append(&mut s.keys()),
             Value::Scope(scope) => {
+                // `dump()`, not `dump_local()`: this must enumerate exactly the names
+                // `Value::field()` above can actually resolve for this same scope, which
+                // walks up through `parent_scope`/`uses` via `Scope::get()`. A scope
+                // created via `create_child` (e.g. the interactive session's own
+                // top-level scope, a child of the scope every builtin is declared into)
+                // has that link; a scope created via `create_namespace` (e.g. `fs`) has
+                // `parent_scope: None`, so `dump()` is identical to `dump_local()` there
+                // -- this only changes behavior where there's actually a parent to see.
                 res.append(
                     &mut scope
-                        .dump_local()
+                        .dump()
                         .unwrap()
                         .iter()
                         .map(|(k, _)| k.to_string())

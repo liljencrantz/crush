@@ -18,6 +18,11 @@ pub enum CrushErrorType {
     InvalidArgument(String),
     InvalidData(String),
     GenericError(String),
+    /// Raised by the `assert` builtin when its condition is false. A dedicated variant
+    /// (rather than reusing `InvalidArgument`/`GenericError`) so a `catch` block can
+    /// discriminate a failed assertion from any other kind of error by `$e:type ==
+    /// "AssertionError"`, without depending on message wording.
+    AssertionError(String),
     /// A user-raised error from the `throw` builtin: `(error_type, message)`. Unlike
     /// every other variant, its `type_name()` is the caller's own string rather than
     /// the Rust variant name -- see `type_name()`'s special case below -- so a script
@@ -136,7 +141,7 @@ impl CrushError {
 
     pub fn message(&self) -> String {
         match &self.error_type {
-            InvalidArgument(s) | InvalidData(s) | GenericError(s) => s.clone(),
+            InvalidArgument(s) | InvalidData(s) | GenericError(s) | AssertionError(s) => s.clone(),
             Thrown(_, message) => message.clone(),
             SendError(e) => e.to_string(),
             EOFError => "EOF error".to_string(),
@@ -635,6 +640,12 @@ pub fn argument_error<T>(message: impl Into<String>, source: &Source) -> CrushRe
 /// Emit this error when a command reads unexpected/invalid data from input
 pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(InvalidData(message.into()).into())
+}
+
+/// Backs the `assert` builtin: raised when its condition is false. Catchable and
+/// discriminable by `$e:type == "AssertionError"` (see `CrushErrorType::AssertionError`).
+pub fn assertion_error<T>(message: impl Into<String>) -> CrushResult<T> {
+    Err(AssertionError(message.into()).into())
 }
 
 /// Emit this error when attempting to jump in an invalid way, e.g. calling continue outside of a

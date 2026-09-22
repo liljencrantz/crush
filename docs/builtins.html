@@ -576,6 +576,11 @@ is found to be true, <a href="#cond-or"><code>or</code></a> will not evaluate an
 <h3 class="cmd-title"><code>control:assert</code></h3>
 <div class="cmd-doc"><pre><code><a href="#control-assert"><span class="tok-command">control:assert</span></a> <span class="tok-string_literal">condition</span><span class="tok-operator">=</span><span class="tok-string_literal">bool</span> <span class="tok-operator">[</span><span class="tok-string_literal">message</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span><span class="tok-operator">]</span></code></pre>
 <p>Error out if the condition is false.</p>
+<p>Unlike assertions in some other languages, crush assert simply stops execution through
+by erroring out. This can be caught using a <a href="#control-try"><code>try</code></a>-command; the error&#39;s <a href="#types-type"><code>type</code></a> (as
+seen via <code>catch {|$e| ...}</code>&#39;s <code>$e:type</code>) is always <code>AssertionError</code>, so a <code>catch</code>
+clause can filter on it specifically with <code>catch AssertionError {...}</code> (see <a href="#control-try"><code>try</code></a>&#39;s
+own help for more on catch filters).</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -586,7 +591,8 @@ is found to be true, <a href="#cond-or"><code>or</code></a> will not evaluate an
 </ul>
 <h1>Examples</h1>
 <pre><code><a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-numeric_literal">1</span> <span class="tok-operator">+</span> <span class="tok-numeric_literal">1</span> <span class="tok-operator">==</span> <span class="tok-numeric_literal">2</span><span class="tok-operator">)</span>
-<a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$x</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">0</span><span class="tok-operator">)</span> <span class="tok-string_literal">&quot;x must be positive&quot;</span></code></pre>
+<a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$x</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">0</span><span class="tok-operator">)</span> <span class="tok-string_literal">&quot;x must be positive&quot;</span>
+<a href="#control-try"><span class="tok-command">try</span></a> <span class="tok-operator">{</span> <a href="#control-assert"><span class="tok-command">assert</span></a> <span class="tok-operator">(</span><span class="tok-identifier">$x</span> <span class="tok-operator">&gt;</span> <span class="tok-numeric_literal">0</span><span class="tok-operator">)</span> <span class="tok-operator">}</span> <span class="tok-string_literal">catch</span> <span class="tok-string_literal">AssertionError</span> <span class="tok-operator">{</span><span class="tok-operator">|</span><span class="tok-identifier">$e</span><span class="tok-operator">|</span> <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-operator">(</span><span class="tok-string_literal">&quot;not positive: {}&quot;</span><span class="tok-operator">:</span><span class="tok-string_literal">format</span><span class="tok-operator">(</span><span class="tok-identifier">$e</span><span class="tok-operator">:</span><span class="tok-string_literal">message</span><span class="tok-operator">)</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
 <h2>Output signature</h2>
 <pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>

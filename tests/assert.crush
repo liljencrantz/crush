@@ -20,4 +20,22 @@ try {
     |$error| echo "caught:" $error:message
 }
 
+echo "a catch clause can filter specifically on AssertionError, since that's a failed"
+echo "assertion's error type"
+try {
+    assert (1 > 2) "custom message here"
+} catch AssertionError {
+    |$error| echo "caught by type filter:" $error:message
+}
+
+echo "a catch clause filtered on a different type does not catch an AssertionError -- it"
+echo "falls through to the next clause"
+try {
+    assert (1 > 2)
+} catch InvalidArgument {
+    |$error| echo "should not run"
+} catch {
+    |$error| echo "fell through to the catch-all clause"
+}
+
 echo "done"

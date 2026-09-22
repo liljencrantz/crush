@@ -1,3 +1,4 @@
+use crate::lang::ast::expand_user;
 use crate::lang::ast::lexer::{LanguageMode, Lexer, TokenizerMode};
 use crate::lang::ast::token::Token;
 use crate::lang::command::{Command, Parameter};
@@ -5,9 +6,11 @@ use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
+use crate::util::escape::unescape_file;
 use crate::util::html_escape;
 use std::cmp::min;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 enum CommandContext {
     Unknown,
@@ -49,6 +52,14 @@ fn classify_tokens<'a>(
         .collect::<CrushResult<Vec<Token>>>()?;
 
     let mut current_command: Option<Command> = None;
+    // Whether the current command-position name resolves to *anything* in scope, not
+    // just a `Command` -- a namespace like `fs` resolves to a `Value::Scope`, which
+    // `current_command` (narrowed to `Value::Command` only, for completion-data lookups
+    // like allowed argument names) can't represent. Without this, a bare namespace name
+    // used as a command (e.g. `fs` alone, which is valid -- it just prints the
+    // namespace's members, like `help fs` would) fell through to `resolve_external_command`,
+    // which only knows about OS executables, and got colored as an error.
+    let mut current_reference_exists = false;
     let mut latest_named_argument_info: Option<(usize, String)> = None;
     let mut command_context = match scope {
         None => CommandContext::Unknown,
@@ -81,6 +92,20 @@ fn classify_tokens<'a>(
                 _,
             ) => false,
             (true, _, Token::String(_, _) | Token::Identifier(_, _), _) => true,
+            // A literal path (`./build.rs`, `'my file'`) can be the head of a job too --
+            // `./mydir` cd's into a directory, and any other path is spawned as an
+            // executable -- exactly like a bare command name. Without these two arms
+            // (mirroring the String/Identifier pair just above), a File/QuotedFile token
+            // always fell through to the catch-all `_ => false` below, so `get_category`
+            // never saw `new_command == true` for it and always colored it as a plain
+            // `file_literal`, even when it was unrunnable and should have been an error.
+            (
+                true,
+                Some(Token::String(_, _) | Token::Identifier(_, _)),
+                Token::File(_, _) | Token::QuotedFile(_, _),
+                _,
+            ) => false,
+            (true, _, Token::File(_, _) | Token::QuotedFile(_, _), _) => true,
             (true, Some(Token::String(s, _)), Token::MemberOperator(_), _) => {
                 match &command_context {
                     CommandContext::Known(v) => match v.field(s) {
@@ -106,16 +131,18 @@ fn classify_tokens<'a>(
 
         match (new_command, tok, ntok) {
             (true, Token::String(name, _), _) => {
-                current_command = match &command_context {
+                let resolved = match &command_context {
                     CommandContext::Unknown => None,
-                    CommandContext::Known(ctx) => ctx.field(name).unwrap_or(None).and_then(|v| {
-                        if let Value::Command(cmd) = v {
-                            Some(cmd)
-                        } else {
-                            None
-                        }
-                    }),
+                    CommandContext::Known(ctx) => ctx.field(name).unwrap_or(None),
                 };
+                current_reference_exists = resolved.is_some();
+                current_command = resolved.and_then(|v| {
+                    if let Value::Command(cmd) = v {
+                        Some(cmd)
+                    } else {
+                        None
+                    }
+                });
             }
             (false, Token::String(name, _), Some(Token::Equals(_))) => {
                 latest_named_argument_info = Some((idx, name.to_string()));
@@ -140,6 +167,7 @@ fn classify_tokens<'a>(
             new_command,
             scope,
             &current_command,
+            current_reference_exists,
             &expected_argument_type,
         );
         result.push((tok, category));
@@ -261,6 +289,7 @@ fn get_category(
     new_command: bool,
     scope: &Option<Scope>,
     current_command: &Option<Command>,
+    current_reference_exists: bool,
     expected_argument_type: &Option<ValueType>,
 ) -> Option<&'static str> {
     use crate::lang::ast::token::Token::*;
@@ -274,7 +303,7 @@ fn get_category(
     match token {
         String(name, _) => {
             if new_command {
-                if current_command.is_some() {
+                if current_command.is_some() || current_reference_exists {
                     Some("command")
                 } else {
                     match next_token_type {
@@ -282,7 +311,7 @@ fn get_category(
                         _ => match scope {
                             None => Some("command"),
                             Some(_) => match resolve_external_command(name) {
-                                Ok(Some(_)) => Some("command"),
+                                Ok(Some(path)) if is_runnable_as_command(&path) => Some("command"),
                                 _ => Some("error"),
                             },
                         },
@@ -316,7 +345,25 @@ fn get_category(
         Regex(_, _) => Some("regex_literal"),
         Glob(_, _) => Some("glob_literal"),
         Comment(_, _) => Some("comment"),
-        File(_, _) | QuotedFile(_, _) => Some("file_literal"),
+        File(name, _) | QuotedFile(name, _) => {
+            // As an argument (the ordinary case), a file literal's validity doesn't
+            // matter for highlighting -- `cat ./nonexistent` should highlight the same
+            // whether or not the file exists. Only in command position does it need the
+            // same runnability check as a bare command name gets, below.
+            if new_command && scope.is_some() {
+                let path = if matches!(token, QuotedFile(_, _)) {
+                    unescape_file(name).ok()
+                } else {
+                    expand_user(name).ok().map(PathBuf::from)
+                };
+                match path {
+                    Some(p) if is_runnable_as_command(&p) => Some("file_literal"),
+                    _ => Some("error"),
+                }
+            } else {
+                Some("file_literal")
+            }
+        }
         Float(_, _) | Integer(_, _) | Duration(_, _) => Some("numeric_literal"),
         Unnamed(_)
         | Named(_)
@@ -355,6 +402,17 @@ fn get_category(
         For(_) | While(_) | Loop(_) | If(_) | Else(_) | Match(_) | Default(_) | Try(_)
         | Catch(_) | Return(_) | Break(_) | Continue(_) => Some("keyword"),
     }
+}
+
+/// Whether a `$PATH` entry `resolve_external_command` found is actually something a bare
+/// word in command position could run. `resolve_external_command` itself only checks
+/// existence (`Path::exists`), so a plain, non-executable regular file matches it too --
+/// but running one fails at the OS level (`EACCES`/"Permission denied"), so it isn't a
+/// valid command and shouldn't be highlighted as one. A directory is treated as valid
+/// here even though it isn't executable, mirroring how an explicit path (e.g.
+/// `./some_dir`) is already a legitimate `cd` target elsewhere in the codebase.
+fn is_runnable_as_command(path: &std::path::Path) -> bool {
+    path.is_dir() || nix::unistd::access(path, nix::unistd::AccessFlags::X_OK).is_ok()
 }
 
 fn allowed_named_argument(parameter_completion_data: &[Parameter], name: &str) -> bool {
@@ -440,4 +498,251 @@ fn named_argument_type(parameter_completion_data: &[Parameter], name: &str) -> O
         }
     }
     default
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::state::contexts::CommandContext;
+    use signature::signature;
+    use std::os::unix::fs::PermissionsExt;
+    use std::sync::Mutex;
+
+    fn my_cmd(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    #[signature(my_cmd)]
+    struct MyCmdSignature {}
+
+    // Serializes every test below that points `$PATH` at a scratch directory --
+    // `resolve_external_command` reads the real process-wide `PATH`, which `cargo test`'s
+    // default multi-threaded runner would otherwise let two such tests race on.
+    static PATH_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Points `$PATH` at `dir` for as long as the guard is alive, restoring whatever
+    /// `$PATH` held before on drop (even if the test body panics) so one test's PATH
+    /// override can never leak into another.
+    struct PathGuard {
+        original: Option<String>,
+    }
+
+    impl PathGuard {
+        fn set(dir: &std::path::Path) -> PathGuard {
+            let original = std::env::var("PATH").ok();
+            unsafe {
+                std::env::set_var("PATH", dir);
+            }
+            PathGuard { original }
+        }
+    }
+
+    impl Drop for PathGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.original {
+                    Some(p) => std::env::set_var("PATH", p),
+                    None => std::env::remove_var("PATH"),
+                }
+            }
+        }
+    }
+
+    /// A fresh scratch directory under the OS temp dir, unique per test (by test name),
+    /// so parallel tests never collide on the same path.
+    fn scratch_dir(test_name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "crush_highlight_test_{}_{}",
+            test_name,
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// A root scope with a `fs` namespace holding one command -- mirrors the shape of
+    /// the real, builtin `fs` namespace (`fs:files`, `fs:mounts`, ...) closely enough to
+    /// reproduce the bug without pulling in the whole builtins tree.
+    fn scope_with_fs_namespace() -> Scope {
+        let root = Scope::create_root();
+        root.create_namespace(
+            "fs",
+            "bla",
+            None,
+            Box::new(|env| {
+                MyCmdSignature::declare(env)?;
+                Ok(())
+            }),
+        )
+        .unwrap();
+        root
+    }
+
+    /// A bare namespace name used as a command (`fs`, with no `:member` following it) is
+    /// a real, valid reference -- it resolves to the namespace's own scope value, and
+    /// running it just lists that scope's members, exactly like `help fs` would. It
+    /// should never be highlighted as an error just because it isn't itself invocable.
+    #[test]
+    fn bare_namespace_used_as_command_is_not_an_error() {
+        let scope = Some(scope_with_fs_namespace());
+        let classified = classify_tokens("fs", &scope).unwrap();
+        assert_eq!(classified.len(), 1);
+        assert_ne!(
+            classified[0].1,
+            Some("error"),
+            "a bare namespace name in command position should not be highlighted as an error"
+        );
+    }
+
+    /// Same namespace, referenced the ordinary way (`fs:my_cmd`) -- this already worked
+    /// before the fix and must keep working after it.
+    #[test]
+    fn namespace_member_access_is_still_a_command() {
+        let scope = Some(scope_with_fs_namespace());
+        let classified = classify_tokens("fs:my_cmd", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("command"));
+        assert_eq!(classified[2].1, Some("command"));
+    }
+
+    /// A name that resolves to nothing at all in scope is still a genuine error.
+    #[test]
+    fn unresolvable_bare_word_is_still_an_error() {
+        let scope = Some(scope_with_fs_namespace());
+        let classified = classify_tokens("not_a_real_command_or_namespace", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("error"));
+    }
+
+    /// A bare word that names a real, `$PATH`-visible entry that is neither executable
+    /// nor a directory (a plain data file) can never actually run as a command --
+    /// spawning it fails with EACCES/"Permission denied" -- so it should be highlighted
+    /// as an error, not optimistically colored as a valid command just because
+    /// `resolve_external_command`'s plain `.exists()` check found it on `$PATH`.
+    #[test]
+    fn non_executable_plain_file_used_as_command_is_an_error() {
+        let _lock = PATH_TEST_LOCK.lock().unwrap();
+        let dir = scratch_dir("non_executable_plain_file");
+        let file = dir.join("just_a_data_file");
+        std::fs::write(&file, b"not a program").unwrap();
+        let mut perms = std::fs::metadata(&file).unwrap().permissions();
+        perms.set_mode(0o644);
+        std::fs::set_permissions(&file, perms).unwrap();
+        let _guard = PathGuard::set(&dir);
+
+        let scope = Some(Scope::create_root());
+        let classified = classify_tokens("just_a_data_file", &scope).unwrap();
+        assert_eq!(
+            classified[0].1,
+            Some("error"),
+            "a $PATH entry that exists but isn't executable or a directory should be an error"
+        );
+    }
+
+    /// A bare word naming a real, executable `$PATH` entry is a genuinely valid command
+    /// -- this already worked before the fix and must keep working after it.
+    #[test]
+    fn executable_file_used_as_command_is_still_a_command() {
+        let _lock = PATH_TEST_LOCK.lock().unwrap();
+        let dir = scratch_dir("executable_file");
+        let file = dir.join("a_real_program");
+        std::fs::write(&file, b"#!/bin/sh\necho hi\n").unwrap();
+        let mut perms = std::fs::metadata(&file).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&file, perms).unwrap();
+        let _guard = PathGuard::set(&dir);
+
+        let scope = Some(Scope::create_root());
+        let classified = classify_tokens("a_real_program", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("command"));
+    }
+
+    /// A bare word naming a directory on `$PATH` is also a meaningful command reference
+    /// (the same way an explicit `./some_dir` path is a valid `cd` target), so it
+    /// shouldn't be flagged as an error just because it isn't itself executable.
+    #[test]
+    fn directory_used_as_command_is_not_an_error() {
+        let _lock = PATH_TEST_LOCK.lock().unwrap();
+        let dir = scratch_dir("directory_as_command");
+        let sub_dir = dir.join("a_directory");
+        std::fs::create_dir_all(&sub_dir).unwrap();
+        let _guard = PathGuard::set(&dir);
+
+        let scope = Some(Scope::create_root());
+        let classified = classify_tokens("a_directory", &scope).unwrap();
+        assert_ne!(
+            classified[0].1,
+            Some("error"),
+            "a directory on $PATH should not be highlighted as an error"
+        );
+    }
+
+    /// A literal path (`./build.rs`) pointing at a real, non-executable, non-directory
+    /// file, used as the command itself, is exactly as unrunnable as a bare `$PATH`
+    /// word pointing at the same kind of file -- it fails with EACCES/"Permission
+    /// denied" -- so it should be highlighted as an error too, not unconditionally
+    /// "file_literal" just because it's a well-formed path to a file that exists.
+    #[test]
+    fn file_literal_used_as_command_pointing_at_non_executable_file_is_an_error() {
+        let dir = scratch_dir("file_literal_non_executable");
+        let file = dir.join("build.rs");
+        std::fs::write(&file, b"fn main() {}").unwrap();
+        let mut perms = std::fs::metadata(&file).unwrap().permissions();
+        perms.set_mode(0o644);
+        std::fs::set_permissions(&file, perms).unwrap();
+
+        let scope = Some(Scope::create_root());
+        let code = format!("{}", file.display());
+        let classified = classify_tokens(&code, &scope).unwrap();
+        assert_eq!(
+            classified[0].1,
+            Some("error"),
+            "a non-executable file literal used as a command should be an error"
+        );
+    }
+
+    /// A literal path pointing at a directory, used as the command itself, is a valid
+    /// `cd` target -- must not regress alongside the fix above.
+    #[test]
+    fn file_literal_used_as_command_pointing_at_directory_is_not_an_error() {
+        let dir = scratch_dir("file_literal_directory");
+        let sub_dir = dir.join("some_dir");
+        std::fs::create_dir_all(&sub_dir).unwrap();
+
+        let scope = Some(Scope::create_root());
+        let code = format!("{}", sub_dir.display());
+        let classified = classify_tokens(&code, &scope).unwrap();
+        assert_ne!(classified[0].1, Some("error"));
+    }
+
+    /// A literal path pointing at a genuinely executable file, used as the command
+    /// itself, is still "file_literal" -- the fix must not recolor an already-valid
+    /// case as an error or otherwise change how a working command highlights.
+    #[test]
+    fn file_literal_used_as_command_pointing_at_executable_file_is_still_file_literal() {
+        let dir = scratch_dir("file_literal_executable");
+        let file = dir.join("a_real_program");
+        std::fs::write(&file, b"#!/bin/sh\necho hi\n").unwrap();
+        let mut perms = std::fs::metadata(&file).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&file, perms).unwrap();
+
+        let scope = Some(Scope::create_root());
+        let code = format!("{}", file.display());
+        let classified = classify_tokens(&code, &scope).unwrap();
+        assert_eq!(classified[0].1, Some("file_literal"));
+    }
+
+    /// A file literal's validity is only checked in command position -- as an
+    /// ordinary argument (e.g. `cat ./nonexistent`), it should highlight exactly as it
+    /// always has, regardless of whether the file exists or is runnable.
+    #[test]
+    fn file_literal_used_as_argument_ignores_runnability() {
+        let root = Scope::create_root();
+        root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
+            .unwrap();
+
+        let classified = classify_tokens("my_cmd ./this_file_does_not_exist_anywhere", &Some(root)).unwrap();
+        assert_eq!(classified[0].1, Some("command"));
+        assert_eq!(classified[1].1, Some("file_literal"));
+    }
 }
