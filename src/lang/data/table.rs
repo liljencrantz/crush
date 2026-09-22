@@ -194,11 +194,46 @@ pub enum ColumnFormat {
     ByteUnit,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug)]
 pub struct ColumnType {
     name: AnyStr,
     pub format: ColumnFormat,
     pub cell_type: ValueType,
+    help: AnyStr,
+}
+
+// `help` is documentation, not logical content -- and, unlike `name`/`format`/`cell_type`,
+// isn't even preserved across serialization (the wire format has no field for it yet, see
+// table_serializer.rs), so a deserialized ColumnType's `help` is always empty. Excluding it
+// here (the same way Table excludes its own `materialized` bookkeeping flag above) means two
+// columns with the same name/format/type are still equal regardless of what, if anything,
+// documents either one -- including a column that just round-tripped through serialization.
+impl PartialEq for ColumnType {
+    fn eq(&self, other: &ColumnType) -> bool {
+        self.name == other.name && self.format == other.format && self.cell_type == other.cell_type
+    }
+}
+
+impl Eq for ColumnType {}
+
+impl std::hash::Hash for ColumnType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.format.hash(state);
+        self.cell_type.hash(state);
+    }
+}
+
+impl PartialOrd for ColumnType {
+    fn partial_cmp(&self, other: &ColumnType) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ColumnType {
+    fn cmp(&self, other: &ColumnType) -> std::cmp::Ordering {
+        (&self.name, self.format, &self.cell_type).cmp(&(&other.name, other.format, &other.cell_type))
+    }
 }
 
 pub fn find_string_columns(input: &[ColumnType], mut cfg: Vec<String>) -> Vec<usize> {
@@ -228,6 +263,10 @@ impl ColumnType {
         self.name.to_str()
     }
 
+    pub fn help(&self) -> &str {
+        self.help.to_str()
+    }
+
     pub fn materialize(input: &[ColumnType]) -> CrushResult<Vec<ColumnType>> {
         let mut res = Vec::new();
 
@@ -236,24 +275,27 @@ impl ColumnType {
                 name: col.name.clone(),
                 format: col.format,
                 cell_type: col.cell_type.materialize()?,
+                help: col.help.clone(),
             });
         }
         Ok(res)
     }
 
-    pub const fn new(name: &'static str, cell_type: ValueType) -> ColumnType {
+    pub const fn new(name: &'static str, cell_type: ValueType, help: &'static str) -> ColumnType {
         ColumnType {
             name: AnyStr::Slice(name),
             format: ColumnFormat::None,
             cell_type,
+            help: AnyStr::Slice(help),
         }
     }
 
-    pub fn new_from_string(name: String, cell_type: ValueType) -> ColumnType {
+    pub fn new_from_string(name: String, cell_type: ValueType, help: String) -> ColumnType {
         ColumnType {
             name: name.into(),
             format: ColumnFormat::None,
             cell_type,
+            help: AnyStr::String(help),
         }
     }
 
@@ -261,11 +303,13 @@ impl ColumnType {
         name: &'static str,
         format: ColumnFormat,
         cell_type: ValueType,
+        help: &'static str,
     ) -> ColumnType {
         ColumnType {
             name: AnyStr::Slice(name),
             format,
             cell_type,
+            help: AnyStr::Slice(help),
         }
     }
 
@@ -273,11 +317,13 @@ impl ColumnType {
         name: String,
         format: ColumnFormat,
         cell_type: ValueType,
+        help: String,
     ) -> ColumnType {
         ColumnType {
             name: name.into(),
             format,
             cell_type,
+            help: AnyStr::String(help),
         }
     }
 }
@@ -333,7 +379,7 @@ impl ColumnVec for &[ColumnType] {
                     name = format!("{}_{}", c.name(), version);
                 }
                 seen.insert(name.clone());
-                ColumnType::new_with_format_from_string(name, c.format, c.cell_type.clone())
+                ColumnType::new_with_format_from_string(name, c.format, c.cell_type.clone(), c.help.to_string())
             })
             .collect()
     }

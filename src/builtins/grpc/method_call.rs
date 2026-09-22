@@ -24,8 +24,11 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
                 let mut input_signature = vec![];
                 for a in context.remove_arguments() {
                     if let Some(name) = a.argument_type {
-                        input_signature
-                            .push(ColumnType::new_from_string(name, a.value.value_type()));
+                        input_signature.push(ColumnType::new_from_string(
+                            name,
+                            a.value.value_type(),
+                            "A field of the gRPC request message.".to_string(),
+                        ));
                         fields.push(a.value);
                     } else {
                         return command_error(

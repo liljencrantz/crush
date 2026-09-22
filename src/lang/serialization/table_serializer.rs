@@ -38,10 +38,13 @@ impl Serializable<ColumnType> for ColumnType {
         state: &mut DeserializationState,
     ) -> CrushResult<ColumnType> {
         if let element::Element::ColumnType(t) = elements[id].element.as_ref().unwrap() {
+            // The wire format has no help field yet, so a deserialized ColumnType's help
+            // text is always empty -- there's nothing to recover it from.
             Ok(ColumnType::new_with_format_from_string(
                 String::deserialize(t.name as usize, elements, state)?,
                 ColumnFormat::try_from(t.format)?,
                 ValueType::deserialize(t.r#type as usize, elements, state)?,
+                String::new(),
             ))
         } else {
             error("Expected a table")

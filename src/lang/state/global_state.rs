@@ -415,7 +415,7 @@ impl GlobalState {
                     res.push(JobInfo {
                         id: jd.id,
                         job_type: jd.job_type,
-                        description: live_job.description.clone(),
+                        definition: live_job.definition.clone(),
                         status: live_job.status(),
                         parent: jd.parent,
                     });

@@ -18,7 +18,7 @@ impl JobHandle {
         JobHandle {
             id,
             live_job: Arc::from(Mutex::from(JobControlData {
-                description: String::new(),
+                definition: String::new(),
                 senders: HashMap::new(),
                 next_command_id: CommandId::first(),
                 status: JobStatus::Running,
@@ -32,7 +32,7 @@ impl JobHandle {
 
     pub fn set_name(&self, name: impl Into<String>) {
         let mut live_job = self.live_job.lock().unwrap();
-        live_job.description = name.into();
+        live_job.definition = name.into();
     }
 
     pub fn command_handle(&self, id: CommandId) -> CommandHandle {
@@ -84,9 +84,9 @@ impl JobHandle {
         Arc::downgrade(&self.live_job)
     }
 
-    pub fn description(&self) -> String {
+    pub fn definition(&self) -> String {
         let live_job = self.live_job.lock().unwrap();
-        live_job.description.clone()
+        live_job.definition.clone()
     }
 }
 
@@ -141,7 +141,8 @@ impl Display for JobType {
 pub struct JobInfo {
     pub id: JobId,
     pub job_type: JobType,
-    pub description: String,
+    /// The job's definition, i.e. the invocation that started it, as source text.
+    pub definition: String,
     pub status: JobStatus,
     /// The job this job is nested inside (e.g. a closure/block body evaluated as part of
     /// an enclosing job), if any. Lets code that needs to know about "other" jobs (like
@@ -151,7 +152,8 @@ pub struct JobInfo {
 }
 
 pub struct JobControlData {
-    pub description: String,
+    /// The job's definition, i.e. the invocation that started it, as source text.
+    pub definition: String,
     status: JobStatus,
     senders: HashMap<CommandId, Vec<JobController>>,
     next_command_id: CommandId,

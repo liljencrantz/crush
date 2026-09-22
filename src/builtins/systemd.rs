@@ -13,8 +13,8 @@ use std::convert::TryFrom;
 use systemd::journal::{Journal, JournalSeek, OpenOptions};
 
 static JOURNAL_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("time", ValueType::Time),
-    ColumnType::new("data", ValueType::Struct),
+    ColumnType::new("time", ValueType::Time, "When the journal entry was recorded."),
+    ColumnType::new("data", ValueType::Struct, "The journal entry's fields."),
 ];
 
 #[signature(

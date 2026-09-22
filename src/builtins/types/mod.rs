@@ -144,7 +144,9 @@ fn class(mut context: CommandContext) -> CrushResult<()> {
 pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
     columns
         .iter()
-        .map(|(key, value)| ColumnType::new_from_string(key.clone(), value.clone()))
+        .map(|(key, value)| {
+            ColumnType::new_from_string(key.clone(), value.clone(), "A column defined by the caller.".to_string())
+        })
         .collect()
 }
 
@@ -401,8 +403,8 @@ fn member(mut context: CommandContext) -> CrushResult<()> {
 }
 
 static MEMBERS_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("name", ValueType::String),
-    ColumnType::new("type", ValueType::Type),
+    ColumnType::new("name", ValueType::String, "The column's name."),
+    ColumnType::new("type", ValueType::Type, "The column's type."),
 ];
 
 #[signature(

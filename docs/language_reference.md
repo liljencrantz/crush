@@ -1266,7 +1266,7 @@ never `fg`'d has its failure go unreported.
 
 `fg` waits for and returns a backgrounded job's result. `crush:jobs` lists every
 currently running job (including nested ones, like command substitutions running as
-part of a larger job), with `id`/`parent`/`description`/`type`/`status` columns.
+part of a larger job), with `id`/`parent`/`definition`/`type`/`status` columns.
 `crush:pause`/`bg` pause a running job and later resume it in the background (as opposed
 to `&`, which starts a job in the background from the moment it's created).
 

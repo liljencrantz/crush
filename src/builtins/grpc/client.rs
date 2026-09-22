@@ -668,7 +668,11 @@ impl GrpcClient {
                 } else {
                     scalar_type
                 };
-                ColumnType::new_from_string(field.name().to_string(), actual_type)
+                ColumnType::new_from_string(
+                    field.name().to_string(),
+                    actual_type,
+                    "A field of the gRPC message.".to_string(),
+                )
             })
             .collect()
     }

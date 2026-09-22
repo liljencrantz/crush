@@ -1111,7 +1111,7 @@ set, in which case those jobs are terminated first.</p>
 <div class="cmd-doc"><pre><code><a href="#crush-jobs"><span class="tok-command">crush:jobs</span></a></code></pre>
 <p>List running jobs</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">id</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">parent</span><span class="tok-operator">=</span><a href="#types-any"><span class="tok-identifier">$any</span></a> <span class="tok-string_literal">description</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">type</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">status</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">id</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">parent</span><span class="tok-operator">=</span><a href="#types-any"><span class="tok-identifier">$any</span></a> <span class="tok-string_literal">definition</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">type</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">status</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
 <p>All currently running jobs</p>
 </div>
 </article>
@@ -3745,14 +3745,16 @@ mutable set of keys.</p>
 <h3 class="ns-title"><code>types:duration</code></h3>
 <div class="ns-prose"><pre><code><a href="#types-type"><span class="tok-command">type</span></a> <span class="tok-string_literal">duration</span></code></pre>
 <p>A difference between two points in time.</p>
-<p>To create your own duration objects, use the <a href="#types-duration-of"><code>duration:of</code></a> method, for example</p>
+<p>To create your own duration use a duration literal, an integer number combined with one of the suffixes <code>h</code>, <code>m</code>, <code>s</code>, <code>ms</code>, and <code>ns</code>. <code>5s</code> means five seconds, for example.</p>
+<p>If you want to create a duration object with of a size not known at the point of writing the code, use the <a href="#types-duration-of"><code>duration:of</code></a> method, for example</p>
 <pre><code><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span></code></pre>
 <p>A duration instance has nanosecond precision. It is represented internally as two 64 bit numbers,
 one for the number of seconds, and one for the nanosecond remainder.</p>
 <p>durations are signed, i.e. they can be used to denote a negative span of time. Durations
-are immutable values. The most similar type is <a href="#types-time"><code>time</code></a>: subtracting one <a href="#types-time"><code>time</code></a> from
-another produces a <a href="#types-duration"><code>duration</code></a>, and a <a href="#types-duration"><code>duration</code></a> can be added to or subtracted from a
-<a href="#types-time"><code>time</code></a>.</p>
+are immutable values. <a href="#types-duration"><code>duration</code></a> instances are often osed together with <a href="#types-time"><code>time</code></a> instances:
+subtracting one <a href="#types-time"><code>time</code></a> from another produces a <a href="#types-duration"><code>duration</code></a>, and a <a href="#types-duration"><code>duration</code></a> can be added
+to or subtracted from a <a href="#types-time"><code>time</code></a> instance.</p>
+<p>In expression mode, you can multiply or divide a <a href="#types-duration"><code>duration</code></a> by an integer.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-duration-__add__"><code>types:duration:__add__</code></a></li><li class="idx-cmd"><a href="#types-duration-__div__"><code>types:duration:__div__</code></a></li><li class="idx-cmd"><a href="#types-duration-__mul__"><code>types:duration:__mul__</code></a></li><li class="idx-cmd"><a href="#types-duration-__neg__"><code>types:duration:__neg__</code></a></li><li class="idx-cmd"><a href="#types-duration-__sub__"><code>types:duration:__sub__</code></a></li><li class="idx-cmd"><a href="#types-duration-days"><code>types:duration:days</code></a></li><li class="idx-cmd"><a href="#types-duration-hours"><code>types:duration:hours</code></a></li><li class="idx-cmd"><a href="#types-duration-milliseconds"><code>types:duration:milliseconds</code></a></li><li class="idx-cmd"><a href="#types-duration-minutes"><code>types:duration:minutes</code></a></li><li class="idx-cmd"><a href="#types-duration-nanoseconds_part"><code>types:duration:nanoseconds_part</code></a></li><li class="idx-cmd"><a href="#types-duration-of"><code>types:duration:of</code></a></li><li class="idx-cmd"><a href="#types-duration-seconds"><code>types:duration:seconds</code></a></li></ul></nav>
 <article class="cmd" id="types-duration-__add__">
@@ -4163,9 +4165,8 @@ expression promotes the result to a float.</p>
 a wildcard character (<code>*</code> or <code>?</code>), like <code>files *.toml</code>.</p>
 <p>If you want to construct a new glob from a string, use the <a href="#types-glob-new"><code>glob:new</code></a> command, e.g.
 <code>glob:new &quot;*.txt&quot;</code>.</p>
-<p>Globs are immutable. The most similar types are <a href="#types-re"><code>re</code></a>, which supports much richer
-patterns at the cost of more complex syntax, and <a href="#types-string"><code>string</code></a>, which globs otherwise
-resemble but never match by wildcard -- only a real glob value does.</p>
+<p>Globs are immutable. The most similar type is <a href="#types-re"><code>re</code></a>, which supports much richer
+patterns at the cost of more complex syntax.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-glob-__is__"><code>types:glob:__is__</code></a></li><li class="idx-cmd"><a href="#types-glob-__is_not__"><code>types:glob:__is_not__</code></a></li><li class="idx-cmd"><a href="#types-glob-files"><code>types:glob:files</code></a></li><li class="idx-cmd"><a href="#types-glob-filter"><code>types:glob:filter</code></a></li><li class="idx-cmd"><a href="#types-glob-new"><code>types:glob:new</code></a></li></ul></nav>
 <article class="cmd" id="types-glob-__is__">
@@ -4365,11 +4366,11 @@ is a row of several named, differently-typed columns rather than a single value.
 <h3 class="ns-title"><code>types:one_of</code></h3>
 <div class="ns-prose"><pre><code><a href="#types-type"><span class="tok-command">type</span></a> <span class="tok-string_literal">one_of</span></code></pre>
 <p>One of</p>
-<p>A one_of value is constructed with the <code>one_of:of</code> command,
-e.g. <code>one_of:of $file $string $regex</code>, and names a set of acceptable types rather than a
-single one. It&#39;s used the same way an ordinary type is -- most commonly to declare that a
-signature parameter accepts any one of several types -- rather than being a type user
-code creates values of.</p>
+<p>A one_of value is constructed by calling one_of as a
+command with all the types as arguments, e.g. <code>one_of $file $string $regex</code>. It&#39;s used
+the same way an ordinary type is, most commonly to declare that a signature parameter
+accepts any one of several types:</p>
+<pre><code><span class="tok-identifier">$ls</span> <span class="tok-operator">:=</span> <span class="tok-operator">{</span><span class="tok-operator">|</span><span class="tok-identifier">$directory</span> <span class="tok-operator">:</span> <span class="tok-operator">$(</span><a href="#types-one_of"><span class="tok-command">one_of</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a><span class="tok-operator">)</span><span class="tok-operator">|</span> <a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-identifier">$directory</span> <span class="tok-operator">|</span> <a href="#stream-select"><span class="tok-command">select</span></a> <span class="tok-string_literal">file</span> <span class="tok-operator">|</span> <a href="#stream-sort"><span class="tok-command">sort</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a><span class="tok-operator">}</span></code></pre>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-one_of-__call__"><code>types:one_of:__call__</code></a></li></ul></nav>
 <article class="cmd" id="types-one_of-__call__">
@@ -5176,9 +5177,10 @@ is <a href="#types-table_input_stream"><code>table_input_stream</code></a>, its 
 <p>All time instances use the local time zone.</p>
 <p>A time instance has nanosecond precision. It is represented internally as two 64 bit numbers, one
 for the number of seconds since the Unix epoc, and one for the nanosecond remainder.</p>
-<p>Times are immutable values -- arithmetic methods like adding a <a href="#types-duration"><code>duration</code></a> return a new
-time rather than changing the receiver. The most similar type is <a href="#types-duration"><code>duration</code></a>, used to
-represent the difference between two times.</p>
+<p>Times are immutable values -- arithmetic methods like adding a <a href="#types-duration"><code>duration</code></a> (using the + operator
+in expression mode) return a new time rather than changing the receiver. <a href="#types-time"><code>time</code></a> instances are
+often used together with <a href="#types-duration"><code>duration</code></a>, which is used to represent the difference between two
+points in time.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-time-__add__"><code>types:time:__add__</code></a></li><li class="idx-cmd"><a href="#types-time-__sub__"><code>types:time:__sub__</code></a></li><li class="idx-cmd"><a href="#types-time-format"><code>types:time:format</code></a></li><li class="idx-cmd"><a href="#types-time-now"><code>types:time:now</code></a></li><li class="idx-cmd"><a href="#types-time-parse"><code>types:time:parse</code></a></li></ul></nav>
 <article class="cmd" id="types-time-__add__">
@@ -5440,10 +5442,10 @@ Special characters:</p>
 <h3 class="ns-title"><code>types:type</code></h3>
 <div class="ns-prose"><pre><code><a href="#types-type"><span class="tok-command">type</span></a> <span class="tok-string_literal">type</span></code></pre>
 <p>A type.</p>
-<p>A type value names one of crush&#39;s own types, e.g. <code>$string</code> or
-<code>$integer</code> -- <a href="#types-typeof"><code>typeof</code></a> returns a value of this kind. Types are mostly used to declare
+<p>A type value names one of crush&#39;s builtin types, e.g. <code>$string</code> or
+<code>$integer</code>. The <a href="#types-typeof"><code>typeof</code></a> command returns a value of this kind. Types are mostly used to declare
 what kind of value a signature parameter or table column accepts, e.g. via <a href="#types-convert"><code>convert</code></a> or
-a class field declaration, rather than being manipulated directly by everyday scripts.</p>
+a closure argument declaration, rather than being manipulated directly by everyday scripts.</p>
 </div>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-type-__is__"><code>types:type:__is__</code></a></li><li class="idx-cmd"><a href="#types-type-__is_not__"><code>types:type:__is_not__</code></a></li></ul></nav>
 <article class="cmd" id="types-type-__is__">

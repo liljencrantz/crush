@@ -983,8 +983,8 @@ impl TableStreamReader for ScopeReader {
 
     fn types(&self) -> &[ColumnType] {
         static SCOPE_STREAM_TYPE: [ColumnType; 2] = [
-            ColumnType::new("name", ValueType::String),
-            ColumnType::new("value", ValueType::Any),
+            ColumnType::new("name", ValueType::String, "The variable's name."),
+            ColumnType::new("value", ValueType::Any, "The variable's value."),
         ];
         &SCOPE_STREAM_TYPE
     }

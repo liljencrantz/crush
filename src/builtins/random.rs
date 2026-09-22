@@ -28,9 +28,9 @@ fn float(mut context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-static FLOAT_STREAM_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", ValueType::Float)];
+static FLOAT_STREAM_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", ValueType::Float, "A random floating point number.")];
 
-static INTEGER_STREAM_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", ValueType::Integer)];
+static INTEGER_STREAM_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", ValueType::Integer, "A random integer.")];
 
 #[signature(
     random.float_stream,

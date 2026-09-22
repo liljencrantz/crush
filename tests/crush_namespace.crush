@@ -23,7 +23,7 @@ assert ($($args:len) > 0) "crush:arguments should be non-empty when running a sc
 # and a sane row count, not exact contents, since both vary run to run.
 assert ($(crush:jobs | count) >= 0) "crush:jobs should not error"
 $job_columns := $(crush:jobs | members | select name | list:collect name)
-for col=$(list:of id parent description type status) {
+for col=$(list:of id parent definition type status) {
     $found := $($job_columns | any_match {($value == $col)})
     assert $found $("crush:jobs should have a column called {}":format $col)
 }

@@ -32,6 +32,7 @@ pub fn rename(mut context: CommandContext) -> CrushResult<()> {
                 new_name,
                 ct.format,
                 ct.cell_type.clone(),
+                ct.help().to_string(),
             )),
             None => output_type.push(ct.clone()),
         }

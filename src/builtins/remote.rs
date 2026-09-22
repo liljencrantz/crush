@@ -27,13 +27,13 @@ use std::net::{Ipv6Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
 
 static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("identity", ValueType::String),
-    ColumnType::new("public_key", ValueType::Binary),
+    ColumnType::new("identity", ValueType::String, "The identity's comment, usually describing which key it is."),
+    ColumnType::new("public_key", ValueType::Binary, "The identity's public key."),
 ];
 
 static HOST_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("host", ValueType::String),
-    ColumnType::new("public_key", ValueType::String),
+    ColumnType::new("host", ValueType::String, "The hostname, or the empty string if the key has none."),
+    ColumnType::new("public_key", ValueType::String, "The host's public key."),
 ];
 
 fn parse(
@@ -446,8 +446,8 @@ struct Pexec {
 }
 
 static PEXEC_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("host", ValueType::String),
-    ColumnType::new("result", ValueType::Any),
+    ColumnType::new("host", ValueType::String, "The host the command was run on."),
+    ColumnType::new("result", ValueType::Any, "The command's own output value from that host."),
 ];
 
 fn pexec(mut context: CommandContext) -> CrushResult<()> {

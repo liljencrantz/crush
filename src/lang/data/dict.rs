@@ -220,8 +220,8 @@ impl DictReader {
     pub fn new(dict: Dict) -> DictReader {
         DictReader {
             types: vec![
-                ColumnType::new("key", dict.key_type.clone()),
-                ColumnType::new("value", dict.value_type.clone()),
+                ColumnType::new("key", dict.key_type.clone(), "The entry's key."),
+                ColumnType::new("value", dict.value_type.clone(), "The entry's value."),
             ],
             list: dict.elements(),
             idx: 0usize,

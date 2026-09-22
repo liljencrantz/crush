@@ -82,7 +82,13 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
         .collect();
     let columns: Vec<ColumnType> = elements
         .iter()
-        .map(|(name, value)| ColumnType::new_from_string(name.clone(), value.value_type()))
+        .map(|(name, value)| {
+            ColumnType::new_from_string(
+                name.clone(),
+                value.value_type(),
+                "A field from one of the joined structs.".to_string(),
+            )
+        })
         .collect();
     let deduped = columns
         .as_slice()

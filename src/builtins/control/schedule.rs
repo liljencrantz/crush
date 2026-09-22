@@ -88,7 +88,11 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             }
         }
         Some(cmd) => {
-            let output = context.initialize_output(&[ColumnType::new("value", ValueType::Any)])?;
+            let output = context.initialize_output(&[ColumnType::new(
+                "value",
+                ValueType::Any,
+                "The output of invoking the command at this heartbeat.",
+            )])?;
             let base_context = context.empty();
             let env = context.scope.clone();
             run(cfg, &control_receiver, || {

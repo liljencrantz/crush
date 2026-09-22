@@ -43,17 +43,17 @@ fn uptime(context: CommandContext) -> CrushResult<()> {
 }
 
 static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
-    ColumnType::new("vendor", ValueType::String),
-    ColumnType::new("model", ValueType::String),
-    ColumnType::new("technology", ValueType::String),
-    ColumnType::new("cycle_count", ValueType::Integer),
-    ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::Float),
-    ColumnType::new("voltage", ValueType::Float),
-    ColumnType::new_with_format("health", ColumnFormat::Percentage, ValueType::Float),
-    ColumnType::new("state", ValueType::String),
-    ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float),
-    ColumnType::new("time_to_full", ValueType::Duration),
-    ColumnType::new("time_to_empty", ValueType::Duration),
+    ColumnType::new("vendor", ValueType::String, "The battery's manufacturer."),
+    ColumnType::new("model", ValueType::String, "The battery's model name."),
+    ColumnType::new("technology", ValueType::String, "The battery's chemistry, e.g. lithium-ion."),
+    ColumnType::new("cycle_count", ValueType::Integer, "The number of charge cycles the battery has gone through."),
+    ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::Float, "The battery's current temperature."),
+    ColumnType::new("voltage", ValueType::Float, "The battery's current voltage."),
+    ColumnType::new_with_format("health", ColumnFormat::Percentage, ValueType::Float, "The battery's remaining capacity relative to when it was new."),
+    ColumnType::new("state", ValueType::String, "The battery's current charging state, e.g. charging or discharging."),
+    ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float, "The battery's current charge level."),
+    ColumnType::new("time_to_full", ValueType::Duration, "How long until the battery is fully charged."),
+    ColumnType::new("time_to_empty", ValueType::Duration, "How long until the battery is fully depleted."),
 ];
 
 #[signature(
@@ -196,13 +196,13 @@ mod cpu {
 }
 
 static PROCS_OUTPUT_TYPE: [ColumnType; 7] = [
-    ColumnType::new("pid", ValueType::Integer),
-    ColumnType::new("ppid", ValueType::Integer),
-    ColumnType::new("user", ValueType::String),
-    ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
-    ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
-    ColumnType::new("cpu", ValueType::Duration),
-    ColumnType::new("name", ValueType::String),
+    ColumnType::new("pid", ValueType::Integer, "The process id."),
+    ColumnType::new("ppid", ValueType::Integer, "The parent process's id."),
+    ColumnType::new("user", ValueType::String, "The name of the user running the process."),
+    ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "The process's resident set size, i.e. physical memory in use."),
+    ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "The process's virtual memory size."),
+    ColumnType::new("cpu", ValueType::Duration, "The total CPU time the process has used."),
+    ColumnType::new("name", ValueType::String, "The process's executable path, or its name if the path isn't known."),
 ];
 
 #[signature(
@@ -253,12 +253,12 @@ mod macos {
     use mach2::mach_time::mach_timebase_info;
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
-        ColumnType::new("tid", ValueType::Integer),
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("priority", ValueType::Integer),
-        ColumnType::new("user", ValueType::Duration),
-        ColumnType::new("system", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
+        ColumnType::new("tid", ValueType::Integer, "The thread id."),
+        ColumnType::new("pid", ValueType::Integer, "The id of the process this thread belongs to."),
+        ColumnType::new("priority", ValueType::Integer, "The thread's scheduling priority."),
+        ColumnType::new("user", ValueType::Duration, "The CPU time the thread has spent in user mode."),
+        ColumnType::new("system", ValueType::Duration, "The CPU time the thread has spent in kernel mode."),
+        ColumnType::new("name", ValueType::String, "The thread's name."),
     ];
 
     #[signature(
@@ -332,13 +332,13 @@ mod linux {
     use super::*;
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 7] = [
-        ColumnType::new("tid", ValueType::Integer),
-        ColumnType::new("pid", ValueType::Integer),
-        ColumnType::new("user", ValueType::String),
-        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer),
-        ColumnType::new("cpu", ValueType::Duration),
-        ColumnType::new("name", ValueType::String),
+        ColumnType::new("tid", ValueType::Integer, "The thread id."),
+        ColumnType::new("pid", ValueType::Integer, "The id of the process this thread belongs to."),
+        ColumnType::new("user", ValueType::String, "The name of the user running the thread's process."),
+        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "The thread's resident set size, i.e. physical memory in use."),
+        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "The thread's virtual memory size."),
+        ColumnType::new("cpu", ValueType::Duration, "The total CPU time the thread has used."),
+        ColumnType::new("name", ValueType::String, "The thread's name."),
     ];
 
     #[signature(

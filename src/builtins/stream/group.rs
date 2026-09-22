@@ -196,7 +196,11 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         .collect::<Vec<_>>();
 
     for name in cfg.command.keys() {
-        output_type.push(ColumnType::new_from_string(name.clone(), ValueType::Any));
+        output_type.push(ColumnType::new_from_string(
+            name.clone(),
+            ValueType::Any,
+            "The result of aggregating this group's rows.".to_string(),
+        ));
     }
 
     let output_type = output_type.as_slice().deduplicate_names();

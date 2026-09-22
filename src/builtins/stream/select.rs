@@ -47,11 +47,18 @@ pub fn run(config: Config, mut input: Stream, context: CommandContext) -> CrushR
         };
         match location {
             Action::Append(name) => {
-                output_type.push(ColumnType::new_from_string(name.clone(), next_type));
+                output_type.push(ColumnType::new_from_string(
+                    name.clone(),
+                    next_type,
+                    "A column computed by select.".to_string(),
+                ));
             }
             Action::Replace(idx) => {
                 let name = output_type[*idx].name().to_string();
-                output_type.replace(*idx, ColumnType::new_from_string(name, next_type));
+                output_type.replace(
+                    *idx,
+                    ColumnType::new_from_string(name, next_type, "A column computed by select.".to_string()),
+                );
             }
         }
     }

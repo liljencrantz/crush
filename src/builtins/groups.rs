@@ -9,8 +9,8 @@ use signature::signature;
 use std::ops::Add;
 
 static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("name", ValueType::String),
-    ColumnType::new("gid", ValueType::Integer),
+    ColumnType::new("name", ValueType::String, "The group's name."),
+    ColumnType::new("gid", ValueType::Integer, "The group's id."),
 ];
 
 #[signature(

@@ -17,7 +17,7 @@ impl VecReader {
     pub fn new(vec: Vec<Value>, column_type: ValueType) -> VecReader {
         VecReader {
             vec,
-            types: vec![ColumnType::new("value", column_type)],
+            types: vec![ColumnType::new("value", column_type, "One element of the list.")],
             idx: 0,
         }
     }

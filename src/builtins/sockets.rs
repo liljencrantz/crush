@@ -10,12 +10,12 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 
 static TCP_OUTPUT_TYPE: LazyLock<[ColumnType; 6]> = LazyLock::new(|| [
-    ColumnType::new("local_address", ValueType::String),
-    ColumnType::new("local_port", ValueType::Integer),
-    ColumnType::new("remote_address", ValueType::String),
-    ColumnType::new("remote_port", ValueType::Integer),
-    ColumnType::new("pids", ValueType::List(Box::from(ValueType::Integer))),
-    ColumnType::new("state", ValueType::String),
+    ColumnType::new("local_address", ValueType::String, "The local IP address the socket is bound to."),
+    ColumnType::new("local_port", ValueType::Integer, "The local port the socket is bound to."),
+    ColumnType::new("remote_address", ValueType::String, "The remote peer's IP address."),
+    ColumnType::new("remote_port", ValueType::Integer, "The remote peer's port."),
+    ColumnType::new("pids", ValueType::List(Box::from(ValueType::Integer)), "The ids of the processes that own the socket."),
+    ColumnType::new("state", ValueType::String, "The connection's current TCP state, e.g. listen or established."),
 ]);
 
 #[signature(
@@ -52,9 +52,9 @@ fn tcp(mut context: CommandContext) -> CrushResult<()> {
 }
 
 static UDP_OUTPUT_TYPE: LazyLock<[ColumnType; 3]> = LazyLock::new(|| [
-    ColumnType::new("local_address", ValueType::String),
-    ColumnType::new("local_port", ValueType::Integer),
-    ColumnType::new("pids", ValueType::List(Box::from(ValueType::Integer))),
+    ColumnType::new("local_address", ValueType::String, "The local IP address the socket is bound to."),
+    ColumnType::new("local_port", ValueType::Integer, "The local port the socket is bound to."),
+    ColumnType::new("pids", ValueType::List(Box::from(ValueType::Integer)), "The ids of the processes that own the socket."),
 ]);
 
 #[signature(

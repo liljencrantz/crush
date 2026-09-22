@@ -13,9 +13,9 @@ use signature::signature;
 use std::path::PathBuf;
 
 static WATCH_OUTPUT_TYPE: [ColumnType; 3] = [
-    ColumnType::new("path", ValueType::File),
-    ColumnType::new("kind", ValueType::String),
-    ColumnType::new("timestamp", ValueType::Time),
+    ColumnType::new("path", ValueType::File, "The file or directory the change was observed on."),
+    ColumnType::new("kind", ValueType::String, "The kind of change, e.g. create, modify, or remove."),
+    ColumnType::new("timestamp", ValueType::Time, "When the change was observed."),
 ];
 
 #[signature(

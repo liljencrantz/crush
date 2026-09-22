@@ -1230,7 +1230,11 @@ fn signal_value(
         .iter()
         .zip(&arguments)
         .map(|(name, a)| {
-            ColumnType::new_from_string(name.clone(), column_type_for_signature(&a.signature))
+            ColumnType::new_from_string(
+                name.clone(),
+                column_type_for_signature(&a.signature),
+                "An argument of the D-Bus signal.".to_string(),
+            )
         })
         .collect::<Vec<_>>();
 
@@ -1296,7 +1300,11 @@ fn call_signal(mut context: CommandContext) -> CrushResult<()> {
         .iter()
         .zip(&signatures)
         .map(|(name, signature)| {
-            ColumnType::new_from_string(name.clone(), column_type_for_signature(signature))
+            ColumnType::new_from_string(
+                name.clone(),
+                column_type_for_signature(signature),
+                "An argument of the D-Bus signal.".to_string(),
+            )
         })
         .collect::<Vec<_>>();
     let output = context.initialize_output(&columns)?;

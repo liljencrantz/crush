@@ -268,8 +268,8 @@ pub fn unuse(mut context: CommandContext) -> CrushResult<()> {
 }
 
 static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("name", ValueType::String),
-    ColumnType::new("type", ValueType::String),
+    ColumnType::new("name", ValueType::String, "The variable's name."),
+    ColumnType::new("type", ValueType::String, "The variable's type."),
 ];
 
 #[signature(

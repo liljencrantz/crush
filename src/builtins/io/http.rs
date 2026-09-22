@@ -93,8 +93,8 @@ fn http(mut context: CommandContext) -> CrushResult<()> {
     let header_map: &HeaderMap = b.headers();
     let headers = Table::from((
         vec![
-            ColumnType::new("name", ValueType::String),
-            ColumnType::new("value", ValueType::String),
+            ColumnType::new("name", ValueType::String, "The header's name."),
+            ColumnType::new("value", ValueType::String, "The header's value."),
         ],
         header_map
             .iter()
