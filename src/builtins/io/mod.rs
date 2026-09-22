@@ -54,9 +54,11 @@ pub fn val(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::List(Box::from(ValueType::String))),
     long = "Works on any value -- a struct's own fields, a scope's local variables, or",
     long = "(for anything else, including a type value like `$float`) the methods its",
-    long = "type declares. If `dir`'s input is a pipeline, `dir` lists the members of the",
-    long = "value in the pipeline. Otherwise, `dir` requires a value to be provided as an",
-    long = "argument and lists the members of that value.",
+    long = "type declares.",
+    long = "",
+    long = "If `dir`'s input is a pipeline, `dir` lists the members of the value in the",
+    long = "pipeline. Otherwise, `dir` requires a value to be provided as an argument,",
+    long = "and lists the members of that value instead.",
     long = "",
     long = "Pair with `member` to fetch one of the listed names -- `member`'s own name",
     long = "argument, unlike the `:` operator, can be a runtime value instead of a fixed",
@@ -73,10 +75,7 @@ struct Dir {
 
 pub fn dir(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Dir = Dir::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let value = match cfg.value {
-        Some(value) => value,
-        None => context.input.recv()?,
-    };
+    let value = context.input.recv_or(cfg.value)?;
     context.output.send(
         List::new(
             ValueType::String,
@@ -136,25 +135,34 @@ fn echo(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.member,
     can_block = false,
-    short = "Extract one named member from the input value.",
+    short = "Extract one named member from a value.",
     long = "Works like the `:` member operator, except the member name is a runtime",
     long = "value (e.g. a variable) rather than a fixed word in the source -- use this",
     long = "when the name to look up isn't known until the script runs. Pair with `dir`",
     long = "to discover a value's member names first.",
+    long = "",
+    long = "If `member`'s input is a pipeline, `member` extracts the named member from",
+    long = "the value in the pipeline. Otherwise, `member` requires a value to be",
+    long = "provided as an argument, and extracts the named member from that value",
+    long = "instead.",
     example = "$uri := \"https://raw.githubusercontent.com/liljencrantz/crush/refs/heads/master/example_data/dinosaurs.json\"",
     example = "http $uri | member body | json:from",
+    example = "# member also takes its value as an argument instead of a pipe",
+    example = "member __neg__ 5",
     example = "# dir lists a value's member names; member fetches one by name -- together",
     example = "# they let you enumerate members whose names aren't known ahead of time",
-    example = "for name=$(dir 5) { echo (5 | member $name) }",
+    example = "for name=$(dir 5) { echo (member $name 5) }",
 )]
 struct Member {
     #[description("the member to extract.")]
     field: String,
+    #[description("the value to extract the member from.")]
+    value: Option<Value>,
 }
 
 fn member(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Member = Member::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let value = context.input.recv()?;
+    let value = context.input.recv_or(cfg.value)?;
     let result = value.field(&cfg.field)?.ok_or_else(|| {
         format!(
             "Missing field `{}` in value of type `{}`",

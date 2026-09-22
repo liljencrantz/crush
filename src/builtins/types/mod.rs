@@ -150,14 +150,16 @@ pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
 #[signature(
     types.convert,
     can_block = false,
-    short = "Convert the vale to the specified type",
+    short = "Convert the value to the specified type",
     long = "Converting a value to the type it already holds always works and returns the original value. Most other conversions take the input value, convert it to a string and then attempt to parse that string as the desired type.",
-    long = "",
-    long = "If no value is provided, the value is read from the input pipeline.",
     long = "",
     long = "The following short cut conversions exist that do not go via a string representation:",
     long = "* `$float` to `$integer` the value is truncated to its integer part.",
     long = "* `$integer` to `$bool` 0 is false, all other values are true.",
+    long = "",
+    long = "If `convert`'s input is a pipeline, `convert` converts the value in the",
+    long = "pipeline. Otherwise, `convert` requires a value to be provided as an",
+    long = "argument, and converts that value instead.",
     example = "convert $integer 1.8",
 )]
 struct Convert {
@@ -169,10 +171,7 @@ struct Convert {
 
 pub fn convert(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Convert = Convert::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let value = match cfg.value {
-        None => context.input.recv()?,
-        Some(v) => v,
-    };
+    let value = context.input.recv_or(cfg.value)?;
     context.output.send(value.convert(cfg.target_type)?)
 }
 
@@ -181,7 +180,9 @@ pub fn convert(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Type),
     short = "Return the type of the specified value.",
-    long = "If `typeof` input is a pipeline, `typeof` returns the type of the value in the pipeline. Otherwise, `typeof` requires a value to be provided as an argument and returns the type of that value.",
+    long = "If `typeof`'s input is a pipeline, `typeof` returns the type of the value in",
+    long = "the pipeline. Otherwise, `typeof` requires a value to be provided as an",
+    long = "argument, and returns the type of that value instead.",
     example = "# Returns float",
     example = "typeof 1.8",
 )]
@@ -192,11 +193,7 @@ struct TypeOf {
 
 pub fn r#typeof(mut context: CommandContext) -> CrushResult<()> {
     let cfg: TypeOf = TypeOf::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let value = if context.input.is_pipeline() {
-        context.input.recv()?
-    } else {
-        cfg.value.ok_or_else(||"No value specified".to_string())?
-    };
+    let value = context.input.recv_or(cfg.value)?;
     context.output.send(Value::Type(value.value_type()))
 }
 

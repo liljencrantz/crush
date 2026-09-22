@@ -1,0 +1,51 @@
+# member, typeof, dir, convert, and help all take their subject value either as an
+# argument or via a pipe. This locks in that all five behave the same way: an argument
+# alone works, a pipe alone works, and -- since a command mid-pipeline can't opt out of
+# receiving its predecessor's output -- a connected pipe always wins over an argument
+# that also happens to be given, rather than the two being resolved inconsistently
+# depending on which command you happen to be calling.
+
+# argument-only and pipe-only forms agree
+assert (($(typeof 5)) == $(5 | typeof)) "typeof should behave the same via argument or pipe"
+assert (($($(dir 5) | count)) == $($(5 | dir) | count)) "dir should behave the same via argument or pipe"
+assert (($(convert $string 5)) == $(5 | convert $string)) "convert should behave the same via argument or pipe"
+assert (($(typeof $(member __neg__ 5))) == $command) "member via argument should return a command"
+assert (($(typeof $(5 | member __neg__))) == $command) "member via pipe should return a command"
+
+# a connected pipe wins over an argument that's also given
+assert (($(5 | typeof 3.0)) == $integer) "typeof should prefer the piped value over an argument"
+assert (($(5 | convert $string "not five")) == "5") "convert should prefer the piped value over an argument"
+
+$s := $(struct:of a=1 b=2)
+assert (($($(val $s | dir "unused") | count)) == 2) "dir should prefer the piped value over an argument"
+assert (($(val $s | member a "unused")) == 1) "member should prefer the piped value over an argument"
+
+# with neither an argument nor a pipe, all four error the same way
+for cmd=$(list:of typeof dir convert member) {
+    $errored := $false
+    try {
+        match $cmd {
+            case "typeof" { typeof }
+            case "dir" { dir }
+            case "convert" { convert $string }
+            case "member" { member a }
+        }
+    } catch {|$e|
+        $errored = $true
+        assert ($e:message == "No value specified") $("{}'s error message should be consistent":format $cmd)
+    }
+    assert $errored $("{} should error when given neither an argument nor a pipe":format $cmd)
+}
+
+# help is the one exception: with neither a topic argument nor a pipe, it shows an
+# introductory message instead of erroring -- but a piped value still takes priority
+# over an argument, same as the other four.
+$piped := $($(5 | help format=markdown))
+$argued := $($(help 5 format=markdown))
+assert ($piped == $argued) "help should show the same thing via argument or pipe"
+$overridden := $($(5 | help 3.0 format=markdown))
+assert ($overridden == $piped) "help should prefer the piped value over a topic argument"
+$welcome := $($(help format=markdown))
+assert ($welcome:starts_with("\n# Welcome to Crush!")) "help with neither an argument nor a pipe should show the welcome message"
+
+echo "ok"

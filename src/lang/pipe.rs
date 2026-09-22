@@ -78,6 +78,24 @@ impl ValueReceiver {
     pub fn is_pipeline(&self) -> bool {
         self.is_pipeline
     }
+
+    /// The standard way for a command whose subject can be given either as an argument
+    /// (`cmd $value`) or piped in (`$value | cmd`) to read that subject: if a pipe is
+    /// actually connected, the value flowing through it always wins, regardless of
+    /// whether `value` (typically the command's own optional argument) was also given
+    /// -- a command later in a pipeline can't opt out of receiving its predecessor's
+    /// output, so preferring the pipe is the only choice that can't silently ignore
+    /// real input. With no pipe connected, `value` is used, and it's an error for
+    /// neither to be present. Keeping this in one place (rather than every such command
+    /// reimplementing the same `if is_pipeline() {...} else {...}` check) is what keeps
+    /// them all actually consistent -- see `dir`/`member`/`typeof` for callers.
+    pub fn recv_or(&self, value: Option<Value>) -> CrushResult<Value> {
+        if self.is_pipeline() {
+            self.recv()
+        } else {
+            value.ok_or_else(|| "No value specified".into())
+        }
+    }
 }
 
 /**
