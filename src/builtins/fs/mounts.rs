@@ -1,4 +1,5 @@
 use crate::data::table::Row;
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::table::ColumnFormat;
 use crate::lang::data::table::ColumnType;
@@ -9,12 +10,12 @@ use mountpoints::mountinfos;
 use signature::signature;
 
 static OUTPUT_TYPE: [ColumnType; 7] = [
-    ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer, "size in bytes."),
-    ColumnType::new_with_format("available", ColumnFormat::ByteUnit, ValueType::Integer, "available space in bytes."),
-    ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::Float, "usage percentage."),
-    ColumnType::new("format", ValueType::String, "filesystem type (ntfs, ext4, etc.)."),
-    ColumnType::new("readonly", ValueType::Any, "whether the filesystem is mounted readonly."),
-    ColumnType::new("name", ValueType::String, "name assigned to this mountpoint, if any."),
+    ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "size in bytes, if known."),
+    ColumnType::new_with_format("available", ColumnFormat::ByteUnit, ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "available space in bytes, if known."),
+    ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::OneOf(AnySequence::Slice(&[ValueType::Float, ValueType::Empty])), "usage percentage, if known."),
+    ColumnType::new("format", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "filesystem type (ntfs, ext4, etc.), if known."),
+    ColumnType::new("readonly", ValueType::OneOf(AnySequence::Slice(&[ValueType::Bool, ValueType::Empty])), "whether the filesystem is mounted readonly, if known."),
+    ColumnType::new("name", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "name assigned to this mountpoint, if any."),
     ColumnType::new("path", ValueType::File, "the mount location."),
 ];
 
@@ -23,14 +24,6 @@ static OUTPUT_TYPE: [ColumnType; 7] = [
     can_block = true,
     output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
     short = "List filesystem mount points",
-    long = "`mounts` outputs the following information about each mount point:",
-    long = "* `size` size in bytes.",
-    long = "* `available` available space in bytes.",
-    long = "* `usage` usage percentage.",
-    long = "* `format` filesystem type (ntfs, ext4, etc.).",
-    long = "* `readonly` whether the filesystem is mounted readonly.",
-    long = "* `name` name assigned to this mountpoint, if any.",
-    long = "* `path` the mount location.",
 )]
 pub struct Mounts {}
 
@@ -39,20 +32,22 @@ fn mounts(mut context: CommandContext) -> CrushResult<()> {
     let output = context.initialize_output(&OUTPUT_TYPE)?;
 
     for m in mountinfos()? {
-        let size = m.size.unwrap_or(0);
-        let avail = m.avail.unwrap_or(0);
-
-        output.send(Row::new(vec![
-            Value::from(size),
-            Value::from(avail),
-            Value::from(if size == 0 {
+        let usage = match (m.size, m.avail) {
+            (Some(size), Some(avail)) => Value::from(if size == 0 {
                 0.0
             } else {
                 (avail as f64) / (size as f64)
             }),
-            Value::from(m.format.unwrap_or("".to_string())),
-            Value::from(m.readonly.map(|r| Value::from(r)).unwrap_or(Value::Empty)),
-            Value::from(m.name.unwrap_or("".to_string())),
+            _ => Value::Empty,
+        };
+
+        output.send(Row::new(vec![
+            m.size.map(Value::from).unwrap_or(Value::Empty),
+            m.avail.map(Value::from).unwrap_or(Value::Empty),
+            usage,
+            m.format.map(Value::from).unwrap_or(Value::Empty),
+            m.readonly.map(Value::from).unwrap_or(Value::Empty),
+            m.name.map(Value::from).unwrap_or(Value::Empty),
             Value::from(m.path),
         ]))?;
     }

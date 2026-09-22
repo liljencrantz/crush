@@ -1,3 +1,4 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::{Command, CrushCommand};
 use crate::lang::data::list::List;
@@ -501,7 +502,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             env.declare("table_input_stream", Value::Type(ValueType::TableInputStream(vec![])))?;
             env.declare("table_output_stream", Value::Type(ValueType::TableOutputStream(vec![])))?;
             env.declare("struct", Value::Type(ValueType::Struct))?;
-            env.declare("one_of", Value::Type(ValueType::OneOf(vec![])))?;
+            env.declare("one_of", Value::Type(ValueType::OneOf(AnySequence::Slice(&[]))))?;
             Ok(())
         }))?;
     root.r#use(&e);

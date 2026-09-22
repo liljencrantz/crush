@@ -90,6 +90,8 @@ fn r#continue(context: CommandContext) -> CrushResult<()> {
     can_block = false,
     short = "Error out if the condition is false.",
     output = Known(ValueType::Empty),
+    long = "Unlike assertions in some other languages, crush assert simply stops execution through",
+    long = "by erroring out. This can be caught using a `try`-command.",
     example = "assert (1 + 1 == 2)",
     example = "assert ($x > 0) \"x must be positive\"",
 )]
@@ -142,6 +144,7 @@ impl BinaryReader for PipeReader {
 #[signature(
     control.sleep,
     can_block = true,
+    output = Known(ValueType::Empty),
     short = "Pause execution of commands for the specified amount of time",
     example = "sleep $(duration:of seconds=10)",
 )]

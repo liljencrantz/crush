@@ -1,3 +1,4 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::data::table::ColumnType;
 use crate::lang::errors::{CrushResult, error};
 use crate::lang::serialization::model;
@@ -67,12 +68,12 @@ impl Serializable<ValueType> for ValueType {
                         .map(|t| ColumnType::deserialize(*t as usize, elements, state))
                         .collect::<CrushResult<Vec<_>>>()?,
                 )),
-                model::r#type::Type::OneOf(of) => Ok(ValueType::OneOf(
+                model::r#type::Type::OneOf(of) => Ok(ValueType::OneOf(AnySequence::Vec(
                     of.types
                         .iter()
                         .map(|t| ValueType::deserialize(*t as usize, elements, state))
                         .collect::<CrushResult<Vec<_>>>()?,
-                )),
+                ))),
             }
         } else {
             error("Invalid type")

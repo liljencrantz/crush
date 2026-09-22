@@ -82,7 +82,7 @@ fn format_output_type(t: &ValueType) -> String {
     };
     let mut lines = vec![format!("A {} with the following columns", kind)];
     for c in columns {
-        lines.push(format!("* `{}` {}", c.name(), c.help()));
+        lines.push(format!("* `{}` ({}) {}", c.name(), c.cell_type, c.help()));
     }
     lines.join("\n")
 }

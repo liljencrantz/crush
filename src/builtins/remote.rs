@@ -1,3 +1,4 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::completion::Completion;
@@ -32,7 +33,7 @@ static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
 ];
 
 static HOST_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("host", ValueType::String, "the hostname, or the empty string if the key has none."),
+    ColumnType::new("host", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the hostname, if the key has one."),
     ColumnType::new("public_key", ValueType::String, "the host's public key."),
 ];
 
@@ -557,7 +558,7 @@ mod host {
         can_block = true,
         output = Known(ValueType::table_input_stream(&HOST_OUTPUT_TYPE)),
         short = "List all known hosts",
-        long = "If a given host key has no hostname, the hostname will be the empty string"
+        long = "If a given host key has no hostname, the `host` column will be `$empty`"
     )]
     pub struct List {
         #[description("(~/.ssh/known_hosts) known hosts file.")]
@@ -577,7 +578,7 @@ mod host {
         known_hosts.read_file(&host_file, KnownHostFileKind::OpenSSH)?;
         for host in known_hosts.iter()? {
             output.send(Row::new(vec![
-                Value::from(host.name().unwrap_or("")),
+                host.name().map(Value::from).unwrap_or(Value::Empty),
                 Value::from(host.key()),
             ]))?;
         }

@@ -1,3 +1,4 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
@@ -34,5 +35,5 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Call::parse(context.remove_arguments(), &context.global_state.printer())?;
     context
         .output
-        .send(Value::Type(ValueType::OneOf(cfg.types)))
+        .send(Value::Type(ValueType::OneOf(AnySequence::Vec(cfg.types))))
 }

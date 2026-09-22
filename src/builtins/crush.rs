@@ -1,6 +1,7 @@
 use chrono::{Duration, Local};
 use crate::builtins::term::{CYAN, GREEN, MAGENTA, RED, YELLOW};
 use crate::data::list::List;
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
@@ -289,6 +290,7 @@ mod prompt {
     #[signature(
         crush.prompt.get,
         can_block = false,
+        output = Known(ValueType::one_of(vec![ValueType::Command, ValueType::Empty])),
         short = "Get the current prompt command.")
     ]
     pub struct Get {}
@@ -364,6 +366,7 @@ mod title {
     #[signature(
         crush.title.get,
         can_block = false,
+        output = Known(ValueType::one_of(vec![ValueType::Command, ValueType::Empty])),
         short = "Get the current title command")
     ]
     pub struct Get {}
@@ -382,7 +385,7 @@ mod title {
 
 static JOB_OUTPUT_TYPE: [ColumnType; 5] = [
     ColumnType::new("id", ValueType::Integer, "the job's id."),
-    ColumnType::new("parent", ValueType::Any, "the id of the job this job is nested inside, if any."),
+    ColumnType::new("parent", ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "the id of the job this job is nested inside, if any."),
     ColumnType::new("definition", ValueType::String, "the job's definition, i.e. the invocation that started it, as source text."),
     ColumnType::new("type", ValueType::String, "whether the job is running interactively or in the background."),
     ColumnType::new("status", ValueType::String, "whether the job is running, paused, or terminated."),
@@ -447,10 +450,10 @@ mod warn {
 
     static LIST_OUTPUT_TYPE: [ColumnType; 5] = [
         ColumnType::new("timestamp", ValueType::Time, "when the warning was recorded."),
-        ColumnType::new("command", ValueType::String, "the name of the command that reported the warning, if known."),
+        ColumnType::new("command", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the name of the command that reported the warning, if known."),
         ColumnType::new("message", ValueType::String, "the warning message."),
-        ColumnType::new("file", ValueType::String, "the source file the warning was reported from, if known."),
-        ColumnType::new("location", ValueType::String, "the location within the source file the warning was reported from, if known."),
+        ColumnType::new("file", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the source file the warning was reported from, if known."),
+        ColumnType::new("location", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the location within the source file the warning was reported from, if known."),
     ];
 
     #[signature(
@@ -472,18 +475,18 @@ mod warn {
             let (file, location) = match w.source() {
                 Some(s) => (
                     s.file()
-                        .map(|f| f.to_string_lossy().to_string())
-                        .unwrap_or_default(),
-                    format!("{}-{}", s.location().start, s.location().end),
+                        .map(|f| Value::from(f.to_string_lossy().to_string()))
+                        .unwrap_or(Value::Empty),
+                    Value::from(format!("{}-{}", s.location().start, s.location().end)),
                 ),
-                None => (String::new(), String::new()),
+                None => (Value::Empty, Value::Empty),
             };
             output.send(Row::new(vec![
                 Value::Time(w.timestamp()),
-                Value::from(w.command().clone().unwrap_or_default()),
+                w.command().clone().map(Value::from).unwrap_or(Value::Empty),
                 Value::from(w.message()),
-                Value::from(file),
-                Value::from(location),
+                file,
+                location,
             ]))?;
         }
         Ok(())

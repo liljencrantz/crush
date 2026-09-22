@@ -368,7 +368,23 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
 
     let root: Item = syn::parse2(input).expect("Invalid syntax tree");
 
-    let mut long_description = metadata.long_description;
+    // The `long_help` text is assembled at runtime (inside the generated `create_command()`,
+    // not at macro-expansion time) because an argument's type -- shown in its bullet whenever
+    // it has no default value -- must come from the real `ValueType`'s own `Display` impl
+    // (see `format!(" ({})", (#crush_internal_type).to_string())` below) rather than a
+    // hand-duplicated compile-time string, which has drifted from the real type before (e.g.
+    // the `Number` synopsis's hardcoded "one_of $float $integer" vs. the real declared
+    // `Integer, Float` order). `section_stmts` accumulates the Rust statements that push each
+    // section's text into a local `_sections: Vec<String>` at runtime; `has_content` mirrors
+    // that Vec's emptiness at compile time, since which sections exist -- just not their
+    // bullets' exact text -- is fully known at macro-expansion time.
+    let mut section_stmts = TokenStream::new();
+    let mut has_content = false;
+    if !metadata.long_description.is_empty() {
+        let text = Literal::string(&metadata.long_description.join("\n"));
+        section_stmts.extend(quote! { _sections.push(#text.to_string()); });
+        has_content = true;
+    }
     let mut signature = vec![metadata.name.to_string()];
     let output = metadata
         .output
@@ -458,30 +474,54 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                     named_matchers.extend(mappings);
                 }
 
-                let default_help =
-                    default_and_allowed_as_markdown(&default_value, &type_data.allowed_values);
-
-                if let Some(description) = description {
+                if let Some(description) = &description {
                     if !had_field_description {
-                        if !long_description.is_empty() {
-                            long_description.push("".to_string());
+                        if has_content {
+                            section_stmts.extend(quote! { _sections.push("".to_string()); });
                         }
-                        long_description
-                            .push("## Input signature".to_string());
-                        long_description
-                            .push("".to_string());
-                        long_description
-                            .push("This command accepts the following arguments:".to_string());
-                        long_description.push("".to_string());
+                        section_stmts.extend(quote! {
+                            _sections.push("## Input signature".to_string());
+                            _sections.push("".to_string());
+                            _sections.push("This command accepts the following arguments:".to_string());
+                            _sections.push("".to_string());
+                        });
+                        has_content = true;
                         had_field_description = true;
                     }
-                    let bullet_name = type_data.bullet_name.unwrap_or_else(|| unraw(name));
-                    long_description.push(format!(
-                        "* `{}`{} {}",
-                        bullet_name,
-                        default_help,
-                        description
-                    ));
+                    let bullet_name = type_data
+                        .bullet_name
+                        .clone()
+                        .unwrap_or_else(|| unraw(name));
+                    let bullet_name_lit = Literal::string(&bullet_name);
+                    let description_lit = Literal::string(description);
+                    // Borrowed, not moved -- `type_data.crush_internal_type` is moved into
+                    // `crush_internal_type` further down, once this bullet is done with it.
+                    let internal_type_ref = &type_data.crush_internal_type;
+
+                    // The type is only shown when there's no default -- a defaulted argument's
+                    // bullet already communicates its shape via the default value itself (e.g.
+                    // `(default: 5)`), so adding the type too would be redundant.
+                    let type_and_default: TokenStream = match (&default_value, &type_data.allowed_values) {
+                        (Some(_), _) => {
+                            let markdown = Literal::string(&default_and_allowed_as_markdown(
+                                &default_value,
+                                &type_data.allowed_values,
+                            ));
+                            quote! { #markdown.to_string() }
+                        }
+                        (None, Some(a)) => {
+                            let allowed_markdown =
+                                Literal::string(&format!(", allowed: {}", token_trees_to_markdown(a)));
+                            quote! { format!(" ({}{})", (#internal_type_ref).to_string(), #allowed_markdown) }
+                        }
+                        (None, None) => {
+                            quote! { format!(" ({})", (#internal_type_ref).to_string()) }
+                        }
+                    };
+
+                    section_stmts.extend(quote! {
+                        _sections.push(format!("* `{}`{} {}", #bullet_name_lit, #type_and_default, #description_lit));
+                    });
                 }
 
                 if !had_unnamed_target || default_value.is_some() {
@@ -537,29 +577,28 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
             }
 
             if !metadata.example.is_empty() {
-                if !long_description.is_empty() {
-                    long_description.push("".to_string());
+                if has_content {
+                    section_stmts.extend(quote! { _sections.push("".to_string()); });
                 }
-                long_description.push("# Examples".to_string());
-                long_description.push("".to_string());
-                long_description.append(
-                    &mut metadata
-                        .example
-                        .iter()
-                        .map(|e| format!("    {}", e))
-                        .collect::<Vec<_>>(),
-                );
+                let mut example_lines = vec!["# Examples".to_string(), "".to_string()];
+                example_lines.extend(metadata.example.iter().map(|e| format!("    {}", e)));
+                let text = Literal::string(&example_lines.join("\n"));
+                section_stmts.extend(quote! { _sections.push(#text.to_string()); });
+                has_content = true;
             }
 
             let signature_literal = Literal::string(&generate_signature(&metadata.path, signature));
 
-            let long_description = if !long_description.is_empty() {
-                let mut s = "".to_string();
-                s.push_str(&long_description.join("\n"));
-                let text = Literal::string(&s);
-                quote! {Some(#text) }
+            let long_description = if has_content {
+                quote! {
+                    Some({
+                        let mut _sections: Vec<String> = Vec::new();
+                        #section_stmts
+                        _sections.join("\n")
+                    })
+                }
             } else {
-                quote! {None::<crate::lang::any_str::AnyStr>}
+                quote! {None::<String>}
             };
 
             let mut vec_stream = TokenStream::new();

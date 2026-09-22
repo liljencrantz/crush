@@ -1,3 +1,4 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command::{Command, CrushCommand};
@@ -20,6 +21,7 @@ use std::sync::OnceLock;
 #[signature(
     users.me,
     can_block = false,
+    output = Known(ValueType::Struct),
     short = "current user",
     example = "# Show my own uid",
     example = "users:me:uid",
@@ -35,7 +37,7 @@ fn me(context: CommandContext) -> CrushResult<()> {
 static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
     ColumnType::new("name", ValueType::String, "the username."),
     ColumnType::new("tty", ValueType::String, "the terminal the session is connected to."),
-    ColumnType::new("host", ValueType::String, "the remote host the session originated from, if known."),
+    ColumnType::new("host", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the remote host the session originated from, if known."),
     ColumnType::new("time", ValueType::Time, "when the session began."),
     ColumnType::new("pid", ValueType::Integer, "the id of the session's login process."),
 ];
@@ -57,7 +59,7 @@ fn current(context: CommandContext) -> CrushResult<()> {
         output.send(Row::new(vec![
             Value::from(l.user),
             Value::from(l.tty),
-            Value::from(l.host.unwrap_or_else(|| "".to_string())),
+            l.host.map(Value::from).unwrap_or(Value::Empty),
             Value::Time(l.time),
             Value::from(l.pid),
         ]))?;
@@ -211,6 +213,7 @@ fn list(context: CommandContext) -> CrushResult<()> {
 #[signature(
     users.__getitem__,
     can_block = false,
+    output = Known(ValueType::Struct),
     short = "find a user by name",
     example = "# Remove the file foo.txt as root",
     example = "users[root]:do {rm foo.txt}",

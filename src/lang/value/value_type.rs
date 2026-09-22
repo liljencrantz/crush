@@ -1,4 +1,5 @@
 use crate::builtins::types;
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::OutputType::Known;
 /// All the different types a value can have.
 use crate::lang::command::{Command, OutputType};
@@ -37,7 +38,7 @@ pub enum ValueType {
     BinaryInputStream,
     Binary,
     Type,
-    OneOf(Vec<ValueType>),
+    OneOf(AnySequence<ValueType>),
 }
 
 pub fn empty_methods() -> &'static OrderedMap<String, Command> {
@@ -59,11 +60,11 @@ impl ValueType {
         for vt in options {
             match vt {
                 ValueType::Any => return ValueType::Any,
-                ValueType::OneOf(mut vt) => res.append(&mut vt),
+                ValueType::OneOf(vt) => res.extend(vt.as_slice().iter().cloned()),
                 _ => res.push(vt),
             }
         }
-        ValueType::Any
+        ValueType::OneOf(AnySequence::Vec(res))
     }
 
     pub fn fields(&self) -> &OrderedMap<String, Command> {
@@ -131,12 +132,12 @@ impl ValueType {
                 ValueType::Dict(Box::from(k.materialize()?), Box::from(v.materialize()?))
             }
 
-            ValueType::OneOf(types) => ValueType::OneOf(
+            ValueType::OneOf(types) => ValueType::OneOf(AnySequence::Vec(
                 types
                     .iter()
                     .map(|t| t.materialize())
                     .collect::<CrushResult<Vec<_>>>()?,
-            ),
+            )),
         })
     }
 

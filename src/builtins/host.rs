@@ -1,3 +1,4 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::data::table::ColumnFormat;
@@ -43,17 +44,17 @@ fn uptime(context: CommandContext) -> CrushResult<()> {
 }
 
 static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
-    ColumnType::new("vendor", ValueType::String, "the battery's manufacturer."),
-    ColumnType::new("model", ValueType::String, "the battery's model name."),
+    ColumnType::new("vendor", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the battery's manufacturer, if known."),
+    ColumnType::new("model", ValueType::OneOf(AnySequence::Slice(&[ValueType::String, ValueType::Empty])), "the battery's model name, if known."),
     ColumnType::new("technology", ValueType::String, "the battery's chemistry, e.g. lithium-ion."),
-    ColumnType::new("cycle_count", ValueType::Integer, "the number of charge cycles the battery has gone through."),
-    ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::Float, "the battery's current temperature."),
+    ColumnType::new("cycle_count", ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "the number of charge cycles the battery has gone through, if known."),
+    ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::OneOf(AnySequence::Slice(&[ValueType::Float, ValueType::Empty])), "the battery's current temperature, if known."),
     ColumnType::new("voltage", ValueType::Float, "the battery's current voltage."),
     ColumnType::new_with_format("health", ColumnFormat::Percentage, ValueType::Float, "the battery's remaining capacity relative to when it was new."),
     ColumnType::new("state", ValueType::String, "the battery's current charging state, e.g. charging or discharging."),
     ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float, "the battery's current charge level."),
-    ColumnType::new("time_to_full", ValueType::Duration, "how long until the battery is fully charged."),
-    ColumnType::new("time_to_empty", ValueType::Duration, "how long until the battery is fully depleted."),
+    ColumnType::new("time_to_full", ValueType::OneOf(AnySequence::Slice(&[ValueType::Duration, ValueType::Empty])), "how long until the battery is fully charged, if known."),
+    ColumnType::new("time_to_empty", ValueType::OneOf(AnySequence::Slice(&[ValueType::Duration, ValueType::Empty])), "how long until the battery is fully depleted, if known."),
 ];
 
 #[signature(
@@ -63,9 +64,9 @@ static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
     short = "List all batteries in the system and their status")]
 struct Battery {}
 
-fn time_to_duration(tm: Option<battery::units::Time>) -> Duration {
-    tm.map(|t| Duration::seconds(t.value as i64))
-        .unwrap_or(Duration::seconds(0))
+fn time_to_duration(tm: Option<battery::units::Time>) -> Value {
+    tm.map(|t| Value::from(Duration::seconds(t.value as i64)))
+        .unwrap_or(Value::Empty)
 }
 
 fn battery(context: CommandContext) -> CrushResult<()> {
@@ -74,17 +75,17 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     for battery in manager.batteries()? {
         let battery = battery?;
         output.send(Row::new(vec![
-            Value::from(battery.vendor().unwrap_or("")),
-            Value::from(battery.model().unwrap_or("")),
+            battery.vendor().map(Value::from).unwrap_or(Value::Empty),
+            battery.model().map(Value::from).unwrap_or(Value::Empty),
             Value::from(battery.technology().to_string()),
-            Value::from(battery.cycle_count().unwrap_or(0)),
-            Value::from(battery.temperature().map(|t| t.value as f64).unwrap_or(0.0)),
+            battery.cycle_count().map(Value::from).unwrap_or(Value::Empty),
+            battery.temperature().map(|t| Value::from(t.value as f64)).unwrap_or(Value::Empty),
             Value::from(battery.voltage().value as f64),
             Value::from(battery.state_of_health().value as f64),
             Value::from(battery.state().to_string()),
             Value::from(battery.state_of_charge().value as f64),
-            Value::from(time_to_duration(battery.time_to_full())),
-            Value::from(time_to_duration(battery.time_to_empty())),
+            time_to_duration(battery.time_to_full()),
+            time_to_duration(battery.time_to_empty()),
         ]))?;
     }
     Ok(())
@@ -197,7 +198,7 @@ mod cpu {
 
 static PROCS_OUTPUT_TYPE: [ColumnType; 7] = [
     ColumnType::new("pid", ValueType::Integer, "the process id."),
-    ColumnType::new("ppid", ValueType::Integer, "the parent process's id."),
+    ColumnType::new("ppid", ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "the parent process's id, if known."),
     ColumnType::new("user", ValueType::String, "the name of the user running the process."),
     ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "the process's resident set size, i.e. physical memory in use."),
     ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "the process's virtual memory size."),
@@ -223,7 +224,7 @@ fn procs(context: CommandContext) -> CrushResult<()> {
         if let None = proc.thread_kind() {
             output.send(Row::new(vec![
                 Value::from(pid.as_u32()),
-                Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
+                proc.parent().map(|i| Value::from(i.as_u32())).unwrap_or(Value::Empty),
                 proc.user_id()
                     .and_then(|i| users.get(i))
                     .map(|s| Value::from(s))
@@ -333,7 +334,7 @@ mod linux {
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 7] = [
         ColumnType::new("tid", ValueType::Integer, "the thread id."),
-        ColumnType::new("pid", ValueType::Integer, "the id of the process this thread belongs to."),
+        ColumnType::new("pid", ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "the id of the process this thread belongs to, if known."),
         ColumnType::new("user", ValueType::String, "the name of the user running the thread's process."),
         ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "the thread's resident set size, i.e. physical memory in use."),
         ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "the thread's virtual memory size."),
@@ -359,7 +360,7 @@ mod linux {
             if proc.thread_kind().is_some() {
                 output.send(Row::new(vec![
                     Value::from(pid.as_u32()),
-                    Value::from(proc.parent().map(|i| i.as_u32()).unwrap_or(1u32)),
+                    proc.parent().map(|i| Value::from(i.as_u32())).unwrap_or(Value::Empty),
                     proc.user_id()
                         .and_then(|uid| users.get(uid))
                         .map(|s| Value::from(s))

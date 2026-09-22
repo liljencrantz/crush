@@ -140,22 +140,22 @@ impl SimpleSignature {
             SimpleSignature::PathBuf => quote! {crate::lang::value::ValueType::File},
             SimpleSignature::Scope => quote! {crate::lang::value::ValueType::Scope},
             SimpleSignature::BinaryInput => quote! {crate::lang::value::ValueType::OneOf(
-                vec![
+                crate::lang::any_sequence::AnySequence::Slice(&[
                     crate::lang::value::ValueType::File,
                     crate::lang::value::ValueType::Glob,
                     crate::lang::value::ValueType::Regex,
                     crate::lang::value::ValueType::String,
                     crate::lang::value::ValueType::Binary,
                     crate::lang::value::ValueType::BinaryInputStream,
-                ]
+                ])
             )},
             SimpleSignature::Files => quote! {crate::lang::value::ValueType::OneOf(
-                vec![
+                crate::lang::any_sequence::AnySequence::Slice(&[
                     crate::lang::value::ValueType::String,
                     crate::lang::value::ValueType::File,
                     crate::lang::value::ValueType::Glob,
                     crate::lang::value::ValueType::Regex,
-                ]
+                ])
             )},
         }
     }

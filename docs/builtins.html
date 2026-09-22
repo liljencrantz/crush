@@ -383,9 +383,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>left</code> the left side of the comparison.</p>
+<li><p><code>left</code> (any) the left side of the comparison.</p>
 </li>
-<li><p><code>right</code> the right side of the comparison.</p>
+<li><p><code>right</code> (any) the right side of the comparison.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -403,9 +403,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>left</code> the left side of the comparison.</p>
+<li><p><code>left</code> (any) the left side of the comparison.</p>
 </li>
-<li><p><code>right</code> the right side of the comparison.</p>
+<li><p><code>right</code> (any) the right side of the comparison.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -423,9 +423,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>left</code> the left side of the comparison.</p>
+<li><p><code>left</code> (any) the left side of the comparison.</p>
 </li>
-<li><p><code>right</code> the right side of the comparison.</p>
+<li><p><code>right</code> (any) the right side of the comparison.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -443,9 +443,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>left</code> the left side of the comparison.</p>
+<li><p><code>left</code> (any) the left side of the comparison.</p>
 </li>
-<li><p><code>right</code> the right side of the comparison.</p>
+<li><p><code>right</code> (any) the right side of the comparison.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -463,9 +463,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>left</code> the left side of the comparison.</p>
+<li><p><code>left</code> (any) the left side of the comparison.</p>
 </li>
-<li><p><code>right</code> the right side of the comparison.</p>
+<li><p><code>right</code> (any) the right side of the comparison.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -483,9 +483,9 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>left</code> the left side of the comparison.</p>
+<li><p><code>left</code> (any) the left side of the comparison.</p>
 </li>
-<li><p><code>right</code> the right side of the comparison.</p>
+<li><p><code>right</code> (any) the right side of the comparison.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -503,7 +503,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>argument</code> the value to negate.</p>
+<li><p><code>argument</code> (bool) the value to negate.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -579,7 +579,7 @@ is found to be true, <a href="#cond-or"><code>or</code></a> will not evaluate an
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>condition</code> the condition to check.</p>
+<li><p><code>condition</code> (bool) the condition to check.</p>
 </li>
 <li><p><code>message</code> (default: <code>&quot;Assertion failed&quot;</code>) the message to show if the condition is false.</p>
 </li>
@@ -602,7 +602,7 @@ foreground the way <a href="#control-fg"><code>fg</code></a> would.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>job</code> the job id of the paused job to resume in the background.</p>
+<li><p><code>job</code> (integer) the job id of the paused job to resume in the background.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -625,11 +625,11 @@ foreground the way <a href="#control-fg"><code>fg</code></a> would.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>command</code> The file path to the command to execute</p>
+<li><p><code>command</code> (file) The file path to the command to execute</p>
 </li>
-<li><p><code>&lt;any&gt;=$any</code> Switches to pass in to the command. The name will be prepended with a double dash &#39;--&#39;, unless it is a single character name, in which case a single dash &#39;-&#39; will be prepended</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) Switches to pass in to the command. The name will be prepended with a double dash &#39;--&#39;, unless it is a single character name, in which case a single dash &#39;-&#39; will be prepended</p>
 </li>
-<li><p><code>arguments</code> Arguments to pass in to the command</p>
+<li><p><code>arguments</code> (list $any) Arguments to pass in to the command</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -653,7 +653,7 @@ eventual result for later retrieval; <a href="#control-fg"><code>fg</code></a> w
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>job</code> the job id of the background job to put into the foreground.</p>
+<li><p><code>job</code> (integer) the job id of the background job to put into the foreground.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -676,9 +676,9 @@ eventual result for later retrieval; <a href="#control-fg"><code>fg</code></a> w
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$any</code> the name to bind each element to, as <code>name=stream</code> (exactly one pair).</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) the name to bind each element to, as <code>name=stream</code> (exactly one pair).</p>
 </li>
-<li><p><code>body</code> the block to execute once per element, with the bound name available as a variable.</p>
+<li><p><code>body</code> (command) the block to execute once per element, with the bound name available as a variable.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -718,7 +718,7 @@ value instead. With neither, <a href="#control-help"><code>help</code></a> shows
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>topic</code> the topic you want help on.</p>
+<li><p><code>topic</code> (any) the topic you want help on.</p>
 </li>
 <li><p><code>format</code> (default: <code>terminal</code>, allowed: <code>html</code>, <code>markdown</code>, <code>terminal</code>) output format. The default, <code>terminal</code>, will render the help directly into the terminal. The other formats return a string containing either an html fragment or markdown.</p>
 </li>
@@ -739,11 +739,11 @@ value instead. With neither, <a href="#control-help"><code>help</code></a> shows
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>condition</code> the condition to filter on.</p>
+<li><p><code>condition</code> (bool) the condition to filter on.</p>
 </li>
-<li><p><code>true_clause</code> the command to invoke if the condition is true.</p>
+<li><p><code>true_clause</code> (command) the command to invoke if the condition is true.</p>
 </li>
-<li><p><code>false_clause</code> the (optional) command to invoke if the condition is false.</p>
+<li><p><code>false_clause</code> (command) the (optional) command to invoke if the condition is false.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -763,7 +763,7 @@ value instead. With neither, <a href="#control-help"><code>help</code></a> shows
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>body</code> the command to repeatedly invoke.</p>
+<li><p><code>body</code> (command) the command to repeatedly invoke.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -809,9 +809,9 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>subject</code> the value to match against.</p>
+<li><p><code>subject</code> (any) the value to match against.</p>
 </li>
-<li><p><code>body</code> a block containing the match&#39;s arms.</p>
+<li><p><code>body</code> (command) a block containing the match&#39;s arms.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -838,7 +838,7 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>value</code> the value to return</p>
+<li><p><code>value</code> (any) the value to return</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -871,11 +871,11 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>interval</code> the interval between heartbeats.</p>
+<li><p><code>interval</code> (duration) the interval between heartbeats.</p>
 </li>
-<li><p><code>initial_delay</code> the delay for the first heartbeat. If no initial delay is specified, use the interval parameter.</p>
+<li><p><code>initial_delay</code> (duration) the delay for the first heartbeat. If no initial delay is specified, use the interval parameter.</p>
 </li>
-<li><p><code>command</code> a command to run at each heartbeat.</p>
+<li><p><code>command</code> (command) a command to run at each heartbeat.</p>
 </li>
 <li><p><code>schedule_at_fixed_rate</code> (default: <code>false</code>) if heart beat delivery starts blocking, catch up by sending more heartbeats afterwards.</p>
 </li>
@@ -896,11 +896,13 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>duration</code> the time to sleep for.</p>
+<li><p><code>duration</code> (duration) the time to sleep for.</p>
 </li>
 </ul>
 <h1>Examples</h1>
 <pre><code><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-operator">$(</span><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span><span class="tok-operator">)</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-source">
@@ -910,7 +912,7 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to source</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to source</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -928,9 +930,9 @@ catch its own error categories.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>error_type</code> the error&#39;s type, e.g. &quot;NotFound&quot;. Visible to a catch block as <code>$e:type</code>.</p>
+<li><p><code>error_type</code> (string) the error&#39;s type, e.g. &quot;NotFound&quot;. Visible to a catch block as <code>$e:type</code>.</p>
 </li>
-<li><p><code>message</code> the error&#39;s message. Visible to a catch block as <code>$e:message</code>.</p>
+<li><p><code>message</code> (string) the error&#39;s message. Visible to a catch block as <code>$e:message</code>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -946,9 +948,9 @@ catch its own error categories.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>it</code> the command to time.</p>
+<li><p><code>it</code> (command) the command to time.</p>
 </li>
-<li><p><code>number</code> the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds.</p>
+<li><p><code>number</code> (integer) the number of runs in each repeat. If unspecified, timeit will repeat enough times for each batch to take roughly 0.4 seconds.</p>
 </li>
 <li><p><code>repeat</code> (default: <code>5</code>) repeat count. The average speed in the fastest repeat will be returned.</p>
 </li>
@@ -975,9 +977,9 @@ exiting cleanly, even though <a href="#control-timeout"><code>timeout</code></a>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>duration</code> how long to let the command run before terminating it.</p>
+<li><p><code>duration</code> (duration) how long to let the command run before terminating it.</p>
 </li>
-<li><p><code>command</code> the command to run.</p>
+<li><p><code>command</code> (command) the command to run.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -991,7 +993,7 @@ exiting cleanly, even though <a href="#control-timeout"><code>timeout</code></a>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>it</code> the command to time.</p>
+<li><p><code>it</code> (command) the command to time.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1021,9 +1023,9 @@ after <a href="#control-try"><code>try</code></a>.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>body</code> the command to attempt.</p>
+<li><p><code>body</code> (command) the command to attempt.</p>
 </li>
-<li><p><code>catches</code> zero or more <code>catch &lt;filter&gt;? {...}</code> clauses: the literal word <code>catch</code>, an optional filter pattern, and a block to run if that filter matches the error&#39;s <a href="#types-type"><code>type</code></a> (or always, if no filter is given).</p>
+<li><p><code>catches</code> (list $any) zero or more <code>catch &lt;filter&gt;? {...}</code> clauses: the literal word <code>catch</code>, an optional filter pattern, and a block to run if that filter matches the error&#39;s <a href="#types-type"><code>type</code></a> (or always, if no filter is given).</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1059,7 +1061,7 @@ after <a href="#control-try"><code>try</code></a>.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>command</code> the name of the command to find.</p>
+<li><p><code>command</code> (string) the name of the command to find.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1077,9 +1079,9 @@ after <a href="#control-try"><code>try</code></a>.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>condition</code> the condition.</p>
+<li><p><code>condition</code> (command) the condition.</p>
 </li>
-<li><p><code>body</code> the command to invoke as long as the condition is true.</p>
+<li><p><code>body</code> (command) the command to invoke as long as the condition is true.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1133,9 +1135,9 @@ set, in which case those jobs are terminated first.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>idx</code> the command&#39;s position in the history, counting back from the most recent.</p>
+<li><p><code>idx</code> (integer) the command&#39;s position in the history, counting back from the most recent.</p>
 </li>
-<li><p><a href="#types-command"><code>command</code></a> the command line as it was entered.</p>
+<li><p><a href="#types-command"><code>command</code></a> (string) the command line as it was entered.</p>
 </li>
 </ul>
 </div>
@@ -1148,15 +1150,15 @@ set, in which case those jobs are terminated first.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>id</code> the job&#39;s id.</p>
+<li><p><code>id</code> (integer) the job&#39;s id.</p>
 </li>
-<li><p><code>parent</code> the id of the job this job is nested inside, if any.</p>
+<li><p><code>parent</code> (one_of $integer $empty) the id of the job this job is nested inside, if any.</p>
 </li>
-<li><p><a href="#types-definition"><code>definition</code></a> the job&#39;s definition, i.e. the invocation that started it, as source text.</p>
+<li><p><a href="#types-definition"><code>definition</code></a> (string) the job&#39;s definition, i.e. the invocation that started it, as source text.</p>
 </li>
-<li><p><a href="#types-type"><code>type</code></a> whether the job is running interactively or in the background.</p>
+<li><p><a href="#types-type"><code>type</code></a> (string) whether the job is running interactively or in the background.</p>
 </li>
-<li><p><code>status</code> whether the job is running, paused, or terminated.</p>
+<li><p><code>status</code> (string) whether the job is running, paused, or terminated.</p>
 </li>
 </ul>
 </div>
@@ -1177,7 +1179,7 @@ set, in which case those jobs are terminated first.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>jid</code> The job id for the job to pause</p>
+<li><p><code>jid</code> (integer) The job id for the job to pause</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1191,7 +1193,7 @@ set, in which case those jobs are terminated first.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>jid</code> The job id for the job to resume</p>
+<li><p><code>jid</code> (integer) The job id for the job to resume</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1216,7 +1218,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>jid</code> The job id for the job to terminate</p>
+<li><p><code>jid</code> (integer) The job id for the job to terminate</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1241,13 +1243,13 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>job_id</code> the id of the job this thread is running as part of.</p>
+<li><p><code>job_id</code> (integer) the id of the job this thread is running as part of.</p>
 </li>
-<li><p><code>command_id</code> the id of the specific command invocation this thread is running.</p>
+<li><p><code>command_id</code> (integer) the id of the specific command invocation this thread is running.</p>
 </li>
-<li><p><code>created</code> when this thread was created.</p>
+<li><p><code>created</code> (time) when this thread was created.</p>
 </li>
-<li><p><code>name</code> the thread&#39;s name.</p>
+<li><p><code>name</code> (string) the thread&#39;s name.</p>
 </li>
 </ul>
 </div>
@@ -1274,7 +1276,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>name</code> the byte unit&#39;s name.</p>
+<li><p><code>name</code> (string) the byte unit&#39;s name.</p>
 </li>
 </ul>
 </div>
@@ -1286,7 +1288,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>byte_unit</code> the new byte unit.</p>
+<li><p><code>byte_unit</code> (string) the new byte unit.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1321,7 +1323,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>name</code> the locale&#39;s name.</p>
+<li><p><code>name</code> (string) the locale&#39;s name.</p>
 </li>
 </ul>
 </div>
@@ -1333,7 +1335,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>locale</code> the new locale.</p>
+<li><p><code>locale</code> (string) the new locale.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1351,6 +1353,8 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h4 class="cmd-title"><code>crush:prompt:get</code></h4>
 <div class="cmd-doc"><pre><code><a href="#crush-prompt-get"><span class="tok-command">crush:prompt:get</span></a></code></pre>
 <p>Get the current prompt command.</p>
+<h2>Output signature</h2>
+<pre><code><a href="#types-one_of"><span class="tok-command">one_of</span></a> <a href="#types-command"><span class="tok-identifier">$command</span></a> <a href="#types-empty"><span class="tok-identifier">$empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="crush-prompt-set">
@@ -1360,7 +1364,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>prompt</code> The new command to invoke in order to produce a prompt</p>
+<li><p><code>prompt</code> (command) The new command to invoke in order to produce a prompt</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1378,6 +1382,8 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h4 class="cmd-title"><code>crush:title:get</code></h4>
 <div class="cmd-doc"><pre><code><a href="#crush-title-get"><span class="tok-command">crush:title:get</span></a></code></pre>
 <p>Get the current title command</p>
+<h2>Output signature</h2>
+<pre><code><a href="#types-one_of"><span class="tok-command">one_of</span></a> <a href="#types-command"><span class="tok-identifier">$command</span></a> <a href="#types-empty"><span class="tok-identifier">$empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="crush-title-set">
@@ -1387,7 +1393,7 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>title</code> The new command to invoke in order to produce a title</p>
+<li><p><code>title</code> (command) The new command to invoke in order to produce a title</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1413,15 +1419,15 @@ mode, they are also printed as soon as they happen, unless disabled (see
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>timestamp</code> when the warning was recorded.</p>
+<li><p><code>timestamp</code> (time) when the warning was recorded.</p>
 </li>
-<li><p><a href="#types-command"><code>command</code></a> the name of the command that reported the warning, if known.</p>
+<li><p><a href="#types-command"><code>command</code></a> (one_of $string $empty) the name of the command that reported the warning, if known.</p>
 </li>
-<li><p><code>message</code> the warning message.</p>
+<li><p><code>message</code> (string) the warning message.</p>
 </li>
-<li><p><a href="#types-file"><code>file</code></a> the source file the warning was reported from, if known.</p>
+<li><p><a href="#types-file"><code>file</code></a> (one_of $string $empty) the source file the warning was reported from, if known.</p>
 </li>
-<li><p><code>location</code> the location within the source file the warning was reported from, if known.</p>
+<li><p><code>location</code> (one_of $string $empty) the location within the source file the warning was reported from, if known.</p>
 </li>
 </ul>
 </div>
@@ -1437,7 +1443,7 @@ wants to flag something without stopping.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>message</code> the warning message to report.</p>
+<li><p><code>message</code> (string) the warning message to report.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1468,7 +1474,7 @@ wants to flag something without stopping.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>limit</code> the new warning limit.</p>
+<li><p><code>limit</code> (integer) the new warning limit.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1500,7 +1506,7 @@ immediately. Defaults to <code>true</code>.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>print</code> whether to print warnings to the screen as they happen.</p>
+<li><p><code>print</code> (bool) whether to print warnings to the screen as they happen.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -1571,13 +1577,13 @@ unqualified name.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> DNS record to look up.</p>
+<li><p><code>name</code> (string) DNS record to look up.</p>
 </li>
 <li><p><code>record_type</code> (default: <code>A</code>, allowed: <code>A</code>, <code>AAAA</code>, <code>CNAME</code>, <code>MX</code>, <code>NS</code>, <code>PTR</code>, <code>SOA</code>, <code>SRV</code>, <code>TXT</code>) DNS record type.</p>
 </li>
 <li><p><code>tcp</code> (default: <code>false</code>) use TCP as the transport instead of UDP.</p>
 </li>
-<li><p><code>nameserver</code> the nameserver to talk to. If none is given, use the nameservers configured in <code>/etc/resolv.conf</code>.</p>
+<li><p><code>nameserver</code> (string) the nameserver to talk to. If none is given, use the nameservers configured in <code>/etc/resolv.conf</code>.</p>
 </li>
 <li><p><code>port</code> (default: <code>53</code>) port to talk to the nameserver on.</p>
 </li>
@@ -1607,11 +1613,11 @@ contain one.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>address</code> IP address to look up. Can be either IPv4 or IPv6.</p>
+<li><p><code>address</code> (string) IP address to look up. Can be either IPv4 or IPv6.</p>
 </li>
 <li><p><code>tcp</code> (default: <code>false</code>) Use TCP connection instead of UDP</p>
 </li>
-<li><p><code>nameserver</code> Override the nameserver to talk to</p>
+<li><p><code>nameserver</code> (string) Override the nameserver to talk to</p>
 </li>
 <li><p><code>port</code> (default: <code>53</code>) DNS port</p>
 </li>
@@ -1648,7 +1654,7 @@ asked to resolve plain <a href="#host"><code>host</code></a>); <a href="#dns-que
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>destination</code> the new working directory.</p>
+<li><p><code>destination</code> (one_of $string $file $glob $re) the new working directory.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -1674,7 +1680,7 @@ the <code>--recurse</code> switch.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>directory</code> directories and files to list</p>
+<li><p><code>directory</code> (list $(one_of $string $file $glob $re)) directories and files to list</p>
 </li>
 <li><p><code>recurse</code> (default: <code>false</code>) recurse into subdirectories</p>
 </li>
@@ -1707,39 +1713,22 @@ the <code>--recurse</code> switch.</p>
 <h3 class="cmd-title"><code>fs:mounts</code></h3>
 <div class="cmd-doc"><pre><code><a href="#fs-mounts"><span class="tok-command">fs:mounts</span></a></code></pre>
 <p>List filesystem mount points</p>
-<p><a href="#fs-mounts"><code>mounts</code></a> outputs the following information about each mount point:</p>
-<ul>
-<li><p><code>size</code> size in bytes.</p>
-</li>
-<li><p><code>available</code> available space in bytes.</p>
-</li>
-<li><p><a href="#fs-usage"><code>usage</code></a> usage percentage.</p>
-</li>
-<li><p><code>format</code> filesystem type (ntfs, ext4, etc.).</p>
-</li>
-<li><p><code>readonly</code> whether the filesystem is mounted readonly.</p>
-</li>
-<li><p><code>name</code> name assigned to this mountpoint, if any.</p>
-</li>
-<li><p><code>path</code> the mount location.</p>
-</li>
-</ul>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>size</code> size in bytes.</p>
+<li><p><code>size</code> (one_of $integer $empty) size in bytes, if known.</p>
 </li>
-<li><p><code>available</code> available space in bytes.</p>
+<li><p><code>available</code> (one_of $integer $empty) available space in bytes, if known.</p>
 </li>
-<li><p><a href="#fs-usage"><code>usage</code></a> usage percentage.</p>
+<li><p><a href="#fs-usage"><code>usage</code></a> (one_of $float $empty) usage percentage, if known.</p>
 </li>
-<li><p><code>format</code> filesystem type (ntfs, ext4, etc.).</p>
+<li><p><code>format</code> (one_of $string $empty) filesystem type (ntfs, ext4, etc.), if known.</p>
 </li>
-<li><p><code>readonly</code> whether the filesystem is mounted readonly.</p>
+<li><p><code>readonly</code> (one_of $bool $empty) whether the filesystem is mounted readonly, if known.</p>
 </li>
-<li><p><code>name</code> name assigned to this mountpoint, if any.</p>
+<li><p><code>name</code> (one_of $string $empty) name assigned to this mountpoint, if any.</p>
 </li>
-<li><p><code>path</code> the mount location.</p>
+<li><p><code>path</code> (file) the mount location.</p>
 </li>
 </ul>
 </div>
@@ -1788,7 +1777,7 @@ the <code>--recurse</code> switch.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>destination</code> the files to show the status for.</p>
+<li><p><code>destination</code> (list $(one_of $string $file $glob $re)) the files to show the status for.</p>
 </li>
 <li><p><code>symlink</code> (default: <code>false</code>) stat symlinks, not the files they point to.</p>
 </li>
@@ -1796,41 +1785,41 @@ the <code>--recurse</code> switch.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>is_socket</code> true if the file is a Unix domain socket.</p>
+<li><p><code>is_socket</code> (bool) true if the file is a Unix domain socket.</p>
 </li>
-<li><p><code>is_symlink</code> true if the file is a symbolic link.</p>
+<li><p><code>is_symlink</code> (bool) true if the file is a symbolic link.</p>
 </li>
-<li><p><code>is_file</code> true if the file is a regular file.</p>
+<li><p><code>is_file</code> (bool) true if the file is a regular file.</p>
 </li>
-<li><p><code>is_block</code> true if the file is a block device.</p>
+<li><p><code>is_block</code> (bool) true if the file is a block device.</p>
 </li>
-<li><p><code>is_dir</code> true if the file is a directory.</p>
+<li><p><code>is_dir</code> (bool) true if the file is a directory.</p>
 </li>
-<li><p><code>is_char</code> true if the file is a character device.</p>
+<li><p><code>is_char</code> (bool) true if the file is a character device.</p>
 </li>
-<li><p><code>is_fifo</code> true if the file is a named pipe (FIFO).</p>
+<li><p><code>is_fifo</code> (bool) true if the file is a named pipe (FIFO).</p>
 </li>
-<li><p><code>inode</code> the file&#39;s inode number.</p>
+<li><p><code>inode</code> (integer) the file&#39;s inode number.</p>
 </li>
-<li><p><code>nlink</code> the number of hard links to the file.</p>
+<li><p><code>nlink</code> (integer) the number of hard links to the file.</p>
 </li>
-<li><p><code>uid</code> the id of the file&#39;s owning user.</p>
+<li><p><code>uid</code> (integer) the id of the file&#39;s owning user.</p>
 </li>
-<li><p><code>gid</code> the id of the file&#39;s owning group.</p>
+<li><p><code>gid</code> (integer) the id of the file&#39;s owning group.</p>
 </li>
-<li><p><code>size</code> the file&#39;s size in bytes.</p>
+<li><p><code>size</code> (integer) the file&#39;s size in bytes.</p>
 </li>
-<li><p><code>block_size</code> the size of the filesystem blocks the file is stored in.</p>
+<li><p><code>block_size</code> (integer) the size of the filesystem blocks the file is stored in.</p>
 </li>
-<li><p><code>blocks</code> the number of blocks allocated to the file.</p>
+<li><p><code>blocks</code> (integer) the number of blocks allocated to the file.</p>
 </li>
-<li><p><code>access_time</code> when the file was last accessed.</p>
+<li><p><code>access_time</code> (time) when the file was last accessed.</p>
 </li>
-<li><p><code>modification_time</code> when the file&#39;s contents were last modified.</p>
+<li><p><code>modification_time</code> (time) when the file&#39;s contents were last modified.</p>
 </li>
-<li><p><code>creation_time</code> when the file was created.</p>
+<li><p><code>creation_time</code> (time) when the file was created.</p>
 </li>
-<li><p><a href="#types-file"><code>file</code></a> the file this row describes.</p>
+<li><p><a href="#types-file"><code>file</code></a> (file) the file this row describes.</p>
 </li>
 </ul>
 </div>
@@ -1842,7 +1831,7 @@ the <code>--recurse</code> switch.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>directory</code> the files to calculate the recursive size of.</p>
+<li><p><code>directory</code> (list $(one_of $string $file $glob $re)) the files to calculate the recursive size of.</p>
 </li>
 <li><p><code>silent</code> (default: <code>false</code>) do not show directory sizes for subdirectories.</p>
 </li>
@@ -1852,11 +1841,11 @@ the <code>--recurse</code> switch.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>size</code> the recursive size of the file or directory, in bytes.</p>
+<li><p><code>size</code> (integer) the recursive size of the file or directory, in bytes.</p>
 </li>
-<li><p><code>blocks</code> the recursive number of blocks allocated to the file or directory.</p>
+<li><p><code>blocks</code> (integer) the recursive number of blocks allocated to the file or directory.</p>
 </li>
-<li><p><a href="#types-file"><code>file</code></a> the file or directory this row describes.</p>
+<li><p><a href="#types-file"><code>file</code></a> (file) the file or directory this row describes.</p>
 </li>
 </ul>
 </div>
@@ -1873,7 +1862,7 @@ granularity differs by platform.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>path</code> the path to watch.</p>
+<li><p><code>path</code> (one_of $string $file $glob $re) the path to watch.</p>
 </li>
 <li><p><code>recurse</code> (default: <code>false</code>) also watch subdirectories.</p>
 </li>
@@ -1883,11 +1872,11 @@ granularity differs by platform.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>path</code> the file or directory the change was observed on.</p>
+<li><p><code>path</code> (file) the file or directory the change was observed on.</p>
 </li>
-<li><p><code>kind</code> the kind of change, e.g. create, modify, or remove.</p>
+<li><p><code>kind</code> (string) the kind of change, e.g. create, modify, or remove.</p>
 </li>
-<li><p><code>timestamp</code> when the change was observed.</p>
+<li><p><code>timestamp</code> (time) when the change was observed.</p>
 </li>
 </ul>
 </div>
@@ -1922,9 +1911,9 @@ The grpc methods support tab completion of argument names. They also come with h
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>host</code> the host to connect to.</p>
+<li><p><code>host</code> (string) the host to connect to.</p>
 </li>
-<li><p><code>service</code> the service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use <code>*</code> to connect to all available services.</p>
+<li><p><code>service</code> (one_of $string $glob $re) the service to connect to on this host. This can be a string, a glob or a regular expression, in order to allow you to easily specify multiple services, e.g. use <code>*</code> to connect to all available services.</p>
 </li>
 <li><p><code>plaintext</code> (default: <code>false</code>) use plaintext instead of TLS to connect.</p>
 </li>
@@ -1958,27 +1947,27 @@ The grpc methods support tab completion of argument names. They also come with h
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>vendor</code> the battery&#39;s manufacturer.</p>
+<li><p><code>vendor</code> (one_of $string $empty) the battery&#39;s manufacturer, if known.</p>
 </li>
-<li><p><code>model</code> the battery&#39;s model name.</p>
+<li><p><code>model</code> (one_of $string $empty) the battery&#39;s model name, if known.</p>
 </li>
-<li><p><code>technology</code> the battery&#39;s chemistry, e.g. lithium-ion.</p>
+<li><p><code>technology</code> (string) the battery&#39;s chemistry, e.g. lithium-ion.</p>
 </li>
-<li><p><code>cycle_count</code> the number of charge cycles the battery has gone through.</p>
+<li><p><code>cycle_count</code> (one_of $integer $empty) the number of charge cycles the battery has gone through, if known.</p>
 </li>
-<li><p><code>temperature</code> the battery&#39;s current temperature.</p>
+<li><p><code>temperature</code> (one_of $float $empty) the battery&#39;s current temperature, if known.</p>
 </li>
-<li><p><code>voltage</code> the battery&#39;s current voltage.</p>
+<li><p><code>voltage</code> (float) the battery&#39;s current voltage.</p>
 </li>
-<li><p><code>health</code> the battery&#39;s remaining capacity relative to when it was new.</p>
+<li><p><code>health</code> (float) the battery&#39;s remaining capacity relative to when it was new.</p>
 </li>
-<li><p><code>state</code> the battery&#39;s current charging state, e.g. charging or discharging.</p>
+<li><p><code>state</code> (string) the battery&#39;s current charging state, e.g. charging or discharging.</p>
 </li>
-<li><p><code>charge</code> the battery&#39;s current charge level.</p>
+<li><p><code>charge</code> (float) the battery&#39;s current charge level.</p>
 </li>
-<li><p><code>time_to_full</code> how long until the battery is fully charged.</p>
+<li><p><code>time_to_full</code> (one_of $duration $empty) how long until the battery is fully charged, if known.</p>
 </li>
-<li><p><code>time_to_empty</code> how long until the battery is fully depleted.</p>
+<li><p><code>time_to_empty</code> (one_of $duration $empty) how long until the battery is fully depleted, if known.</p>
 </li>
 </ul>
 </div>
@@ -2020,19 +2009,19 @@ The grpc methods support tab completion of argument names. They also come with h
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>pid</code> the process id.</p>
+<li><p><code>pid</code> (integer) the process id.</p>
 </li>
-<li><p><code>ppid</code> the parent process&#39;s id.</p>
+<li><p><code>ppid</code> (one_of $integer $empty) the parent process&#39;s id, if known.</p>
 </li>
-<li><p><code>user</code> the name of the user running the process.</p>
+<li><p><code>user</code> (string) the name of the user running the process.</p>
 </li>
-<li><p><code>rss</code> the process&#39;s resident set size, i.e. physical memory in use.</p>
+<li><p><code>rss</code> (integer) the process&#39;s resident set size, i.e. physical memory in use.</p>
 </li>
-<li><p><code>vms</code> the process&#39;s virtual memory size.</p>
+<li><p><code>vms</code> (integer) the process&#39;s virtual memory size.</p>
 </li>
-<li><p><code>cpu</code> the total CPU time the process has used.</p>
+<li><p><code>cpu</code> (duration) the total CPU time the process has used.</p>
 </li>
-<li><p><code>name</code> the process&#39;s executable path, or its name if the path isn&#39;t known.</p>
+<li><p><code>name</code> (string) the process&#39;s executable path, or its name if the path isn&#39;t known.</p>
 </li>
 </ul>
 </div>
@@ -2048,7 +2037,7 @@ SIGCONT and SIGWINCH.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>pid</code> the id of the process to send to.</p>
+<li><p><code>pid</code> (list $integer) the id of the process to send to.</p>
 </li>
 <li><p><code>signal</code> (default: <code>SIGTERM</code>) the name of the signal to send.</p>
 </li>
@@ -2071,17 +2060,17 @@ SIGCONT and SIGWINCH.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>tid</code> the thread id.</p>
+<li><p><code>tid</code> (integer) the thread id.</p>
 </li>
-<li><p><code>pid</code> the id of the process this thread belongs to.</p>
+<li><p><code>pid</code> (integer) the id of the process this thread belongs to.</p>
 </li>
-<li><p><code>priority</code> the thread&#39;s scheduling priority.</p>
+<li><p><code>priority</code> (integer) the thread&#39;s scheduling priority.</p>
 </li>
-<li><p><code>user</code> the CPU time the thread has spent in user mode.</p>
+<li><p><code>user</code> (duration) the CPU time the thread has spent in user mode.</p>
 </li>
-<li><p><code>system</code> the CPU time the thread has spent in kernel mode.</p>
+<li><p><code>system</code> (duration) the CPU time the thread has spent in kernel mode.</p>
 </li>
-<li><p><code>name</code> the thread&#39;s name.</p>
+<li><p><code>name</code> (string) the thread&#39;s name.</p>
 </li>
 </ul>
 </div>
@@ -2165,7 +2154,7 @@ SIGCONT and SIGWINCH.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>values</code> the values to print.</p>
+<li><p><code>values</code> (list $any) the values to print.</p>
 </li>
 <li><p><code>raw</code> (default: <code>false</code>) do not escape control characters in string values.</p>
 </li>
@@ -2198,13 +2187,13 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>uri</code> URI to request</p>
+<li><p><code>uri</code> (string) URI to request</p>
 </li>
 <li><p><code>method</code> (default: <code>GET</code>, allowed: <code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>DELETE</code>, <code>HEAD</code>, <code>OPTIONS</code>, <code>CONNECT</code>, <code>PATCH</code>, <code>TRACE</code>) the HTTP method to use in this request.</p>
 </li>
-<li><p><code>form</code> form content, if any.</p>
+<li><p><code>form</code> (one_of $file $glob $re $string $binary $binary_stream) form content, if any.</p>
 </li>
-<li><p><code>header</code> HTTP headers, must be on the form &quot;key:value&quot;.</p>
+<li><p><code>header</code> (list $string) HTTP headers, must be on the form &quot;key:value&quot;.</p>
 </li>
 <li><p><code>timeout</code> (default: <code>5s</code>) connection timeout.</p>
 </li>
@@ -2223,7 +2212,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <ul>
 <li><p><code>prompt</code> (default: <code>&quot;crush# &quot;</code>) the prompt to show the user.</p>
 </li>
-<li><p><code>history</code> load and save history under specified name.</p>
+<li><p><code>history</code> (string) load and save history under specified name.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2251,7 +2240,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from. Read from input if no file is specified.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to read from. Read from input if no file is specified.</p>
 </li>
 <li><p><code>alphabet</code> (default: <code>standard</code>) base64 encoding style to use.</p>
 </li>
@@ -2272,7 +2261,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> the file to write to. Write to output if no file is specified.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) the file to write to. Write to output if no file is specified.</p>
 </li>
 <li><p><code>alphabet</code> (default: <code>standard</code>) base64 encoding style to use.</p>
 </li>
@@ -2299,7 +2288,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 </div>
@@ -2311,7 +2300,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 </div>
@@ -2330,15 +2319,15 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source. If unspecified, will read from input, which must be a binary or binary_stream.</p>
 </li>
-<li><p><code>&lt;any&gt;=$type</code> name and type of all columns.</p>
+<li><p><code>&lt;any&gt;=$type</code> (type) name and type of all columns.</p>
 </li>
 <li><p><code>separator</code> (default: <code>&#39;,&#39;</code>) column separator.</p>
 </li>
 <li><p><code>head</code> (default: <code>0</code>) skip this many lines of input from the beginning.</p>
 </li>
-<li><p><code>trim</code> trim this character from start and end of every value.</p>
+<li><p><code>trim</code> (string) trim this character from start and end of every value.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2360,7 +2349,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to read from (read from input if no file is specified).</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2377,7 +2366,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2401,7 +2390,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2422,7 +2411,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 <li><p><code>compact</code> (default: <code>false</code>) Disable line breaking and indentation.</p>
 </li>
@@ -2445,7 +2434,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to read from (read from input if no file is specified).</p>
 </li>
 <li><p><code>skip_empty_lines</code> (default: <code>false</code>) do not emit empty lines.</p>
 </li>
@@ -2455,7 +2444,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>line</code> one line of input.</p>
+<li><p><code>line</code> (string) one line of input.</p>
 </li>
 </ul>
 </div>
@@ -2467,7 +2456,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 </div>
@@ -2488,7 +2477,7 @@ decoded bytes aren&#39;t valid UTF-8.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>input</code> the percent-encoded string to decode. Reads a string from input if unspecified.</p>
+<li><p><code>input</code> (string) the percent-encoded string to decode. Reads a string from input if unspecified.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2510,7 +2499,7 @@ to one component of one.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>input</code> the string to percent-encode. Reads a string from input if unspecified.</p>
+<li><p><code>input</code> (string) the string to percent-encode. Reads a string from input if unspecified.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2534,7 +2523,7 @@ to one component of one.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2550,7 +2539,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2571,11 +2560,11 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to read from (read from input if no file is specified).</p>
 </li>
-<li><p><code>separator</code> characters to split on</p>
+<li><p><code>separator</code> (string) characters to split on</p>
 </li>
-<li><p><code>trim</code> characters to trim from start and end of each token.</p>
+<li><p><code>trim</code> (string) characters to trim from start and end of each token.</p>
 </li>
 <li><p><code>allow_empty</code> (default: <code>false</code>) allow empty tokens.</p>
 </li>
@@ -2598,7 +2587,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2620,7 +2609,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2642,7 +2631,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> the files to read from (read from input pipe if no file is specified).</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to read from (read from input pipe if no file is specified).</p>
 </li>
 </ul>
 </div>
@@ -2662,7 +2651,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>files</code> source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2683,7 +2672,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>file</code> destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
+<li><p><code>file</code> (one_of $string $file $glob $re) destination file to write to. If unspecified, output is returned as a <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2704,7 +2693,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the absolute value of.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the absolute value of.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2718,7 +2707,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the value, between -1 and 1, to take the arc cosine of.</p>
+<li><p><code>number</code> (one_of $integer $float) the value, between -1 and 1, to take the arc cosine of.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2732,7 +2721,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the value, between -1 and 1, to take the arc sine of.</p>
+<li><p><code>number</code> (one_of $integer $float) the value, between -1 and 1, to take the arc sine of.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2746,7 +2735,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the value to take the arc tangent of.</p>
+<li><p><code>number</code> (one_of $integer $float) the value to take the arc tangent of.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2760,7 +2749,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to round up to the nearest integer.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to round up to the nearest integer.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2774,11 +2763,11 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to clamp.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to clamp.</p>
 </li>
-<li><p><code>min</code> the lower bound of the allowed range.</p>
+<li><p><code>min</code> (one_of $integer $float) the lower bound of the allowed range.</p>
 </li>
-<li><p><code>max</code> the upper bound of the allowed range.</p>
+<li><p><code>max</code> (one_of $integer $float) the upper bound of the allowed range.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2792,7 +2781,7 @@ lambdas can be serialized to this format.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the cosine of, in radians.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the cosine of, in radians.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2811,7 +2800,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the exponent to raise e to.</p>
+<li><p><code>number</code> (one_of $integer $float) the exponent to raise e to.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2828,7 +2817,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to round down to the nearest integer.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to round down to the nearest integer.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2842,7 +2831,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the natural logarithm of.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the natural logarithm of.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2856,9 +2845,9 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the logarithm of.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the logarithm of.</p>
 </li>
-<li><p><code>base</code> the base of the logarithm.</p>
+<li><p><code>base</code> (one_of $integer $float) the base of the logarithm.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2872,9 +2861,9 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>base</code> the base to raise to a power.</p>
+<li><p><code>base</code> (one_of $integer $float) the base to raise to a power.</p>
 </li>
-<li><p><code>n</code> the exponent to raise the base to.</p>
+<li><p><code>n</code> (one_of $integer $float) the exponent to raise the base to.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2888,7 +2877,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to round to the nearest whole number.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to round to the nearest whole number.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2902,7 +2891,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to inspect the sign of.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to inspect the sign of.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2916,7 +2905,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the sine of, in radians.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the sine of, in radians.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -2932,7 +2921,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the square root of.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the square root of.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2946,7 +2935,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>number</code> the number to take the tangent of, in radians.</p>
+<li><p><code>number</code> (one_of $integer $float) the number to take the tangent of, in radians.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -2990,7 +2979,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>value</code> a random floating point number.</p>
+<li><p><code>value</code> (float) a random floating point number.</p>
 </li>
 </ul>
 </div>
@@ -3025,7 +3014,7 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>value</code> a random integer.</p>
+<li><p><code>value</code> (integer) a random integer.</p>
 </li>
 </ul>
 </div>
@@ -3052,15 +3041,15 @@ weaken protection against a machine-in-the-middle impersonating the remote host.
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>command</code> the command to execute.</p>
+<li><p><code>command</code> (command) the command to execute.</p>
 </li>
-<li><p><code>host</code> host to execute the command on.</p>
+<li><p><code>host</code> (string) host to execute the command on.</p>
 </li>
-<li><p><code>username</code> username on remote machines.</p>
+<li><p><code>username</code> (string) username on remote machines.</p>
 </li>
-<li><p><code>password</code> password on remote machines. If no password is provided, agent authentication will be used.</p>
+<li><p><code>password</code> (string) password on remote machines. If no password is provided, agent authentication will be used.</p>
 </li>
-<li><p><code>host_file</code> (~/.ssh/known_hosts) known hosts file.</p>
+<li><p><code>host_file</code> (one_of $string $file $glob $re) (~/.ssh/known_hosts) known hosts file.</p>
 </li>
 <li><p><code>ignore_host_file</code> (default: <code>false</code>) skip checking the know hosts file.</p>
 </li>
@@ -3078,9 +3067,9 @@ weaken protection against a machine-in-the-middle impersonating the remote host.
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>identity</code> the identity&#39;s comment, usually describing which key it is.</p>
+<li><p><code>identity</code> (string) the identity&#39;s comment, usually describing which key it is.</p>
 </li>
-<li><p><code>public_key</code> the identity&#39;s public key.</p>
+<li><p><code>public_key</code> (binary) the identity&#39;s public key.</p>
 </li>
 </ul>
 </div>
@@ -3104,17 +3093,17 @@ for what <code>ignore_host_file</code>/<code>allow_not_found</code> mean for sec
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>command</code> the command to execute.</p>
+<li><p><code>command</code> (command) the command to execute.</p>
 </li>
-<li><p><code>host</code> hosts to execute the command on.</p>
+<li><p><code>host</code> (list $string) hosts to execute the command on.</p>
 </li>
 <li><p><code>parallel</code> (default: <code>32</code>) maximum number of hosts to run on in parallel.</p>
 </li>
-<li><p><code>username</code> username on remote machines.</p>
+<li><p><code>username</code> (string) username on remote machines.</p>
 </li>
-<li><p><code>password</code> password on remote machines. If no password is provided, agent authentication will be used.</p>
+<li><p><code>password</code> (string) password on remote machines. If no password is provided, agent authentication will be used.</p>
 </li>
-<li><p><code>host_file</code> (~/.ssh/known_hosts) known hosts file.</p>
+<li><p><code>host_file</code> (one_of $string $file $glob $re) (~/.ssh/known_hosts) known hosts file.</p>
 </li>
 <li><p><code>ignore_host_file</code> (default: <code>false</code>) skip checking the know hosts file.</p>
 </li>
@@ -3126,9 +3115,9 @@ for what <code>ignore_host_file</code>/<code>allow_not_found</code> mean for sec
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>host</code> the host the command was run on.</p>
+<li><p><code>host</code> (string) the host the command was run on.</p>
 </li>
-<li><p><code>result</code> the command&#39;s own output value from that host.</p>
+<li><p><code>result</code> (any) the command&#39;s own output value from that host.</p>
 </li>
 </ul>
 </div>
@@ -3144,19 +3133,19 @@ for what <code>ignore_host_file</code>/<code>allow_not_found</code> mean for sec
 <h4 class="cmd-title"><code>remote:host:list</code></h4>
 <div class="cmd-doc"><pre><code><a href="#remote-host-list"><span class="tok-command">remote:host:list</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">host_file</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-operator">]</span></code></pre>
 <p>List all known hosts</p>
-<p>If a given host key has no hostname, the hostname will be the empty string</p>
+<p>If a given host key has no hostname, the <a href="#host"><code>host</code></a> column will be <code>$empty</code></p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>host_file</code> (~/.ssh/known_hosts) known hosts file.</p>
+<li><p><code>host_file</code> (one_of $string $file $glob $re) (~/.ssh/known_hosts) known hosts file.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><a href="#host"><code>host</code></a> the hostname, or the empty string if the key has none.</p>
+<li><p><a href="#host"><code>host</code></a> (one_of $string $empty) the hostname, if the key has one.</p>
 </li>
-<li><p><code>public_key</code> the host&#39;s public key.</p>
+<li><p><code>public_key</code> (string) the host&#39;s public key.</p>
 </li>
 </ul>
 </div>
@@ -3170,11 +3159,11 @@ Returns the number of host entries deleted.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>host_file</code> (~/.ssh/known_hosts) known hosts file.</p>
+<li><p><code>host_file</code> (one_of $string $file $glob $re) (~/.ssh/known_hosts) known hosts file.</p>
 </li>
-<li><p><code>host</code> host filter.</p>
+<li><p><code>host</code> (one_of $string $glob $re) host filter.</p>
 </li>
-<li><p><code>key</code> key filter.</p>
+<li><p><code>key</code> (one_of $string $glob $re) key filter.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -3196,17 +3185,17 @@ Returns the number of host entries deleted.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>local_address</code> the local IP address the socket is bound to.</p>
+<li><p><code>local_address</code> (string) the local IP address the socket is bound to.</p>
 </li>
-<li><p><code>local_port</code> the local port the socket is bound to.</p>
+<li><p><code>local_port</code> (integer) the local port the socket is bound to.</p>
 </li>
-<li><p><code>remote_address</code> the remote peer&#39;s IP address.</p>
+<li><p><code>remote_address</code> (string) the remote peer&#39;s IP address.</p>
 </li>
-<li><p><code>remote_port</code> the remote peer&#39;s port.</p>
+<li><p><code>remote_port</code> (integer) the remote peer&#39;s port.</p>
 </li>
-<li><p><code>pids</code> the ids of the processes that own the socket.</p>
+<li><p><code>pids</code> (list $integer) the ids of the processes that own the socket.</p>
 </li>
-<li><p><code>state</code> the connection&#39;s current TCP state, e.g. listen or established.</p>
+<li><p><code>state</code> (string) the connection&#39;s current TCP state, e.g. listen or established.</p>
 </li>
 </ul>
 </div>
@@ -3218,11 +3207,11 @@ Returns the number of host entries deleted.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>local_address</code> the local IP address the socket is bound to.</p>
+<li><p><code>local_address</code> (string) the local IP address the socket is bound to.</p>
 </li>
-<li><p><code>local_port</code> the local port the socket is bound to.</p>
+<li><p><code>local_port</code> (integer) the local port the socket is bound to.</p>
 </li>
-<li><p><code>pids</code> the ids of the processes that own the socket.</p>
+<li><p><code>pids</code> (list $integer) the ids of the processes that own the socket.</p>
 </li>
 </ul>
 </div>
@@ -3246,7 +3235,7 @@ name, exactly like <a href="#stream-where"><code>where</code></a>.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>condition</code> the condition to check for each row.</p>
+<li><p><code>condition</code> (command) the condition to check for each row.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3266,7 +3255,7 @@ by name, exactly like <a href="#stream-where"><code>where</code></a>.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>condition</code> the condition to check for each row.</p>
+<li><p><code>condition</code> (command) the condition to check for each row.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3285,7 +3274,7 @@ The column type must be numeric or a duration.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to find the average of</p>
+<li><p><code>field</code> (string) The name of the column to find the average of</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3301,7 +3290,7 @@ The column can be numeric, or textual.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to concatenate</p>
+<li><p><code>field</code> (string) The name of the column to concatenate</p>
 </li>
 <li><p><code>separator</code> (default: <code>&quot;, &quot;</code>) The separator to insert between each element</p>
 </li>
@@ -3332,7 +3321,7 @@ Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>drop</code> the columns to remove from the stream.</p>
+<li><p><code>drop</code> (list $string) the columns to remove from the stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3348,7 +3337,7 @@ Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>body</code> the command to run.</p>
+<li><p><code>body</code> (command) the command to run.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3370,9 +3359,9 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>initial</code> the accumulator&#39;s value before the first row is processed.</p>
+<li><p><code>initial</code> (any) the accumulator&#39;s value before the first row is processed.</p>
 </li>
-<li><p><code>body</code> called once per row with the accumulator (<code>acc</code>) and the row&#39;s own columns as named arguments; its return value is the next accumulator.</p>
+<li><p><code>body</code> (command) called once per row with the accumulator (<code>acc</code>) and the row&#39;s own columns as named arguments; its return value is the next accumulator.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3389,9 +3378,9 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>group_by</code> the column(s) to group by and copy into the output stream.</p>
+<li><p><code>group_by</code> (list $string) the column(s) to group by and copy into the output stream.</p>
 </li>
-<li><p><code>&lt;any&gt;=$command</code> create additional columns by aggregating the grouped rows using the supplied aggregation command. The supplied command will be called once for each group, with a table_input_stream containing all rows within that group. Whatever the command outputs will be the value for the specified column for that group.</p>
+<li><p><code>&lt;any&gt;=$command</code> (command) create additional columns by aggregating the grouped rows using the supplied aggregation command. The supplied command will be called once for each group, with a table_input_stream containing all rows within that group. Whatever the command outputs will be the value for the specified column for that group.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3422,7 +3411,7 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$any</code> Fields to join</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) Fields to join</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3438,7 +3427,7 @@ The column can be numeric, temporal, a string or a file.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to find the maximum of</p>
+<li><p><code>field</code> (string) The name of the column to find the maximum of</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3456,7 +3445,7 @@ than silently including it in (or excluding it from) the calculation.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to find the median of</p>
+<li><p><code>field</code> (string) The name of the column to find the median of</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3472,7 +3461,7 @@ The column can be numeric, temporal, a string or a file.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to find the minimum of</p>
+<li><p><code>field</code> (string) The name of the column to find the minimum of</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3488,7 +3477,7 @@ The column type must be numeric.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to find the product of</p>
+<li><p><code>field</code> (string) The name of the column to find the product of</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3504,7 +3493,7 @@ new name to give it. Columns not mentioned pass through unchanged.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$string</code> mapping from current column name to new column name.</p>
+<li><p><code>&lt;any&gt;=$string</code> (string) mapping from current column name to new column name.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3568,13 +3557,13 @@ ambiguous which one actually sets the end of the sequence.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>args</code> 1 to 3 numbers: <code>to</code>, <code>from to</code>, or <code>from to step</code> -- see the command&#39;s own long help. Can&#39;t be combined with the from/to/step named arguments.</p>
+<li><p><code>args</code> (list $integer) 1 to 3 numbers: <code>to</code>, <code>from to</code>, or <code>from to step</code> -- see the command&#39;s own long help. Can&#39;t be combined with the from/to/step named arguments.</p>
 </li>
-<li><p><code>from</code> the first number in the sequence. Defaults to 0.</p>
+<li><p><code>from</code> (integer) the first number in the sequence. Defaults to 0.</p>
 </li>
-<li><p><code>to</code> the end of the sequence (exclusive). If not specified, the sequence will continue forever.</p>
+<li><p><code>to</code> (integer) the end of the sequence (exclusive). If not specified, the sequence will continue forever.</p>
 </li>
-<li><p><code>step</code> the step size. Defaults to 1.</p>
+<li><p><code>step</code> (integer) the step size. Defaults to 1.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3608,7 +3597,7 @@ other floats.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> the columns to sort on. Optional if input only has one column.</p>
+<li><p><code>field</code> (list $string) the columns to sort on. Optional if input only has one column.</p>
 </li>
 <li><p><code>reverse</code> (default: <code>false</code>) reverse the sort order.</p>
 </li>
@@ -3632,7 +3621,7 @@ other floats.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The name of the column to find the sum of</p>
+<li><p><code>field</code> (string) The name of the column to find the sum of</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3666,7 +3655,7 @@ reported via <a href="#crush-warn-list"><code>crush:warn:list</code></a> rather 
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>branches</code> one or more pipelines to send an independent copy of the stream through.</p>
+<li><p><code>branches</code> (list $command) one or more pipelines to send an independent copy of the stream through.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3685,7 +3674,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>streams</code> the streams to concatenate.</p>
+<li><p><code>streams</code> (list $any) the streams to concatenate.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3701,7 +3690,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> The field to compare.</p>
+<li><p><code>field</code> (string) The field to compare.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3718,7 +3707,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>condition</code> the condition to filter on.</p>
+<li><p><code>condition</code> (command) the condition to filter on.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3736,9 +3725,9 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>first</code> the first stream.</p>
+<li><p><code>first</code> (any) the first stream.</p>
 </li>
-<li><p><code>second</code> the second stream.</p>
+<li><p><code>second</code> (any) the second stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3768,7 +3757,7 @@ the second stream, and so on. All streams must have identical column types.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>parent</code> the parent type to inherit members from (if any).</p>
+<li><p><code>parent</code> (struct) the parent type to inherit members from (if any).</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3825,9 +3814,9 @@ argument, and converts that value instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>target_type</code> the type to convert the value to.</p>
+<li><p><code>target_type</code> (type) the type to convert the value to.</p>
 </li>
-<li><p><code>value</code> the value to convert.</p>
+<li><p><code>value</code> (any) the value to convert.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3843,7 +3832,7 @@ argument, and converts that value instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>command</code> the closure to show the definition of.</p>
+<li><p><code>command</code> (command) the closure to show the definition of.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3871,7 +3860,7 @@ whose names aren&#39;t known ahead of time.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>value</code> the value to list the members of.</p>
+<li><p><code>value</code> (any) the value to list the members of.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3895,9 +3884,9 @@ operator (or <code>!~</code> for the negation).</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>value</code> the value to test.</p>
+<li><p><code>value</code> (any) the value to test.</p>
 </li>
-<li><p><code>pattern</code> the pattern(s) to test the value against.</p>
+<li><p><code>pattern</code> (list $any) the pattern(s) to test the value against.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3937,9 +3926,9 @@ instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>field</code> the member to extract.</p>
+<li><p><code>field</code> (string) the member to extract.</p>
 </li>
-<li><p><code>value</code> the value to extract the member from.</p>
+<li><p><code>value</code> (any) the value to extract the member from.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3964,9 +3953,9 @@ any of its actual rows.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>name</code> the column&#39;s name.</p>
+<li><p><code>name</code> (string) the column&#39;s name.</p>
 </li>
-<li><p><a href="#types-type"><code>type</code></a> the column&#39;s type.</p>
+<li><p><a href="#types-type"><code>type</code></a> (type) the column&#39;s type.</p>
 </li>
 </ul>
 </div>
@@ -3981,7 +3970,7 @@ argument, and returns the type of that value instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>value</code> the value to provide the type of.</p>
+<li><p><code>value</code> (any) the value to provide the type of.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -3999,7 +3988,7 @@ argument, and returns the type of that value instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>value</code> the value to pass as output.</p>
+<li><p><code>value</code> (any) the value to pass as output.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4039,7 +4028,7 @@ sequence-of-data types (<a href="#types-string"><code>string</code></a>, <a href
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>index</code> index</p>
+<li><p><code>index</code> (integer) index</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4266,7 +4255,7 @@ of paths rather than naming a single one.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the name of the file or subdirectory</p>
+<li><p><code>name</code> (one_of $string $file) the name of the file or subdirectory</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4293,7 +4282,7 @@ of paths rather than naming a single one.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>permissions</code> the set of permissions to add.</p>
+<li><p><code>permissions</code> (list $string) the set of permissions to add.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4309,9 +4298,9 @@ of paths rather than naming a single one.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>user</code> the owning user for the file.</p>
+<li><p><code>user</code> (string) the owning user for the file.</p>
 </li>
-<li><p><code>group</code> the owning group for the file.</p>
+<li><p><code>group</code> (string) the owning group for the file.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4380,11 +4369,11 @@ of paths rather than naming a single one.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><a href="#types-file"><code>file</code></a> the file this row describes.</p>
+<li><p><a href="#types-file"><code>file</code></a> (file) the file this row describes.</p>
 </li>
-<li><p><code>deleted</code> true if the file was successfully deleted.</p>
+<li><p><code>deleted</code> (bool) true if the file was successfully deleted.</p>
 </li>
-<li><p><code>status</code> &quot;Deleted&quot;, or the error that prevented deletion.</p>
+<li><p><code>status</code> (string) &quot;Deleted&quot;, or the error that prevented deletion.</p>
 </li>
 </ul>
 </div>
@@ -4431,7 +4420,7 @@ expression promotes the result to a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to add.</p>
+<li><p><code>term</code> (one_of $integer $float) the number to add.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4445,7 +4434,7 @@ expression promotes the result to a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to divide by</p>
+<li><p><code>term</code> (one_of $integer $float) the number to divide by</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4459,7 +4448,7 @@ expression promotes the result to a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to multiply</p>
+<li><p><code>term</code> (one_of $integer $float) the number to multiply</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4481,7 +4470,7 @@ expression promotes the result to a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to subtract</p>
+<li><p><code>term</code> (one_of $integer $float) the number to subtract</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4556,7 +4545,7 @@ patterns at the cost of more complex syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4570,7 +4559,7 @@ patterns at the cost of more complex syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4584,7 +4573,7 @@ patterns at the cost of more complex syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>directory</code> the directory to match in. Use current working directory if unspecified.</p>
+<li><p><code>directory</code> (file) the directory to match in. Use current working directory if unspecified.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4599,7 +4588,7 @@ patterns at the cost of more complex syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>columns</code> Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used.</p>
+<li><p><code>columns</code> (list $string) Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4616,7 +4605,7 @@ patterns at the cost of more complex syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>glob</code> the string representation of the glob.</p>
+<li><p><code>glob</code> (string) the string representation of the glob.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4644,7 +4633,7 @@ promotes the result to a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to add</p>
+<li><p><code>term</code> (one_of $integer $float) the number to add</p>
 </li>
 </ul>
 </div>
@@ -4658,7 +4647,7 @@ follows IEEE 754 (producing infinity or NaN), since the result is a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to divide by</p>
+<li><p><code>term</code> (one_of $integer $float) the number to divide by</p>
 </li>
 </ul>
 </div>
@@ -4671,7 +4660,7 @@ follows IEEE 754 (producing infinity or NaN), since the result is a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to divide by</p>
+<li><p><code>term</code> (integer) the number to divide by</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4685,7 +4674,7 @@ follows IEEE 754 (producing infinity or NaN), since the result is a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to multiply</p>
+<li><p><code>term</code> (one_of $integer $float) the number to multiply</p>
 </li>
 </ul>
 </div>
@@ -4706,7 +4695,7 @@ follows IEEE 754 (producing infinity or NaN), since the result is a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to divide by</p>
+<li><p><code>term</code> (integer) the number to divide by</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4720,7 +4709,7 @@ follows IEEE 754 (producing infinity or NaN), since the result is a float.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to subtract</p>
+<li><p><code>term</code> (one_of $integer $float) the number to subtract</p>
 </li>
 </ul>
 </div>
@@ -4771,7 +4760,7 @@ accepts any one of several types:</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>types</code> The allowed types</p>
+<li><p><code>types</code> (list $type) The allowed types</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4800,7 +4789,7 @@ simple wildcard patterns but with much simpler syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4814,7 +4803,7 @@ simple wildcard patterns but with much simpler syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4829,7 +4818,7 @@ simple wildcard patterns but with much simpler syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>columns</code> Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used.</p>
+<li><p><code>columns</code> (list $string) Columns to filter on. Column must be textual. If no columns are specified, all textual columns are used.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4846,7 +4835,7 @@ simple wildcard patterns but with much simpler syntax.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>pattern</code> the new regular expression as a string.</p>
+<li><p><code>pattern</code> (string) the new regular expression as a string.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -4865,9 +4854,9 @@ group number or name.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>text</code> the text to perform replacement on.</p>
+<li><p><code>text</code> (string) the text to perform replacement on.</p>
 </li>
-<li><p><code>replacement</code> the replacement text; may reference capture groups, see above.</p>
+<li><p><code>replacement</code> (string) the replacement text; may reference capture groups, see above.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4889,9 +4878,9 @@ group number or name.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>text</code> the text to perform replacement on.</p>
+<li><p><code>text</code> (string) the text to perform replacement on.</p>
 </li>
-<li><p><code>replacement</code> the replacement text; may reference capture groups, see above.</p>
+<li><p><code>replacement</code> (string) the replacement text; may reference capture groups, see above.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -4937,7 +4926,7 @@ scope it&#39;s declared or resolved in.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the name of the member to look up.</p>
+<li><p><code>name</code> (string) the name of the member to look up.</p>
 </li>
 </ul>
 </div>
@@ -4972,7 +4961,7 @@ scope it&#39;s declared or resolved in.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the name of the member to resolve.</p>
+<li><p><code>name</code> (string) the name of the member to resolve.</p>
 </li>
 </ul>
 </div>
@@ -5040,7 +5029,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>idx</code> index</p>
+<li><p><code>idx</code> (integer) index</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5054,7 +5043,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5068,7 +5057,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5096,7 +5085,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>suffix</code> suffix to check for</p>
+<li><p><code>suffix</code> (string) suffix to check for</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5110,9 +5099,9 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$any</code> The named parameters to format into the pattern string</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) The named parameters to format into the pattern string</p>
 </li>
-<li><p><code>unnamed</code> The unnamed parameters to format into the pattern string</p>
+<li><p><code>unnamed</code> (list $any) The unnamed parameters to format into the pattern string</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5199,7 +5188,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>elements</code> the elements to join.</p>
+<li><p><code>elements</code> (list $any) the elements to join.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5238,7 +5227,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>length</code> the length to pad to.</p>
+<li><p><code>length</code> (integer) the length to pad to.</p>
 </li>
 <li><p><code>padding</code> (default: <code>&quot; &quot;</code>) the character to pad with.</p>
 </li>
@@ -5259,7 +5248,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>times</code> the number of times to repeat the string.</p>
+<li><p><code>times</code> (integer) the number of times to repeat the string.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5275,7 +5264,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>length</code> the length to pad to.</p>
+<li><p><code>length</code> (integer) the length to pad to.</p>
 </li>
 <li><p><code>padding</code> (default: <code>&quot; &quot;</code>) the character to pad with.</p>
 </li>
@@ -5296,7 +5285,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>separator</code> the separator to split on.</p>
+<li><p><code>separator</code> (string) the separator to split on.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5313,7 +5302,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>prefix</code> prefix to check for</p>
+<li><p><code>prefix</code> (string) prefix to check for</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5329,7 +5318,7 @@ erroring, crush falls back to displaying it as the placeholder text
 <ul>
 <li><p><code>from</code> (default: <code>0</code>) Starting index (inclusive). If unspecified, from start of string.</p>
 </li>
-<li><p><code>to</code> ending index (exclusive). If unspecified, to end of string.</p>
+<li><p><code>to</code> (integer) ending index (exclusive). If unspecified, to end of string.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5381,7 +5370,7 @@ columns from more than one source, applied here to struct members instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>structs</code> the structs to combine.</p>
+<li><p><code>structs</code> (list $struct) the structs to combine.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5399,9 +5388,9 @@ columns from more than one source, applied here to struct members instead.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>unnamed</code> unnamed values.</p>
+<li><p><code>unnamed</code> (list $any) unnamed values.</p>
 </li>
-<li><p><code>&lt;any&gt;=$any</code> named values.</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) named values.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5431,7 +5420,7 @@ methods for adding, removing, or replacing rows. The most similar type is
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$type</code> the columns of the stream.</p>
+<li><p><code>&lt;any&gt;=$type</code> (type) the columns of the stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5447,7 +5436,7 @@ methods for adding, removing, or replacing rows. The most similar type is
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>index</code> the row index to return.</p>
+<li><p><code>index</code> (integer) the row index to return.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5478,7 +5467,7 @@ the writable counterpart of the same rows.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$type</code> the columns of the stream.</p>
+<li><p><code>&lt;any&gt;=$type</code> (type) the columns of the stream.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5494,7 +5483,7 @@ the writable counterpart of the same rows.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>index</code> the row index to return.</p>
+<li><p><code>index</code> (integer) the row index to return.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5572,7 +5561,7 @@ is <a href="#types-table_input_stream"><code>table_input_stream</code></a>, its 
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$type</code> the columns of the stream.</p>
+<li><p><code>&lt;any&gt;=$type</code> (type) the columns of the stream.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5610,7 +5599,7 @@ points in time.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>term</code> the number to add</p>
+<li><p><code>term</code> (duration) the number to add</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5726,7 +5715,7 @@ Special characters:</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>format</code> the format of the time.</p>
+<li><p><code>format</code> (string) the format of the time.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5849,9 +5838,9 @@ Special characters:</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>format</code> the format of the time.</p>
+<li><p><code>format</code> (string) the format of the time.</p>
 </li>
-<li><p><code>time</code> the time string to parse.</p>
+<li><p><code>time</code> (string) the time string to parse.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5878,7 +5867,7 @@ a closure argument declaration, rather than being manipulated directly by everyd
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5892,7 +5881,7 @@ a closure argument declaration, rather than being manipulated directly by everyd
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>needle</code> the value whose type to check.</p>
+<li><p><code>needle</code> (any) the value whose type to check.</p>
 </li>
 </ul>
 <h2>Output signature</h2>
@@ -5925,7 +5914,7 @@ name of the variable you want to get.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the name of the variable to return the value of.</p>
+<li><p><code>name</code> (string) the name of the variable to return the value of.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5943,7 +5932,7 @@ name of the variable you want to get.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$any</code> the variables to declare. The value you supply will be the initial value of the variable.</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) the variables to declare. The value you supply will be the initial value of the variable.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5964,9 +5953,9 @@ number of names, or an error results.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>names</code> the names of the variables to declare, in order.</p>
+<li><p><code>names</code> (list $string) the names of the variables to declare, in order.</p>
 </li>
-<li><p><code>value</code> the list, struct, or dict to destructure.</p>
+<li><p><code>value</code> (any) the list, struct, or dict to destructure.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -5984,9 +5973,9 @@ the scopes used in any of those scopes.</p>
 <h2>Output signature</h2>
 <p>A table input stream with the following columns</p>
 <ul>
-<li><p><code>name</code> the variable&#39;s name.</p>
+<li><p><code>name</code> (string) the variable&#39;s name.</p>
 </li>
-<li><p><a href="#types-type"><code>type</code></a> the variable&#39;s type.</p>
+<li><p><a href="#types-type"><code>type</code></a> (string) the variable&#39;s type.</p>
 </li>
 </ul>
 </div>
@@ -6010,7 +5999,7 @@ operator.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>&lt;any&gt;=$any</code> the variables to reassign. The value you supply will be the new value of the variable.</p>
+<li><p><code>&lt;any&gt;=$any</code> (any) the variables to reassign. The value you supply will be the new value of the variable.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -6032,9 +6021,9 @@ or an error results.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>names</code> the names of the variables to reassign, in order.</p>
+<li><p><code>names</code> (list $string) the names of the variables to reassign, in order.</p>
 </li>
-<li><p><code>value</code> the list, struct, or dict to destructure.</p>
+<li><p><code>value</code> (any) the list, struct, or dict to destructure.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -6050,7 +6039,7 @@ var:set_destructure a b value=[1, 2]</code></pre>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the name of the variables to unset.</p>
+<li><p><code>name</code> (list $string) the name of the variables to unset.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -6069,7 +6058,7 @@ the provided scopes through the entire chain.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the scopes to unuse.</p>
+<li><p><code>name</code> (list $scope) the scopes to unuse.</p>
 </li>
 </ul>
 <h1>Examples</h1>
@@ -6088,7 +6077,7 @@ the provided scopes through the entire chain.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
-<li><p><code>name</code> the scopes to use.</p>
+<li><p><code>name</code> (list $scope) the scopes to use.</p>
 </li>
 </ul>
 <h1>Examples</h1>
