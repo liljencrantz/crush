@@ -467,6 +467,10 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             long_description.push("".to_string());
                         }
                         long_description
+                            .push("## Input signature".to_string());
+                        long_description
+                            .push("".to_string());
+                        long_description
                             .push("This command accepts the following arguments:".to_string());
                         long_description.push("".to_string());
                         had_field_description = true;

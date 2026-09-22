@@ -59,9 +59,9 @@ impl OutputType {
     fn format(&self) -> Option<String> {
         match self {
             OutputType::Unknown => None,
-            OutputType::Known(t) => Some(format!("# Output\n{}", format_output_type(t))),
+            OutputType::Known(t) => Some(format!("## Output signature\n\n{}", format_output_type(t))),
             OutputType::Passthrough => {
-                Some("# Output\nA stream with the same columns as the input".to_string())
+                Some("## Output signature\n\nA stream with the same columns as the input".to_string())
             }
         }
     }
