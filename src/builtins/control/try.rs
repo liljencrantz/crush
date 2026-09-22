@@ -42,13 +42,13 @@ use signature::signature;
     example = "# try/catch is real grammar in expression mode too, with the exact same syntax",
     example = "# -- except a glob filter like Dns* above needs $(...) there, since glob literals",
     example = "# only parse in command mode",
-    example = "assert ((try {",
+    example = "assert (try {",
     example = "    throw(\"DnsTimeout\", \"no response\")",
     example = "} catch ^(Serde) {",
     example = "    |$e| \"serde\"",
     example = "} catch $(Dns*) {",
     example = "    |$e| \"dns\"",
-    example = "}) == \"dns\")",
+    example = "} == \"dns\")",
 )]
 pub struct Try {
     #[description("the command to attempt.")]

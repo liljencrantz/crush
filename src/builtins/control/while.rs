@@ -17,15 +17,15 @@ use signature::signature;
     example = "while {./some_file:exists} {echo \"hello\"}",
     example = "# while is real grammar in expression mode too -- the condition is a bare",
     example = "# expression there, not wrapped in its own {...} block like in command mode",
-    example = "assert (({",
+    example = "assert ((",
     example = "    $i := 0",
     example = "    $sum := 0",
-    example = "    while ($i < 5) {",
+    example = "    while $i < 5 {",
     example = "        $sum = ($sum + $i)",
     example = "        $i = ($i + 1)",
     example = "    }",
     example = "    $sum",
-    example = "}()) == 10)",
+    example = ") == 10)",
 )]
 pub struct While {
     #[description("the condition.")]

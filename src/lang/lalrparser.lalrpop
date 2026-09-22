@@ -131,7 +131,7 @@ ExprOptFalseBody: Option<JobListNode> = {
 }
 
 ExprItem: Box<Node> = {
-    ExprModeStart <e:Expr> SubEnd => e,
+    <l: @L>ExprModeStart <e:ExprJobList> SubEnd <r: @R> => Box::from(Node::Substitution(e)),
     SubStart <j:Job> SubEnd => Box::from(Node::Substitution(j.into())),
     <l: Identifier> => Node::identifier(l),
     <l: Regex> => Node::regex(l),
