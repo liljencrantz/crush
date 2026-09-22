@@ -84,8 +84,8 @@ mod env {
     }
 
     static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
-        ColumnType::new("name", ValueType::String, "The environment variable's name."),
-        ColumnType::new("value", ValueType::String, "The environment variable's value."),
+        ColumnType::new("name", ValueType::String, "the environment variable's name."),
+        ColumnType::new("value", ValueType::String, "the environment variable's value."),
     ];
 
     #[signature(
@@ -113,10 +113,10 @@ fn make_arguments() -> Value {
 }
 
 static THREADS_OUTPUT_TYPE: [ColumnType; 4] = [
-    ColumnType::new("job_id", ValueType::Integer, "The id of the job this thread is running as part of."),
-    ColumnType::new("command_id", ValueType::Integer, "The id of the specific command invocation this thread is running."),
-    ColumnType::new("created", ValueType::Time, "When this thread was created."),
-    ColumnType::new("name", ValueType::String, "The thread's name."),
+    ColumnType::new("job_id", ValueType::Integer, "the id of the job this thread is running as part of."),
+    ColumnType::new("command_id", ValueType::Integer, "the id of the specific command invocation this thread is running."),
+    ColumnType::new("created", ValueType::Time, "when this thread was created."),
+    ColumnType::new("name", ValueType::String, "the thread's name."),
 ];
 
 #[signature(
@@ -381,11 +381,11 @@ mod title {
 }
 
 static JOB_OUTPUT_TYPE: [ColumnType; 5] = [
-    ColumnType::new("id", ValueType::Integer, "The job's id."),
-    ColumnType::new("parent", ValueType::Any, "The id of the job this job is nested inside, if any."),
-    ColumnType::new("definition", ValueType::String, "The job's definition, i.e. the invocation that started it, as source text."),
-    ColumnType::new("type", ValueType::String, "Whether the job is running interactively or in the background."),
-    ColumnType::new("status", ValueType::String, "Whether the job is running, paused, or terminated."),
+    ColumnType::new("id", ValueType::Integer, "the job's id."),
+    ColumnType::new("parent", ValueType::Any, "the id of the job this job is nested inside, if any."),
+    ColumnType::new("definition", ValueType::String, "the job's definition, i.e. the invocation that started it, as source text."),
+    ColumnType::new("type", ValueType::String, "whether the job is running interactively or in the background."),
+    ColumnType::new("status", ValueType::String, "whether the job is running, paused, or terminated."),
 ];
 
 #[signature(
@@ -412,8 +412,8 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
 }
 
 static HISTORY_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("idx", ValueType::Integer, "The command's position in the history, counting back from the most recent."),
-    ColumnType::new("command", ValueType::String, "The command line as it was entered."),
+    ColumnType::new("idx", ValueType::Integer, "the command's position in the history, counting back from the most recent."),
+    ColumnType::new("command", ValueType::String, "the command line as it was entered."),
 ];
 
 #[signature(
@@ -446,11 +446,11 @@ mod warn {
     use super::*;
 
     static LIST_OUTPUT_TYPE: [ColumnType; 5] = [
-        ColumnType::new("timestamp", ValueType::Time, "When the warning was recorded."),
-        ColumnType::new("command", ValueType::String, "The name of the command that reported the warning, if known."),
-        ColumnType::new("message", ValueType::String, "The warning message."),
-        ColumnType::new("file", ValueType::String, "The source file the warning was reported from, if known."),
-        ColumnType::new("location", ValueType::String, "The location within the source file the warning was reported from, if known."),
+        ColumnType::new("timestamp", ValueType::Time, "when the warning was recorded."),
+        ColumnType::new("command", ValueType::String, "the name of the command that reported the warning, if known."),
+        ColumnType::new("message", ValueType::String, "the warning message."),
+        ColumnType::new("file", ValueType::String, "the source file the warning was reported from, if known."),
+        ColumnType::new("location", ValueType::String, "the location within the source file the warning was reported from, if known."),
     ];
 
     #[signature(
@@ -596,7 +596,7 @@ mod locale {
     use crate::util::escape::{escape, escape_without_quotes};
     use num_format::SystemLocale;
 
-    static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String, "The locale's name.")];
+    static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String, "the locale's name.")];
 
     #[signature(
         crush.locale.list,
@@ -676,7 +676,7 @@ mod byte_unit {
     use super::*;
     use crate::util::byte_unit::ByteUnit;
 
-    static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String, "The byte unit's name.")];
+    static LIST_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("name", ValueType::String, "the byte unit's name.")];
 
     #[signature(
         crush.byte_unit.list,

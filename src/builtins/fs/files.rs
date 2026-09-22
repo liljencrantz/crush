@@ -294,23 +294,23 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
     let mut cols = Vec::new();
 
     if config.permissions {
-        types.push(ColumnType::new("permissions", ValueType::String, "The file's permission bits, in symbolic form."));
+        types.push(ColumnType::new("permissions", ValueType::String, "the file's permission bits, in symbolic form."));
         cols.push(Column::Permissions);
     }
     if config.inode {
-        types.push(ColumnType::new("inode", ValueType::Integer, "The file's inode number."));
+        types.push(ColumnType::new("inode", ValueType::Integer, "the file's inode number."));
         cols.push(Column::Inode);
     }
     if config.links {
-        types.push(ColumnType::new("links", ValueType::Integer, "The number of hard links to the file."));
+        types.push(ColumnType::new("links", ValueType::Integer, "the number of hard links to the file."));
         cols.push(Column::Links);
     }
     if config.user {
-        types.push(ColumnType::new("user", ValueType::String, "The name of the file's owning user."));
+        types.push(ColumnType::new("user", ValueType::String, "the name of the file's owning user."));
         cols.push(Column::User);
     }
     if config.group {
-        types.push(ColumnType::new("group", ValueType::String, "The name of the file's owning group."));
+        types.push(ColumnType::new("group", ValueType::String, "the name of the file's owning group."));
         cols.push(Column::Group);
     }
     if config.size {
@@ -318,28 +318,28 @@ fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
             "size",
             ColumnFormat::ByteUnit,
             ValueType::Integer,
-            "The file's size in bytes.",
+            "the file's size in bytes.",
         ));
         cols.push(Column::Size);
     }
     if config.blocks {
-        types.push(ColumnType::new("blocks", ValueType::Integer, "The number of blocks allocated to the file."));
+        types.push(ColumnType::new("blocks", ValueType::Integer, "the number of blocks allocated to the file."));
         cols.push(Column::Blocks);
     }
     if config.modified {
-        types.push(ColumnType::new("modified", ValueType::Time, "When the file's contents were last modified."));
+        types.push(ColumnType::new("modified", ValueType::Time, "when the file's contents were last modified."));
         cols.push(Column::Modified);
     }
     if config.accessed {
-        types.push(ColumnType::new("accessed", ValueType::Time, "When the file was last accessed."));
+        types.push(ColumnType::new("accessed", ValueType::Time, "when the file was last accessed."));
         cols.push(Column::Accessed);
     }
     if config.r#type {
-        types.push(ColumnType::new("type", ValueType::String, "The kind of file, e.g. file, directory, or symlink."));
+        types.push(ColumnType::new("type", ValueType::String, "the kind of file, e.g. file, directory, or symlink."));
         cols.push(Column::Type);
     }
     if config.file {
-        types.push(ColumnType::new("file", ValueType::File, "The file itself."));
+        types.push(ColumnType::new("file", ValueType::File, "the file itself."));
         cols.push(Column::File);
     }
 

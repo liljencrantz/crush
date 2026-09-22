@@ -30,7 +30,7 @@ fn send(output: &TableOutputStream, mut ptr: &str) -> CrushResult<()> {
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.initialize_output(&[ColumnType::new("word", ValueType::String, "One word of the input.")])?;
+    let output = context.initialize_output(&[ColumnType::new("word", ValueType::String, "one word of the input.")])?;
     let cfg = From::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let command_handle = context.command_handle().clone();

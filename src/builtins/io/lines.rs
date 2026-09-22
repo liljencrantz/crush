@@ -10,7 +10,7 @@ use signature::signature;
 use std::convert::From;
 use std::io::{BufRead, BufReader};
 
-static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("line", ValueType::String, "One line of input.")];
+static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("line", ValueType::String, "one line of input.")];
 
 #[signature(
     io.lines.from,

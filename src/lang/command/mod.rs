@@ -59,12 +59,32 @@ impl OutputType {
     fn format(&self) -> Option<String> {
         match self {
             OutputType::Unknown => None,
-            OutputType::Known(t) => Some(format!("# Output\n    {}", t)),
+            OutputType::Known(t) => Some(format!("# Output\n{}", format_output_type(t))),
             OutputType::Passthrough => {
                 Some("# Output\nA stream with the same columns as the input".to_string())
             }
         }
     }
+}
+
+/// Renders a command's known output type for its help text. A table stream/table's
+/// column signature is rendered as prose with one bullet per column (mirroring how a
+/// command's own arguments are listed just above this in the same help text) instead of
+/// the compact `name=type` form `t`'s own `Display` produces -- that form is fine as a
+/// one-line synopsis, but has no room for what each column actually means. Anything else
+/// keeps the plain, indented single-line form every other output type already used.
+fn format_output_type(t: &ValueType) -> String {
+    let (kind, columns) = match t {
+        ValueType::TableInputStream(columns) => ("table input stream", columns),
+        ValueType::TableOutputStream(columns) => ("table output stream", columns),
+        ValueType::Table(columns) => ("table", columns),
+        _ => return format!("    {}", t),
+    };
+    let mut lines = vec![format!("A {} with the following columns", kind)];
+    for c in columns {
+        lines.push(format!("* `{}` {}", c.name(), c.help()));
+    }
+    lines.join("\n")
 }
 
 pub trait CrushCommand: Help + Display {

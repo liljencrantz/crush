@@ -9,13 +9,13 @@ use mountpoints::mountinfos;
 use signature::signature;
 
 static OUTPUT_TYPE: [ColumnType; 7] = [
-    ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer, "Size in bytes."),
-    ColumnType::new_with_format("available", ColumnFormat::ByteUnit, ValueType::Integer, "Available space in bytes."),
-    ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::Float, "Usage percentage."),
-    ColumnType::new("format", ValueType::String, "Filesystem type (ntfs, ext4, etc.)."),
-    ColumnType::new("readonly", ValueType::Any, "Whether the filesystem is mounted readonly."),
-    ColumnType::new("name", ValueType::String, "Name assigned to this mountpoint, if any."),
-    ColumnType::new("path", ValueType::File, "The mount location."),
+    ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer, "size in bytes."),
+    ColumnType::new_with_format("available", ColumnFormat::ByteUnit, ValueType::Integer, "available space in bytes."),
+    ColumnType::new_with_format("usage", ColumnFormat::Percentage, ValueType::Float, "usage percentage."),
+    ColumnType::new("format", ValueType::String, "filesystem type (ntfs, ext4, etc.)."),
+    ColumnType::new("readonly", ValueType::Any, "whether the filesystem is mounted readonly."),
+    ColumnType::new("name", ValueType::String, "name assigned to this mountpoint, if any."),
+    ColumnType::new("path", ValueType::File, "the mount location."),
 ];
 
 #[signature(

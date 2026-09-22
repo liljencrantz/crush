@@ -86,7 +86,7 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
             ColumnType::new_from_string(
                 name.clone(),
                 value.value_type(),
-                "A field from one of the joined structs.".to_string(),
+                "a field from one of the joined structs.".to_string(),
             )
         })
         .collect();

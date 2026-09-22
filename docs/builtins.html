@@ -1102,7 +1102,13 @@ set, in which case those jobs are terminated first.</p>
 <div class="cmd-doc"><pre><code><a href="#crush-history"><span class="tok-command">crush:history</span></a></code></pre>
 <p>List previous commands</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">idx</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>idx</code> the command&#39;s position in the history, counting back from the most recent.</p>
+</li>
+<li><p><a href="#types-command"><code>command</code></a> the command line as it was entered.</p>
+</li>
+</ul>
 <p>All previous invocation</p>
 </div>
 </article>
@@ -1111,7 +1117,19 @@ set, in which case those jobs are terminated first.</p>
 <div class="cmd-doc"><pre><code><a href="#crush-jobs"><span class="tok-command">crush:jobs</span></a></code></pre>
 <p>List running jobs</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">id</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">parent</span><span class="tok-operator">=</span><a href="#types-any"><span class="tok-identifier">$any</span></a> <span class="tok-string_literal">definition</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">type</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">status</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>id</code> the job&#39;s id.</p>
+</li>
+<li><p><code>parent</code> the id of the job this job is nested inside, if any.</p>
+</li>
+<li><p><a href="#types-definition"><code>definition</code></a> the job&#39;s definition, i.e. the invocation that started it, as source text.</p>
+</li>
+<li><p><a href="#types-type"><code>type</code></a> whether the job is running interactively or in the background.</p>
+</li>
+<li><p><code>status</code> whether the job is running, paused, or terminated.</p>
+</li>
+</ul>
 <p>All currently running jobs</p>
 </div>
 </article>
@@ -1190,7 +1208,17 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <div class="cmd-doc"><pre><code><a href="#crush-threads"><span class="tok-command">crush:threads</span></a></code></pre>
 <p>All the subthreads crush is currently running.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">job_id</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">command_id</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">created</span><span class="tok-operator">=</span><a href="#types-time"><span class="tok-identifier">$time</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>job_id</code> the id of the job this thread is running as part of.</p>
+</li>
+<li><p><code>command_id</code> the id of the specific command invocation this thread is running.</p>
+</li>
+<li><p><code>created</code> when this thread was created.</p>
+</li>
+<li><p><code>name</code> the thread&#39;s name.</p>
+</li>
+</ul>
 </div>
 </article>
 </section>
@@ -1213,7 +1241,11 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <div class="cmd-doc"><pre><code><a href="#crush-byte_unit-list"><span class="tok-command">crush:byte_unit:list</span></a></code></pre>
 <p>List all available byte units.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>name</code> the byte unit&#39;s name.</p>
+</li>
+</ul>
 </div>
 </article>
 <article class="cmd" id="crush-byte_unit-set">
@@ -1255,7 +1287,11 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <div class="cmd-doc"><pre><code><a href="#crush-locale-list"><span class="tok-command">crush:locale:list</span></a></code></pre>
 <p>List all available locales.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>name</code> the locale&#39;s name.</p>
+</li>
+</ul>
 </div>
 </article>
 <article class="cmd" id="crush-locale-set">
@@ -1335,7 +1371,19 @@ The run mode can not be changed while crush is running. It is decided by how cru
 <div class="cmd-doc"><pre><code><a href="#crush-warn-list"><span class="tok-command">crush:warn:list</span></a></code></pre>
 <p>List recent warnings reported by commands that experienced a partial failure.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">timestamp</span><span class="tok-operator">=</span><a href="#types-time"><span class="tok-identifier">$time</span></a> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">message</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">file</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">location</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>timestamp</code> when the warning was recorded.</p>
+</li>
+<li><p><a href="#types-command"><code>command</code></a> the name of the command that reported the warning, if known.</p>
+</li>
+<li><p><code>message</code> the warning message.</p>
+</li>
+<li><p><a href="#types-file"><code>file</code></a> the source file the warning was reported from, if known.</p>
+</li>
+<li><p><code>location</code> the location within the source file the warning was reported from, if known.</p>
+</li>
+</ul>
 <p>Commands that continue past a partial failure (e.g. one bad row out of a
 stream) report it as a warning rather than aborting. A bounded number of the
 most recent warnings are kept here (see <a href="#crush-warn-limit"><code>crush:warn:limit</code></a>); in interactive
@@ -1618,7 +1666,23 @@ the <code>--recurse</code> switch.</p>
 <div class="cmd-doc"><pre><code><a href="#fs-mounts"><span class="tok-command">fs:mounts</span></a></code></pre>
 <p>List filesystem mount points</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">size</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">available</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">usage</span><span class="tok-operator">=</span><a href="#types-float"><span class="tok-identifier">$float</span></a> <span class="tok-string_literal">format</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">readonly</span><span class="tok-operator">=</span><a href="#types-any"><span class="tok-identifier">$any</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">path</span><span class="tok-operator">=</span><a href="#types-file"><span class="tok-identifier">$file</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>size</code> size in bytes.</p>
+</li>
+<li><p><code>available</code> available space in bytes.</p>
+</li>
+<li><p><a href="#fs-usage"><code>usage</code></a> usage percentage.</p>
+</li>
+<li><p><code>format</code> filesystem type (ntfs, ext4, etc.).</p>
+</li>
+<li><p><code>readonly</code> whether the filesystem is mounted readonly.</p>
+</li>
+<li><p><code>name</code> name assigned to this mountpoint, if any.</p>
+</li>
+<li><p><code>path</code> the mount location.</p>
+</li>
+</ul>
 <p><a href="#fs-mounts"><code>mounts</code></a> outputs the following information about each mount point:</p>
 <ul>
 <li><p><code>size</code> size in bytes.</p>
@@ -1643,7 +1707,45 @@ the <code>--recurse</code> switch.</p>
 <div class="cmd-doc"><pre><code><a href="#fs-stat"><span class="tok-command">fs:stat</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">destination</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-file_literal">...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--symlink</span><span class="tok-operator">]</span></code></pre>
 <p>Return a row with information about each file</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">is_socket</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">is_symlink</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">is_file</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">is_block</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">is_dir</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">is_char</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">is_fifo</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">inode</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">nlink</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">uid</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">gid</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">size</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">block_size</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">blocks</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">access_time</span><span class="tok-operator">=</span><a href="#types-time"><span class="tok-identifier">$time</span></a> <span class="tok-string_literal">modification_time</span><span class="tok-operator">=</span><a href="#types-time"><span class="tok-identifier">$time</span></a> <span class="tok-string_literal">creation_time</span><span class="tok-operator">=</span><a href="#types-time"><span class="tok-identifier">$time</span></a> <span class="tok-string_literal">file</span><span class="tok-operator">=</span><a href="#types-file"><span class="tok-identifier">$file</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>is_socket</code> true if the file is a Unix domain socket.</p>
+</li>
+<li><p><code>is_symlink</code> true if the file is a symbolic link.</p>
+</li>
+<li><p><code>is_file</code> true if the file is a regular file.</p>
+</li>
+<li><p><code>is_block</code> true if the file is a block device.</p>
+</li>
+<li><p><code>is_dir</code> true if the file is a directory.</p>
+</li>
+<li><p><code>is_char</code> true if the file is a character device.</p>
+</li>
+<li><p><code>is_fifo</code> true if the file is a named pipe (FIFO).</p>
+</li>
+<li><p><code>inode</code> the file&#39;s inode number.</p>
+</li>
+<li><p><code>nlink</code> the number of hard links to the file.</p>
+</li>
+<li><p><code>uid</code> the id of the file&#39;s owning user.</p>
+</li>
+<li><p><code>gid</code> the id of the file&#39;s owning group.</p>
+</li>
+<li><p><code>size</code> the file&#39;s size in bytes.</p>
+</li>
+<li><p><code>block_size</code> the size of the filesystem blocks the file is stored in.</p>
+</li>
+<li><p><code>blocks</code> the number of blocks allocated to the file.</p>
+</li>
+<li><p><code>access_time</code> when the file was last accessed.</p>
+</li>
+<li><p><code>modification_time</code> when the file&#39;s contents were last modified.</p>
+</li>
+<li><p><code>creation_time</code> when the file was created.</p>
+</li>
+<li><p><a href="#types-file"><code>file</code></a> the file this row describes.</p>
+</li>
+</ul>
 <p>The return value contains the following columns:</p>
 <ul>
 <li><p><code>is_socket</code> (<a href="#types-bool"><code>bool</code></a>) is the file is a socket</p>
@@ -1695,7 +1797,15 @@ the <code>--recurse</code> switch.</p>
 <div class="cmd-doc"><pre><code><a href="#fs-usage"><span class="tok-command">fs:usage</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">directory</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-file_literal">...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--silent</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--all</span><span class="tok-operator">]</span></code></pre>
 <p>Calculate the recursive directory space usage.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">size</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">blocks</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">file</span><span class="tok-operator">=</span><a href="#types-file"><span class="tok-identifier">$file</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>size</code> the recursive size of the file or directory, in bytes.</p>
+</li>
+<li><p><code>blocks</code> the recursive number of blocks allocated to the file or directory.</p>
+</li>
+<li><p><a href="#types-file"><code>file</code></a> the file or directory this row describes.</p>
+</li>
+</ul>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>directory</code> the files to calculate the recursive size of.</p>
@@ -1712,7 +1822,15 @@ the <code>--recurse</code> switch.</p>
 <div class="cmd-doc"><pre><code><a href="#fs-watch"><span class="tok-command">fs:watch</span></a> <span class="tok-string_literal">path</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a> <span class="tok-operator">[</span><span class="tok-named_argument">--recurse</span><span class="tok-operator">]</span></code></pre>
 <p>Watch a path for filesystem changes and stream them as rows.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">path</span><span class="tok-operator">=</span><a href="#types-file"><span class="tok-identifier">$file</span></a> <span class="tok-string_literal">kind</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">timestamp</span><span class="tok-operator">=</span><a href="#types-time"><span class="tok-identifier">$time</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>path</code> the file or directory the change was observed on.</p>
+</li>
+<li><p><code>kind</code> the kind of change, e.g. create, modify, or remove.</p>
+</li>
+<li><p><code>timestamp</code> when the change was observed.</p>
+</li>
+</ul>
 <p>Uses the operating system&#39;s native filesystem notification API (inotify on
 Linux, FSEvents on macOS, ReadDirectoryChangesW on Windows), so what counts as a
 change and how quickly it is reported is a best-effort property of the host OS,
@@ -1792,7 +1910,31 @@ The grpc methods support tab completion of argument names. They also come with h
 <div class="cmd-doc"><pre><code><a href="#host-battery"><span class="tok-command">host:battery</span></a></code></pre>
 <p>List all batteries in the system and their status</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">vendor</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">model</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">technology</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">cycle_count</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">temperature</span><span class="tok-operator">=</span><a href="#types-float"><span class="tok-identifier">$float</span></a> <span class="tok-string_literal">voltage</span><span class="tok-operator">=</span><a href="#types-float"><span class="tok-identifier">$float</span></a> <span class="tok-string_literal">health</span><span class="tok-operator">=</span><a href="#types-float"><span class="tok-identifier">$float</span></a> <span class="tok-string_literal">state</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">charge</span><span class="tok-operator">=</span><a href="#types-float"><span class="tok-identifier">$float</span></a> <span class="tok-string_literal">time_to_full</span><span class="tok-operator">=</span><a href="#types-duration"><span class="tok-identifier">$duration</span></a> <span class="tok-string_literal">time_to_empty</span><span class="tok-operator">=</span><a href="#types-duration"><span class="tok-identifier">$duration</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>vendor</code> the battery&#39;s manufacturer.</p>
+</li>
+<li><p><code>model</code> the battery&#39;s model name.</p>
+</li>
+<li><p><code>technology</code> the battery&#39;s chemistry, e.g. lithium-ion.</p>
+</li>
+<li><p><code>cycle_count</code> the number of charge cycles the battery has gone through.</p>
+</li>
+<li><p><code>temperature</code> the battery&#39;s current temperature.</p>
+</li>
+<li><p><code>voltage</code> the battery&#39;s current voltage.</p>
+</li>
+<li><p><code>health</code> the battery&#39;s remaining capacity relative to when it was new.</p>
+</li>
+<li><p><code>state</code> the battery&#39;s current charging state, e.g. charging or discharging.</p>
+</li>
+<li><p><code>charge</code> the battery&#39;s current charge level.</p>
+</li>
+<li><p><code>time_to_full</code> how long until the battery is fully charged.</p>
+</li>
+<li><p><code>time_to_empty</code> how long until the battery is fully depleted.</p>
+</li>
+</ul>
 </div>
 </article>
 <article class="cmd" id="host-memory">
@@ -1829,7 +1971,23 @@ The grpc methods support tab completion of argument names. They also come with h
 <div class="cmd-doc"><pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a></code></pre>
 <p>Return a table stream containing information on all running processes on this host</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">pid</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">ppid</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">user</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">rss</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">vms</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">cpu</span><span class="tok-operator">=</span><a href="#types-duration"><span class="tok-identifier">$duration</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>pid</code> the process id.</p>
+</li>
+<li><p><code>ppid</code> the parent process&#39;s id.</p>
+</li>
+<li><p><code>user</code> the name of the user running the process.</p>
+</li>
+<li><p><code>rss</code> the process&#39;s resident set size, i.e. physical memory in use.</p>
+</li>
+<li><p><code>vms</code> the process&#39;s virtual memory size.</p>
+</li>
+<li><p><code>cpu</code> the total CPU time the process has used.</p>
+</li>
+<li><p><code>name</code> the process&#39;s executable path, or its name if the path isn&#39;t known.</p>
+</li>
+</ul>
 <p>host:procs accepts no arguments.</p>
 </div>
 </article>
@@ -1863,7 +2021,21 @@ SIGCONT and SIGWINCH.</p>
 <div class="cmd-doc"><pre><code><a href="#host-threads"><span class="tok-command">host:threads</span></a></code></pre>
 <p>Return a table stream containing information on all running threads on this host</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">tid</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">pid</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">priority</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">user</span><span class="tok-operator">=</span><a href="#types-duration"><span class="tok-identifier">$duration</span></a> <span class="tok-string_literal">system</span><span class="tok-operator">=</span><a href="#types-duration"><span class="tok-identifier">$duration</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>tid</code> the thread id.</p>
+</li>
+<li><p><code>pid</code> the id of the process this thread belongs to.</p>
+</li>
+<li><p><code>priority</code> the thread&#39;s scheduling priority.</p>
+</li>
+<li><p><code>user</code> the CPU time the thread has spent in user mode.</p>
+</li>
+<li><p><code>system</code> the CPU time the thread has spent in kernel mode.</p>
+</li>
+<li><p><code>name</code> the thread&#39;s name.</p>
+</li>
+</ul>
 <p>host:threads accepts no arguments.</p>
 </div>
 </article>
@@ -2212,7 +2384,11 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <div class="cmd-doc"><pre><code><a href="#io-lines-from"><span class="tok-command">io:lines:from</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">files</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-binary"><span class="tok-identifier">$binary</span></a> <span class="tok-identifier">$binary_input_stream</span> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-file_literal">...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--skip_empty_lines</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--strip_whitespace</span><span class="tok-operator">]</span></code></pre>
 <p>Read specified files (or input) as a table with one line of text per row</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">line</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>line</code> one line of input.</p>
+</li>
+</ul>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>files</code> the files to read from (read from input if no file is specified).</p>
@@ -2714,7 +2890,11 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <div class="cmd-doc"><pre><code><a href="#random-float_stream"><span class="tok-command">random:float_stream</span></a> <span class="tok-string_literal">to</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><a href="#types-one_of"><span class="tok-command">one_of</span></a> <a href="#types-float"><span class="tok-identifier">$float</span></a> <a href="#types-integer"><span class="tok-identifier">$integer</span></a><span class="tok-operator">)</span></code></pre>
 <p>generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive)</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">value</span><span class="tok-operator">=</span><a href="#types-float"><span class="tok-identifier">$float</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>value</code> a random floating point number.</p>
+</li>
+</ul>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>to</code> (default: <code>1.0</code>) upper bound (exclusive).</p>
@@ -2743,7 +2923,11 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <div class="cmd-doc"><pre><code><a href="#random-integer_stream"><span class="tok-command">random:integer_stream</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">to</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span></code></pre>
 <p>generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive)</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">value</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>value</code> a random integer.</p>
+</li>
+</ul>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>to</code> (default: <code>2</code>) upper bound (exclusive).</p>
@@ -2799,7 +2983,13 @@ weaken protection against a machine-in-the-middle impersonating the remote host.
 <div class="cmd-doc"><pre><code><a href="#remote-identity"><span class="tok-command">remote:identity</span></a></code></pre>
 <p>List all known ssh-agent identities</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">identity</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">public_key</span><span class="tok-operator">=</span><a href="#types-binary"><span class="tok-identifier">$binary</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>identity</code> the identity&#39;s comment, usually describing which key it is.</p>
+</li>
+<li><p><code>public_key</code> the identity&#39;s public key.</p>
+</li>
+</ul>
 </div>
 </article>
 <article class="cmd" id="remote-pexec">
@@ -2807,7 +2997,13 @@ weaken protection against a machine-in-the-middle impersonating the remote host.
 <div class="cmd-doc"><pre><code><a href="#remote-pexec"><span class="tok-command">remote:pexec</span></a> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-string_literal">command</span> <span class="tok-operator">[</span><span class="tok-string_literal">host</span><span class="tok-operator">=</span><span class="tok-file_literal">string...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">parallel</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">username</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">password</span><span class="tok-operator">=</span><span class="tok-string_literal">string</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">host_file</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--ignore_host_file</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--allow_not_found</span><span class="tok-operator">]</span></code></pre>
 <p>Execute a command on a set of hosts</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">host</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">result</span><span class="tok-operator">=</span><a href="#types-any"><span class="tok-identifier">$any</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>host</code> the host the command was run on.</p>
+</li>
+<li><p><code>result</code> the command&#39;s own output value from that host.</p>
+</li>
+</ul>
 <p>Like <code>exec</code>, but runs <code>command</code> on every host listed in <code>host</code> (up to <code>parallel</code>
 of them at a time). pexec always attempts every host in the list, regardless of
 whether earlier hosts failed to connect or authenticate -- it never fails outright
@@ -2855,7 +3051,13 @@ for what <code>ignore_host_file</code>/<code>allow_not_found</code> mean for sec
 <div class="cmd-doc"><pre><code><a href="#remote-host-list"><span class="tok-command">remote:host:list</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">host_file</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-operator">]</span></code></pre>
 <p>List all known hosts</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">host</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">public_key</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><a href="#host"><code>host</code></a> the hostname, or the empty string if the key has none.</p>
+</li>
+<li><p><code>public_key</code> the host&#39;s public key.</p>
+</li>
+</ul>
 <p>If a given host key has no hostname, the hostname will be the empty string</p>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -2896,7 +3098,21 @@ Returns the number of host entries deleted.</p>
 <div class="cmd-doc"><pre><code><a href="#sockets-tcp"><span class="tok-command">sockets:tcp</span></a></code></pre>
 <p>List open TCP sockets</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">local_address</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">local_port</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">remote_address</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">remote_port</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">pids</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><a href="#types-list"><span class="tok-command">list</span></a> <a href="#types-integer"><span class="tok-identifier">$integer</span></a><span class="tok-operator">)</span> <span class="tok-string_literal">state</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>local_address</code> the local IP address the socket is bound to.</p>
+</li>
+<li><p><code>local_port</code> the local port the socket is bound to.</p>
+</li>
+<li><p><code>remote_address</code> the remote peer&#39;s IP address.</p>
+</li>
+<li><p><code>remote_port</code> the remote peer&#39;s port.</p>
+</li>
+<li><p><code>pids</code> the ids of the processes that own the socket.</p>
+</li>
+<li><p><code>state</code> the connection&#39;s current TCP state, e.g. listen or established.</p>
+</li>
+</ul>
 </div>
 </article>
 <article class="cmd" id="sockets-udp">
@@ -2904,7 +3120,15 @@ Returns the number of host entries deleted.</p>
 <div class="cmd-doc"><pre><code><a href="#sockets-udp"><span class="tok-command">sockets:udp</span></a></code></pre>
 <p>List open UDP sockets</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">local_address</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">local_port</span><span class="tok-operator">=</span><a href="#types-integer"><span class="tok-identifier">$integer</span></a> <span class="tok-string_literal">pids</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><a href="#types-list"><span class="tok-command">list</span></a> <a href="#types-integer"><span class="tok-identifier">$integer</span></a><span class="tok-operator">)</span></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>local_address</code> the local IP address the socket is bound to.</p>
+</li>
+<li><p><code>local_port</code> the local port the socket is bound to.</p>
+</li>
+<li><p><code>pids</code> the ids of the processes that own the socket.</p>
+</li>
+</ul>
 </div>
 </article>
 </section>
@@ -3605,7 +3829,13 @@ instead.</p>
 <div class="cmd-doc"><pre><code><a href="#types-members"><span class="tok-command">types:members</span></a></code></pre>
 <p>List the columns of any streamable input value as name/type pairs.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">type</span><span class="tok-operator">=</span><a href="#types-type"><span class="tok-identifier">$type</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>name</code> the column&#39;s name.</p>
+</li>
+<li><p><a href="#types-type"><code>type</code></a> the column&#39;s type.</p>
+</li>
+</ul>
 <p>Works on anything that can be read as a stream of rows -- a table, a list, a
 dict, a struct, a scope -- and reports that stream&#39;s shape without consuming
 any of its actual rows.</p>
@@ -4003,7 +4233,15 @@ of paths rather than naming a single one.</p>
 <div class="cmd-doc"><pre><code><a href="#types-file-remove"><span class="tok-command">types:file:remove</span></a> <span class="tok-operator">[</span><span class="tok-named_argument">--recursive</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-named_argument">--verbose</span><span class="tok-operator">]</span></code></pre>
 <p>Delete this file</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">file</span><span class="tok-operator">=</span><a href="#types-file"><span class="tok-identifier">$file</span></a> <span class="tok-string_literal">deleted</span><span class="tok-operator">=</span><a href="#types-bool"><span class="tok-identifier">$bool</span></a> <span class="tok-string_literal">status</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><a href="#types-file"><code>file</code></a> the file this row describes.</p>
+</li>
+<li><p><code>deleted</code> true if the file was successfully deleted.</p>
+</li>
+<li><p><code>status</code> &quot;Deleted&quot;, or the error that prevented deletion.</p>
+</li>
+</ul>
 <p>Returns a stream of deletion failures.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -5552,9 +5790,15 @@ var:let_destructure a b value=[1, 2]</code></pre>
 <div class="cmd-doc"><pre><code><a href="#var-list"><span class="tok-command">var:list</span></a></code></pre>
 <p>Returns a table containing all variable names currently in scope and their types.</p>
 <h1>Output</h1>
-<pre><code><a href="#types-table_input_stream"><span class="tok-command">table_input_stream</span></a> <span class="tok-string_literal">name</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a> <span class="tok-string_literal">type</span><span class="tok-operator">=</span><a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
-<p>A variable is in scope if it exists in the current scope, any of its parents, or any of
-the scopes used in any of those scopes.</p>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>name</code> the variable&#39;s name.</p>
+</li>
+<li><p><a href="#types-type"><code>type</code></a> the variable&#39;s type.</p>
+</li>
+</ul>
+<p>A variable is in scope if it exists in the current scope, any of its parents, or any of</p>
+<pre><code> <span class="tok-command">the</span> <span class="tok-string_literal">scopes</span> <span class="tok-string_literal">used</span> <span class="tok-string_literal">in</span> <span class="tok-string_literal">any</span> <span class="tok-string_literal">of</span> <span class="tok-string_literal">those</span> <span class="tok-file_literal">scopes.</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="var-local">

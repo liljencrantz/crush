@@ -15,9 +15,9 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 static OUTPUT_TYPE: [ColumnType; 3] = [
-    ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer, "The recursive size of the file or directory, in bytes."),
-    ColumnType::new("blocks", ValueType::Integer, "The recursive number of blocks allocated to the file or directory."),
-    ColumnType::new("file", ValueType::File, "The file or directory this row describes."),
+    ColumnType::new_with_format("size", ColumnFormat::ByteUnit, ValueType::Integer, "the recursive size of the file or directory, in bytes."),
+    ColumnType::new("blocks", ValueType::Integer, "the recursive number of blocks allocated to the file or directory."),
+    ColumnType::new("file", ValueType::File, "the file or directory this row describes."),
 ];
 
 #[signature(

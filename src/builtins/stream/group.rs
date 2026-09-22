@@ -199,7 +199,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         output_type.push(ColumnType::new_from_string(
             name.clone(),
             ValueType::Any,
-            "The result of aggregating this group's rows.".to_string(),
+            "the result of aggregating this group's rows.".to_string(),
         ));
     }
 

@@ -33,11 +33,11 @@ fn me(context: CommandContext) -> CrushResult<()> {
 }
 
 static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
-    ColumnType::new("name", ValueType::String, "The username."),
-    ColumnType::new("tty", ValueType::String, "The terminal the session is connected to."),
-    ColumnType::new("host", ValueType::String, "The remote host the session originated from, if known."),
-    ColumnType::new("time", ValueType::Time, "When the session began."),
-    ColumnType::new("pid", ValueType::Integer, "The id of the session's login process."),
+    ColumnType::new("name", ValueType::String, "the username."),
+    ColumnType::new("tty", ValueType::String, "the terminal the session is connected to."),
+    ColumnType::new("host", ValueType::String, "the remote host the session originated from, if known."),
+    ColumnType::new("time", ValueType::Time, "when the session began."),
+    ColumnType::new("pid", ValueType::Integer, "the id of the session's login process."),
 ];
 
 #[signature(
@@ -66,12 +66,12 @@ fn current(context: CommandContext) -> CrushResult<()> {
 }
 
 static LIST_OUTPUT_TYPE: [ColumnType; 6] = [
-    ColumnType::new("name", ValueType::String, "The username."),
-    ColumnType::new("home", ValueType::File, "The user's home directory."),
-    ColumnType::new("shell", ValueType::File, "The user's login shell."),
-    ColumnType::new("information", ValueType::String, "The user's full name or other descriptive information (the GECOS field)."),
-    ColumnType::new("uid", ValueType::Integer, "The user's id."),
-    ColumnType::new("gid", ValueType::Integer, "The id of the user's primary group."),
+    ColumnType::new("name", ValueType::String, "the username."),
+    ColumnType::new("home", ValueType::File, "the user's home directory."),
+    ColumnType::new("shell", ValueType::File, "the user's login shell."),
+    ColumnType::new("information", ValueType::String, "the user's full name or other descriptive information (the GECOS field)."),
+    ColumnType::new("uid", ValueType::Integer, "the user's id."),
+    ColumnType::new("gid", ValueType::Integer, "the id of the user's primary group."),
 ];
 
 pub fn user_struct() -> &'static Struct {

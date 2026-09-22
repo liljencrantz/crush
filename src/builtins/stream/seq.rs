@@ -56,7 +56,7 @@ pub fn seq(mut context: CommandContext) -> CrushResult<()> {
         }
     };
 
-    let output = context.initialize_output(&[ColumnType::new("value", ValueType::Integer, "The next number in the sequence.")])?;
+    let output = context.initialize_output(&[ColumnType::new("value", ValueType::Integer, "the next number in the sequence.")])?;
 
     let mut idx = from;
     loop {

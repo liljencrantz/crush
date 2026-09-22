@@ -1233,7 +1233,7 @@ fn signal_value(
             ColumnType::new_from_string(
                 name.clone(),
                 column_type_for_signature(&a.signature),
-                "An argument of the D-Bus signal.".to_string(),
+                "an argument of the D-Bus signal.".to_string(),
             )
         })
         .collect::<Vec<_>>();
@@ -1303,7 +1303,7 @@ fn call_signal(mut context: CommandContext) -> CrushResult<()> {
             ColumnType::new_from_string(
                 name.clone(),
                 column_type_for_signature(signature),
-                "An argument of the D-Bus signal.".to_string(),
+                "an argument of the D-Bus signal.".to_string(),
             )
         })
         .collect::<Vec<_>>();

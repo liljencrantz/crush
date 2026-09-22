@@ -43,17 +43,17 @@ fn uptime(context: CommandContext) -> CrushResult<()> {
 }
 
 static BATTERY_OUTPUT_TYPE: [ColumnType; 11] = [
-    ColumnType::new("vendor", ValueType::String, "The battery's manufacturer."),
-    ColumnType::new("model", ValueType::String, "The battery's model name."),
-    ColumnType::new("technology", ValueType::String, "The battery's chemistry, e.g. lithium-ion."),
-    ColumnType::new("cycle_count", ValueType::Integer, "The number of charge cycles the battery has gone through."),
-    ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::Float, "The battery's current temperature."),
-    ColumnType::new("voltage", ValueType::Float, "The battery's current voltage."),
-    ColumnType::new_with_format("health", ColumnFormat::Percentage, ValueType::Float, "The battery's remaining capacity relative to when it was new."),
-    ColumnType::new("state", ValueType::String, "The battery's current charging state, e.g. charging or discharging."),
-    ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float, "The battery's current charge level."),
-    ColumnType::new("time_to_full", ValueType::Duration, "How long until the battery is fully charged."),
-    ColumnType::new("time_to_empty", ValueType::Duration, "How long until the battery is fully depleted."),
+    ColumnType::new("vendor", ValueType::String, "the battery's manufacturer."),
+    ColumnType::new("model", ValueType::String, "the battery's model name."),
+    ColumnType::new("technology", ValueType::String, "the battery's chemistry, e.g. lithium-ion."),
+    ColumnType::new("cycle_count", ValueType::Integer, "the number of charge cycles the battery has gone through."),
+    ColumnType::new_with_format("temperature", ColumnFormat::Temperature, ValueType::Float, "the battery's current temperature."),
+    ColumnType::new("voltage", ValueType::Float, "the battery's current voltage."),
+    ColumnType::new_with_format("health", ColumnFormat::Percentage, ValueType::Float, "the battery's remaining capacity relative to when it was new."),
+    ColumnType::new("state", ValueType::String, "the battery's current charging state, e.g. charging or discharging."),
+    ColumnType::new_with_format("charge", ColumnFormat::Percentage, ValueType::Float, "the battery's current charge level."),
+    ColumnType::new("time_to_full", ValueType::Duration, "how long until the battery is fully charged."),
+    ColumnType::new("time_to_empty", ValueType::Duration, "how long until the battery is fully depleted."),
 ];
 
 #[signature(
@@ -196,13 +196,13 @@ mod cpu {
 }
 
 static PROCS_OUTPUT_TYPE: [ColumnType; 7] = [
-    ColumnType::new("pid", ValueType::Integer, "The process id."),
-    ColumnType::new("ppid", ValueType::Integer, "The parent process's id."),
-    ColumnType::new("user", ValueType::String, "The name of the user running the process."),
-    ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "The process's resident set size, i.e. physical memory in use."),
-    ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "The process's virtual memory size."),
-    ColumnType::new("cpu", ValueType::Duration, "The total CPU time the process has used."),
-    ColumnType::new("name", ValueType::String, "The process's executable path, or its name if the path isn't known."),
+    ColumnType::new("pid", ValueType::Integer, "the process id."),
+    ColumnType::new("ppid", ValueType::Integer, "the parent process's id."),
+    ColumnType::new("user", ValueType::String, "the name of the user running the process."),
+    ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "the process's resident set size, i.e. physical memory in use."),
+    ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "the process's virtual memory size."),
+    ColumnType::new("cpu", ValueType::Duration, "the total CPU time the process has used."),
+    ColumnType::new("name", ValueType::String, "the process's executable path, or its name if the path isn't known."),
 ];
 
 #[signature(
@@ -253,12 +253,12 @@ mod macos {
     use mach2::mach_time::mach_timebase_info;
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 6] = [
-        ColumnType::new("tid", ValueType::Integer, "The thread id."),
-        ColumnType::new("pid", ValueType::Integer, "The id of the process this thread belongs to."),
-        ColumnType::new("priority", ValueType::Integer, "The thread's scheduling priority."),
-        ColumnType::new("user", ValueType::Duration, "The CPU time the thread has spent in user mode."),
-        ColumnType::new("system", ValueType::Duration, "The CPU time the thread has spent in kernel mode."),
-        ColumnType::new("name", ValueType::String, "The thread's name."),
+        ColumnType::new("tid", ValueType::Integer, "the thread id."),
+        ColumnType::new("pid", ValueType::Integer, "the id of the process this thread belongs to."),
+        ColumnType::new("priority", ValueType::Integer, "the thread's scheduling priority."),
+        ColumnType::new("user", ValueType::Duration, "the CPU time the thread has spent in user mode."),
+        ColumnType::new("system", ValueType::Duration, "the CPU time the thread has spent in kernel mode."),
+        ColumnType::new("name", ValueType::String, "the thread's name."),
     ];
 
     #[signature(
@@ -332,13 +332,13 @@ mod linux {
     use super::*;
 
     static THREADS_OUTPUT_TYPE: [ColumnType; 7] = [
-        ColumnType::new("tid", ValueType::Integer, "The thread id."),
-        ColumnType::new("pid", ValueType::Integer, "The id of the process this thread belongs to."),
-        ColumnType::new("user", ValueType::String, "The name of the user running the thread's process."),
-        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "The thread's resident set size, i.e. physical memory in use."),
-        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "The thread's virtual memory size."),
-        ColumnType::new("cpu", ValueType::Duration, "The total CPU time the thread has used."),
-        ColumnType::new("name", ValueType::String, "The thread's name."),
+        ColumnType::new("tid", ValueType::Integer, "the thread id."),
+        ColumnType::new("pid", ValueType::Integer, "the id of the process this thread belongs to."),
+        ColumnType::new("user", ValueType::String, "the name of the user running the thread's process."),
+        ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "the thread's resident set size, i.e. physical memory in use."),
+        ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "the thread's virtual memory size."),
+        ColumnType::new("cpu", ValueType::Duration, "the total CPU time the thread has used."),
+        ColumnType::new("name", ValueType::String, "the thread's name."),
     ];
 
     #[signature(

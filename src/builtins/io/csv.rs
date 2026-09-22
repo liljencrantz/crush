@@ -44,7 +44,7 @@ fn from(mut context: CommandContext) -> CrushResult<()> {
     let columns = cfg
         .columns
         .iter()
-        .map(|(k, v)| ColumnType::new_from_string(k.clone(), v.clone(), "A column defined by the caller.".to_string()))
+        .map(|(k, v)| ColumnType::new_from_string(k.clone(), v.clone(), "a column defined by the caller.".to_string()))
         .collect::<Vec<_>>();
     let output = context.initialize_output(&columns)?;
     let command_handle = context.command_handle().clone();

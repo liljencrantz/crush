@@ -18,37 +18,37 @@ use trust_dns_client::tcp::TcpClientConnection;
 use trust_dns_client::udp::UdpClientConnection;
 
 static A_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("target", ValueType::String, "The IP address the record resolves to."),
-    ColumnType::new("ttl", ValueType::Duration, "How long this record may be cached."),
+    ColumnType::new("target", ValueType::String, "the IP address the record resolves to."),
+    ColumnType::new("ttl", ValueType::Duration, "how long this record may be cached."),
 ];
 
 static MX_STREAM_OUTPUT_TYPE: [ColumnType; 3] = [
-    ColumnType::new("target", ValueType::String, "The hostname of the mail server."),
-    ColumnType::new("preference", ValueType::Integer, "The mail server's preference; lower values are tried first."),
-    ColumnType::new("ttl", ValueType::Duration, "How long this record may be cached."),
+    ColumnType::new("target", ValueType::String, "the hostname of the mail server."),
+    ColumnType::new("preference", ValueType::Integer, "the mail server's preference; lower values are tried first."),
+    ColumnType::new("ttl", ValueType::Duration, "how long this record may be cached."),
 ];
 
 static SOA_STREAM_OUTPUT_TYPE: [ColumnType; 7] = [
-    ColumnType::new("mname", ValueType::String, "The hostname of the zone's primary name server."),
-    ColumnType::new("rname", ValueType::String, "The email address of the zone's administrator, with the first `.` in place of `@`."),
-    ColumnType::new("serial", ValueType::Integer, "The zone file's serial number, incremented on every change."),
-    ColumnType::new("refresh", ValueType::Duration, "How often secondary name servers should check for zone updates."),
-    ColumnType::new("retry", ValueType::Duration, "How long a secondary name server should wait before retrying a failed zone transfer."),
-    ColumnType::new("expire", ValueType::Duration, "How long a secondary name server may keep serving stale data before it must stop."),
-    ColumnType::new("ttl", ValueType::Duration, "The minimum time other name servers may cache a negative (non-existence) answer for this zone."),
+    ColumnType::new("mname", ValueType::String, "the hostname of the zone's primary name server."),
+    ColumnType::new("rname", ValueType::String, "the email address of the zone's administrator, with the first `.` in place of `@`."),
+    ColumnType::new("serial", ValueType::Integer, "the zone file's serial number, incremented on every change."),
+    ColumnType::new("refresh", ValueType::Duration, "how often secondary name servers should check for zone updates."),
+    ColumnType::new("retry", ValueType::Duration, "how long a secondary name server should wait before retrying a failed zone transfer."),
+    ColumnType::new("expire", ValueType::Duration, "how long a secondary name server may keep serving stale data before it must stop."),
+    ColumnType::new("ttl", ValueType::Duration, "the minimum time other name servers may cache a negative (non-existence) answer for this zone."),
 ];
 
 static SRV_STREAM_OUTPUT_TYPE: [ColumnType; 5] = [
-    ColumnType::new("target", ValueType::String, "The hostname providing the service."),
-    ColumnType::new("priority", ValueType::Integer, "The target's priority; lower values are tried first."),
-    ColumnType::new("weight", ValueType::Integer, "The relative weight for targets sharing the same priority."),
-    ColumnType::new("port", ValueType::Integer, "The port the service is available on."),
-    ColumnType::new("ttl", ValueType::Duration, "How long this record may be cached."),
+    ColumnType::new("target", ValueType::String, "the hostname providing the service."),
+    ColumnType::new("priority", ValueType::Integer, "the target's priority; lower values are tried first."),
+    ColumnType::new("weight", ValueType::Integer, "the relative weight for targets sharing the same priority."),
+    ColumnType::new("port", ValueType::Integer, "the port the service is available on."),
+    ColumnType::new("ttl", ValueType::Duration, "how long this record may be cached."),
 ];
 
 static TXT_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
-    ColumnType::new("text", ValueType::Binary, "The record's raw text data."),
-    ColumnType::new("ttl", ValueType::Duration, "How long this record may be cached."),
+    ColumnType::new("text", ValueType::Binary, "the record's raw text data."),
+    ColumnType::new("ttl", ValueType::Duration, "how long this record may be cached."),
 ];
 
 /// How many CNAME hops `query_internal` will follow before giving up. A nameserver

@@ -320,8 +320,8 @@ fn parent(mut context: CommandContext) -> CrushResult<()> {
 }
 
 static REMOVE_OUTPUT_TYPE: [ColumnType; 3] = [
-    ColumnType::new("file", ValueType::File, "The file this row describes."),
-    ColumnType::new("deleted", ValueType::Bool, "True if the file was successfully deleted."),
+    ColumnType::new("file", ValueType::File, "the file this row describes."),
+    ColumnType::new("deleted", ValueType::Bool, "true if the file was successfully deleted."),
     ColumnType::new("status", ValueType::String, "\"Deleted\", or the error that prevented deletion."),
 ];
 

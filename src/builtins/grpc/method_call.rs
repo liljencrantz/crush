@@ -27,7 +27,7 @@ async fn grpc_method_call_async(mut context: CommandContext) -> CrushResult<()> 
                         input_signature.push(ColumnType::new_from_string(
                             name,
                             a.value.value_type(),
-                            "A field of the gRPC request message.".to_string(),
+                            "a field of the gRPC request message.".to_string(),
                         ));
                         fields.push(a.value);
                     } else {

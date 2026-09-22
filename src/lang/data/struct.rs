@@ -17,8 +17,8 @@ use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
 static STRUCT_STREAM_TYPE: [ColumnType; 2] = [
-    ColumnType::new("name", ValueType::String, "The field's name."),
-    ColumnType::new("value", ValueType::Any, "The field's value."),
+    ColumnType::new("name", ValueType::String, "the field's name."),
+    ColumnType::new("value", ValueType::Any, "the field's value."),
 ];
 
 #[derive(Clone)]
@@ -124,7 +124,7 @@ impl Struct {
             res.push(ColumnType::new_from_string(
                 reverse_lookup.get(&idx).unwrap().to_string(),
                 value.value_type(),
-                "A field of this struct.".to_string(),
+                "a field of this struct.".to_string(),
             ));
         }
         res

@@ -91,7 +91,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
             let output = context.initialize_output(&[ColumnType::new(
                 "value",
                 ValueType::Any,
-                "The output of invoking the command at this heartbeat.",
+                "the output of invoking the command at this heartbeat.",
             )])?;
             let base_context = context.empty();
             let env = context.scope.clone();
