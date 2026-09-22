@@ -360,7 +360,7 @@ impl Help for SimpleCommand {
         let output = self.output.format();
         let long_cat = self.long_help.as_ref().map(|s| s.to_string());
         match (output, long_cat) {
-            (Some(o), Some(l)) => Some(format!("{}\n\n{}", o, l)),
+            (Some(o), Some(l)) => Some(format!("{}\n\n{}", l, o)),
             (Some(o), None) => Some(o),
             (None, Some(o)) => Some(o),
             (None, None) => None,
