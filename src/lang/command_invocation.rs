@@ -298,6 +298,18 @@ pub fn resolve_external_command(name: &str) -> CrushResult<Option<PathBuf>> {
     Ok(None)
 }
 
+/// Whether a `$PATH` entry is actually something a bare word in command position could
+/// run. `resolve_external_command` itself only checks existence (`Path::exists`), so a
+/// plain, non-executable regular file matches it too -- but running one fails at the OS
+/// level (`EACCES`/"Permission denied"), so it isn't a valid command. A directory is
+/// treated as valid here even though it isn't executable, mirroring how an explicit path
+/// (e.g. `./some_dir`) is already a legitimate `cd` target elsewhere in the codebase.
+/// Shared by `util::highlight` (to flag an unrunnable command red) and
+/// `lang::completion` (to only offer real, runnable `$PATH` entries as completions).
+pub fn is_runnable_as_command(path: &std::path::Path) -> bool {
+    path.is_dir() || nix::unistd::access(path, nix::unistd::AccessFlags::X_OK).is_ok()
+}
+
 fn try_external_command(
     cmd: &Source,
     mut arguments: Vec<ArgumentDefinition>,

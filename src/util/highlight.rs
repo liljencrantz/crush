@@ -2,7 +2,7 @@ use crate::lang::ast::expand_user;
 use crate::lang::ast::lexer::{LanguageMode, Lexer, TokenizerMode};
 use crate::lang::ast::token::Token;
 use crate::lang::command::{Command, Parameter};
-use crate::lang::command_invocation::resolve_external_command;
+use crate::lang::command_invocation::{is_runnable_as_command, resolve_external_command};
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
@@ -402,17 +402,6 @@ fn get_category(
         For(_) | While(_) | Loop(_) | If(_) | Else(_) | Match(_) | Default(_) | Try(_)
         | Catch(_) | Return(_) | Break(_) | Continue(_) => Some("keyword"),
     }
-}
-
-/// Whether a `$PATH` entry `resolve_external_command` found is actually something a bare
-/// word in command position could run. `resolve_external_command` itself only checks
-/// existence (`Path::exists`), so a plain, non-executable regular file matches it too --
-/// but running one fails at the OS level (`EACCES`/"Permission denied"), so it isn't a
-/// valid command and shouldn't be highlighted as one. A directory is treated as valid
-/// here even though it isn't executable, mirroring how an explicit path (e.g.
-/// `./some_dir`) is already a legitimate `cd` target elsewhere in the codebase.
-fn is_runnable_as_command(path: &std::path::Path) -> bool {
-    path.is_dir() || nix::unistd::access(path, nix::unistd::AccessFlags::X_OK).is_ok()
 }
 
 fn allowed_named_argument(parameter_completion_data: &[Parameter], name: &str) -> bool {

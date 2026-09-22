@@ -1,6 +1,7 @@
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::node::TextLiteralStyle::Unquoted;
 use crate::lang::command::Parameter;
+use crate::lang::command_invocation::is_runnable_as_command;
 use crate::lang::completion::parse::{
     CompletionCommand, LastArgument, ParseResult, PartialCommandResult, parse,
 };
@@ -16,6 +17,7 @@ use crate::util::escape::escape_without_quotes;
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use nix::NixPath;
+use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::PathBuf;
 
@@ -148,6 +150,69 @@ fn complete_label(
             })
             .collect(),
     );
+    Ok(())
+}
+
+/// Every runnable `$PATH` entry (see `is_runnable_as_command`) whose name starts with
+/// `prefix`, from every directory listed in `path_env` (a `:`-separated `$PATH`-shaped
+/// string, e.g. `"/usr/bin:/usr/local/bin"`). Listed through `lister` -- the same
+/// injectable `DirectoryLister` regular file completion already uses -- rather than
+/// reading the real filesystem directly, so a test using `FakeDirectoryLister` (which
+/// errors on any path it wasn't explicitly told about) never sees real, machine-specific
+/// `$PATH` entries leak into its expected completion list. `path_env` is likewise a
+/// plain argument rather than a real `$PATH` read, for the same reason --
+/// `complete_external_commands` below is what reads the real one.
+///
+/// A name found in more than one directory (a common case: PATH generally has several
+/// `bin` directories, and the same tool can exist in more than one) is only offered
+/// once, matching how a shell would only ever run the first match.
+fn complete_path_entries(
+    lister: &impl DirectoryLister,
+    path_env: &str,
+    prefix: &str,
+    cursor: usize,
+    out: &mut Vec<Completion>,
+) {
+    let mut seen = HashSet::new();
+    for dir in path_env.split(':') {
+        if dir.is_empty() {
+            continue;
+        }
+        let Ok(entries) = lister.list(dir) else {
+            continue;
+        };
+        for entry in entries {
+            let Some(name) = entry.name.to_str() else {
+                continue;
+            };
+            if !prefix_match(prefix, name) || !seen.insert(name.to_string()) {
+                continue;
+            }
+            if !is_runnable_as_command(&entry.full_path) {
+                continue;
+            }
+            out.push(Completion::new(
+                format!("{} ", &name[prefix.len()..]),
+                name,
+                cursor,
+            ));
+        }
+    }
+}
+
+/// Command-position completion's own external-command source: every runnable entry on
+/// the real `$PATH`, matching `prefix`. Complements `complete_label`, which only knows
+/// about names declared in the crush scope tree (builtins, session variables, ...) --
+/// without this, a script or tool that's only ever invoked as a bare external command
+/// (never wrapped in a crush builtin) never completed at all.
+fn complete_external_commands(
+    lister: &impl DirectoryLister,
+    prefix: &str,
+    cursor: usize,
+    out: &mut Vec<Completion>,
+) -> CrushResult<()> {
+    let path_env = crate::util::env::get("PATH").unwrap_or_default();
+    complete_path_entries(lister, &path_env, prefix, cursor, out);
     Ok(())
 }
 
@@ -358,6 +423,7 @@ pub fn complete(
                 cursor,
                 &mut res,
             )?;
+            complete_external_commands(lister, "", cursor, &mut res)?;
             complete_file(lister, "", Unquoted, &ValueType::Any, false, cursor, &mut res)?;
         }
 
@@ -379,6 +445,7 @@ pub fn complete(
                 cursor,
                 &mut res,
             )?;
+            complete_external_commands(lister, &label, cursor, &mut res)?;
         }
 
         ParseResult::PartialMember(parent, label) => {
@@ -404,11 +471,73 @@ mod tests {
     use super::*;
     use crate::lang::state::contexts::CommandContext;
     use crate::lang::value::Value;
+    use crate::util::directory_lister::directory_lister;
     use crate::util::directory_lister::tests::FakeDirectoryLister;
     use signature::signature;
+    use std::os::unix::fs::PermissionsExt;
+    use std::sync::Mutex;
 
     fn parser() -> Parser {
         Parser::new()
+    }
+
+    // Serializes the one test below that overrides the real process-wide `$PATH` --
+    // `cargo test`'s default multi-threaded runner would otherwise let it race against
+    // any other test that reads `$PATH`.
+    static PATH_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Points `$PATH` at `dir` for as long as the guard is alive, restoring whatever
+    /// `$PATH` held before on drop (even if the test body panics).
+    struct PathGuard {
+        original: Option<String>,
+    }
+
+    impl PathGuard {
+        fn set(dir: &std::path::Path) -> PathGuard {
+            let original = std::env::var("PATH").ok();
+            unsafe {
+                std::env::set_var("PATH", dir);
+            }
+            PathGuard { original }
+        }
+    }
+
+    impl Drop for PathGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match &self.original {
+                    Some(p) => std::env::set_var("PATH", p),
+                    None => std::env::remove_var("PATH"),
+                }
+            }
+        }
+    }
+
+    /// A fresh scratch directory under the OS temp dir, unique per test (by name), so
+    /// parallel tests never collide on the same path.
+    fn scratch_dir(test_name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "crush_completion_test_{}_{}",
+            test_name,
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn write_executable(path: &std::path::Path, content: &[u8]) {
+        std::fs::write(path, content).unwrap();
+        let mut perms = std::fs::metadata(path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(path, perms).unwrap();
+    }
+
+    fn write_plain_file(path: &std::path::Path, content: &[u8]) {
+        std::fs::write(path, content).unwrap();
+        let mut perms = std::fs::metadata(path).unwrap().permissions();
+        perms.set_mode(0o644);
+        std::fs::set_permissions(path, perms).unwrap();
     }
 
     fn lister() -> FakeDirectoryLister {
@@ -1027,5 +1156,68 @@ mod tests {
             "expected at least one builtin command completing `wh` (e.g. `which`)"
         );
         assert!(completions.iter().any(|c| c.display() == "which"));
+    }
+
+    /// `complete_path_entries` only offers `$PATH` entries `is_runnable_as_command`
+    /// considers valid: a real executable and a real directory, but not a plain,
+    /// non-executable file -- exactly the same distinction the earlier syntax-
+    /// highlighting fix draws for a bare word used as a command.
+    #[test]
+    fn complete_path_entries_offers_only_runnable_entries() {
+        let dir = scratch_dir("offers_only_runnable");
+        write_executable(&dir.join("wh_tool"), b"#!/bin/sh\necho hi\n");
+        write_plain_file(&dir.join("wh_data"), b"not a program");
+        std::fs::create_dir_all(dir.join("wh_dir")).unwrap();
+
+        let mut res = Vec::new();
+        complete_path_entries(&directory_lister(), &dir.display().to_string(), "wh_", 3, &mut res);
+
+        let mut names: Vec<&str> = res.iter().map(|c| c.display()).collect();
+        names.sort();
+        assert_eq!(names, vec!["wh_dir", "wh_tool"]);
+    }
+
+    /// The same tool present on more than one `$PATH` directory (a common real-world
+    /// case -- PATH generally has several `bin` directories) is only offered once.
+    #[test]
+    fn complete_path_entries_deduplicates_across_directories() {
+        let dir1 = scratch_dir("dedup_1");
+        let dir2 = scratch_dir("dedup_2");
+        write_executable(&dir1.join("dup_tool"), b"#!/bin/sh\n");
+        write_executable(&dir2.join("dup_tool"), b"#!/bin/sh\n");
+        let path_env = format!("{}:{}", dir1.display(), dir2.display());
+
+        let mut res = Vec::new();
+        complete_path_entries(&directory_lister(), &path_env, "dup_", 4, &mut res);
+        assert_eq!(res.len(), 1);
+    }
+
+    /// A `FakeDirectoryLister`-backed test (every other test in this module) never sees
+    /// real `$PATH` entries leak in, since the fake lister errors on any path it wasn't
+    /// explicitly told about -- confirmed here directly rather than just inferred from
+    /// the other tests still passing.
+    #[test]
+    fn complete_path_entries_ignores_real_path_when_using_fake_lister() {
+        let mut res = Vec::new();
+        complete_path_entries(&empty_lister(), "/usr/bin:/bin", "", 0, &mut res);
+        assert!(res.is_empty());
+    }
+
+    /// End-to-end: `complete()` itself, with the real `$PATH` pointed at a scratch
+    /// directory holding one real executable -- the exact scenario reported ("`wh`
+    /// should complete with external commands too").
+    #[test]
+    fn check_external_command_completion_end_to_end() {
+        let _lock = PATH_TEST_LOCK.lock().unwrap();
+        let dir = scratch_dir("end_to_end");
+        write_executable(&dir.join("which_gizmo"), b"#!/bin/sh\n");
+        let _guard = PathGuard::set(&dir);
+
+        let line = "which_g";
+        let cursor = line.len();
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &parser(), &directory_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "which_gizmo ");
     }
 }
