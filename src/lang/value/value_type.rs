@@ -305,7 +305,9 @@ there is no other way to construct one. Booleans are immutable, and are the resu
 of every comparison (`==`, `<`, ...) and logical (`and`, `or`) operator.",
 
             ValueType::Duration =>
-                    "To create your own duration objects, use the `duration:of` method, for example
+                    "To create your own duration use a duration literal, an integer number combined with one of the suffixes `h`, `m`, `s`, `ms`, and `ns`. `5s` means five seconds, for example.
+
+If you want to create a duration object with of a size not known at the point of writing the code, use the `duration:of` method, for example
 
     duration:of seconds=10
 
@@ -313,9 +315,11 @@ A duration instance has nanosecond precision. It is represented internally as tw
 one for the number of seconds, and one for the nanosecond remainder.
 
 durations are signed, i.e. they can be used to denote a negative span of time. Durations
-are immutable values. The most similar type is `time`: subtracting one `time` from
-another produces a `duration`, and a `duration` can be added to or subtracted from a
-`time`.",
+are immutable values. `duration` instances are often osed together with `time` instances:
+subtracting one `time` from another produces a `duration`, and a `duration` can be added
+to or subtracted from a `time` instance.
+
+In expression mode, you can multiply or divide a `duration` by an integer.",
 
             ValueType::Time =>
                     "To get the current time, use `time:now`. To parse a time from text, use
@@ -326,9 +330,10 @@ All time instances use the local time zone.
 A time instance has nanosecond precision. It is represented internally as two 64 bit numbers, one
 for the number of seconds since the Unix epoc, and one for the nanosecond remainder.
 
-Times are immutable values -- arithmetic methods like adding a `duration` return a new
-time rather than changing the receiver. The most similar type is `duration`, used to
-represent the difference between two times.",
+Times are immutable values -- arithmetic methods like adding a `duration` (using the + operator
+in expression mode) return a new time rather than changing the receiver. `time` instances are
+ often used together with `duration`, which is used to represent the difference between two
+ points in time.",
 
             ValueType::Glob => "Globs are usually created by writing an unescaped string containing
 a wildcard character (`*` or `?`), like `files *.toml`.
@@ -336,9 +341,8 @@ a wildcard character (`*` or `?`), like `files *.toml`.
 If you want to construct a new glob from a string, use the `glob:new` command, e.g.
 `glob:new \"*.txt\"`.
 
-Globs are immutable. The most similar types are `re`, which supports much richer
-patterns at the cost of more complex syntax, and `string`, which globs otherwise
-resemble but never match by wildcard -- only a real glob value does.",
+Globs are immutable. The most similar type is `re`, which supports much richer
+patterns at the cost of more complex syntax.",
 
             ValueType::Regex => "Regular expressions are usually created by writing using regexp
 literal syntax, e.g. `files ^(^...$)`.
@@ -463,16 +467,18 @@ when data isn't necessarily text or a path. See `help string` for how the three
 sequence-of-data types (`string`, `file`, `binary`) differ. The most similar type is
 `binary_stream`, its one-shot streaming form.",
 
-            ValueType::Type => "A type value names one of crush's own types, e.g. `$string` or
-`$integer` -- `typeof` returns a value of this kind. Types are mostly used to declare
+            ValueType::Type => "A type value names one of crush's builtin types, e.g. `$string` or
+`$integer`. The `typeof` command returns a value of this kind. Types are mostly used to declare
 what kind of value a signature parameter or table column accepts, e.g. via `convert` or
-a class field declaration, rather than being manipulated directly by everyday scripts.",
+a closure argument declaration, rather than being manipulated directly by everyday scripts.",
 
-            ValueType::OneOf(_) => "A one_of value is constructed with the `one_of:of` command,
-e.g. `one_of:of $file $string $regex`, and names a set of acceptable types rather than a
-single one. It's used the same way an ordinary type is -- most commonly to declare that a
-signature parameter accepts any one of several types -- rather than being a type user
-code creates values of.",
+            ValueType::OneOf(_) => "A one_of value is constructed by calling one_of as a
+command with all the types as arguments, e.g. `one_of $file $string $regex`. It's used
+the same way an ordinary type is, most commonly to declare that a signature parameter
+accepts any one of several types:
+
+    $ls := {|$directory : $(one_of $file $string $re $glob)| files $directory | select file | sort $file}
+",
         }.to_string()
             ];
 
