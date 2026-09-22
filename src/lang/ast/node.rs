@@ -66,17 +66,17 @@ pub enum Node {
 impl Node {
     pub fn val(l: Location) -> Node {
         Node::GetAttr(
-            Box::from(Node::GetAttr(Node::global(l), TrackedString::new("io", l))),
+            Box::from(Node::GetAttr(Node::global(l), TrackedString::new("types", l))),
             TrackedString::new("val", l),
         )
     }
 
-    /// True for the synthetic `global:io:val` reference that `Node::val` builds -- see
-    /// `unwrap_val` below.
+    /// True for the synthetic `global:types:val` reference that `Node::val` builds --
+    /// see `unwrap_val` below.
     fn is_val_ref(node: &Node) -> bool {
         match node {
             Node::GetAttr(parent, field) if field.string == "val" => match parent.as_ref() {
-                Node::GetAttr(grandparent, field2) if field2.string == "io" => {
+                Node::GetAttr(grandparent, field2) if field2.string == "types" => {
                     matches!(grandparent.as_ref(), Node::Identifier(id) if id.string == "global")
                 }
                 _ => false,
@@ -87,7 +87,7 @@ impl Node {
 
     /// Expression mode desugars a bare value used as one "job" in a list (e.g. `$a` in
     /// `[$a, $b]`) into a synthetic two-expression command invoking the hidden
-    /// `global:io:val` builtin on it (see `Node::val`), so that e.g. `(1 + 1)` evaluates
+    /// `global:types:val` builtin on it (see `Node::val`), so that e.g. `(1 + 1)` evaluates
     /// the expression and returns its value. That's invisible for an ordinary list
     /// literal, but it means a simple identifier list element normalizes to a
     /// `Node::Substitution` instead of a bare `Node::Identifier` -- which matters for

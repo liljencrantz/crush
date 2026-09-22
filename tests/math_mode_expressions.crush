@@ -1,5 +1,5 @@
 # `(expr)` and `[...]` are both syntactic sugar over ordinary command invocations
-# (src/lang/ast/node.rs): `(expr)` desugars to `global:io:val expr`, and `[a; b; c]`
+# (src/lang/ast/node.rs): `(expr)` desugars to `global:types:val expr`, and `[a; b; c]`
 # desugars to `global:types:list:of a b c`. This is the exact mechanism that caused the
 # real completion bug fixed earlier this session, and had no test coverage of its own.
 #

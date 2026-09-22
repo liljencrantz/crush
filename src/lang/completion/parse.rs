@@ -211,14 +211,14 @@ fn find_command_in_job(job: JobNode, cursor: usize) -> CrushResult<CommandNode> 
 }
 
 /// A bare `(expr)` used as a command argument is desugared by the parser into a synthetic
-/// two-expression command invoking the hidden `global:io:val` builtin on `expr` (see
+/// two-expression command invoking the hidden `global:types:val` builtin on `expr` (see
 /// `Node::val`), so that e.g. `(1 + 1)` evaluates the expression and returns its value. That
 /// desugaring reuses `expr`'s own source location for the synthetic `val` reference, which a
 /// user-typed identifier never does, so it doubles as a reliable marker for detecting it here.
 fn is_synthetic_val_wrapper(node: &Node) -> bool {
     match node {
         Node::GetAttr(parent, field) if field.string == "val" => match parent.as_ref() {
-            Node::GetAttr(grandparent, field2) if field2.string == "io" => {
+            Node::GetAttr(grandparent, field2) if field2.string == "types" => {
                 matches!(grandparent.as_ref(), Node::Identifier(id) if id.string == "global")
             }
             _ => false,
