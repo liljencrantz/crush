@@ -1,0 +1,45 @@
+# A handful of names are reserved and can never be bound by `:=` (or its destructuring
+# form): the bare-word control-flow keywords (`if`, `for`, ...) and a few names crush's
+# own bootstrap relies on meaning one specific thing everywhere (`true`, `false`,
+# `global`, `help`, `throw`). See Scope::declare's RESERVED_DECLARATION_NAMES.
+#
+# Note that e.g. `$if := 5` would otherwise parse fine -- a `$`-prefixed identifier
+# bypasses the lexer's keyword handling for bare words -- but the name would then be
+# unreachable as a *command*, since the bare word `if` always wins there.
+
+for name=$(list:of global true false if else for while try catch match break continue help loop return throw) {
+    $errored := $false
+    $message := ""
+    try {
+        # var:let_destructure declares its (runtime, not literal) `names` positionally --
+        # unlike `var:let x=5`/`$x := 5`, this lets the loop variable itself be the name
+        # under test, rather than only ever exercising one hardcoded literal name.
+        var:let_destructure $name value=$(list:of 5)
+    } catch {|$e|
+        $errored = $true
+        $message = $e:message
+    }
+    assert $errored $("declaring a variable named `{}` should error":format $name)
+    $pattern := $(glob:new $("*`{}`*reserved word*":format $name))
+    assert $(like $message $pattern) $("the error for `{}` should name it and call it a reserved word, got: {}":format $name $message)
+}
+
+# The destructuring form of `:=` goes through the same check.
+$destructure_errored := $false
+try {
+    [$a $if] := $(list:of 1 2)
+} catch {|$e|
+    $destructure_errored = $true
+}
+assert $destructure_errored "destructuring into a reserved name should error"
+
+# A name that isn't reserved is unaffected.
+$not_reserved := 5
+assert ($not_reserved == 5) "a non-reserved name should still be declarable"
+
+# None of this touches the reserved names' own meaning as builtins.
+assert $true "true should still work as the boolean constant"
+assert $(not $false) "false should still work as the boolean constant"
+assert ($(if $true {"yes"} else {"no"}) == "yes") "if/else should still work as commands"
+
+echo "done"

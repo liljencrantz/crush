@@ -13,6 +13,19 @@ use ordered_map::OrderedMap;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+/// Names `Scope::declare` (i.e. the `:=` operator, and its destructuring form) refuses to
+/// bind a new variable to -- either a bare-word control-flow keyword (`if`, `for`, ...;
+/// `$if := ...` would otherwise parse fine, since a `$`-prefixed identifier bypasses the
+/// lexer's keyword handling for bare words, but the name would then be unreachable as a
+/// *command*, since the bare word always wins there) or a name crush's own bootstrap
+/// relies on meaning a specific thing everywhere (`true`, `false`, `global`, `help`,
+/// `throw`). Deliberately narrower than "every builtin name" -- shadowing an ordinary
+/// command or type name with a local variable is normal and already supported.
+const RESERVED_DECLARATION_NAMES: &[&str] = &[
+    "global", "true", "false", "if", "else", "for", "while", "try", "catch", "match",
+    "break", "continue", "help", "loop", "return", "throw",
+];
+
 /**
 This is where we store variables, including functions.
 
@@ -622,6 +635,12 @@ impl Scope {
         if name.starts_with("__") {
             return command_error(format!(
                 "Illegal operation: Can't declare variables beginning with double underscores. ({})",
+                name
+            ));
+        }
+        if RESERVED_DECLARATION_NAMES.contains(&name) {
+            return command_error(format!(
+                "Illegal operation: `{}` is a reserved word and can't be used as a variable name.",
                 name
             ));
         }
