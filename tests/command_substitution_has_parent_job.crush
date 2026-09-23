@@ -7,36 +7,52 @@
 # From<&JobContext>/From<&CommandContext>) into JobContext::new_nested whenever a
 # substitution is evaluated as part of some other job's own execution.
 #
-# A job-list substitution ($(A; B)) keeps its own enclosing job alive on the stack while
-# evaluating each of its statements in turn, so taking a crush:jobs snapshot as the
-# *last* statement reliably catches an earlier statement's still-running backgrounded
-# job (started via `&`, here `sleep`) alongside the snapshot's own enclosing job -- both
-# genuinely running at the same time, not a timing race.
-$snapshot := $(
-    $inner_id := $(sleep $(duration:of milliseconds=300) &);
-    crush:jobs | materialize
-)
+# This used to check a *backgrounded* substitution's parent (`$(sleep ... &)`, captured
+# from a later, sibling statement's own crush:jobs snapshot) -- but that's exactly the
+# false-parentage shape tests/job_orphaning_on_parent_death.crush now protects against:
+# the statement that spawns a background job returns (and is reaped) essentially
+# instantly, well before any later statement can even run, so a later snapshot could
+# only ever see a *stale* parent id there, never a live one -- and once dying jobs
+# correctly orphan their children (clearing `parent` instead of leaving that stale id
+# behind for a subsequent job to coincidentally recycle), there's no id left for a later
+# statement to match against at all. Confirmed empirically: on unfixed code this test
+# was actually passing only because the reaped statement's freed id got handed straight
+# back to the very next job (the snapshot-taking one itself), making the stale parent
+# field match by sheer numeric coincidence, not genuine ancestry.
+#
+# The property this test actually needs -- a substitution genuinely nested inside
+# another job that's still running -- has to be observed while the parent job provably
+# hasn't returned yet, not via any job created strictly *after* it returns. Argument
+# evaluation gives exactly that: `list:of` can't start running until its own argument,
+# the inner `$(crush:jobs | materialize)` substitution, finishes evaluating -- so while
+# that substitution is busy capturing its snapshot, the `list:of` job is unquestionably
+# still alive (its own Job::eval is on the stack, blocked evaluating that very
+# argument). No race, no reliance on reaping timing. (`list:of` specifically, rather
+# than e.g. `echo`, because it passes its argument through unchanged with no stdout side
+# effect, so the snapshot table itself -- not some derived/printed value -- is what ends
+# up captured in $snapshot.)
+$snapshot := $($(list:of $(crush:jobs | materialize))[0])
 
-# The backgrounded sleep substitution should be visible -- matched by definition
-# prefix rather than a substring search (crush has no working substring-search
-# operator on plain strings today: `like`/`=~` do exact equality against a string
-# pattern despite the name, and `=~`/regex would also match the *outer* job's own
-# definition, which also mentions "sleep" as part of representing the whole nested
-# job list it's evaluating).
-$sleep_rows := $($snapshot | where {$definition:starts_with "\$sleep "} | materialize)
-$sleep_row_count := $($sleep_rows | count)
-assert ($sleep_row_count == 1) "the backgrounded sleep substitution should be visible in crush:jobs"
-
-# ...with a real parent job id recorded (not empty/none).
-$sleep_parent_id := $($($sleep_rows | select parent | list:collect)[0])
+# The snapshot-taking job itself should show up with a real parent job id recorded (not
+# empty/none) -- matched by definition prefix, the same technique used elsewhere in this
+# suite, since `like`/`=~` only do exact equality against a string pattern despite the
+# name.
+$snapshot_rows := $($snapshot | where {$definition:starts_with "\$crush:jobs "} | materialize)
+$snapshot_row_count := $($snapshot_rows | count)
+assert ($snapshot_row_count == 1) "the crush:jobs substitution itself should be visible in its own snapshot"
+$snapshot_parent_id := $($($snapshot_rows | select parent | list:collect)[0])
 
 # ...and that parent id should itself point at another job that's *also* visible in the
-# very same snapshot, not a dangling/empty reference. (If $sleep_parent_id were Empty,
-# comparing it against an Integer id column below would fail per-row and this filter
-# would simply come back empty, correctly failing the count check -- no separate
-# type check needed.)
-$parent_rows := $($snapshot | where {($id == $sleep_parent_id)} | materialize)
+# very same snapshot -- the still-running `list:of` job that's blocked waiting on this
+# very substitution to finish, not a dangling/empty reference. (If $snapshot_parent_id
+# were Empty, comparing it against an Integer id column below would fail per-row and
+# this filter would simply come back empty, correctly failing the count check -- no
+# separate type check needed.)
+$parent_rows := $($snapshot | where {($id == $snapshot_parent_id)} | materialize)
 $parent_row_count := $($parent_rows | count)
-assert ($parent_row_count == 1) "the sleep substitution's recorded parent should itself be a visible job in the same snapshot"
+assert ($parent_row_count == 1) "the substitution's recorded parent should itself be a visible, still-running job in the same snapshot"
 
-fg $inner_id
+# ...and that parent job's own definition should indeed be the enclosing `list:of`, not
+# merely some unrelated job that happens to share its id.
+$parent_definition := $($($parent_rows | select definition | list:collect)[0])
+assert ($parent_definition:starts_with("\$list:of ")) "the recorded parent should be the enclosing list:of job, not an unrelated one"

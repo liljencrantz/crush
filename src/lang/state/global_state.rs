@@ -635,13 +635,33 @@ fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
     result
 }
 
+/// Reaps dead jobs and orphans anything that pointed at one as its `parent`.
+///
+/// `JobId`s are recycled (`next_id` hands out the smallest currently-unused one) the
+/// moment a job's entry is pruned here, so a `parent` left pointing at a dead job's id
+/// isn't just stale, it's actively misleading: that id can be handed to a brand new,
+/// completely unrelated job, and `descendant_job_ids` would then treat the old,
+/// long-lived job as a descendant of it -- e.g. `crush:pause`ing the new job would also
+/// silently pause the old, unrelated one. Clearing `parent` to `None` on every surviving
+/// job whose parent just died closes that hole without touching id allocation itself
+/// (small, consecutive, predictable job ids are a deliberate, kept feature).
 fn remove_finished_jobs(data: &mut MutexGuard<StateData>) {
     let mut res = Vec::new();
+    let mut dead_ids = HashSet::new();
     for jd in data.jobs.drain(..) {
         match jd.job_control_data.strong_count() {
-            0 => {}
+            0 => {
+                dead_ids.insert(jd.id);
+            }
             _ => {
                 res.push(jd);
+            }
+        }
+    }
+    if !dead_ids.is_empty() {
+        for jd in &mut res {
+            if jd.parent.is_some_and(|p| dead_ids.contains(&p)) {
+                jd.parent = None;
             }
         }
     }
