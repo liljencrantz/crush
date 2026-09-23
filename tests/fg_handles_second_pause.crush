@@ -1,0 +1,49 @@
+# Regression test: pause()/resume() promote whatever job they touch back to the front
+# of current_job()'s search (see get_job's `fg` parameter in global_state.rs) -- so once
+# `fg` resumes a paused job and starts waiting on its result, a *second* pause of that
+# same job (interactively, a second Ctrl-Z) correctly targets the job again, not fg's
+# own wrapper job. That reaches the external process fine (via the job's own registered
+# controllers), but fg's own wait used to be a plain, non-pause-aware recv() -- it never
+# noticed, and stayed blocked on a value the job's worker thread wouldn't produce again
+# until resumed a second time. From the interactive session's perspective this looked
+# identical to the original "can't get back to the prompt" bug fg itself was written to
+# fix, just one level removed.
+#
+# crush:pause here plays the exact role Ctrl-Z's SIGTSTP handler does -- both just call
+# GlobalState::pause(job_id) -- so this reproduces the real scenario without needing an
+# actual interactive terminal.
+
+$job_id := $(cmd sleep 15 &)
+sleep $(duration:of milliseconds=300)
+crush:pause $job_id
+sleep $(duration:of milliseconds=300)
+
+# A second pause, timed to land while `fg` below is already waiting on the (by then
+# resumed) job. Uses `schedule ... --once &`, not a plain `{...} &` closure: a closure
+# block run via `&` gets its own *nested* job for the block body (see Job::eval), and
+# that job can be assigned a low, recently-freed id -- risking exactly the kind of
+# accidental id collision this whole file is testing around. `schedule`'s `command`
+# runs via a direct Command::eval, not another Job::eval, so it doesn't allocate a job
+# of its own; the outer `schedule` job is the only new one.
+$repause_job := $(schedule $(duration:of milliseconds=500) command={crush:pause $job_id} --once &)
+
+fg $job_id
+fg $repause_job
+
+# fg should have returned (without hanging) once the second pause landed, without the
+# job ever actually completing -- it should still be sitting Paused, re-registered for
+# another fg/bg, not gone.
+$status := $($(crush:jobs | where {($id == $job_id)} | select status | list:collect)[0])
+assert ($status == "Paused") "job should still be Paused after fg returned from a second pause"
+
+# Clean up quickly rather than waiting out the rest of the sleep: crush:terminate
+# interrupts it almost immediately (see terminate.crush), and fg on it afterwards may
+# either return the (now-terminated) result or error, depending on exactly when the
+# worker thread finishes relative to this -- either is fine, only the earlier assert
+# above is this test's actual point.
+crush:terminate $job_id
+try {
+    $(fg $job_id)
+} catch {|$e|
+}
+echo "done"

@@ -71,6 +71,32 @@ impl ValueReceiver {
         Ok(self.receiver.recv()?)
     }
 
+    /// Like `recv`, but also races against `control` for a `Pause` message -- used by
+    /// `Job::eval` to notice a job it's waiting on getting paused (e.g. via Ctrl-Z) and
+    /// stop blocking instead of leaving the calling thread -- for a plain top-level
+    /// statement, the interactive session's own main thread -- stuck until *something*
+    /// resumes the job, which the user has no way to ask for if that thread never
+    /// returns to the prompt in the first place. `Resume`/`Terminate` arriving here
+    /// (rather than on whatever job-specific channel actually handles them, e.g.
+    /// `cmd::wait_for_child`) don't need this call to do anything special, so they're
+    /// ignored and waiting continues. Returns `Ok(None)` if `Pause` won the race --
+    /// `self` is still perfectly usable afterwards, nothing about it is consumed, so a
+    /// later `recv`/`recv_or_pause` call can still pick up the eventual real value.
+    pub fn recv_or_pause(
+        &self,
+        control: &Receiver<StreamControlMessage>,
+    ) -> CrushResult<Option<Value>> {
+        loop {
+            select! {
+                recv(self.receiver) -> v => return Ok(Some(v?)),
+                recv(control) -> msg => match msg? {
+                    StreamControlMessage::Pause => return Ok(None),
+                    StreamControlMessage::Resume | StreamControlMessage::Terminate => {}
+                },
+            }
+        }
+    }
+
     pub fn recv_timeout(&self, timeout: std::time::Duration) -> CrushResult<Value> {
         Ok(self.receiver.recv_timeout(timeout)?)
     }
@@ -609,5 +635,64 @@ mod tests {
             first_saw_terminate,
             second_saw_terminate,
         );
+    }
+
+    // Regression tests for recv_or_pause, the piece Job::eval uses to notice a job it's
+    // waiting on getting paused (e.g. via Ctrl-Z) and stop blocking instead of leaving
+    // the interactive session's main thread stuck until *something* resumes the job --
+    // which the user has no way to ask for if that thread never returns to the prompt in
+    // the first place. See Job::eval's own doc comment in job.rs for the full story.
+    mod recv_or_pause_tests {
+        use super::*;
+
+        #[test]
+        fn returns_the_value_when_it_arrives_before_any_control_message() {
+            let (sender, receiver) = pipe();
+            let (_control_sender, control_receiver) = unbounded();
+            sender.send(Value::from(5)).unwrap();
+
+            let result = receiver.recv_or_pause(&control_receiver).unwrap();
+            assert!(matches!(result, Some(Value::Integer(5))));
+        }
+
+        #[test]
+        fn returns_none_when_paused_before_any_value_arrives() {
+            let (_sender, receiver) = pipe();
+            let (control_sender, control_receiver) = unbounded();
+            control_sender.send(StreamControlMessage::Pause).unwrap();
+
+            let result = receiver.recv_or_pause(&control_receiver).unwrap();
+            assert!(result.is_none());
+        }
+
+        #[test]
+        fn the_receiver_is_still_usable_after_a_pause_is_observed() {
+            let (sender, receiver) = pipe();
+            let (control_sender, control_receiver) = unbounded();
+            control_sender.send(StreamControlMessage::Pause).unwrap();
+            assert!(receiver.recv_or_pause(&control_receiver).unwrap().is_none());
+
+            // The real value can still be picked up later, e.g. by `fg` calling the
+            // plain `recv()` on the same receiver once it's retrieved from the
+            // background-job registry.
+            sender.send(Value::from(7)).unwrap();
+            assert!(matches!(receiver.recv().unwrap(), Value::Integer(7)));
+        }
+
+        #[test]
+        fn resume_and_terminate_are_ignored_and_waiting_continues() {
+            let (sender, receiver) = pipe();
+            let (control_sender, control_receiver) = unbounded();
+            // Neither of these should make recv_or_pause return early -- only Pause
+            // does. Sent before the real value, then the real value, so a call that
+            // incorrectly stopped on either of these would return the wrong thing (or
+            // never see the value at all) instead of racing past them to it.
+            control_sender.send(StreamControlMessage::Resume).unwrap();
+            control_sender.send(StreamControlMessage::Terminate).unwrap();
+            sender.send(Value::from(9)).unwrap();
+
+            let result = receiver.recv_or_pause(&control_receiver).unwrap();
+            assert!(matches!(result, Some(Value::Integer(9))));
+        }
     }
 }

@@ -471,6 +471,24 @@ impl GlobalState {
         res
     }
 
+    /// The live `JobHandle` for `jid`, if it still exists -- lets a caller that already
+    /// knows a job's id (rather than discovering it via `current_job()`) register its
+    /// own controller directly against that job, the same way `Job::eval` registers one
+    /// against its own job to notice a pause. `fg` uses this: once it hands a
+    /// background job's id to `resume()` and starts waiting on its result, a second
+    /// pause of that same job (e.g. another Ctrl-Z; see `get_job`'s `fg` parameter,
+    /// which is what makes `current_job()` keep finding this job rather than `fg`'s own
+    /// wrapper job once `resume()` has touched it) needs to reach `fg`'s own wait, not
+    /// just the external process -- otherwise `fg` would keep blocking on a value the
+    /// job's worker thread won't produce again until resumed a second time, exactly the
+    /// same class of "interactive session can't get back to the prompt" bug `Job::eval`
+    /// itself was fixed for.
+    pub fn job_handle(&self, jid: JobId) -> CrushResult<JobHandle> {
+        let mut data = self.data.lock().unwrap();
+        let arc = get_job(&mut data, jid, false)?;
+        Ok(JobHandle::from(jid, arc))
+    }
+
     /// Register a job started in the background (i.e. `Job::eval()` saw its
     /// `is_background` flag set): `value` is the receiver for whatever the pipeline's
     /// actual last stage eventually sends, to be retrieved later via `fg`.
@@ -500,11 +518,14 @@ impl GlobalState {
         matching.pop().map(|job| job.value)
     }
 
-    /// Remove and return the most recently backgrounded job's receiver, if any is
-    /// registered.
-    pub fn take_last_background_job(&self) -> Option<ValueReceiver> {
+    /// Remove and return the most recently backgrounded job's id and receiver, if any is
+    /// registered. Returns the id too (unlike `take_background_job`, where the caller
+    /// already has it) because `fg` needs it to `resume()` the job before waiting on it
+    /// -- a job registered here because it was paused (e.g. via Ctrl-Z), rather than
+    /// started with a trailing `&`, sits suspended until something resumes it.
+    pub fn take_last_background_job(&self) -> Option<(JobId, ValueReceiver)> {
         let mut data = self.data.lock().unwrap();
-        data.background_jobs.pop().map(|job| job.value)
+        data.background_jobs.pop().map(|job| (job.job_id, job.value))
     }
 
     pub fn set_editor(&self, editor: Option<Editor<RustylineHelper, DefaultHistory>>) {

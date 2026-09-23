@@ -3,9 +3,11 @@ use crate::lang::ast::source::Source;
 /// An executable pipeline of one or more commands.
 use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::CrushResult;
+use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::{last_element, pipe};
 use crate::lang::state::contexts::{EvalContext, JobContext};
 use crate::lang::value::Value;
+use crossbeam::channel::unbounded;
 use std::fmt::{Display, Formatter};
 use std::thread::ThreadId;
 
@@ -108,8 +110,32 @@ impl Job {
             last_element()
         };
         let res = last_call_def.eval(context.with_io(input, last_output));
-        if let Ok(v) = last_input.recv() {
-            context.output.send(v)?;
+
+        // Race the job's own final value against a pause of this job (e.g. Ctrl-Z):
+        // without this, a job that gets paused mid-flight never sends anything here
+        // (its worker thread just sits suspended until resumed), so a plain `recv()`
+        // would leave the calling thread -- for a plain top-level statement, the
+        // interactive session's own main thread -- blocked forever, unable to ever
+        // return to the prompt so the user could type `fg`/`bg` in the first place.
+        let (control_sender, control_receiver) = unbounded();
+        context
+            .handle
+            .next_command_handle()
+            .register(Box::from(ChannelBasedController::new(control_sender)));
+        match last_input.recv_or_pause(&control_receiver) {
+            Ok(Some(v)) => {
+                context.output.send(v)?;
+            }
+            Ok(None) => {
+                // Paused. Treat exactly like an explicit `&`: the job is left running
+                // (or, having been sent SIGSTOP, sits suspended) independently, and its
+                // eventual result is retrieved later via `fg`/`bg` instead of by this
+                // call ever returning it.
+                let job_id = context.handle.id();
+                context.global_state.add_background_job(job_id, last_input);
+                return Ok(None);
+            }
+            Err(_) => {}
         }
 
         // Join every thread still registered under this job now that the pipeline has

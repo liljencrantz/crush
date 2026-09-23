@@ -5,16 +5,17 @@ use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::errors::{CrushResult, assertion_error, command_error, throw_error};
 use crate::lang::job_control::ChannelBasedController;
-use crate::lang::pipe::{empty_channel, pipe};
+use crate::lang::pipe::{ValueReceiver, empty_channel, pipe};
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::{CommandContext, JobContext};
 use crate::lang::state::handles::JobType::Background;
+use crate::lang::state::id::JobId;
 use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, value::Value, value::ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;
 use chrono::Duration;
-use crossbeam::channel::bounded;
+use crossbeam::channel::{bounded, unbounded};
 use os_pipe::PipeReader;
 use signature::signature;
 use std::io::Read;
@@ -355,17 +356,70 @@ struct Fg {
     job: Option<usize>,
 }
 
+/// Resumes `job_id` (it may be sitting suspended -- registered here because it was
+/// paused, e.g. via Ctrl-Z, rather than started with a trailing `&`; a best-effort
+/// no-op, ignored failure, for a job that was never paused or has already finished on
+/// its own) and waits for its result.
+///
+/// The wait itself has to be pause-aware, not a plain `recv()`, for the same reason
+/// `Job::eval` itself needed this fix (see its own doc comment): `resume()`/`pause()`
+/// promote whatever job they touch back to the front of `current_job()`'s search (see
+/// `get_job`'s `fg` parameter) -- so once this resumes `job_id`, a *second* pause (e.g.
+/// another Ctrl-Z) targets `job_id` again, not this `fg` invocation's own wrapper job.
+/// Without this, that second pause would reach the external process (via `job_id`'s own
+/// registered controllers, e.g. `cmd::wait_for_child`) but never reach this plain
+/// blocking wait, leaving it stuck on a value `job_id`'s worker thread won't produce
+/// again until resumed a second time -- the same "interactive session can't get back to
+/// the prompt" failure mode all over again, just one level removed.
+fn wait_for_background_job(
+    context: &CommandContext,
+    job_id: JobId,
+    v: ValueReceiver,
+) -> CrushResult<Value> {
+    // Registered *before* resume(), not after: a pause landing in the gap between the
+    // two would otherwise reach the job's other controllers (e.g. cmd::wait_for_child,
+    // which would still correctly SIGSTOP the external process) without this one ever
+    // seeing it, since it wouldn't exist yet -- silently defeating the very check
+    // below.
+    let (control_sender, control_receiver) = unbounded();
+    if let Ok(job_handle) = context.global_state.job_handle(job_id) {
+        job_handle
+            .next_command_handle()
+            .register(Box::from(ChannelBasedController::new(control_sender)));
+    }
+
+    let _ = context.global_state.resume(job_id);
+
+    match v.recv_or_pause(&control_receiver)? {
+        Some(value) => Ok(value),
+        None => {
+            // Paused again while this fg was waiting. The job itself is already
+            // stopped (the very pause() that woke this up already reached it); put it
+            // back for a later fg/bg instead of ever returning a value for it, exactly
+            // like the job's own first pause did in Job::eval.
+            context.global_state.add_background_job(job_id, v);
+            Ok(Value::Empty)
+        }
+    }
+}
+
 fn fg(mut context: CommandContext) -> CrushResult<()> {
     let cfg = Fg::parse(context.remove_arguments(), &context.global_state.printer())?;
     match cfg.job {
         None => match context.global_state.take_last_background_job() {
             None => context.output.send(Value::Empty),
-            Some(v) => context.output.send(v.recv()?),
+            Some((job_id, v)) => {
+                let value = wait_for_background_job(&context, job_id, v)?;
+                context.output.send(value)
+            }
         },
 
         Some(id) => match context.global_state.take_background_job(id.into()) {
             None => context.output.send(Value::Empty),
-            Some(v) => context.output.send(v.recv()?),
+            Some(v) => {
+                let value = wait_for_background_job(&context, id.into(), v)?;
+                context.output.send(value)
+            }
         },
     }
 }
