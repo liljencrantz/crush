@@ -169,6 +169,20 @@ impl GlobalState {
     }
 
     fn create_job_handle_with_parent(&self, job_type: JobType, parent: Option<JobId>) -> JobHandle {
+        // A finished thread's `ThreadData` entry (see `ThreadStore::spawn`) embeds a
+        // `CommandHandle`, and so a `JobHandle` clone, that's only ever dropped by an
+        // explicit `reap()`/`join_one()` call -- never automatically just because the
+        // underlying OS thread has already returned. The interactive REPL calls `reap()`
+        // after every line for exactly this reason; without an equivalent call here,
+        // `remove_finished_jobs` below would find that job's `strong_count()` still
+        // nonzero (kept alive by that lingering clone) and never reap it, regardless of
+        // whether the job was `crush:terminate`d or simply finished on its own -- the
+        // job would sit in `crush:jobs` forever even though its underlying process/work
+        // is long gone. Must run before acquiring `self.data`'s lock below: it only
+        // touches `ThreadStore`'s own separate lock, and needs to actually drop those
+        // clones first for `remove_finished_jobs`'s `strong_count()` check to see it.
+        self.threads().reap(self.printer());
+
         let mut data = self.data.lock().unwrap();
         remove_finished_jobs(&mut data);
         let id = next_id(&data);
