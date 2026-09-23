@@ -90,14 +90,15 @@ impl ChannelReader {
             recv(self.receiver) -> r => r.map_err(|_| RecvFailure::Disconnected),
             recv(control) -> msg => match msg {
                 Ok(StreamControlMessage::Terminate) => Err(RecvFailure::Interrupted(terminate::<()>().unwrap_err())),
-                Ok(StreamControlMessage::Resume) => self.recv_next(),
+                Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => self.recv_next(),
                 Ok(StreamControlMessage::Pause) => {
                     loop {
                         match control.recv() {
                             Ok(StreamControlMessage::Terminate) => {
                                 return Err(RecvFailure::Interrupted(terminate::<()>().unwrap_err()));
                             }
-                            Ok(StreamControlMessage::Resume) => break,
+                            Ok(StreamControlMessage::Resume)
+                            | Ok(StreamControlMessage::ResumeForeground) => break,
                             Ok(StreamControlMessage::Pause) => {}
                             Err(e) => return Err(RecvFailure::Interrupted(e.into())),
                         }
@@ -193,14 +194,15 @@ impl Write for ChannelWriter {
             }
             recv(control) -> msg => match msg {
                 Ok(StreamControlMessage::Terminate) => Err(Error::other(terminate::<()>().unwrap_err())),
-                Ok(StreamControlMessage::Resume) => self.write(buf),
+                Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => self.write(buf),
                 Ok(StreamControlMessage::Pause) => {
                     loop {
                         match control.recv() {
                             Ok(StreamControlMessage::Terminate) => {
                                 return Err(Error::other(terminate::<()>().unwrap_err()));
                             }
-                            Ok(StreamControlMessage::Resume) => break,
+                            Ok(StreamControlMessage::Resume)
+                            | Ok(StreamControlMessage::ResumeForeground) => break,
                             Ok(StreamControlMessage::Pause) => {}
                             Err(e) => return Err(Error::other(CrushError::from(e))),
                         }

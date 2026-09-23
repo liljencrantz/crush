@@ -88,13 +88,14 @@ pub fn watch(mut context: CommandContext) -> CrushResult<()> {
                 Ok(StreamControlMessage::Terminate) => return terminate(),
                 Ok(StreamControlMessage::Pause) => loop {
                     match control_receiver.recv() {
-                        Ok(StreamControlMessage::Resume) => break,
+                        Ok(StreamControlMessage::Resume)
+                        | Ok(StreamControlMessage::ResumeForeground) => break,
                         Ok(StreamControlMessage::Terminate) => return terminate(),
                         Ok(StreamControlMessage::Pause) => {}
                         Err(_) => return terminate(),
                     }
                 },
-                Ok(StreamControlMessage::Resume) => {}
+                Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => {}
                 Err(_) => return terminate(),
             },
         }

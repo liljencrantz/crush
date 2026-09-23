@@ -9,6 +9,14 @@ pub trait JobControl {
     fn terminate(&self) -> CrushResult<()>;
     fn pause(&self) -> CrushResult<()>;
     fn resume(&self) -> CrushResult<()>;
+    /// Like `resume`, but specifically because the job is being brought into the
+    /// foreground (`fg`), as opposed to just being unpaused in place (`bg`,
+    /// `crush:resume`). `cmd`'s own controller (see cmd.rs) is the only implementor
+    /// that currently treats this differently from a plain `resume`: it also hands the
+    /// real controlling terminal back to an external command that wants it, which a
+    /// plain background resume must not do (that would just make the command fight
+    /// crush's own prompt for the terminal again, exactly backwards for `bg`).
+    fn resume_foreground(&self) -> CrushResult<()>;
 }
 
 pub type JobController = Box<dyn JobControl + Send>;
@@ -33,6 +41,10 @@ impl JobControl for ChannelBasedController {
     fn resume(&self) -> CrushResult<()> {
         Ok(self.0.send(StreamControlMessage::Resume)?)
     }
+
+    fn resume_foreground(&self) -> CrushResult<()> {
+        Ok(self.0.send(StreamControlMessage::ResumeForeground)?)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -40,6 +52,8 @@ pub enum StreamControlMessage {
     Terminate,
     Pause,
     Resume,
+    /// See `JobControl::resume_foreground`.
+    ResumeForeground,
 }
 
 pub struct InterruptibleJoinHandle<T> {

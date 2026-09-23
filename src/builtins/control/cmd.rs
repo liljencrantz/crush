@@ -78,13 +78,16 @@ enum ChildEvent {
 /// unconditional semantics `terminate()` has everywhere else in the job control
 /// system.
 ///
-/// `holds_terminal` is true only when this specific invocation handed the real
-/// controlling terminal over to the child's own process group (see `cmd_internal`) --
-/// only ever true for a *foreground* (no trailing `&`) command using the real tty, and
-/// only when that handoff actually succeeded. Whenever this returns -- however it
-/// returns -- the terminal is handed back to crush's own process group if it was
-/// handed away, so crush's own prompt can read from it again; see the `wait_for_child`
-/// wrapper below, which does that unconditionally once this inner loop is done.
+/// `holds_terminal` is true whenever this specific invocation currently has the real
+/// controlling terminal handed over to the child's own process group (see
+/// `cmd_internal` for the initial handoff, and the `ResumeForeground` arms below for a
+/// later one via `fg`) -- only ever true for a command using the real tty, and only
+/// when the handoff actually succeeded. It can change over the life of one call (a
+/// `Stopped` event always gives the terminal back; a `ResumeForeground` may take it
+/// again), so this returns its final value alongside the result rather than assuming
+/// it's fixed for the whole call -- see the `wait_for_child` wrapper below, which uses
+/// that to decide whether it still needs to hand the terminal back once this inner
+/// loop is done.
 fn wait_for_child_inner(
     pid: Pid,
     events: &Receiver<ChildEvent>,
@@ -92,10 +95,10 @@ fn wait_for_child_inner(
     context: &CommandContext,
     holds_terminal: bool,
     crush_pgid: Pid,
-) -> CrushResult<()> {
+) -> (CrushResult<()>, bool) {
     select! {
         recv(events) -> res => match res {
-            Ok(ChildEvent::Done(r)) => r,
+            Ok(ChildEvent::Done(r)) => (r, holds_terminal),
             Ok(ChildEvent::Stopped) => {
                 // Give crush's own prompt the terminal back immediately, rather than
                 // only once this whole call eventually returns -- a job that's stopped
@@ -113,32 +116,56 @@ fn wait_for_child_inner(
                 // (e.g. a backgrounded job touching the terminal, or Ctrl-Z reaching a
                 // foregrounded job directly once it owns the terminal).
                 let _ = context.global_state.pause(context.command_handle().job_handle.id());
-                wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid)
+                wait_for_child_inner(pid, events, control, context, false, crush_pgid)
             }
-            Err(err) => Err(err.into()),
+            Err(err) => (Err(err.into()), holds_terminal),
         },
         recv(control) -> message => match message {
             Ok(StreamControlMessage::Terminate) => {
                 let _ = signal::kill(pid, signal::Signal::SIGKILL);
-                terminate()
+                (terminate(), holds_terminal)
             }
             Ok(StreamControlMessage::Resume) => {
                 wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid)
             }
+            Ok(StreamControlMessage::ResumeForeground) => {
+                // `fg` on a job that was never using the real tty at all (an ordinary
+                // pipeline stage, say) just lands here as a harmless no-op: `pid` is
+                // still the process's own pgid (see `process_group(0)` in
+                // `cmd_internal`), so `tcsetpgrp` either succeeds pointlessly (nothing
+                // was reading the terminal anyway) or fails and is ignored.
+                let now_holds = tcsetpgrp(&std::io::stdin(), pid).is_ok();
+                let _ = signal::kill(pid, signal::Signal::SIGCONT);
+                wait_for_child_inner(pid, events, control, context, now_holds, crush_pgid)
+            }
             Ok(StreamControlMessage::Pause) => {
+                // If this job currently owns the terminal (e.g. crush:pause on an
+                // actively-running foreground command), give it back to crush's own
+                // process group now -- the same reasoning as the Stopped arm above,
+                // just triggered by crush itself asking for the pause rather than the
+                // kernel imposing it.
+                if holds_terminal {
+                    let _ = tcsetpgrp(&std::io::stdin(), crush_pgid);
+                }
                 let _ = signal::kill(pid, signal::Signal::SIGSTOP);
+                let mut now_holds = false;
                 loop {
                     match control.recv() {
                         Ok(StreamControlMessage::Resume) => {
                             let _ = signal::kill(pid, signal::Signal::SIGCONT);
                             break;
                         }
+                        Ok(StreamControlMessage::ResumeForeground) => {
+                            now_holds = tcsetpgrp(&std::io::stdin(), pid).is_ok();
+                            let _ = signal::kill(pid, signal::Signal::SIGCONT);
+                            break;
+                        }
                         Ok(StreamControlMessage::Terminate) => {
                             let _ = signal::kill(pid, signal::Signal::SIGKILL);
-                            return terminate();
+                            return (terminate(), now_holds);
                         }
                         Ok(StreamControlMessage::Pause) => {}
-                        Err(_) => return terminate(),
+                        Err(_) => return (terminate(), now_holds),
                     }
                 }
                 // The SIGSTOP above caused exactly one real stop, which the waiter
@@ -150,11 +177,11 @@ fn wait_for_child_inner(
                 // same time is genuine and must not be lost, so only a `Stopped` is
                 // discarded.
                 if let Ok(ChildEvent::Done(r)) = events.try_recv() {
-                    return r;
+                    return (r, now_holds);
                 }
-                wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid)
+                wait_for_child_inner(pid, events, control, context, now_holds, crush_pgid)
             }
-            Err(err) => Err(err.into()),
+            Err(err) => (Err(err.into()), holds_terminal),
         },
     }
 }
@@ -167,8 +194,9 @@ fn wait_for_child(
     holds_terminal: bool,
 ) -> CrushResult<()> {
     let crush_pgid = getpgrp();
-    let result = wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid);
-    if holds_terminal {
+    let (result, still_holds_terminal) =
+        wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid);
+    if still_holds_terminal {
         let _ = tcsetpgrp(&std::io::stdin(), crush_pgid);
     }
     result

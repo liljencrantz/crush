@@ -17,7 +17,8 @@ pub fn interruptible_sleep(duration: &Duration, control: &Receiver<StreamControl
                 loop {
                     match control.recv() {
                         Ok(StreamControlMessage::Terminate) => return terminate(),
-                        Ok(StreamControlMessage::Resume) => {
+                        Ok(StreamControlMessage::Resume)
+                        | Ok(StreamControlMessage::ResumeForeground) => {
                             time_left -= sleep_duration;
                             break;
                         },
@@ -26,7 +27,7 @@ pub fn interruptible_sleep(duration: &Duration, control: &Receiver<StreamControl
                     }
                 }
             },
-            Ok(StreamControlMessage::Resume) => {
+            Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => {
                 let sleep_duration = Local::now() - start_sleep;
                 time_left -= sleep_duration;
             }

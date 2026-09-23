@@ -485,6 +485,22 @@ impl GlobalState {
         res
     }
 
+    /// Like `resume`, but for `fg` specifically -- see `JobControl::resume_foreground`
+    /// for what that changes and why `bg`/`crush:resume` must keep using plain
+    /// `resume` instead.
+    pub fn resume_foreground(&self, jid: JobId) -> CrushResult<()> {
+        let mut data = self.data.lock().unwrap();
+        let res = get_job(&mut data, jid, true)?.lock()?.resume_foreground();
+        for id in descendant_job_ids(&data, jid) {
+            if let Ok(job) = get_job(&mut data, id, false) {
+                if let Ok(mut guard) = job.lock() {
+                    let _ = guard.resume_foreground();
+                }
+            }
+        }
+        res
+    }
+
     /// The live `JobHandle` for `jid`, if it still exists -- lets a caller that already
     /// knows a job's id (rather than discovering it via `current_job()`) register its
     /// own controller directly against that job, the same way `Job::eval` registers one

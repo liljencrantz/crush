@@ -91,7 +91,9 @@ impl ValueReceiver {
                 recv(self.receiver) -> v => return Ok(Some(v?)),
                 recv(control) -> msg => match msg? {
                     StreamControlMessage::Pause => return Ok(None),
-                    StreamControlMessage::Resume | StreamControlMessage::Terminate => {}
+                    StreamControlMessage::Resume
+                    | StreamControlMessage::ResumeForeground
+                    | StreamControlMessage::Terminate => {}
                 },
             }
         }
@@ -161,7 +163,7 @@ impl TableOutputStream {
                         Ok(StreamControlMessage::Terminate) => {
                             terminate()
                         }
-                        Ok(StreamControlMessage::Resume) => {
+                        Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => {
                             self.send(row)
                         }
 
@@ -172,7 +174,8 @@ impl TableOutputStream {
                                         return terminate();
                                     }
                                     StreamControlMessage::Pause => {}
-                                    StreamControlMessage::Resume => break,
+                                    StreamControlMessage::Resume
+                                    | StreamControlMessage::ResumeForeground => break,
                                 }
                             }
                             self.send(row)
@@ -195,12 +198,12 @@ impl TableOutputStream {
         loop {
             match control.try_recv() {
                 Ok(StreamControlMessage::Terminate) => return terminate(),
-                Ok(StreamControlMessage::Resume) => {}
+                Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => {}
                 Ok(StreamControlMessage::Pause) => loop {
                     match control.recv()? {
                         StreamControlMessage::Terminate => return terminate(),
                         StreamControlMessage::Pause => {}
-                        StreamControlMessage::Resume => break,
+                        StreamControlMessage::Resume | StreamControlMessage::ResumeForeground => break,
                     }
                 },
                 Err(_) => return Ok(()),
@@ -448,13 +451,14 @@ impl TableStreamReader for InterruptibleTableInputStream {
                                 Ok(StreamControlMessage::Terminate) => {
                                         return terminate();
                                         }
-                                Ok(StreamControlMessage::Resume) => break,
+                                Ok(StreamControlMessage::Resume)
+                                | Ok(StreamControlMessage::ResumeForeground) => break,
                                 Ok(StreamControlMessage::Pause) => {}
                                 Err(_) => return terminate(),
                                 }
                             }
                         }
-                        Ok(StreamControlMessage::Resume) => {}
+                        Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => {}
                         Err(e) => {
                             return Err(e.into());
                         }

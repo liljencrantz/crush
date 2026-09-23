@@ -147,12 +147,15 @@ fn wait_for_command(
         },
         recv(control) -> message => match message {
             Ok(StreamControlMessage::Terminate) => terminate(),
-            Ok(StreamControlMessage::Resume) => wait_for_command(done, control),
+            Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) => {
+                wait_for_command(done, control)
+            }
             Ok(StreamControlMessage::Pause) => {
                 loop {
                     match control.recv() {
                         Ok(StreamControlMessage::Terminate) => return terminate(),
-                        Ok(StreamControlMessage::Resume) => break,
+                        Ok(StreamControlMessage::Resume)
+                        | Ok(StreamControlMessage::ResumeForeground) => break,
                         Ok(StreamControlMessage::Pause) => {}
                         Err(_) => return terminate(),
                     }

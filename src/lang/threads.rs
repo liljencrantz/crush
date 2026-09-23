@@ -160,7 +160,7 @@ impl ThreadStore {
                         let mut data = self.data.lock().unwrap();
                         data.threads.push(h);
                     }
-                    StreamControlMessage::Resume => {}
+                    StreamControlMessage::Resume | StreamControlMessage::ResumeForeground => {}
                 },
                 Err(err) => return Err(err),
             }

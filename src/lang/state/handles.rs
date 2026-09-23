@@ -200,4 +200,17 @@ impl JobControlData {
         self.status = JobStatus::Running;
         Ok(())
     }
+
+    /// Like `resume`, but for a job being brought into the foreground (`fg`) rather
+    /// than just unpaused in place (`bg`/`crush:resume`) -- see
+    /// `JobControl::resume_foreground`.
+    pub fn resume_foreground(&mut self) -> CrushResult<()> {
+        for vc in self.senders.values() {
+            for c in vc {
+                let _ = c.resume_foreground();
+            }
+        }
+        self.status = JobStatus::Running;
+        Ok(())
+    }
 }

@@ -270,12 +270,13 @@ fn run_remote(
             Ok(StreamControlMessage::Pause) => loop {
                 match control_receiver.recv() {
                     Ok(StreamControlMessage::Terminate) => return terminate(),
-                    Ok(StreamControlMessage::Resume) => break,
+                    Ok(StreamControlMessage::Resume)
+                    | Ok(StreamControlMessage::ResumeForeground) => break,
                     Ok(StreamControlMessage::Pause) => {}
                     Err(_) => return terminate(),
                 }
             },
-            Ok(StreamControlMessage::Resume) | Err(_) => {}
+            Ok(StreamControlMessage::Resume) | Ok(StreamControlMessage::ResumeForeground) | Err(_) => {}
         }
     }
     sess.set_timeout(0);
