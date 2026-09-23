@@ -86,7 +86,34 @@ impl<T> InterruptibleJoinHandle<T> {
         &self.name
     }
 
+    /// Blocks until either the thread's own real result is available, or a control
+    /// message (e.g. a stray `Pause` broadcast to every job's threads, this one
+    /// included, even though nothing here ever actually reads its own copy of that
+    /// channel) shows up first.
+    ///
+    /// Checks `result_receiver` with a non-blocking `try_recv` *before* racing the two
+    /// in `select!`, deliberately breaking the tie in the result's favor -- crossbeam's
+    /// `select!` picks fairly/arbitrarily among whichever channels are *already* ready,
+    /// with no notion of one being more "current" than the other. By the time this is
+    /// called (via `ThreadStore::reap`, well after the thread actually finished),
+    /// `control_receiver` can easily already hold a stale message from some earlier
+    /// `crush:pause`/`crush:terminate` broadcast that was sent to this thread's own
+    /// control channel along with everyone else's but was simply never consumed by
+    /// anything -- and `result_receiver` can *simultaneously* already hold the thread's
+    /// genuine, final result. Racing the two blind lets `select!` return that stale
+    /// message instead of the real result about as often as not: `join_one` (see
+    /// threads.rs) treats `Either::Right(Pause)` as "still legitimately running, just
+    /// paused, put it back," permanently re-registering an already-finished thread --
+    /// observed directly as a `cmd`-spawned job that had ever been `crush:pause`d never
+    /// getting reaped after being `crush:terminate`d, which is what made
+    /// `crush:exit --force`'s own "keep terminating until crush:jobs is empty" loop
+    /// spin for its full timeout and report "Failed to terminate jobs." even though the
+    /// job's external process was already long dead. `try_join`, just below, already
+    /// gets this ordering right -- this brings `join` in line with it.
     pub fn join(&self) -> CrushResult<Either<T, StreamControlMessage>> {
+        if let Ok(res) = self.result_receiver.try_recv() {
+            return Ok(Either::Left(res));
+        }
         select! {
             recv(self.result_receiver) -> result => match result {
                 Ok(res) => Ok(Either::Left(res)),
