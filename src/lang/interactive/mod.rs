@@ -185,6 +185,12 @@ pub fn run(
             .as_mut()
             .map(|rl| rl.load_history(&file));
     }
+    // Set when Ctrl-D is pressed while jobs are still running, instead of exiting right
+    // away (which would otherwise leave `main`'s final `threads().join(...)` blocked
+    // forever waiting on them). Cleared by any other input, so only a Ctrl-D pressed
+    // again as the very next thing confirms the exit and terminates those jobs.
+    let mut pending_exit_confirmation = false;
+
     loop {
         if let Ok(Some(title)) = execute_command(global_state.title(), &global_env, global_state) {
             println!("\x1b]0;{}\x07", title);
@@ -205,6 +211,7 @@ pub fn run(
 
         match readline {
             Some(Ok(mut cmd)) => {
+                pending_exit_confirmation = false;
                 if cmd.is_empty() {
                     global_state.threads().reap(global_state.printer())
                 } else {
@@ -248,11 +255,37 @@ pub fn run(
                 }
             }
             Some(Err(ReadlineError::Interrupted)) => {
+                pending_exit_confirmation = false;
                 global_state.printer().line("^C");
             }
             Some(Err(ReadlineError::Eof)) => {
-                global_state.printer().line("exit");
-                break;
+                // Delegates to crush:exit (crush:exit --force on a confirmed second
+                // press) rather than duplicating its "are there other jobs running"
+                // check and force-terminate-with-timeout loop here. On success it sets
+                // global_state's exit_status, which is what actually ends this loop --
+                // just like typing "exit" at the prompt would.
+                let exit_cmd = if pending_exit_confirmation {
+                    "crush:exit --force"
+                } else {
+                    "crush:exit"
+                };
+                global_state.threads().reap(global_state.printer());
+                let result = execute::string(
+                    &global_env,
+                    exit_cmd,
+                    LanguageMode::Command,
+                    pretty_printer,
+                    global_state,
+                    Interactive,
+                );
+                global_state.threads().reap(global_state.printer());
+                if global_state.exit_status().is_some() {
+                    global_state.printer().line("exit");
+                    break;
+                } else {
+                    global_state.printer().handle_error(result);
+                    pending_exit_confirmation = true;
+                }
             }
             Some(Err(err)) => {
                 global_state.printer().handle_error::<()>(Err(err.into()));
