@@ -94,6 +94,17 @@ pub struct JobContext {
     pub global_state: GlobalState,
     pub handle: JobHandle,
     pub job_type: JobType,
+    /// True only for the final stage of a job that's neither backgrounded (no trailing
+    /// `&`) nor paused mid-flight -- i.e. only when the thread that dispatched this
+    /// stage is genuinely going to block waiting for it, not go on to read another
+    /// line/expression in the meantime. Set via `with_io_foreground`, only at the one
+    /// call site in `Job::eval` where that's actually true; every other job/stage
+    /// defaults to `false`. This is what lets `cmd` (see cmd.rs) safely hand the real
+    /// controlling terminal over to an external command like `emacs` and reclaim it
+    /// afterwards, without risking handing it to a job whose caller is about to try
+    /// reading that same terminal again immediately -- which would just make *that*
+    /// caller (e.g. crush's own prompt) the one that gets stopped by the kernel instead.
+    pub foreground: bool,
 }
 
 impl JobContext {
@@ -111,6 +122,7 @@ impl JobContext {
             handle: global_state.create_job_handle(job_type),
             global_state,
             job_type: job_type,
+            foreground: false,
         }
     }
 
@@ -134,6 +146,7 @@ impl JobContext {
             handle: global_state.create_nested_job_handle(job_type, parent),
             global_state,
             job_type,
+            foreground: false,
         }
     }
 
@@ -149,7 +162,17 @@ impl JobContext {
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
             job_type: self.job_type,
+            foreground: false,
         }
+    }
+
+    /// Like `with_io`, but marks this as the final stage of a job that isn't
+    /// backgrounded and isn't paused -- see `JobContext::foreground`'s own doc comment
+    /// for exactly what that means and why it matters.
+    pub fn with_io_foreground(&self, input: ValueReceiver, output: ValueSender) -> JobContext {
+        let mut ctx = self.with_io(input, output);
+        ctx.foreground = true;
+        ctx
     }
 
     pub fn command_context(
@@ -168,6 +191,7 @@ impl JobContext {
             global_state: self.global_state.clone(),
             source: source.clone(),
             job_type: self.job_type,
+            foreground: self.foreground,
         })
     }
 }
@@ -186,6 +210,9 @@ pub struct CommandContext {
     pub source: Source,
     handle: CommandHandle,
     pub job_type: JobType,
+    /// See `JobContext::foreground`'s doc comment -- copied through from there via
+    /// `JobContext::command_context`.
+    pub foreground: bool,
 }
 
 impl CommandContext {
@@ -209,6 +236,7 @@ impl CommandContext {
             source: source.clone(),
             handle: id,
             job_type,
+            foreground: false,
         }
     }
 
@@ -237,6 +265,7 @@ impl CommandContext {
             global_state: self.global_state.clone(),
             handle: self.handle.clone(),
             job_type: self.job_type,
+            foreground: self.foreground,
         }
     }
 
@@ -254,6 +283,7 @@ impl CommandContext {
             handle: self.handle,
             source: self.source,
             job_type: self.job_type,
+            foreground: self.foreground,
         }
     }
 
@@ -271,6 +301,7 @@ impl CommandContext {
             handle: self.handle,
             source: self.source,
             job_type: self.job_type,
+            foreground: self.foreground,
         }
     }
 
@@ -288,6 +319,7 @@ impl CommandContext {
             handle: self.handle,
             source: self.source,
             job_type: self.job_type,
+            foreground: self.foreground,
         }
     }
 
@@ -305,6 +337,7 @@ impl CommandContext {
             handle: self.handle,
             source: self.source,
             job_type: self.job_type,
+            foreground: self.foreground,
         }
     }
 

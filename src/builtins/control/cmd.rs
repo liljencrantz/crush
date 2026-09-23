@@ -12,12 +12,14 @@ use crate::state::contexts::CommandContext;
 use crate::util::file::cwd;
 use crossbeam::channel::{Receiver, bounded, select};
 use nix::sys::signal;
-use nix::unistd::Pid;
+use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
+use nix::unistd::{Pid, getpgrp, tcsetpgrp};
 use signature::signature;
 use std::borrow::BorrowMut;
 use std::io::{Read, Write};
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
-use std::process::{Child, ExitStatus, Stdio};
+use std::process::{Child, Stdio};
 
 #[signature(
     control.cmd,
@@ -50,25 +52,69 @@ fn format_value(v: &Value) -> CrushResult<Vec<String>> {
         .collect())
 }
 
+/// One transition `spawn_child_wait`'s waiter thread observed in the child, decoded
+/// from a `WUNTRACED` `waitpid` call so a stop (e.g. the kernel suspending a
+/// backgrounded job that tried to read/write the controlling terminal, or a real
+/// Ctrl-Z reaching a foregrounded one directly) is reported instead of silently waited
+/// through -- plain `Child::wait()` has no stable way to ask for that.
+enum ChildEvent {
+    /// The child was stopped (SIGSTOP, SIGTSTP, SIGTTIN, SIGTTOU, ...) but hasn't
+    /// exited. May be followed by more `Stopped` events (each real stop/resume/stop
+    /// cycle) before an eventual `Done`.
+    Stopped,
+    /// The child has exited or been killed; the waiter thread is finished.
+    Done(CrushResult<()>),
+}
+
 /// Waits for `child` (identified by `pid`, already spawned onto its own tracked
-/// `cmd:wait` thread that owns it and reports its exit via `done`) while reacting to
-/// `control` the same way `schedule`'s `wait_for_command` does -- except here Pause and
-/// Terminate must reach the real OS process this job spawned, not just this waiting
-/// thread: `cmd`'s child runs independently of any crush-level job/thread tracking, so
-/// without sending it an actual signal, `crush:pause`/`crush:terminate` on this job
-/// would stop waiting on the child without the child itself ever stopping or exiting.
-/// SIGSTOP/SIGCONT suspend and resume the process; SIGKILL is used (rather than
-/// SIGTERM) for Terminate so this matches the immediate, unconditional semantics
-/// `terminate()` has everywhere else in the job control system.
-fn wait_for_child(
+/// `cmd:wait` thread that owns it and reports its state transitions via `events`)
+/// while reacting to `control` the same way `schedule`'s `wait_for_command` does --
+/// except here Pause and Terminate must reach the real OS process this job spawned,
+/// not just this waiting thread: `cmd`'s child runs independently of any crush-level
+/// job/thread tracking, so without sending it an actual signal, `crush:pause`/
+/// `crush:terminate` on this job would stop waiting on the child without the child
+/// itself ever stopping or exiting. SIGSTOP/SIGCONT suspend and resume the process;
+/// SIGKILL is used (rather than SIGTERM) for Terminate so this matches the immediate,
+/// unconditional semantics `terminate()` has everywhere else in the job control
+/// system.
+///
+/// `holds_terminal` is true only when this specific invocation handed the real
+/// controlling terminal over to the child's own process group (see `cmd_internal`) --
+/// only ever true for a *foreground* (no trailing `&`) command using the real tty, and
+/// only when that handoff actually succeeded. Whenever this returns -- however it
+/// returns -- the terminal is handed back to crush's own process group if it was
+/// handed away, so crush's own prompt can read from it again; see the `wait_for_child`
+/// wrapper below, which does that unconditionally once this inner loop is done.
+fn wait_for_child_inner(
     pid: Pid,
-    done: &Receiver<CrushResult<ExitStatus>>,
+    events: &Receiver<ChildEvent>,
     control: &Receiver<StreamControlMessage>,
+    context: &CommandContext,
+    holds_terminal: bool,
+    crush_pgid: Pid,
 ) -> CrushResult<()> {
     select! {
-        recv(done) -> res => match res {
-            Ok(Ok(_status)) => Ok(()),
-            Ok(Err(err)) => Err(err),
+        recv(events) -> res => match res {
+            Ok(ChildEvent::Done(r)) => r,
+            Ok(ChildEvent::Stopped) => {
+                // Give crush's own prompt the terminal back immediately, rather than
+                // only once this whole call eventually returns -- a job that's stopped
+                // (however that happened) but not yet resumed could sit like this for
+                // a long time, during which crush itself needs to be able to read the
+                // terminal again.
+                if holds_terminal {
+                    let _ = tcsetpgrp(&std::io::stdin(), crush_pgid);
+                }
+                // Reuses the exact same machinery crush:pause/a real Ctrl-Z on *crush
+                // itself* already use, so every other job-control-aware piece (Job::eval's
+                // own recv_or_pause, crush:jobs' status column, a later fg/bg) sees this
+                // exactly like any other pause -- regardless of whether it was crush that
+                // asked for it (see the Pause arm below) or the kernel that imposed it
+                // (e.g. a backgrounded job touching the terminal, or Ctrl-Z reaching a
+                // foregrounded job directly once it owns the terminal).
+                let _ = context.global_state.pause(context.command_handle().job_handle.id());
+                wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid)
+            }
             Err(err) => Err(err.into()),
         },
         recv(control) -> message => match message {
@@ -76,7 +122,9 @@ fn wait_for_child(
                 let _ = signal::kill(pid, signal::Signal::SIGKILL);
                 terminate()
             }
-            Ok(StreamControlMessage::Resume) => wait_for_child(pid, done, control),
+            Ok(StreamControlMessage::Resume) => {
+                wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid)
+            }
             Ok(StreamControlMessage::Pause) => {
                 let _ = signal::kill(pid, signal::Signal::SIGSTOP);
                 loop {
@@ -93,33 +141,81 @@ fn wait_for_child(
                         Err(_) => return terminate(),
                     }
                 }
-                wait_for_child(pid, done, control)
+                // The SIGSTOP above caused exactly one real stop, which the waiter
+                // thread will separately have reported as its own `ChildEvent::Stopped`
+                // -- already accounted for here via this same Pause/Resume exchange, so
+                // discard it rather than letting the next iteration mistake it for a
+                // *new*, independent stop (e.g. a fresh Ctrl-Z reaching the child
+                // directly) immediately after this resume. A `Done` racing in at the
+                // same time is genuine and must not be lost, so only a `Stopped` is
+                // discarded.
+                if let Ok(ChildEvent::Done(r)) = events.try_recv() {
+                    return r;
+                }
+                wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid)
             }
             Err(err) => Err(err.into()),
         },
     }
 }
 
-/// Spawns a dedicated thread that owns `child` and does the actual blocking `wait()`,
-/// reporting its result through the returned receiver -- so the caller can race that
-/// against the job's control channel via `wait_for_child` instead of blocking on
-/// `child.wait()` directly (which, like `schedule`'s old `cmd.eval(...)` call, would
-/// leave this job's control channel unreachable for the entire lifetime of the child).
+fn wait_for_child(
+    pid: Pid,
+    events: &Receiver<ChildEvent>,
+    control: &Receiver<StreamControlMessage>,
+    context: &CommandContext,
+    holds_terminal: bool,
+) -> CrushResult<()> {
+    let crush_pgid = getpgrp();
+    let result = wait_for_child_inner(pid, events, control, context, holds_terminal, crush_pgid);
+    if holds_terminal {
+        let _ = tcsetpgrp(&std::io::stdin(), crush_pgid);
+    }
+    result
+}
+
+/// Spawns a dedicated thread that owns `child` and does the actual blocking wait,
+/// reporting every state transition (stopped, and finally exited/killed) through the
+/// returned receiver -- so the caller can race that against the job's control channel
+/// via `wait_for_child` instead of blocking on `child.wait()` directly (which, like
+/// `schedule`'s old `cmd.eval(...)` call, would leave this job's control channel
+/// unreachable for the entire lifetime of the child). Uses a raw `waitpid` with
+/// `WUNTRACED` rather than `Child::wait()`: the latter has no stable way to ask for a
+/// stop to be reported at all, so a stopped (not exited) child would otherwise just
+/// leave this call blocked indefinitely, with nothing to report a stop happened.
 fn spawn_child_wait(
     context: &CommandContext,
-    mut child: Child,
-) -> CrushResult<Receiver<CrushResult<ExitStatus>>> {
-    let (done_sender, done_receiver) = bounded(1);
+    child: Child,
+) -> CrushResult<Receiver<ChildEvent>> {
+    let (event_sender, event_receiver) = bounded(8);
+    let pid = Pid::from_raw(child.id() as i32);
     context.global_state.threads().spawn(
         "cmd:wait",
         &context.next_command_handle(),
         move || {
-            let res = child.wait().map_err(|e| e.into());
-            let _ = done_sender.send(res);
+            // Keeps `child` (and so its underlying pid) alive for the duration --
+            // waited on directly by pid below rather than via `Child::wait()`, since
+            // that has no stable way to request `WUNTRACED`.
+            let _child = child;
+            loop {
+                let event = match waitpid(pid, Some(WaitPidFlag::WUNTRACED)) {
+                    Ok(WaitStatus::Stopped(_, _)) => ChildEvent::Stopped,
+                    Ok(WaitStatus::Exited(_, _)) | Ok(WaitStatus::Signaled(_, _, _)) => {
+                        ChildEvent::Done(Ok(()))
+                    }
+                    Ok(_) => continue,
+                    Err(err) => ChildEvent::Done(Err(err.into())),
+                };
+                let done = matches!(event, ChildEvent::Done(_));
+                let _ = event_sender.send(event);
+                if done {
+                    break;
+                }
+            }
             Ok(())
         },
     )?;
-    Ok(done_receiver)
+    Ok(event_receiver)
 }
 
 fn cmd_internal(
@@ -133,6 +229,37 @@ fn cmd_internal(
 
     let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
     let mut cmd = std::process::Command::new(file.as_os_str());
+    // Every external command gets its own process group -- the same thing a real
+    // shell's own job control does for every job it launches -- rather than silently
+    // sharing crush's, which is what let a backgrounded job that touches the terminal
+    // (e.g. `emacs &`) simply take it over instead of being stopped by the kernel like
+    // it should be. `0` means "make the child its own group leader" (its pgid becomes
+    // its own pid).
+    cmd.process_group(0);
+    // Crush itself ignores SIGTTOU/SIGTTIN for its own process (see
+    // `interactive::ignore_terminal_control_signals`) -- otherwise its own terminal
+    // operations while momentarily not the foreground group (e.g. reclaiming the
+    // terminal after a foreground child exits) would fail outright with EIO rather than
+    // just working. `SIG_IGN` survives `exec` (unlike a caught handler, which resets to
+    // default), so without this the child would silently inherit that same "ignore"
+    // disposition -- exactly undoing the point of giving it its own process group: a
+    // backgrounded child that's ignoring SIGTTOU no longer gets stopped when it writes
+    // to the terminal, it just writes to it, displacing crush's own prompt all over
+    // again. Resetting both to their default disposition here, after fork but before
+    // exec, is the standard fix real shells use for the exact same reason.
+    unsafe {
+        cmd.pre_exec(|| {
+            let _ = nix::sys::signal::signal(
+                nix::sys::signal::Signal::SIGTTOU,
+                nix::sys::signal::SigHandler::SigDfl,
+            );
+            let _ = nix::sys::signal::signal(
+                nix::sys::signal::Signal::SIGTTIN,
+                nix::sys::signal::SigHandler::SigDfl,
+            );
+            Ok(())
+        });
+    }
 
     for a in arguments.drain(..) {
         match a.argument_type {
@@ -196,8 +323,19 @@ fn cmd_internal(
 
         let child = cmd.spawn()?;
         let pid = Pid::from_raw(child.id() as i32);
-        let done = spawn_child_wait(&context, child)?;
-        wait_for_child(pid, &done, &control_receiver)?;
+        // Only a genuinely foreground invocation (no trailing `&`, not paused
+        // mid-flight -- see `JobContext::foreground`) hands the terminal over: the
+        // caller is actually going to block waiting for this, so it's safe for the
+        // child to own the terminal until it stops or exits. A backgrounded one keeps
+        // the terminal with crush's own process group instead, so if it tries to
+        // read/write it, the kernel stops it automatically (SIGTTIN/SIGTTOU) exactly
+        // like a real shell's background job would -- crush itself is never affected,
+        // since it was never handed away. `tcsetpgrp` failing (e.g. crush's own stdin
+        // isn't actually a terminal right now) just means there's nothing to hand off
+        // or reclaim.
+        let holds_terminal = context.foreground && tcsetpgrp(&std::io::stdin(), pid).is_ok();
+        let events = spawn_child_wait(&context, child)?;
+        wait_for_child(pid, &events, &control_receiver, &context, holds_terminal)?;
         context.output.send(Value::Empty)
     } else {
         let input = context.input.recv()?;
@@ -262,8 +400,8 @@ fn cmd_internal(
         )?;
 
         let pid = Pid::from_raw(child.id() as i32);
-        let done = spawn_child_wait(&context, child)?;
-        wait_for_child(pid, &done, &control_receiver)?;
+        let events = spawn_child_wait(&context, child)?;
+        wait_for_child(pid, &events, &control_receiver, &context, false)?;
 
         Ok(())
     }

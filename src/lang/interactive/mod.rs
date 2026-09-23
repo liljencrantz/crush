@@ -94,7 +94,31 @@ pub fn load_init(env: &Scope, global_state: &GlobalState) -> CrushResult<()> {
     }
 }
 
+/// Real shells ignore SIGTTOU/SIGTTIN for themselves for exactly this reason: an
+/// interactive shell's own process group is essentially always "orphaned" in the
+/// POSIX sense (its parent -- typically a terminal emulator or multiplexer like tmux --
+/// isn't part of the shell's own session), and from an orphaned process group, any
+/// terminal operation that would normally just stop a background process instead fails
+/// outright with EIO. Without this, crush's own `tcsetpgrp` calls (see cmd.rs) to hand
+/// the terminal to a foreground external command and reclaim it afterwards -- and any
+/// of crush's own tty reads/writes while it's momentarily not the terminal's foreground
+/// group -- would fail with EIO instead of working, observed directly as crush itself
+/// exiting right after a foreground `cmd` like `emacs` exits normally.
+fn ignore_terminal_control_signals() {
+    unsafe {
+        let _ = nix::sys::signal::signal(
+            nix::sys::signal::Signal::SIGTTOU,
+            nix::sys::signal::SigHandler::SigIgn,
+        );
+        let _ = nix::sys::signal::signal(
+            nix::sys::signal::Signal::SIGTTIN,
+            nix::sys::signal::SigHandler::SigIgn,
+        );
+    }
+}
+
 pub fn handle_signals(global_state: &GlobalState) -> CrushResult<Handle> {
+    ignore_terminal_control_signals();
     let mut signals = Signals::new([SIGINT, SIGTSTP])?;
     let handle = signals.handle();
     let local_global_state = global_state.clone();

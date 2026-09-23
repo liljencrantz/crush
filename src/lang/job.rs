@@ -109,7 +109,7 @@ impl Job {
         } else {
             last_element()
         };
-        let res = last_call_def.eval(context.with_io(input, last_output));
+        let res = last_call_def.eval(context.with_io_foreground(input, last_output));
 
         // Race the job's own final value against a pause of this job (e.g. Ctrl-Z):
         // without this, a job that gets paused mid-flight never sends anything here
