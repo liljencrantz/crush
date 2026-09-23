@@ -756,8 +756,8 @@ invocation of it:
 
 ```shell script
 crush# $items := $(list:of 1 2 3)
-crush# (($items:len()) > 0)
-true
+crush# ($items:len() > 0)
+$true
 crush# (($items:len) > 0)
 Error: The two provided values of types command and integer could not be compared
 ```
@@ -784,7 +784,7 @@ while condition_test() {
   ...
 }
 
-if ($a > 10) { 
+if $a > 10 { 
   "big"
 } else { 
   "small" 
@@ -800,11 +800,10 @@ try {
 
 match $x {
     case 2 {"two"}
-    any $(seq 5 10) {"between 5 and 10"}
+    any $seq(5, 10) {"between 5 and 10"}
     is $string {"a string"}
     default {"something else"}
 }
-
 )
 ```
 
@@ -906,9 +905,7 @@ Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any ty
 be used as a pattern by implementing it:
 
 ```shell script
-$Even := $(class)
-$Even:__is__ = {|$needle| ($needle mod 2 == 0)}
-$even := $(Even:new)
+$even := $(struct:of __is__={|$needle| ($needle mod 2 == 0)})
 
 like 4 $even   # true
 like 5 $even   # false
@@ -1247,6 +1244,30 @@ in to `return`. If none was given, the output value is `$empty`. If a closure do
 have a return command, the output will be the output of the last command, just like in
 a regular block.
 
+## Calling external commands
+
+If no internal command of a given name exists, Crush looks for an external command and
+runs it if found. External commands accept `$binary_output_stream` as input and provide
+a `$binary_input_stream` as output.
+
+Two shortcuts make external commands nicer to call:
+
+* Named arguments become options: a single-character name becomes a single-hyphen
+  option, a multi-character name becomes a GNU-style double-hyphen long option -- e.g.
+  `git commit m="hello"` becomes `git commit -m "hello"`, and
+  `git commit message="hello"` becomes `git commit --message "hello"`.
+* A named argument with value `$true` becomes a flag with no value -- `git commit
+  a=$true` becomes `git commit -a`.
+
+A path written directly in command position runs as an external command too, without
+needing to be found on `$PATH` first, e.g. `./configure` or `~/bin/some-script`. If
+the path is a directory and no arguments are given, Crush will `cd` into it. This only
+happens when the path is written literally in command position (or referenced through
+a plain variable, e.g. `$f` where`$f := ./configure`) a file path that merely *results*
+from evaluating something else in that position (member access like `$s:script`,
+a dict/struct field read some other way) is never executed, so reading a value that
+happens to hold a path can't accidentally run it as a subprocess.
+
 ## Background jobs
 
 A job started with a trailing `&` runs in the background: control returns to the script
@@ -1316,30 +1337,3 @@ only way to notice one happened is to check `crush:warn:list` (or, for commands 
 report per-item this way, to compare how much output you got against how much you
 expected -- see e.g. `remote:pexec`'s own documentation).
 
-
-## Calling external commands
-
-If no internal command of a given name exists, Crush looks for an external command and
-runs it if found. Crush doesn't hand over the tty or emulate one, so interactive
-terminal programs and heavily escape-sequence-dependent output don't work -- this part
-of Crush is best considered a proof of concept, though most non-interactive commands
-work as expected.
-
-Two shortcuts make external commands nicer to call:
-
-* Named arguments become options: a single-character name becomes a single-hyphen
-  option, a multi-character name becomes a GNU-style double-hyphen long option -- e.g.
-  `git commit m="hello"` becomes `git commit -m "hello"`, and
-  `git commit message="hello"` becomes `git commit --message "hello"`.
-* A named argument with value `$true` becomes a flag with no value -- `git commit
-  a=$true` becomes `git commit -a`.
-
-A path written directly in command position runs as an external command too, without
-needing to be found on `$PATH` first -- e.g. `./configure` or `~/bin/some-script`. If
-the path is a directory and no arguments are given, it's `cd`'d into instead of
-executed, the same as running `cd` directly. This only happens when the path is written
-literally in command position (or referenced through a plain variable, e.g. `$f` where
-`$f := ./configure`) -- a file path that merely *results* from evaluating something
-else in that position (member access like `$s:script`, a dict/struct field read some
-other way) is never executed, so reading a value that happens to hold a path can't
-accidentally run it as a subprocess.
