@@ -1,14 +1,14 @@
 # Command substitutions ($(...)) used to be evaluated with no job-parent information at
 # all (EvalContext carried no job handle), so a substitution's own job always showed up
-# in crush:jobs as an unrelated top-level job with no parent -- the same class of bug
-# crush:exit's "are there other jobs running" check had for closures/blocks before it
+# in jobs as an unrelated top-level job with no parent -- the same class of bug
+# exit's "are there other jobs running" check had for closures/blocks before it
 # was taught to recognize an ancestor job, except command substitutions went unfixed at
 # the time. Fixed by threading a parent job id through EvalContext (via
 # From<&JobContext>/From<&CommandContext>) into JobContext::new_nested whenever a
 # substitution is evaluated as part of some other job's own execution.
 #
 # This used to check a *backgrounded* substitution's parent (`$(sleep ... &)`, captured
-# from a later, sibling statement's own crush:jobs snapshot) -- but that's exactly the
+# from a later, sibling statement's own jobs snapshot) -- but that's exactly the
 # false-parentage shape tests/job_orphaning_on_parent_death.crush now protects against:
 # the statement that spawns a background job returns (and is reaped) essentially
 # instantly, well before any later statement can even run, so a later snapshot could
@@ -24,22 +24,22 @@
 # another job that's still running -- has to be observed while the parent job provably
 # hasn't returned yet, not via any job created strictly *after* it returns. Argument
 # evaluation gives exactly that: `list:of` can't start running until its own argument,
-# the inner `$(crush:jobs | materialize)` substitution, finishes evaluating -- so while
+# the inner `$(jobs | materialize)` substitution, finishes evaluating -- so while
 # that substitution is busy capturing its snapshot, the `list:of` job is unquestionably
 # still alive (its own Job::eval is on the stack, blocked evaluating that very
 # argument). No race, no reliance on reaping timing. (`list:of` specifically, rather
 # than e.g. `echo`, because it passes its argument through unchanged with no stdout side
 # effect, so the snapshot table itself -- not some derived/printed value -- is what ends
 # up captured in $snapshot.)
-$snapshot := $($(list:of $(crush:jobs | materialize))[0])
+$snapshot := $($(list:of $(jobs | materialize))[0])
 
 # The snapshot-taking job itself should show up with a real parent job id recorded (not
 # empty/none) -- matched by definition prefix, the same technique used elsewhere in this
 # suite, since `like`/`=~` only do exact equality against a string pattern despite the
 # name.
-$snapshot_rows := $($snapshot | where {$definition:starts_with "\$crush:jobs "} | materialize)
+$snapshot_rows := $($snapshot | where {$definition:starts_with "\$jobs "} | materialize)
 $snapshot_row_count := $($snapshot_rows | count)
-assert ($snapshot_row_count == 1) "the crush:jobs substitution itself should be visible in its own snapshot"
+assert ($snapshot_row_count == 1) "the jobs substitution itself should be visible in its own snapshot"
 $snapshot_parent_id := $($($snapshot_rows | select parent | list:collect)[0])
 
 # ...and that parent id should itself point at another job that's *also* visible in the

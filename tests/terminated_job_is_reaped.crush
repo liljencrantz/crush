@@ -1,6 +1,6 @@
-# Regression test: crush:terminate on a job wrapping an external command (started via
+# Regression test: terminate on a job wrapping an external command (started via
 # `cmd`) killed the real OS process fine, but the job's own bookkeeping stuck around in
-# crush:jobs forever afterward. Not specific to termination either -- a background job
+# jobs forever afterward. Not specific to termination either -- a background job
 # that simply finished on its own, never terminated and never even `fg`'d, leaked in
 # exactly the same way when run non-interactively (as any .crush script is).
 #
@@ -20,15 +20,15 @@
 # interactively or by a script.
 $job_id := $(cmd sleep 8171 &)
 sleep $(duration:of milliseconds=300)
-crush:terminate $job_id
+terminate $job_id
 sleep $(duration:of milliseconds=500)
 
 # Matched by a distinctive sleep duration rather than by id: ids get recycled (see
 # tests/job_orphaning_on_parent_death.crush), so the very next job created here --
-# this crush:jobs pipeline itself -- could plausibly be handed $job_id's own freed id,
-# and filtering on `id == $job_id` would then wrongly match crush:jobs' own still-running
+# this jobs pipeline itself -- could plausibly be handed $job_id's own freed id,
+# and filtering on `id == $job_id` would then wrongly match jobs' own still-running
 # row instead of correctly finding nothing.
-$remaining_rows := $(crush:jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | materialize)
+$remaining_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | materialize)
 $remaining_count := $($remaining_rows | count)
-assert ($remaining_count == 0) "a terminated external-command job should eventually be reaped from crush:jobs, not linger forever"
+assert ($remaining_count == 0) "a terminated external-command job should eventually be reaped from jobs, not linger forever"
 echo "done"

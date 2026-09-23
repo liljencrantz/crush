@@ -146,7 +146,7 @@ pub struct JobInfo {
     pub status: JobStatus,
     /// The job this job is nested inside (e.g. a closure/block body evaluated as part of
     /// an enclosing job), if any. Lets code that needs to know about "other" jobs (like
-    /// `crush:exit`'s running-jobs check) tell an ancestor apart from a genuinely
+    /// `exit`'s running-jobs check) tell an ancestor apart from a genuinely
     /// unrelated, concurrently running job.
     pub parent: Option<JobId>,
 }
@@ -202,7 +202,7 @@ impl JobControlData {
     }
 
     /// Like `resume`, but for a job being brought into the foreground (`fg`) rather
-    /// than just unpaused in place (`bg`/`crush:resume`) -- see
+    /// than just unpaused in place (`bg`/`resume`) -- see
     /// `JobControl::resume_foreground`.
     pub fn resume_foreground(&mut self) -> CrushResult<()> {
         for vc in self.senders.values() {

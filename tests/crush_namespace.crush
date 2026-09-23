@@ -1,6 +1,6 @@
 # crush:* commands mostly report on and control the running crush process itself.
-# Several are legitimately hard to test in a golden-output script: crush:exit would end
-# this very test process, and crush:terminate is a separate, already-known-buggy case
+# Several are legitimately hard to test in a golden-output script: exit would end
+# this very test process, and terminate is a separate, already-known-buggy case
 # tracked elsewhere -- both are deliberately not exercised here. Everything else gets at
 # least a structural check.
 
@@ -21,11 +21,11 @@ assert ($($args:len) > 0) "crush:arguments should be non-empty when running a sc
 
 # All three are just table streams reporting live process state -- checked for shape
 # and a sane row count, not exact contents, since both vary run to run.
-assert ($(crush:jobs | count) >= 0) "crush:jobs should not error"
-$job_columns := $(crush:jobs | members | select name | list:collect name)
+assert ($(jobs | count) >= 0) "jobs should not error"
+$job_columns := $(jobs | members | select name | list:collect name)
 for col=$(list:of id parent definition type status) {
     $found := $($job_columns | any_match {($value == $col)})
-    assert $found $("crush:jobs should have a column called {}":format $col)
+    assert $found $("jobs should have a column called {}":format $col)
 }
 
 assert ($(crush:threads | count) >= 0) "crush:threads should not error"
@@ -137,16 +137,16 @@ assert $env_errored "crush:env should no longer have a variable after :unset"
 # A job id that could never exist should error cleanly rather than doing nothing.
 $pause_errored := $false
 try {
-    crush:pause 999999999
+    pause 999999999
 } catch {|$e|
     $pause_errored = $true
 }
-assert $pause_errored "crush:pause with a nonexistent job id should error"
+assert $pause_errored "pause with a nonexistent job id should error"
 
 $resume_errored := $false
 try {
-    crush:resume 999999999
+    resume 999999999
 } catch {|$e|
     $resume_errored = $true
 }
-assert $resume_errored "crush:resume with a nonexistent job id should error"
+assert $resume_errored "resume with a nonexistent job id should error"

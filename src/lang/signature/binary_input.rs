@@ -17,7 +17,7 @@ use std::sync::Arc;
 /// Registers a fresh job-control channel with `command_handle` and wires it into
 /// `reader`, so a blocked read on it (only meaningful for a channel-backed reader --
 /// see `BinaryReader::register_control`'s own doc comment, everything else ignores this)
-/// can be interrupted by `crush:pause`/`crush:terminate` instead of hanging forever on a
+/// can be interrupted by `pause`/`terminate` instead of hanging forever on a
 /// producer that never sends anything. Mirrors `CommandContext::input_stream`'s
 /// identical wiring for table streams (`TableInputStream::interruptible`).
 fn register_control(reader: &mut Box<dyn BinaryReader + Send + Sync>, command_handle: &CommandHandle) {

@@ -100,7 +100,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
                 // calling cmd.eval(...) directly here: that used to block this thread --
                 // the same one that otherwise checks `control_receiver` between
                 // heartbeats via interruptible_sleep -- for the invocation's entire
-                // duration, with no way for crush:pause/crush:terminate to reach it
+                // duration, with no way for pause/terminate to reach it
                 // until it finished on its own. Spawning it under context's own
                 // CommandHandle (next_command_handle) keeps it under this job's own
                 // job_id, so a message sent to this job already reaches it directly --

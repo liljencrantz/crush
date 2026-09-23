@@ -11,23 +11,23 @@
 #
 # `schedule`'s default initial delay equals its interval, so the very first row isn't
 # available for 2 seconds -- comfortably longer than the few milliseconds this script
-# needs to reach crush:exit below. If echo's stream printing ever becomes synchronous
+# needs to reach exit below. If echo's stream printing ever becomes synchronous
 # again, dispatching the `&` job blocks for the entire (never-ending) stream instead of
 # returning immediately, and this test times out under run_system_test's own 30s limit
 # instead of completing in about two seconds.
 #
-# No echo/golden output needed: crush:exit refuses while any job is still running (see
+# No echo/golden output needed: exit refuses while any job is still running (see
 # the sibling test exit_refuses_while_stream_running.crush), which doubles as
 # confirmation that the backgrounded job is genuinely still active, not just fast or
-# never started -- if it ever isn't, the first crush:exit below succeeds outright,
+# never started -- if it ever isn't, the first exit below succeeds outright,
 # ending the process with the default status 0 rather than ever reaching the
-# unconditional crush:exit --force 1 that follows, which the sibling .crush.status file
+# unconditional exit --force 1 that follows, which the sibling .crush.status file
 # checks for.
 
 seq 1 1000001 | schedule $(duration:of seconds=2) | echo &
 
 try {
-    crush:exit
+    exit
 } catch {|$e|
 }
-crush:exit --force 1
+exit --force 1

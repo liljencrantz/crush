@@ -128,8 +128,8 @@ fn run() -> CrushResult<i32> {
             // An error that escapes all the way to the top of the script should make
             // the process exit non-zero, so a caller can detect failure via $?. Don't
             // override an exit status the script already set explicitly (e.g. via
-            // crush:exit) -- though in practice execute::file only returns Err here
-            // when nothing already did that, since crush:exit itself doesn't error.
+            // exit) -- though in practice execute::file only returns Err here
+            // when nothing already did that, since exit itself doesn't error.
             if result.is_err() && global_state.exit_status().is_none() {
                 global_state.set_exit_status(1);
             }

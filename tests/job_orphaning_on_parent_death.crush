@@ -32,7 +32,7 @@ sleep $(duration:of milliseconds=300)
 # empty value -- so `== $empty` can never match an actual empty value. Instead,
 # probe whether the value behaves like an integer (arithmetic succeeds) or not
 # (arithmetic errors, caught below) to tell the two apart.
-$rows := $(crush:jobs | where {($id == $job_id)} | materialize)
+$rows := $(jobs | where {($id == $job_id)} | materialize)
 $parent_after_x_died := $($rows[0]):parent
 $parent_is_still_an_id := $true
 try {
@@ -48,15 +48,15 @@ assert (!$parent_is_still_an_id) "job_id's dead parent should have been orphaned
 # This job is unrelated to $job_id in every way.
 cmd sleep 31 &
 sleep $(duration:of milliseconds=300)
-$colliding_id := $($($(crush:jobs | where {like $definition *sleep*31*} | materialize)[0]):id)
+$colliding_id := $($($(jobs | where {like $definition *sleep*31*} | materialize)[0]):id)
 
 # Pausing the unrelated job must never affect $job_id, regardless of whether their ids
 # happen to collide with whatever job_id's parent used to be.
-crush:pause $colliding_id
+pause $colliding_id
 sleep $(duration:of milliseconds=200)
-$job_id_status := $($($(crush:jobs | where {($id == $job_id)} | materialize)[0]):status)
+$job_id_status := $($($(jobs | where {($id == $job_id)} | materialize)[0]):status)
 assert ($job_id_status == "Running") "pausing an unrelated job must not pause job_id itself, no matter what id it was handed"
 
-crush:terminate $job_id
-crush:terminate $colliding_id
+terminate $job_id
+terminate $colliding_id
 echo "done"

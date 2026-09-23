@@ -71,8 +71,8 @@ enum ChildEvent {
 /// while reacting to `control` the same way `schedule`'s `wait_for_command` does --
 /// except here Pause and Terminate must reach the real OS process this job spawned,
 /// not just this waiting thread: `cmd`'s child runs independently of any crush-level
-/// job/thread tracking, so without sending it an actual signal, `crush:pause`/
-/// `crush:terminate` on this job would stop waiting on the child without the child
+/// job/thread tracking, so without sending it an actual signal, `pause`/
+/// `terminate` on this job would stop waiting on the child without the child
 /// itself ever stopping or exiting. SIGSTOP/SIGCONT suspend and resume the process;
 /// SIGKILL is used (rather than SIGTERM) for Terminate so this matches the immediate,
 /// unconditional semantics `terminate()` has everywhere else in the job control
@@ -108,9 +108,9 @@ fn wait_for_child_inner(
                 if holds_terminal {
                     let _ = tcsetpgrp(&std::io::stdin(), crush_pgid);
                 }
-                // Reuses the exact same machinery crush:pause/a real Ctrl-Z on *crush
+                // Reuses the exact same machinery pause/a real Ctrl-Z on *crush
                 // itself* already use, so every other job-control-aware piece (Job::eval's
-                // own recv_or_pause, crush:jobs' status column, a later fg/bg) sees this
+                // own recv_or_pause, jobs' status column, a later fg/bg) sees this
                 // exactly like any other pause -- regardless of whether it was crush that
                 // asked for it (see the Pause arm below) or the kernel that imposed it
                 // (e.g. a backgrounded job touching the terminal, or Ctrl-Z reaching a
@@ -139,7 +139,7 @@ fn wait_for_child_inner(
                 wait_for_child_inner(pid, events, control, context, now_holds, crush_pgid)
             }
             Ok(StreamControlMessage::Pause) => {
-                // If this job currently owns the terminal (e.g. crush:pause on an
+                // If this job currently owns the terminal (e.g. pause on an
                 // actively-running foreground command), give it back to crush's own
                 // process group now -- the same reasoning as the Stopped arm above,
                 // just triggered by crush itself asking for the pause rather than the

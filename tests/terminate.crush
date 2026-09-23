@@ -1,7 +1,7 @@
-# crush:terminate/crush:pause reach a running command only by sending a
+# terminate/pause reach a running command only by sending a
 # StreamControlMessage through a channel that command registered for itself --
 # sleep used to never register one at all (a plain std::thread::sleep(), completely
-# uninterruptible), so crush:terminate had no observable effect on the kind of job a
+# uninterruptible), so terminate had no observable effect on the kind of job a
 # user would actually reach for it to stop: backgrounding a multi-second sleep and
 # terminating it right away still took the full duration and returned nothing early.
 # Confirmed and fixed this session. These checks use real elapsed wall-clock time
@@ -10,28 +10,28 @@
 
 $start := $(time:now)
 $job_id := $(sleep $(duration:of seconds=5) &)
-crush:terminate $job_id
+terminate $job_id
 try {
     $(fg $job_id)
 } catch {|$e|
 }
 $end := $(time:now)
-assert (($end - $start) < $(duration:of seconds=2)) "crush:terminate should interrupt a running sleep almost immediately, not wait out its full duration"
+assert (($end - $start) < $(duration:of seconds=2)) "terminate should interrupt a running sleep almost immediately, not wait out its full duration"
 
-# crush:pause should actually stop a running sleep's countdown, not just fail to error.
+# pause should actually stop a running sleep's countdown, not just fail to error.
 $start2 := $(time:now)
 $job_id2 := $(sleep $(duration:of seconds=5) &)
-crush:pause $job_id2
+pause $job_id2
 $mid := $(time:now)
-assert (($mid - $start2) < $(duration:of seconds=2)) "crush:pause should stop a running sleep from completing at its original deadline"
+assert (($mid - $start2) < $(duration:of seconds=2)) "pause should stop a running sleep from completing at its original deadline"
 
 # Resuming a paused sleep continues counting down its remaining duration, rather than
 # ending the wait immediately -- the pause itself shouldn't shorten the sleep. The pause
 # above landed well within the first 2 of the original 5 seconds, so at least a few
 # seconds should still remain; a generous upper bound below just guards against resume
 # not working at all (waiting out the rest forever).
-crush:resume $job_id2
+resume $job_id2
 $(fg $job_id2)
 $end2 := $(time:now)
-assert (($end2 - $mid) > $(duration:of seconds=1)) "crush:resume should let a paused sleep continue counting down its remaining duration, not finish immediately"
-assert (($end2 - $mid) < $(duration:of seconds=6)) "crush:resume should not wait any longer than the sleep's original total duration"
+assert (($end2 - $mid) > $(duration:of seconds=1)) "resume should let a paused sleep continue counting down its remaining duration, not finish immediately"
+assert (($end2 - $mid) < $(duration:of seconds=6)) "resume should not wait any longer than the sleep's original total duration"

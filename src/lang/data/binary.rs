@@ -223,11 +223,11 @@ impl Write for ChannelWriter {
 /// job-control hookup -- the writer-side counterpart of `BinaryReader`. Every existing
 /// caller of `binary_channel`/`files::writer` used to get a plain `Box<dyn Write>`; this
 /// narrow, `Write`-extending trait lets a channel-backed writer additionally respond to
-/// `crush:pause`/`crush:terminate` without changing how any of those callers use it (all
+/// `pause`/`terminate` without changing how any of those callers use it (all
 /// the `Write` methods stay directly callable through the supertrait bound).
 pub trait BinaryWriter: Write + Send {
-    /// Registers the job-control channel a paused/terminated job's `crush:pause`/
-    /// `crush:terminate` sends `StreamControlMessage`s through, so a `write()` blocked
+    /// Registers the job-control channel a paused/terminated job's `pause`/
+    /// `terminate` sends `StreamControlMessage`s through, so a `write()` blocked
     /// because nothing is draining this writer's channel can be interrupted instead of
     /// hanging forever -- see `BinaryReader::register_control`'s identical doc comment
     /// for the read-side counterpart. A plain file has no reader to wait on and just
@@ -253,8 +253,8 @@ pub trait BinaryReader: Read + Debug + Send + Sync {
     /// in-flight producer and just ignore this.
     fn set_producer_job(&mut self, _job: JobHandle, _threads: ThreadStore) {}
 
-    /// Registers the job-control channel a paused/terminated job's `crush:pause`/
-    /// `crush:terminate` sends `StreamControlMessage`s through, so a `read()` blocked
+    /// Registers the job-control channel a paused/terminated job's `pause`/
+    /// `terminate` sends `StreamControlMessage`s through, so a `read()` blocked
     /// waiting on this reader's own producer can be interrupted instead of hanging
     /// forever -- mirrors `TableOutputStream`'s existing `control` field and
     /// `InterruptibleTableInputStream`'s existing `select!` against it. Most readers (a
@@ -414,7 +414,7 @@ mod tests {
     // A blocked ChannelReader::read() must respect a Terminate control message the way
     // TableOutputStream::send/InterruptibleTableInputStream::read already do -- otherwise
     // a job stuck reading a binary_stream whose producer never sends anything (or hangs)
-    // can never be interrupted via crush:terminate, only killed at the process level.
+    // can never be interrupted via terminate, only killed at the process level.
     // Run on a background thread with a bounded wait, not directly: a real hang here
     // must fail this test with a clear message, not hang the whole test binary.
     #[test]

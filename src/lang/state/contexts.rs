@@ -21,7 +21,7 @@ pub struct EvalContext {
     pub global_state: GlobalState,
     /// The job this expression is being evaluated as part of, if any -- e.g. a command
     /// substitution (`$(...)`) evaluated while resolving an argument gets the enclosing
-    /// job as its parent, so a `crush:exit`/`crush:jobs` check run from *inside* the
+    /// job as its parent, so a `exit`/`jobs` check run from *inside* the
     /// substitution can recognize it as nested rather than a genuinely separate,
     /// unrelated job. `None` for contexts with no enclosing job (e.g. compiling a
     /// closure's parameter-list default values, which happens outside of running any
@@ -129,7 +129,7 @@ impl JobContext {
     /// Like `new`, but for a job that's nested inside another one already being
     /// evaluated (e.g. a closure/block body run as part of `parent`), rather than a
     /// fresh top-level statement. Recording `parent` lets job-related checks (like
-    /// `crush:exit`'s running-jobs check) recognize an ancestor job as not being a
+    /// `exit`'s running-jobs check) recognize an ancestor job as not being a
     /// genuinely separate, unrelated one.
     pub fn new_nested(
         input: ValueReceiver,

@@ -1,8 +1,10 @@
+use crate::lang::any_sequence::AnySequence;
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::command::OutputType::Unknown;
 use crate::lang::command_invocation::resolve_external_command;
+use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::{CrushResult, assertion_error, command_error, throw_error};
 use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::{ValueReceiver, empty_channel, pipe};
@@ -14,9 +16,10 @@ use crate::lang::state::scope::Scope;
 use crate::lang::{data::binary::BinaryReader, value::Value, value::ValueType};
 use crate::util::file::cwd;
 use crate::util::regex::RegexFileMatcher;
-use chrono::Duration;
+use chrono::{Duration, Local};
 use crossbeam::channel::{bounded, unbounded};
 use os_pipe::PipeReader;
+use rand::RngExt;
 use signature::signature;
 use std::io::Read;
 use crate::util::interruptible_sleep::interruptible_sleep;
@@ -179,7 +182,7 @@ fn sleep(mut context: CommandContext) -> CrushResult<()> {
     short = "Run a command, terminating it if it hasn't finished within the given duration.",
     long = "If `command` finishes before `duration` elapses, `timeout` returns its result",
     long = "normally. Otherwise, a termination signal is sent to it -- the same cooperative",
-    long = "mechanism `crush:terminate` uses, which only a command that actually checks for",
+    long = "mechanism `terminate` uses, which only a command that actually checks for",
     long = "it (like `sleep`) will actually stop for; most builtins don't, and will keep",
     long = "running in the background regardless -- and `timeout` itself fails with a",
     long = "timeout error.",
@@ -321,7 +324,7 @@ fn is_descendant_job(
     short = "Resume a paused job, letting it continue running in the background.",
     long = "Unlike a job started with a trailing `&` (which is in the background from the",
     long = "moment it starts), `bg` acts on a job that already exists and is currently",
-    long = "paused (e.g. via `crush:pause`) -- it resumes it without putting it in the",
+    long = "paused (e.g. via `pause`) -- it resumes it without putting it in the",
     long = "foreground the way `fg` would.",
 )]
 struct Bg {
@@ -426,6 +429,173 @@ fn fg(mut context: CommandContext) -> CrushResult<()> {
             }
         },
     }
+}
+
+static JOB_OUTPUT_TYPE: [ColumnType; 5] = [
+    ColumnType::new("id", ValueType::Integer, "the job's id."),
+    ColumnType::new(
+        "parent",
+        ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])),
+        "the id of the job this job is nested inside, if any.",
+    ),
+    ColumnType::new(
+        "definition",
+        ValueType::String,
+        "the job's definition, i.e. the invocation that started it, as source text.",
+    ),
+    ColumnType::new(
+        "type",
+        ValueType::String,
+        "whether the job is running interactively or in the background.",
+    ),
+    ColumnType::new(
+        "status",
+        ValueType::String,
+        "whether the job is running, paused, or terminated.",
+    ),
+];
+
+#[signature(
+    control.jobs,
+    can_block = false,
+    short = "List running jobs",
+    output = Known(ValueType::table_input_stream(&JOB_OUTPUT_TYPE)),
+    long = "All currently running jobs")]
+struct Jobs {}
+
+fn jobs(context: CommandContext) -> CrushResult<()> {
+    let output = context.initialize_output(&JOB_OUTPUT_TYPE)?;
+    let jobs = context.global_state.jobs();
+    for job in jobs {
+        output.send(Row::new(vec![
+            Value::from(job.id),
+            job.parent.map(Value::from).unwrap_or(Value::Empty),
+            Value::from(job.definition),
+            Value::from(job.job_type.to_string()),
+            Value::from(job.status.to_string()),
+        ]))?;
+    }
+    Ok(())
+}
+
+#[signature(
+    control.terminate,
+    output = Known(ValueType::Empty),
+    short = "Terminate the given job.",
+    long = "A job may continue running for some time after receiving a termination notification. Output pipelines produced by the job will still be readable and will contain any buffered IO already sent to the job before it received the termination notification.",
+    example = "# Create a job that produces a lot of output",
+    example = "$all_files := $(files --recurse /)",
+    example = "# Read a few lines of output",
+    example = "$all_files | head",
+    example = "# Find the job id of the job we want to terminate",
+    example = "jobs",
+    example = "# Ask the job to terminate.",
+    example = "terminate 1",
+    example = "# This will output the number of buffered rows that were buffered",
+    example = "$all_files | count",
+)]
+struct Terminate {
+    #[description("The job id for the job to terminate")]
+    jid: usize,
+}
+
+fn terminate(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.terminate(cfg.jid.into())?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    control.pause,
+    output = Known(ValueType::Empty),
+    short = "Pause the given job.",
+)]
+struct Pause {
+    #[description("The job id for the job to pause")]
+    jid: usize,
+}
+
+fn pause(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Pause::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.pause(cfg.jid.into())?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    control.resume,
+    output = Known(ValueType::Empty),
+    short = "Resume the given job.",
+)]
+struct Resume {
+    #[description("The job id for the job to resume")]
+    jid: usize,
+}
+
+fn resume(mut context: CommandContext) -> CrushResult<()> {
+    let cfg = Resume::parse(context.remove_arguments(), &context.global_state.printer())?;
+    context.global_state.resume(cfg.jid.into())?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    control.exit,
+    output = Known(ValueType::Empty),
+    short = "Exit the shell",
+    long = "If other jobs are still running, exit fails with an error unless `force` is",
+    long = "set, in which case those jobs are terminated first.",
+)]
+struct Exit {
+    #[default(0)]
+    #[description("The exit status to set for the process")]
+    status: i32,
+    #[default(false)]
+    #[description("Terminate all running jobs")]
+    force: bool,
+}
+
+/// Every other job currently running, chosen at random -- excluding this command's own
+/// job and any of its ancestors (e.g. the job list/closure `exit` itself is nested
+/// inside), since those aren't "other jobs" in the sense `exit` cares about. Reuses
+/// `is_descendant_job` (see above): "job.id is an ancestor of my_job_id" is exactly
+/// "my_job_id is a descendant of job.id".
+fn random_other_job(context: &CommandContext) -> Option<JobId> {
+    let my_job_id = context.command_handle().job_handle.id();
+    let jobs = context.global_state.jobs();
+    let other_job_ids: Vec<JobId> = jobs
+        .iter()
+        .filter(|job| job.id != my_job_id && !is_descendant_job(&jobs, job.id, my_job_id))
+        .map(|job| job.id)
+        .collect();
+    match other_job_ids.is_empty() {
+        true => None,
+        false => Some(other_job_ids[rand::rng().random_range(0..other_job_ids.len())]),
+    }
+}
+
+fn exit(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Exit = Exit::parse(context.remove_arguments(), &context.global_state.printer())?;
+
+    if random_other_job(&context).is_some() {
+        if cfg.force {
+            let stop_time = Local::now() + Duration::seconds(2);
+            while let Some(job) = random_other_job(&context) {
+                if Local::now() > stop_time {
+                    return command_error("Failed to terminate jobs.");
+                }
+                let _ = context.global_state.terminate(job);
+                context
+                    .global_state
+                    .threads()
+                    .reap(context.global_state.printer());
+            }
+        } else {
+            return command_error("There are running jobs.");
+        }
+    }
+
+    context.scope.do_exit()?;
+    context.global_state.set_exit_status(cfg.status as i32);
+    context.output.send(Value::Empty)
 }
 
 #[signature(
@@ -568,6 +738,11 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             Timeout::declare(env)?;
             Bg::declare(env)?;
             Fg::declare(env)?;
+            Jobs::declare(env)?;
+            Terminate::declare(env)?;
+            Pause::declare(env)?;
+            Resume::declare(env)?;
+            Exit::declare(env)?;
             help::HelpSignature::declare(env)?;
             Source::declare(env)?;
             Which::declare(env)?;

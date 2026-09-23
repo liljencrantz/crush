@@ -1,4 +1,3 @@
-use chrono::{Duration, Local};
 use crate::builtins::term::{CYAN, GREEN, MAGENTA, RED, YELLOW};
 use crate::data::list::List;
 use crate::lang::any_sequence::AnySequence;
@@ -13,10 +12,8 @@ use crate::lang::state::global_state::RunMode;
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use nix::unistd::Pid;
-use rand::{RngExt};
 use rustyline::history::{History, SearchDirection};
 use signature::signature;
-use crate::lang::state::id::JobId;
 
 mod env {
     use crate::lang::command::OutputType::Known;
@@ -141,132 +138,6 @@ fn threads(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
-#[signature(
-    crush.exit,
-    output = Known(ValueType::Empty),
-    short = "Exit the shell",
-    long = "If other jobs are still running, exit fails with an error unless `force` is",
-    long = "set, in which case those jobs are terminated first.",
-)]
-struct Exit {
-    #[default(0)]
-    #[description("The exit status to set for the process")]
-    status: i32,
-    #[default(false)]
-    #[description("Terminate all running jobs")]
-    force: bool,
-}
-
-/// True if `candidate` is an ancestor of `of` -- i.e. `of` is a closure/block body (or
-/// other nested job) running as part of `candidate`, directly or transitively. Used to
-/// tell a job's own enclosing job apart from a genuinely separate, unrelated one.
-fn is_ancestor(jobs: &[crate::lang::state::handles::JobInfo], candidate: JobId, of: JobId) -> bool {
-    let mut current = of;
-    while let Some(parent) = jobs.iter().find(|j| j.id == current).and_then(|j| j.parent) {
-        if parent == candidate {
-            return true;
-        }
-        current = parent;
-    }
-    false
-}
-
-fn random_other_job(context: &CommandContext) -> Option<JobId> {
-    let my_job_id = context.command_handle().job_handle.id();
-    let jobs = context.global_state.jobs();
-    let other_job_ids: Vec<JobId> = jobs
-        .iter()
-        .filter(|job| job.id != my_job_id && !is_ancestor(&jobs, job.id, my_job_id))
-        .map(|job| job.id)
-        .collect();
-    match other_job_ids.is_empty() {
-        true => None,
-        false => Some(other_job_ids[rand::rng().random_range(0..other_job_ids.len())]),
-    }
-}
-
-fn exit(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Exit = Exit::parse(context.remove_arguments(), &context.global_state.printer())?;
-
-    if random_other_job(&context).is_some() {
-        if cfg.force {
-            let stop_time = Local::now() + Duration::seconds(2);
-            while let Some(job) = random_other_job(&context) {
-                if Local::now() > stop_time {
-                    return command_error("Failed to terminate jobs.");
-                }
-                let _ = context.global_state.terminate(job);
-                context.global_state.threads().reap(context.global_state.printer());
-            }
-        } else {
-            return command_error("There are running jobs.");
-        }
-    }
-
-    context.scope.do_exit()?;
-    context.global_state.set_exit_status(cfg.status as i32);
-    context.output.send(Value::Empty)
-}
-
-#[signature(
-    crush.terminate,
-    output = Known(ValueType::Empty),
-    short = "Terminate the given job.",
-    long = "A job may continue running for some time after receiving a termination notification. Output pipelines produced by the job will still be readable and will contain any buffered IO already sent to the job before it received the termination notification.",
-    example = "# Create a job that produces a lot of output",
-    example = "$all_files := $(files --recurse /)",
-    example = "# Read a few lines of output",
-    example = "$all_files | head",
-    example = "# Find the job id of the job we want to terminate",
-    example = "crush:jobs",
-    example = "# Ask the job to terminate.",
-    example = "crush:terminate 1",
-    example = "# This will output the number of buffered rows that were buffered",
-    example = "$all_files | count",
-)]
-struct Terminate {
-    #[description("The job id for the job to terminate")]
-    jid: usize,
-}
-
-fn terminate(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Terminate::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.global_state.terminate(cfg.jid.into())?;
-    context.output.send(Value::Empty)
-}
-
-#[signature(
-    crush.pause,
-    output = Known(ValueType::Empty),
-    short = "Pause the given job.",
-)]
-struct Pause {
-    #[description("The job id for the job to pause")]
-    jid: usize,
-}
-
-fn pause(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Pause::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.global_state.pause(cfg.jid.into())?;
-    context.output.send(Value::Empty)
-}
-
-#[signature(
-    crush.resume,
-    output = Known(ValueType::Empty),
-    short = "Resume the given job.",
-)]
-struct Resume {
-    #[description("The job id for the job to resume")]
-    jid: usize,
-}
-
-fn resume(mut context: CommandContext) -> CrushResult<()> {
-    let cfg = Resume::parse(context.remove_arguments(), &context.global_state.printer())?;
-    context.global_state.resume(cfg.jid.into())?;
-    context.output.send(Value::Empty)
-}
-
 mod prompt {
     use super::*;
 
@@ -381,37 +252,6 @@ mod title {
                 .unwrap_or(Value::Empty),
         )
     }
-}
-
-static JOB_OUTPUT_TYPE: [ColumnType; 5] = [
-    ColumnType::new("id", ValueType::Integer, "the job's id."),
-    ColumnType::new("parent", ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "the id of the job this job is nested inside, if any."),
-    ColumnType::new("definition", ValueType::String, "the job's definition, i.e. the invocation that started it, as source text."),
-    ColumnType::new("type", ValueType::String, "whether the job is running interactively or in the background."),
-    ColumnType::new("status", ValueType::String, "whether the job is running, paused, or terminated."),
-];
-
-#[signature(
-    crush.jobs,
-    can_block = false,
-    short = "List running jobs",
-    output = Known(ValueType::table_input_stream(&JOB_OUTPUT_TYPE)),
-    long = "All currently running jobs")]
-struct Jobs {}
-
-fn jobs(context: CommandContext) -> CrushResult<()> {
-    let output = context.initialize_output(&JOB_OUTPUT_TYPE)?;
-    let jobs = context.global_state.jobs();
-    for job in jobs {
-        output.send(Row::new(vec![
-            Value::from(job.id),
-            job.parent.map(Value::from).unwrap_or(Value::Empty),
-            Value::from(job.definition),
-            Value::from(job.job_type.to_string()),
-            Value::from(job.status.to_string()),
-        ]))?;
-    }
-    Ok(())
 }
 
 static HISTORY_OUTPUT_TYPE: [ColumnType; 2] = [
@@ -733,8 +573,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
              itself, as distinct from state about the external world (`host`) or the data \
              flowing through a pipeline. This is where you configure the prompt and title, \
              the warning log and syntax highlighting, read and write OS environment \
-             variables, inspect running jobs and threads, and control how the shell exits. \
-             See `docs/config.md` for a guided tour of what's configurable here."
+             variables, and inspect running threads. Job control itself (`exit`, `jobs`, \
+             `pause`, `resume`, `terminate`) lives in `control`. See `docs/config.md` for a \
+             guided tour of what's configurable here."
                 .to_string(),
         ),
         Box::new(move |crush| {
@@ -772,9 +613,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 
             RunModeArg::declare(crush)?;
             LanguageModeArg::declare(crush)?;
-            Terminate::declare(crush)?;
-            Pause::declare(crush)?;
-            Resume::declare(crush)?;
 
             crush.create_namespace(
                 "title",
@@ -788,8 +626,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             )?;
 
             Threads::declare(crush)?;
-            Exit::declare(crush)?;
-            Jobs::declare(crush)?;
             HistoryCommand::declare(crush)?;
 
             crush.create_namespace(

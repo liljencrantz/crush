@@ -2,7 +2,7 @@
 # every bus. Skipped (exit status 0) when not on Linux or when there is no system bus to talk to,
 # e.g. in a container.
 if ($(host:os:name) != "linux") {
-    crush:exit
+    exit
 }
 $reachable := $($(list $bool):new)
 try {
@@ -11,7 +11,7 @@ try {
 } catch {|$e|
 }
 if ($($reachable:len) == 0) {
-    crush:exit
+    exit
 }
 
 $bus := $dbus:system:org:freedesktop:DBus

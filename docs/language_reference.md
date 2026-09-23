@@ -543,7 +543,7 @@ triggers them:
 | `InvalidArgument` | A command was called with arguments it can't accept -- also what `assert` raises on failure. |
 | `InvalidData` | A value was correctly typed but held a bad or unexpected value. |
 | `InvalidJump` | `break`, `continue`, or `return` was used somewhere it doesn't apply. |
-| `Terminate` | Raised internally when `crush:terminate` is sent to a job. Avoid filtering `catch` on this -- catching it defeats job control. |
+| `Terminate` | Raised internally when `terminate` is sent to a job. Avoid filtering `catch` on this -- catching it defeats job control. |
 
 **Parsing and conversion**
 
@@ -1285,10 +1285,10 @@ surfaces immediately -- any error during its real work is deferred into the back
 job registry and only reported once you `fg` it. A backgrounded job that fails and is
 never `fg`'d has its failure go unreported.
 
-`fg` waits for and returns a backgrounded job's result. `crush:jobs` lists every
+`fg` waits for and returns a backgrounded job's result. `jobs` lists every
 currently running job (including nested ones, like command substitutions running as
 part of a larger job), with `id`/`parent`/`definition`/`type`/`status` columns.
-`crush:pause`/`bg` pause a running job and later resume it in the background (as opposed
+`pause`/`bg` pause a running job and later resume it in the background (as opposed
 to `&`, which starts a job in the background from the moment it's created).
 
 For two jobs that need to communicate directly -- one producing data the other consumes,
@@ -1318,17 +1318,17 @@ silently drop that writer's contribution.
 
 Every job -- whether it's the whole command line you just typed, a `&`-backgrounded
 pipeline, or a command substitution running as part of some other job's evaluation --
-gets a numeric id, shown in `crush:jobs`' `id` column and used to target a job with
-`fg`/`bg`/`crush:pause`/`crush:resume`/`crush:terminate`. A new job is always given the
+gets a numeric id, shown in `jobs`' `id` column and used to target a job with
+`fg`/`bg`/`pause`/`resume`/`terminate`. A new job is always given the
 smallest id not currently in use by any other running job, rather than an
 ever-increasing counter -- the same small, consecutive, predictable numbering a
 traditional shell's own job control uses. That means ids get reused constantly: as soon
 as a job finishes, its id becomes available for the very next job that's created.
 
-`crush:jobs`' `parent` column records the job a given job is nested inside -- e.g. a
+`jobs`' `parent` column records the job a given job is nested inside -- e.g. a
 command substitution (`$(...)`) evaluated as part of another job's own execution, or a
 closure/block's body being run as part of a job that dispatched it -- if any. This is
-what lets `crush:pause`/`crush:resume`/`crush:terminate` also affect every job nested
+what lets `pause`/`resume`/`terminate` also affect every job nested
 inside the one they're given, not just that job itself. Because ids get reused so
 readily, a job's `parent` is only ever meaningful while that parent job is still alive:
 the moment a job finishes and its id is freed for reuse, every other job that still
@@ -1357,7 +1357,7 @@ recently* backgrounded or paused job:
 crush# fg
 ```
 
-`fg` given an explicit job id -- as printed by `crush:jobs`, or captured as a `$(... &)`
+`fg` given an explicit job id -- as printed by `jobs`, or captured as a `$(... &)`
 substitution's return value -- resumes that specific job instead, regardless of how
 recently it was backgrounded or paused:
 
@@ -1367,7 +1367,7 @@ crush# fg $job_id
 ```
 
 `Ctrl-C` cancels the job currently running at the prompt outright, rather than pausing
-it -- the interactive equivalent of calling `crush:terminate` on it:
+it -- the interactive equivalent of calling `terminate` on it:
 
 ```shell script
 crush# sleep $(duration:of seconds=30)

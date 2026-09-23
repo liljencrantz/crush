@@ -283,15 +283,15 @@ pub fn run(
                 global_state.printer().line("^C");
             }
             Some(Err(ReadlineError::Eof)) => {
-                // Delegates to crush:exit (crush:exit --force on a confirmed second
+                // Delegates to exit (exit --force on a confirmed second
                 // press) rather than duplicating its "are there other jobs running"
                 // check and force-terminate-with-timeout loop here. On success it sets
                 // global_state's exit_status, which is what actually ends this loop --
                 // just like typing "exit" at the prompt would.
                 let exit_cmd = if pending_exit_confirmation {
-                    "crush:exit --force"
+                    "exit --force"
                 } else {
-                    "crush:exit"
+                    "exit"
                 };
                 global_state.threads().reap(global_state.printer());
                 let result = execute::string(

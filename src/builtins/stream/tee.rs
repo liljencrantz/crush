@@ -103,7 +103,7 @@ fn tee(mut context: CommandContext) -> CrushResult<()> {
     }
 
     // Run the feeding loop in a closure so every exit path -- including an early
-    // `return` below (e.g. a branch's send observing crush:terminate, see
+    // `return` below (e.g. a branch's send observing terminate, see
     // TableOutputStream::send) or `input.next_row()`'s own `?` -- still reaches the
     // cleanup after it: every branch thread must be joined regardless of how/why this
     // command is done producing output, or a still-running (or, for something like an

@@ -8,7 +8,7 @@ $r := $(timeout $(duration:of seconds=5) {(1 + 1)})
 assert ($r == 2) "a command that finishes in time should return its result normally"
 
 # A command that runs past the duration, but cooperates with termination (sleep does,
-# since crush:terminate/crush:pause fixed it this session), should be interrupted
+# since terminate/pause fixed it this session), should be interrupted
 # almost immediately rather than running out its full duration.
 $start := $(time:now)
 $timed_out := $false

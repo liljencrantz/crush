@@ -4,4 +4,4 @@
 # run_system_test skips the output comparison entirely when one isn't present, so this
 # only checks the exit status.
 echo "before exit"
-crush:exit status=7
+exit status=7

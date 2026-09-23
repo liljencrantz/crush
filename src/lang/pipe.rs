@@ -277,7 +277,7 @@ pub struct TableInputStream {
     /// it cleared once resolved. A plain, per-clone `Option` would let the reading
     /// clone's own copy resolve (and get reaped) while `$a`'s own separate copy keeps
     /// holding its own `JobHandle` clone forever, keeping the job's `JobControlData`
-    /// alive and reporting it as still live (e.g. to `crush:exit`) even though its
+    /// alive and reporting it as still live (e.g. to `exit`) even though its
     /// stream had already been fully, successfully drained.
     producer: Arc<Mutex<Option<(JobHandle, ThreadStore)>>>,
 }

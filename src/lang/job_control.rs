@@ -11,7 +11,7 @@ pub trait JobControl {
     fn resume(&self) -> CrushResult<()>;
     /// Like `resume`, but specifically because the job is being brought into the
     /// foreground (`fg`), as opposed to just being unpaused in place (`bg`,
-    /// `crush:resume`). `cmd`'s own controller (see cmd.rs) is the only implementor
+    /// `resume`). `cmd`'s own controller (see cmd.rs) is the only implementor
     /// that currently treats this differently from a plain `resume`: it also hands the
     /// real controlling terminal back to an external command that wants it, which a
     /// plain background resume must not do (that would just make the command fight
@@ -97,16 +97,16 @@ impl<T> InterruptibleJoinHandle<T> {
     /// with no notion of one being more "current" than the other. By the time this is
     /// called (via `ThreadStore::reap`, well after the thread actually finished),
     /// `control_receiver` can easily already hold a stale message from some earlier
-    /// `crush:pause`/`crush:terminate` broadcast that was sent to this thread's own
+    /// `pause`/`terminate` broadcast that was sent to this thread's own
     /// control channel along with everyone else's but was simply never consumed by
     /// anything -- and `result_receiver` can *simultaneously* already hold the thread's
     /// genuine, final result. Racing the two blind lets `select!` return that stale
     /// message instead of the real result about as often as not: `join_one` (see
     /// threads.rs) treats `Either::Right(Pause)` as "still legitimately running, just
     /// paused, put it back," permanently re-registering an already-finished thread --
-    /// observed directly as a `cmd`-spawned job that had ever been `crush:pause`d never
-    /// getting reaped after being `crush:terminate`d, which is what made
-    /// `crush:exit --force`'s own "keep terminating until crush:jobs is empty" loop
+    /// observed directly as a `cmd`-spawned job that had ever been `pause`d never
+    /// getting reaped after being `terminate`d, which is what made
+    /// `exit --force`'s own "keep terminating until jobs is empty" loop
     /// spin for its full timeout and report "Failed to terminate jobs." even though the
     /// job's external process was already long dead. `try_join`, just below, already
     /// gets this ordering right -- this brings `join` in line with it.

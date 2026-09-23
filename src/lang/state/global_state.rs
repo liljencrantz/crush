@@ -176,8 +176,8 @@ impl GlobalState {
         // after every line for exactly this reason; without an equivalent call here,
         // `remove_finished_jobs` below would find that job's `strong_count()` still
         // nonzero (kept alive by that lingering clone) and never reap it, regardless of
-        // whether the job was `crush:terminate`d or simply finished on its own -- the
-        // job would sit in `crush:jobs` forever even though its underlying process/work
+        // whether the job was `terminate`d or simply finished on its own -- the
+        // job would sit in `jobs` forever even though its underlying process/work
         // is long gone. Must run before acquiring `self.data`'s lock below: it only
         // touches `ThreadStore`'s own separate lock, and needs to actually drop those
         // clones first for `remove_finished_jobs`'s `strong_count()` check to see it.
@@ -253,7 +253,7 @@ impl GlobalState {
     /// on `join_job` here cannot deadlock and resolves in microseconds regardless of
     /// system load, and doing so (rather than the non-blocking check used to use)
     /// matters: something checking "is any other job still live" right after this call
-    /// (e.g. `crush:exit`'s refusal to exit with jobs running) needs a real answer, not a
+    /// (e.g. `exit`'s refusal to exit with jobs running) needs a real answer, not a
     /// best-effort one that can still say "yes" for a thread that has, in every way that
     /// matters, already finished.
     ///
@@ -270,7 +270,7 @@ impl GlobalState {
     /// already visible. A *streaming* result is the other case that keeps this
     /// non-blocking, since its producer can legitimately still be doing real, unbounded
     /// work (e.g. `files / --recurse` still walking a large tree) well after handing back
-    /// its stream handle -- exactly the case where a caller like `crush:exit` must keep
+    /// its stream handle -- exactly the case where a caller like `exit` must keep
     /// seeing it as live for as long as that's true, same as a background job.
     ///
     /// Either way, joining also recovers the job's real error instead of the generic
@@ -486,7 +486,7 @@ impl GlobalState {
     }
 
     /// Like `resume`, but for `fg` specifically -- see `JobControl::resume_foreground`
-    /// for what that changes and why `bg`/`crush:resume` must keep using plain
+    /// for what that changes and why `bg`/`resume` must keep using plain
     /// `resume` instead.
     pub fn resume_foreground(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
@@ -632,8 +632,8 @@ fn get_job(
 /// this: a closure's body shares the thread-tracking `CommandHandle`/`ThreadStore`
 /// machinery of whichever job dispatched it, so joining/waiting still sees those
 /// threads. What a nested job gets that's genuinely its *own* is a fresh
-/// `JobControlData` (`create_nested_job_handle`), which is what `crush:terminate`/
-/// `crush:pause`/`crush:resume` (`GlobalState::terminate`/`pause`/`resume`) actually
+/// `JobControlData` (`create_nested_job_handle`), which is what `terminate`/
+/// `pause`/`resume` (`GlobalState::terminate`/`pause`/`resume`) actually
 /// send a message to -- so without this, telling a job to stop would leave anything
 /// still running inside a closure it's currently evaluating completely unreachable,
 /// e.g. a `stream:tee` branch's own command never seeing termination even after tee
@@ -671,7 +671,7 @@ fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
 /// moment a job's entry is pruned here, so a `parent` left pointing at a dead job's id
 /// isn't just stale, it's actively misleading: that id can be handed to a brand new,
 /// completely unrelated job, and `descendant_job_ids` would then treat the old,
-/// long-lived job as a descendant of it -- e.g. `crush:pause`ing the new job would also
+/// long-lived job as a descendant of it -- e.g. `pause`ing the new job would also
 /// silently pause the old, unrelated one. Clearing `parent` to `None` on every surviving
 /// job whose parent just died closes that hole without touching id allocation itself
 /// (small, consecutive, predictable job ids are a deliberate, kept feature).

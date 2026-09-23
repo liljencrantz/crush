@@ -1,5 +1,5 @@
-# Regression test: a job that was ever `crush:pause`d and is later `crush:terminate`d
-# never got reaped from crush:jobs, even though the external process it wrapped was
+# Regression test: a job that was ever `pause`d and is later `terminate`d
+# never got reaped from jobs, even though the external process it wrapped was
 # genuinely dead.
 #
 # Root cause: `ThreadStore::spawn` (threads.rs) registers its own control channel for
@@ -7,8 +7,8 @@
 # `InterruptibleJoinHandle::join`'s internal bookkeeping. Nothing inside that thread's
 # own work (e.g. cmd.rs's wait_for_child_inner, which uses a completely separate,
 # explicitly-registered control channel of its own) ever reads from it. But
-# crush:pause/crush:terminate broadcast to *every* controller registered for a job,
-# which includes this otherwise-unconsumed channel too -- so a single crush:pause
+# pause/terminate broadcast to *every* controller registered for a job,
+# which includes this otherwise-unconsumed channel too -- so a single pause
 # leaves a stale message sitting in it forever.
 #
 # `InterruptibleJoinHandle::join` (called by `ThreadStore::reap`, well after the thread
@@ -27,15 +27,15 @@
 # `try_join`'s (already correct) existing behavior.
 $job_id := $(cmd sleep 6234 &)
 sleep $(duration:of milliseconds=300)
-crush:pause $job_id
+pause $job_id
 sleep $(duration:of milliseconds=300)
-crush:terminate $job_id
+terminate $job_id
 sleep $(duration:of milliseconds=500)
 
 # Matched by a distinctive sleep duration rather than by id: ids get recycled (see
 # tests/job_orphaning_on_parent_death.crush), so a later job here could plausibly be
 # handed $job_id's own freed id.
-$remaining_rows := $(crush:jobs | where {$definition:starts_with "\$cmd \"sleep\" 6234"} | materialize)
+$remaining_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 6234"} | materialize)
 $remaining_count := $($remaining_rows | count)
-assert ($remaining_count == 0) "a job that was ever paused should still be reaped from crush:jobs once terminated, not linger forever"
+assert ($remaining_count == 0) "a job that was ever paused should still be reaped from jobs once terminated, not linger forever"
 echo "done"

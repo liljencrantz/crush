@@ -1,7 +1,7 @@
 # Regression test: fg used to just wait on a background job's receiver without ever
 # resuming it first. That was harmless for a job that had simply never been paused (the
 # common trailing-`&` case, where the job runs freely from the start), but for one
-# paused mid-flight (e.g. via crush:pause, or -- interactively -- Ctrl-Z) it meant the
+# paused mid-flight (e.g. via pause, or -- interactively -- Ctrl-Z) it meant the
 # job just sat suspended: fg would wait on a value the job's own worker thread could
 # never produce without first being resumed.
 #
@@ -12,11 +12,11 @@
 
 $job_id := $(cmd sleep 2 &)
 sleep $(duration:of milliseconds=300)
-crush:pause $job_id
+pause $job_id
 sleep $(duration:of milliseconds=300)
 
-$status := $($(crush:jobs | where {($id == $job_id)} | select status | list:collect)[0])
-assert ($status == "Paused") "job should be Paused after crush:pause"
+$status := $($(jobs | where {($id == $job_id)} | select status | list:collect)[0])
+assert ($status == "Paused") "job should be Paused after pause"
 
 fg $job_id
 echo "done"

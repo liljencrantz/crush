@@ -3,14 +3,14 @@
 # so unlike tee's own passthrough output, a branch's stream never got a control receiver
 # wired up (see TableOutputStream::control's and stream:group's own broadcast_control's
 # doc comments for why a plain, uncontrolled TableOutputStream can't respond to
-# crush:pause/crush:terminate at all). A branch that never reads its own input (here, an
+# pause/terminate at all). A branch that never reads its own input (here, an
 # unconditional `while` loop) fills that stream's bounded row buffer, and tee's own
 # row-feeding loop used to block forever on a plain, uncontrolled send trying to feed it
 # more.
 #
 # Fixing that alone isn't enough to observe cleanly, though: a closure's body runs as its
 # own nested job (see GlobalState::descendant_job_ids' doc comment), which never used to
-# inherit crush:terminate/crush:pause sent to the outer job -- so even with tee's own
+# inherit terminate/pause sent to the outer job -- so even with tee's own
 # send fixed, this script's process would still hang forever at exit, stuck joining the
 # `while` branch's own permanently-running thread. Both fixes landed together: tee's
 # branch streams are now wired for control, and GlobalState::terminate (along with
@@ -28,5 +28,5 @@
 
 $job_id := $(seq 1 10000 | tee {while {$true} {}} {count} {materialize} | count &)
 sleep $(duration:of milliseconds=300)
-crush:terminate $job_id
+terminate $job_id
 echo "ok"
