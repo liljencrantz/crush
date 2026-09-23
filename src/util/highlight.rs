@@ -79,12 +79,27 @@ fn classify_tokens<'a>(
             // Without this, something like `$(files --recurse /)` colored
             // `files` as a plain string, since the state machine only
             // reset on BlockStart/Separator/Pipe.
+            //
+            // Also resets `command_context` back to the root scope: a `:` earlier in
+            // the previous command (e.g. `host:procs`) narrows it into that namespace
+            // so a chained path like `io:base64:to` resolves each segment correctly,
+            // but a fresh job's own command name must be looked up from the top level
+            // again, not as a member of whatever namespace the last command happened to
+            // live in. Without this, `host:procs|count` colored `count` as an error --
+            // it was looked up as a (nonexistent) member of `host`, not as the
+            // ordinary, top-level command it actually is.
             (
                 _,
                 _,
                 Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_) | Token::SubStart(_),
                 _,
-            ) => true,
+            ) => {
+                command_context = match scope {
+                    None => CommandContext::Unknown,
+                    Some(s) => CommandContext::Known(Value::Scope(s.clone())),
+                };
+                true
+            }
             (
                 true,
                 Some(Token::String(_, _) | Token::Identifier(_, _)),
@@ -592,6 +607,32 @@ mod tests {
         let classified = classify_tokens("fs:my_cmd", &scope).unwrap();
         assert_eq!(classified[0].1, Some("command"));
         assert_eq!(classified[2].1, Some("command"));
+    }
+
+    /// A plain, top-level command piped after a namespaced one (`fs:my_cmd|count`, e.g.
+    /// the reported `host:procs|count`) used to be highlighted as an error. Resolving
+    /// `my_cmd` as a member of `fs` narrows the lookup context used for the *next*
+    /// command-position name into the `fs` namespace too (so a chain like
+    /// `io:base64:to` resolves each segment correctly) -- but nothing ever reset that
+    /// context back to the root scope for the job that starts after the `|`, so `count`
+    /// was looked up as a member of `fs` instead of the top-level scope, found nothing,
+    /// and was colored as an error even though it's an ordinary, valid command.
+    #[test]
+    fn command_after_namespaced_command_and_pipe_is_not_an_error() {
+        let root = scope_with_fs_namespace();
+        root.declare("count", Value::Command(MyCmdSignature::create_command()))
+            .unwrap();
+        let scope = Some(root);
+
+        let classified = classify_tokens("fs:my_cmd|count", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("command"), "fs");
+        assert_eq!(classified[2].1, Some("command"), "my_cmd");
+        assert_eq!(
+            classified[4].1,
+            Some("command"),
+            "count, a plain top-level command, should not be highlighted as an error \
+             just because it follows a namespaced command and a pipe"
+        );
     }
 
     /// A name that resolves to nothing at all in scope is still a genuine error.
