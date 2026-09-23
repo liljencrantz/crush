@@ -569,13 +569,12 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "crush",
         "Information about this Crush session",
         Some(
-            "The `crush` namespace holds state and controls for the running Crush process \
-             itself, as distinct from state about the external world (`host`) or the data \
-             flowing through a pipeline. This is where you configure the prompt and title, \
-             the warning log and syntax highlighting, read and write OS environment \
-             variables, and inspect running threads. Job control itself (`exit`, `jobs`, \
-             `pause`, `resume`, `terminate`) lives in `control`. See `docs/config.md` for a \
-             guided tour of what's configurable here."
+            "The `crush` namespace holds information about this particular Crush process,
+as distinct from state about the external world (which lives in the `host` namespace)
+or the data flowing through a pipeline. This is where you configure the prompt and title,
+where you emit or read warning, configure syntax highlighting, read and write OS environment
+variables, and inspect running threads. See `docs/config.md` for a guided tour of what's
+configurable here."
                 .to_string(),
         ),
         Box::new(move |crush| {

@@ -707,15 +707,17 @@ fn which(mut context: CommandContext) -> CrushResult<()> {
 pub fn declare(root: &Scope) -> CrushResult<()> {
     let e = root.create_namespace(
         "control",
-        "Commands for flow control, (loops, etc)",
+        "Commands to control crush behavior.",
         Some(
-            "The language's control-flow and process-execution builtins: conditionals and \
-             loops (`if`, `match`, `while`, `loop`, `for`), error handling (`try`, `throw`), \
-             job control (`bg`, `fg`, `sleep`, `timeout`), running external commands (`cmd`), \
-             and script-level utilities like `source`, `which`, and `help` itself. Imported \
-             into the global scope, so e.g. `control:if` and bare `if` are the same command \
-             -- in practice everything here is almost always written bare, since these are \
-             effectively the language's own keywords."
+            "The language's control-flow and process-execution builtins: conditionals and
+loops (`if`, `match`, `while`, `loop`, `for`, `break`, and `continue`), error handling
+(`try`, `throw`), job control (`bg`, `fg`, `sleep`, `timeout`, `pause`, `terminate`),
+running external commands (`cmd`), and script-level utilities like `source`, `which`,
+`jobs`, `exit`, and `help` itself.
+
+Imported into the global scope, so e.g. `control:if` and bare `if` are the same command.
+in practice everything here is almost always written bare, since these are
+effectively the language's own keywords."
                 .to_string(),
         ),
         Box::new(move |env| {
