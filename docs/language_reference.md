@@ -1314,6 +1314,67 @@ Always `fg` every writer job before calling `pipe:close` -- a writer's own worke
 isn't synchronized with `close`, so closing the pipe before a writer has actually run can
 silently drop that writer's contribution.
 
+### Job ids and parentage
+
+Every job -- whether it's the whole command line you just typed, a `&`-backgrounded
+pipeline, or a command substitution running as part of some other job's evaluation --
+gets a numeric id, shown in `crush:jobs`' `id` column and used to target a job with
+`fg`/`bg`/`crush:pause`/`crush:resume`/`crush:terminate`. A new job is always given the
+smallest id not currently in use by any other running job, rather than an
+ever-increasing counter -- the same small, consecutive, predictable numbering a
+traditional shell's own job control uses. That means ids get reused constantly: as soon
+as a job finishes, its id becomes available for the very next job that's created.
+
+`crush:jobs`' `parent` column records the job a given job is nested inside -- e.g. a
+command substitution (`$(...)`) evaluated as part of another job's own execution, or a
+closure/block's body being run as part of a job that dispatched it -- if any. This is
+what lets `crush:pause`/`crush:resume`/`crush:terminate` also affect every job nested
+inside the one they're given, not just that job itself. Because ids get reused so
+readily, a job's `parent` is only ever meaningful while that parent job is still alive:
+the moment a job finishes and its id is freed for reuse, every other job that still
+recorded it as their parent has that field cleared back to empty instead (it becomes
+*orphaned*), rather than being left pointing at a now-meaningless, soon-to-be-recycled
+number that some unrelated later job might happen to be given next.
+
+### Suspending, resuming, and canceling jobs interactively
+
+At an interactive prompt, `Ctrl-Z` pauses whatever job is currently running -- the
+command you just typed, or whichever of its nested jobs is currently doing the work --
+and immediately hands control back to the prompt, whether or not that job happened to be
+started with a trailing `&`:
+
+```shell script
+crush# sleep $(duration:of seconds=30)
+^Z
+crush#
+```
+
+A job paused this way, just like one started in the background with `&`, can be put
+back in the foreground with `fg`. Called with no job id, `fg` resumes the *most
+recently* backgrounded or paused job:
+
+```shell script
+crush# fg
+```
+
+`fg` given an explicit job id -- as printed by `crush:jobs`, or captured as a `$(... &)`
+substitution's return value -- resumes that specific job instead, regardless of how
+recently it was backgrounded or paused:
+
+```shell script
+crush# $job_id := $(sleep $(duration:of seconds=30) &)
+crush# fg $job_id
+```
+
+`Ctrl-C` cancels the job currently running at the prompt outright, rather than pausing
+it -- the interactive equivalent of calling `crush:terminate` on it:
+
+```shell script
+crush# sleep $(duration:of seconds=30)
+^C
+crush#
+```
+
 ## Warnings
 
 Some commands process many independent items (rows, hosts, files) and are designed to
