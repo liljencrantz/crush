@@ -446,6 +446,15 @@ pub fn complete(
                 &mut res,
             )?;
             complete_external_commands(lister, &label, cursor, &mut res)?;
+            // A bare, unprefixed word in command position (e.g. `bur`, as opposed to
+            // `./bur` or `'bur`, which the parser already routes to `PartialFile`
+            // instead) can also be run as a relative-path external command -- the same
+            // reason `ParseResult::Nothing` (nothing typed yet) already offers file
+            // completion alongside scope labels and $PATH entries. Without this, typing
+            // even one character of a local script/executable's name lost file
+            // completion entirely, while a completely empty command position, or the
+            // same name prefixed with `./`, both still worked.
+            complete_file(lister, &label, Unquoted, &ValueType::Any, false, cursor, &mut res)?;
         }
 
         ParseResult::PartialMember(parent, label) => {
@@ -862,6 +871,25 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "'burrow/carrot' ");
+    }
+
+    /// A bare, unprefixed word in command position (`bur`, with no `./` or quote) is
+    /// how you'd start typing a relative-path external command/script -- it should get
+    /// file completion exactly like an empty command position already does (see
+    /// `ParseResult::Nothing`'s own handling in `complete`), not just once it's already
+    /// unambiguous via `./bur` or `'bur` (both parse to `PartialFile` instead, a
+    /// separate case that already worked). Before the fix, `ParseResult::PartialField`
+    /// only offered scope labels and `$PATH` entries, silently dropping file completion
+    /// the moment a single character was typed.
+    #[test]
+    fn complete_bare_command_position_offers_file_completion() {
+        let line = "bur";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "burrow/");
     }
 
     #[test]
