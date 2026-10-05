@@ -1,3 +1,4 @@
+use crate::lang::ast::expand_user;
 use crate::lang::ast::node::TextLiteralStyle;
 use crate::lang::ast::node::TextLiteralStyle::Unquoted;
 use crate::lang::command::Parameter;
@@ -229,10 +230,24 @@ fn complete_file(
         return Ok(());
     }
     let prefix = prefix.into();
+    // Expand a leading `~`/`~user` into the real home directory for the purposes of
+    // finding which directory to actually list -- `lister.list("~")` would otherwise
+    // just look for a literal directory named `~`, which doesn't exist, so e.g. `~/D`
+    // silently completed nothing at all. Only affects which directory gets read:
+    // `prefix_str` below (the part matched against each entry's name, and the part of
+    // the completion text it replaces) is still taken from the original, unexpanded
+    // prefix, so a completion for `~/D` still inserts `~/Documents/`, not the expanded
+    // absolute path.
+    let expanded_prefix = match prefix.to_str() {
+        Some(s) if s.starts_with('~') => {
+            expand_user(s).map(PathBuf::from).unwrap_or_else(|_| prefix.clone())
+        }
+        _ => prefix.clone(),
+    };
     let (prefix_str, parent) = if prefix.is_empty() {
         ("", PathBuf::from("."))
     } else if prefix.to_str().unwrap_or("").ends_with('/') {
-        ("", prefix)
+        ("", expanded_prefix)
     } else {
         (
             prefix
@@ -240,7 +255,7 @@ fn complete_file(
                 .last()
                 .and_then(|p| p.as_os_str().to_str())
                 .unwrap_or(""),
-            prefix
+            expanded_prefix
                 .parent()
                 .map(|p| p.to_path_buf())
                 .map(|p| if p.is_empty() { PathBuf::from(".") } else { p })
@@ -838,6 +853,28 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "./burrow/");
+    }
+
+    /// `~/Doc` (e.g. the second argument to `mv ~/Doc`) must expand `~` to the real
+    /// home directory before listing it -- `lister.list("~")` would otherwise look for
+    /// a literal directory named `~`, which doesn't exist, so typing `~/<anything>`
+    /// silently completed nothing at all. Rooted at the *real* `expand_user("~")` (the
+    /// same function the fix itself calls, going through the real OS user database --
+    /// not mockable, so this is the only way to test it deterministically) rather than
+    /// the fake lister's usual "/home/rabbit", so the fix is exercised end to end.
+    #[test]
+    fn complete_file_expands_tilde_to_home_directory() {
+        let home = PathBuf::from(expand_user("~").unwrap());
+        let mut home_lister = FakeDirectoryLister::new(home.clone());
+        home_lister.add(home.join("Documents"), &["notes.txt"]);
+
+        let line = "mv ~/Doc";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        let completions = complete(line, cursor, &s, &parser(), &home_lister).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "mv ~/Documents/");
     }
 
     #[test]
