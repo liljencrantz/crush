@@ -1,3 +1,4 @@
+use crate::builtins::vt::control::control_value;
 use crate::builtins::vt::methods::methods;
 use crate::builtins::vt::session::VtSession;
 use crate::lang::data::r#struct::Struct;
@@ -43,9 +44,10 @@ fn create(mut context: CommandContext) -> CrushResult<()> {
     )?;
 
     let mut fields = vec![];
-    for name in ["write", "wait_for", "contents", "close"] {
+    for name in ["write", "wait_for", "contents", "pid", "alive", "close"] {
         fields.push((name, method_struct(id, name)?));
     }
+    fields.push(("control", control_value().clone()));
 
     context.output.send(Value::Struct(Struct::new(fields, None)))
 }

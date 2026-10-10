@@ -1,4 +1,5 @@
 use crate::CrushResult;
+use crate::builtins::vt::control::control_value;
 use crate::builtins::vt::create::Create;
 use crate::lang::state::scope::Scope;
 
@@ -14,6 +15,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         None,
         Box::new(move |env| {
             Create::declare(env)?;
+            env.declare("control", control_value().clone())?;
             Ok(())
         }),
     )?;

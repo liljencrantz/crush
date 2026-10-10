@@ -19,6 +19,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         Write::declare_method(&mut res);
         WaitFor::declare_method(&mut res);
         Contents::declare_method(&mut res);
+        Pid::declare_method(&mut res);
+        Alive::declare_method(&mut res);
         Close::declare_method(&mut res);
         res
     })
@@ -82,6 +84,32 @@ struct Contents {}
 fn contents(mut context: CommandContext) -> CrushResult<()> {
     let session = VtSession::get(&context.this.r#struct()?)?;
     context.output.send(Value::from(session.contents()))
+}
+
+#[signature(
+    vt.session.pid,
+    can_block = false,
+    output = Known(ValueType::Integer),
+    short = "The process id of the command this virtual terminal is running.",
+)]
+struct Pid {}
+
+fn pid(mut context: CommandContext) -> CrushResult<()> {
+    let session = VtSession::get(&context.this.r#struct()?)?;
+    context.output.send(Value::from(session.pid()))
+}
+
+#[signature(
+    vt.session.alive,
+    can_block = false,
+    output = Known(ValueType::Bool),
+    short = "Whether the command this virtual terminal is running is still alive.",
+)]
+struct Alive {}
+
+fn alive(mut context: CommandContext) -> CrushResult<()> {
+    let session = VtSession::get(&context.this.r#struct()?)?;
+    context.output.send(Value::Bool(session.alive()?))
 }
 
 #[signature(
