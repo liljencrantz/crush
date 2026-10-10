@@ -1,0 +1,48 @@
+# Pause a job with Ctrl-Z, then `bg` it, and confirm it's running again (status flips back
+# from Paused to Running) *without* the prompt being occupied -- i.e. control stays with
+# the shell the whole time, unlike `fg`.
+#
+# Checking the sleep job's status must filter down to that job's own row specifically,
+# rather than just grepping the rendered screen for the word "Running" -- `jobs` lists
+# every currently-tracked job, including the `jobs | where {...} | select status`
+# pipeline's own job, which is itself always "Running" at the instant it lists itself
+# (it's the one producing the output). A bare `jobs` followed by `wait_for "Running"`
+# would therefore pass regardless of whether the sleep job was ever actually resumed --
+# confirmed directly: temporarily dropping the `bg` call entirely (leaving the sleep job
+# genuinely still Paused) still made a bare `jobs` + `wait_for "Running"` pass, for
+# exactly this reason. Filtering by `$id == 0` avoids this: the filtering pipeline's own
+# job always gets a different (larger) id than the job it's inspecting, so its own
+# "Running" status is never part of the filtered result.
+#
+# Job id `0`, not `1`: confirmed directly against the debug binary by dumping
+# `$t:contents` right after the first (unfiltered) `jobs` call -- in a freshly created vt
+# session, the first job ever typed (`cmd sleep 100` here) gets id 0, and the `jobs`
+# command used to inspect it is itself id 1 (ids are assigned per *nested* session, not
+# globally, so this is deterministic for this script's structure: `cmd sleep 100` is
+# unconditionally the first command typed into this session). The plan's original
+# brief guessed id `1` for the sleep job; that guess happened to not break the test only
+# because the original (unfiltered) assertion was vacuous as described above. Confirmed
+# directly: `bg 1` actually targets the already-finished first `jobs` query's own job
+# (id 1), not the still-paused sleep job (id 0) -- it produces no visible error either
+# way (`bg` on an already-finished job is a harmless no-op), and the sleep job is still
+# reported "Paused" by a filtered `jobs | where {($id == 0)}` check afterwards.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+
+$t:write "cmd sleep 100\n"
+$t:wait_for "sleep"
+sleep $(duration:of milliseconds=300)
+$t:write $t:control:z
+$t:wait_for "# "
+$t:write "jobs | where {($id == 0)} | select status\n"
+$t:wait_for "Paused"
+
+$t:write "bg 0\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "jobs | where {($id == 0)} | select status\n"
+$t:wait_for "Running"
+
+$t:close
+echo "ok"
