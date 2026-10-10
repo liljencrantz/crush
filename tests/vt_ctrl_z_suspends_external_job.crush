@@ -1,0 +1,25 @@
+# Ctrl-Z on a running *external* job (`cmd sleep 100`) must suspend it and return control
+# to the nested crush session's own prompt, with the job showing up as Paused.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+$t:write "cmd sleep 100\n"
+$t:wait_for "sleep"
+# `wait_for "sleep"` above only proves the command *text* was echoed by the pty's own
+# cooked-mode line discipline -- that happens at keystroke time, well before crush has
+# even read() the line, let alone forked and handed the terminal over to the real
+# `sleep` process. Sending Ctrl-Z too early races that handoff: the kernel delivers
+# SIGTSTP to whichever process group currently owns the terminal, which -- if `sleep`
+# hasn't taken over yet -- is still crush's own, and crush's SIGTSTP handler is a
+# deliberate no-op when there's no *current* job yet, so the keystroke is silently
+# lost and `sleep` is left running untouched. A short settle delay (same pattern as
+# `tests/cmd_paused_then_terminated_is_reaped.crush`'s `pause $job_id` after `cmd ... &`)
+# gives the fork/exec/terminal-handoff -- empirically on the order of ~1ms -- time to
+# actually finish first.
+sleep $(duration:of milliseconds=300)
+$t:write $t:control:z
+$t:wait_for "# "
+$t:write "jobs\n"
+$t:wait_for "Paused"
+$t:close
+echo "ok"
