@@ -1,0 +1,38 @@
+# Start one external and one internal job in the background, then use bare `fg` twice
+# to bring each one to the foreground in turn, confirming control genuinely moves
+# between two distinct jobs -- each job prints its own distinct marker right before it
+# finishes, so "did the right one actually run to completion" is a plain substring
+# check, not a guess based on timing.
+#
+# The internal job is wrapped in a `{...} &` block rather than written as a bare
+# `sleep ...; echo ... &` line: a trailing `&` only backgrounds the single Job it's
+# attached to (see `Job`'s grammar rule in lalrparser.lalrpop), not a whole
+# `;`-separated sequence of jobs -- `sleep ...; echo ... &` would run the `sleep`
+# synchronously in the foreground (blocking this script for a second) and background
+# only the near-instant `echo` after it, never producing a second genuinely-concurrent
+# background job at all. Confirmed directly against the debug binary before writing
+# this test. `{...} &` backgrounds the whole block as a single job instead.
+#
+# Bare `fg` (no job id) operates on the *most recently* backgrounded job -- a LIFO
+# stack, see `GlobalState::take_last_background_job` -- confirmed directly against the
+# debug binary. Since the internal job is started second here, the first `fg` resumes
+# it, and the second `fg` resumes the external one.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+
+$t:write "cmd sh -c 'sleep 1; echo EXTERNAL_DONE' &\n"
+$t:wait_for "# "
+$t:write "{sleep $(duration:of seconds=1); echo INTERNAL_DONE} &\n"
+$t:wait_for "# "
+
+$t:write "fg\n"
+$t:wait_for "INTERNAL_DONE"
+$t:wait_for "# "
+
+$t:write "fg\n"
+$t:wait_for "EXTERNAL_DONE"
+$t:wait_for "# "
+
+$t:close
+echo "ok"
