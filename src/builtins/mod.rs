@@ -27,6 +27,7 @@ mod term;
 pub mod types;
 mod users;
 mod var;
+pub mod vt;
 mod sockets;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -53,6 +54,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     types::declare(root)?;
     users::declare(root)?;
     var::declare(root)?;
+    vt::declare(root)?;
     sockets::declare(root)?;
     root.read_only();
     Ok(())

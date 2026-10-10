@@ -43,6 +43,28 @@ impl Patterns {
     pub fn is_empty(&self) -> bool {
         self.patterns.is_empty()
     }
+
+    /// Like `test()`, but a plain string pattern means "appears somewhere in `haystack`"
+    /// rather than "equals `haystack` exactly" -- the semantics `vt:wait_for` needs (did
+    /// this text ever get printed on a screen that also has lots of *other* text on it),
+    /// as opposed to `test()`'s exact-match semantics (e.g. "is this one service name").
+    /// A glob or regex pattern already supports "appears somewhere" on its own (an
+    /// unanchored regex, or a glob the caller wrote with explicit `*...*` wildcards), so
+    /// only the plain-string case needs different handling here.
+    pub fn test_contains(&self, haystack: &str) -> bool {
+        for v in &self.patterns {
+            let matched = match v {
+                Value::String(s) => haystack.contains(&s.to_string()),
+                Value::Glob(g) => g.matches(haystack),
+                Value::Regex(_, re) => re.is_match(haystack),
+                _ => false,
+            };
+            if matched {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Display for Patterns {
