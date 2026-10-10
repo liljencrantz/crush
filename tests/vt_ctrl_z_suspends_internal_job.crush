@@ -1,0 +1,22 @@
+# Ctrl-Z on a running *internal* job (crush's own builtin `sleep`, not `cmd`-wrapped)
+# must suspend it and return control to the nested crush session's own prompt, with
+# the job showing up as Paused -- same as tests/vt_ctrl_z_suspends_external_job.crush,
+# but exercising job-control signal delivery against a builtin command instead of a
+# forked child process.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+$t:write "sleep $(duration:of seconds=100)\n"
+# Unlike the external-command case, a bare `sleep ...` prints nothing distinctive while
+# it runs (no fork/exec handoff output to wait_for on) and no new prompt appears until
+# it's done or interrupted -- there is nothing to wait_for between submitting it and
+# sending Ctrl-Z. Use the same settle delay as vt_ctrl_z_suspends_external_job.crush
+# instead, giving crush time to actually start running the builtin before the
+# keystroke is delivered.
+sleep $(duration:of milliseconds=300)
+$t:write $t:control:z
+$t:wait_for "# "
+$t:write "jobs\n"
+$t:wait_for "Paused"
+$t:close
+echo "ok"
