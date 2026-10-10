@@ -1,37 +1,96 @@
 # Start one external and one internal job in the background, then use bare `fg` twice
 # to bring each one to the foreground in turn, confirming control genuinely moves
-# between two distinct jobs -- each job prints its own distinct marker right before it
-# finishes, so "did the right one actually run to completion" is a plain substring
-# check, not a guess based on timing.
+# between two distinct jobs.
 #
-# The internal job is wrapped in a `{...} &` block rather than written as a bare
-# `sleep ...; echo ... &` line: a trailing `&` only backgrounds the single Job it's
-# attached to (see `Job`'s grammar rule in lalrparser.lalrpop), not a whole
-# `;`-separated sequence of jobs -- `sleep ...; echo ... &` would run the `sleep`
-# synchronously in the foreground (blocking this script for a second) and background
-# only the near-instant `echo` after it, never producing a second genuinely-concurrent
-# background job at all. Confirmed directly against the debug binary before writing
-# this test. `{...} &` backgrounds the whole block as a single job instead.
+# This does NOT rely on each job's own side-effect output (e.g. an `echo` inside the
+# backgrounded job itself) to prove which job ran -- a background job's own output is
+# printed by the global Printer thread the instant that job finishes on its own
+# schedule, completely independent of whether/when it's ever brought to the
+# foreground: `&` only skips *waiting* for a job's result, it does not gate *when*
+# the job's output appears on `fg` ever being called. Confirmed directly: an earlier
+# version of this test used exactly that approach (each background job printing its
+# own distinct marker), and both markers appeared even with the `fg` calls removed
+# entirely, and even with the two expected markers swapped to the "wrong" order --
+# i.e. it never actually exercised `fg`'s job-selection behavior at all, just two
+# jobs finishing on their own schedule.
+#
+# Instead, each job's distinct marker is its own *return value* -- the value `&`
+# registers for later retrieval via `fg` (see `Job::eval`'s `is_background` branch and
+# `GlobalState::add_background_job`/`take_last_background_job` in
+# src/lang/state/global_state.rs) -- and that value only ever reaches the terminal by
+# being explicitly captured from `fg`'s own return and echoed (`convert $string
+# $(fg)`), which is possible only once `fg` has actually resumed that specific job and
+# received its result.
+#
+# For the external job, a bare `cmd ... &` (with no further pipeline stage) gets the
+# real tty handed to it directly (see `cmd_internal`'s `use_tty` check in
+# src/builtins/control/cmd.rs) -- its child process's stdout bypasses crush's own
+# value pipes entirely, and the background job's registered result is just `Value::
+# Empty`. Piping it into `convert $string` (whose own context.output is a real pipe,
+# forcing `use_tty` to false) makes `cmd` capture the child's stdout into a
+# `binary_stream` instead and forwards it downstream, so the *pipeline's* result --
+# what `fg` actually retrieves -- is the command's own captured output converted to a
+# string. Confirmed directly against the debug binary.
+#
+# For the internal job, a bare `{...} &` block's own result is simply the value its
+# last statement evaluates to -- no piping needed.
+#
+# Both markers are built from two separate pieces joined via `:format`/`printf`
+# (`"{}_{}":format "INTERNAL" "MARKER"`, `printf '%s_%s' EXTERNAL MARKER`) rather than
+# written as one contiguous literal (`"INTERNAL_MARKER"`) -- `vt`'s pty is a real
+# terminal, and the command *line* that starts each background job is itself echoed
+# onto the rendered screen by the pty's own line discipline the instant it's typed,
+# well before the job has actually produced anything. A one-piece literal marker
+# would make that typed-but-not-yet-run echo of the starting command contain the
+# exact same substring `wait_for` checks for later, making the check pass
+# regardless of whether `fg` ever ran -- confirmed directly: an earlier version of
+# this test (before this comment) used one-piece literals and passed even with the
+# `fg` calls removed and with the expected markers swapped, for exactly this reason.
+# Splitting each marker into two pieces joined only once the job actually runs means
+# the full joined string never appears anywhere on screen until that job's result is
+# actually captured and echoed.
 #
 # Bare `fg` (no job id) operates on the *most recently* backgrounded job -- a LIFO
-# stack, see `GlobalState::take_last_background_job` -- confirmed directly against the
-# debug binary. Since the internal job is started second here, the first `fg` resumes
-# it, and the second `fg` resumes the external one.
+# stack, see `GlobalState::take_last_background_job` (`background_jobs` is a
+# `Vec`, popped from the back). Since the internal job is started second here, the
+# first `fg` resumes it, and the second `fg` resumes the external one. Confirmed
+# directly against the debug binary.
+#
+# A settle delay follows every `wait_for "# "` here, same precedent as
+# `tests/cmd_paused_then_terminated_is_reaped.crush` and the sibling vt Ctrl-Z tests --
+# but for a different reason than those: the prompt text (e.g. "...# ") is part of
+# the *same* rendered line a freshly-typed command appears on (a real terminal echoes
+# keystrokes right after the still-visible prompt, on the same line, until Enter is
+# pressed) -- so `wait_for "# "` can be satisfied instantly by the prompt that was
+# already on screen *before* the write, regardless of whether the command just
+# written has actually been submitted, let alone finished running. It provides
+# essentially no synchronization by itself; the real pacing comes from the delay
+# that follows. Confirmed directly against the debug binary: starting the external
+# `cmd ... | convert $string &` pipeline (a real fork/exec plus a second pipeline
+# stage) can take noticeably longer than the 300ms that's otherwise plenty for a
+# plain builtin -- without a long-enough delay after that specific write, the next
+# command gets typed before the first has actually been submitted/executed, and the
+# two end up visibly concatenated/corrupted on the rendered screen rather than
+# appearing as two separate, correctly-ordered command lines.
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(vt:create $crush_bin)
 $t:wait_for "# "
+sleep $(duration:of milliseconds=300)
 
-$t:write "cmd sh -c 'sleep 1; echo EXTERNAL_DONE' &\n"
+$t:write "cmd sh -c 'sleep 1; printf \"%s_%s\" EXTERNAL MARKER' | convert $string &\n"
 $t:wait_for "# "
-$t:write "{sleep $(duration:of seconds=1); echo INTERNAL_DONE} &\n"
+sleep $(duration:of seconds=1)
+$t:write "{sleep $(duration:of seconds=1); \"{}_{}\":format \"INTERNAL\" \"MARKER\"} &\n"
 $t:wait_for "# "
+sleep $(duration:of milliseconds=500)
 
-$t:write "fg\n"
-$t:wait_for "INTERNAL_DONE"
+$t:write "echo $(convert $string $(fg))\n"
+$t:wait_for "INTERNAL_MARKER"
 $t:wait_for "# "
+sleep $(duration:of milliseconds=300)
 
-$t:write "fg\n"
-$t:wait_for "EXTERNAL_DONE"
+$t:write "echo $(convert $string $(fg))\n"
+$t:wait_for "EXTERNAL_MARKER"
 $t:wait_for "# "
 
 $t:close
