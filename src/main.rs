@@ -140,6 +140,11 @@ fn run() -> CrushResult<i32> {
     }
     let status = global_state.exit_status().unwrap_or(0);
     global_state.threads().join(global_state.printer());
+    // Runs unconditionally, regardless of Mode or whether the script called `exit` --
+    // a vt session a script forgot to :close (or errored out before reaching) must not
+    // leave its spawned process running past the end of the crush process that created
+    // it.
+    crate::builtins::vt::close_all_sessions();
     drop(pretty_printer);
     drop(global_state);
     root_scope.clear()?;
