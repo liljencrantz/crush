@@ -209,7 +209,15 @@ impl VtSession {
                     pattern, contents,
                 ));
             }
-            if let Ok(chunk) = self.rx.lock().recv_timeout(POLL_INTERVAL) {
+            // Lock ordering must match `drain_available` (`parser` before `rx`, never the
+            // reverse) to avoid an AB-BA deadlock between this poll loop and a concurrent
+            // `:contents()`/`drain_available` call on the same session -- so the `rx`
+            // guard is dropped (via this `let` binding finishing before the `if let`
+            // starts, rather than being kept alive for the whole `if let` body the way a
+            // bare `if let Ok(chunk) = self.rx.lock().recv_timeout(..)` would) strictly
+            // before `parser` is locked below.
+            let received = self.rx.lock().recv_timeout(POLL_INTERVAL);
+            if let Ok(chunk) = received {
                 self.parser.lock().process(&chunk);
             }
         }
