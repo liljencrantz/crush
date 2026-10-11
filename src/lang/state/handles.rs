@@ -219,6 +219,15 @@ pub struct JobControlData {
     /// `tests/signal_death_inside_background_closure_does_not_abort.crush` for the
     /// regression this field exists to prevent. See `JobHandle::termination_requested`
     /// for where this is actually read.
+    ///
+    /// Unlike `status`, never reset by `pause`/`resume`/`resume_foreground` -- once an
+    /// explicit `terminate` has actually been requested, it stays requested for this
+    /// job's whole remaining lifetime, even if `status` itself later moves back to
+    /// `Running`/`Paused` (e.g. `resume` on a job that was marked `Terminated` but
+    /// never actually died -- see `tests/resume_after_terminate_shows_current_status.
+    /// crush`). This is intentional: "was termination ever requested" is a strictly
+    /// different, one-way question from "what does `status` currently read", and
+    /// nothing resuming a job changes the fact that someone did ask for it to stop.
     termination_requested: bool,
     senders: HashMap<CommandId, Vec<JobController>>,
     next_command_id: CommandId,

@@ -47,8 +47,15 @@
 #
 # The marker path is unique per run (suffixed with this *outer* script's own pid, via
 # `crush:pid`, not the nested session's) so concurrent test runs can never collide on
-# the same file.
+# the same file. A best-effort delete of any stale marker from an earlier run happens
+# before the check below for the same reason pids get reused at all: a *previous* run
+# of this exact test, under a pid that's since been recycled, could have left this
+# same path behind (e.g. if that earlier run's own assertion below had failed, since a
+# failed `assert` ends the script before `$t:close` -- there's nothing to a "finally"
+# here) -- and an already-existing file would wrongly read back as "the second
+# statement ran" on *this* run before it ever got a chance to actually create it.
 #
+
 # A settle delay follows each `wait_for "# "` below, same precedent as the sibling vt
 # tests (e.g. `vt_terminate_and_signal_external_job.crush`): the prompt text is part of
 # the same rendered line a freshly-typed command appears on, so a bare `wait_for "# "`
@@ -56,6 +63,10 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $my_pid := $(crush:pid)
 $marker := $("/tmp/vt_terminate_internal_job_marker_{}":format $my_pid)
+try {
+    cmd rm "-f" $marker
+} catch {
+}
 $cmd_line := $("{{sleep $(duration:of seconds=100); cmd touch \"{}\"}} &\n":format $marker)
 
 $t := $(vt:create $crush_bin)

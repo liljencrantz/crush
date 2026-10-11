@@ -645,7 +645,8 @@ impl Closure {
     }
 
     fn eval_inner(&self, context: CommandContext) -> CrushResult<()> {
-        let parent_job_id = context.command_handle().job_handle.id();
+        let enclosing_job_handle = context.command_handle().job_handle.clone();
+        let parent_job_id = enclosing_job_handle.id();
         let job_definitions = self.jobs.clone();
         let parent_env = self.parent_scope.clone();
 
@@ -671,6 +672,45 @@ impl Closure {
             for (idx, job_definition) in job_definitions.iter().enumerate() {
                 let first = idx == 0;
                 let last = idx == job_definitions.len() - 1;
+                // A `terminate` that lands on *this closure's own enclosing job*
+                // squarely between two statements -- after the previous one's nested
+                // job has already been reaped and before this one's has even been
+                // created -- never reaches any nested job's own `JobControlData` at
+                // all: `GlobalState::terminate`'s descendant walk only ever finds jobs
+                // that already exist at the moment it runs. Checking the enclosing
+                // job's own flag here catches that case too -- see `JobHandle::
+                // termination_requested`'s own doc comment for why this flag (as
+                // opposed to a join's return value) is the race-free way to ask.
+                //
+                // Deliberately `!first` -- never checked before the very first
+                // statement. `while`/`loop` (`src/builtins/control/while.rs`/
+                // `loop.rs`) dispatch their condition/body through `context.empty()`,
+                // which reuses this *same* job handle rather than a fresh nested one
+                // -- so a single-statement closure body like `{$true}` runs with
+                // `enclosing_job_handle` pointing at the `while`/`loop` statement's own
+                // job. Checking unconditionally (including before the first
+                // statement) would make a `while`/`loop` whose own job was terminated
+                // stop immediately on its very next condition check -- which sounds
+                // like a strict improvement, but it's a real, cross-cutting behavior
+                // change: it makes such a loop *stop ignoring* `terminate`, breaking
+                // `tests/resume_after_terminate_shows_current_status.crush` (Task 9),
+                // whose whole scenario depends on `while {$true} {}` specifically
+                // staying unresponsive to `terminate` (to exercise a *different*
+                // feature: a job marked `Terminated` that never actually dies, later
+                // `resume`d, must show up again as `Running`). Confirmed directly by
+                // toggling this condition. A single-statement or empty closure body
+                // (exactly `while`/`loop`'s own condition/body shape) never reaches
+                // this check at all with `!first`, since there's no "between
+                // statements" for it to land in -- closing the actual
+                // between-statements gap this exists for without touching
+                // `while`/`loop` semantics. The resulting inconsistency -- whether a
+                // backgrounded loop is actually interruptible by `terminate` ends up
+                // depending on whether its body is one statement or several -- is
+                // accepted as a pre-existing-in-spirit wrinkle, not something this fix
+                // needs to resolve.
+                if !first && enclosing_job_handle.termination_requested() {
+                    return terminate();
+                }
                 let input = if first {
                     context.input.clone()
                 } else {
