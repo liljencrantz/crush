@@ -164,6 +164,28 @@ pub struct JobData {
     pub job_type: JobType,
     pub parent: Option<JobId>,
     pub job_control_data: Weak<Mutex<JobControlData>>,
+    /// Captured synchronously by `GlobalState::terminate` at the moment it calls
+    /// `JobControlData::terminate` on this job -- while `job_control_data` is still
+    /// guaranteed alive, since locating it in the first place required
+    /// `job_control_data.upgrade()` to have just succeeded.
+    ///
+    /// This exists because, for an external `cmd`-spawned job, the gap between "marked
+    /// Terminated" and "the job's own thread has fully finished and dropped
+    /// `job_control_data`" can be microseconds (SIGKILL is near-instant) -- easily short
+    /// enough that by the time *any* subsequent `jobs` command runs, `job_control_data`
+    /// has already died and its live `status()` is gone forever. Every `jobs` invocation
+    /// is itself a brand new job, and creating a new job always reaps already-finished
+    /// ones *before* building its own listing (see `GlobalState::create_job_handle_with_parent`),
+    /// so without a durable snapshot taken at termination time, a terminated job could
+    /// never actually be observed as `Terminated` -- it would just silently vanish, every
+    /// single time, not merely as an occasional race.
+    ///
+    /// `Some(definition)` means this job was explicitly terminated and hasn't been
+    /// reported as `Terminated` by a `jobs()` call yet; `jobs()` clears it back to `None`
+    /// once it has, so the entry is eligible for actual removal on the next reap pass
+    /// (see `remove_finished_jobs`) -- giving it exactly one listing, the same "reported
+    /// once, then gone" shape a POSIX shell's own job control has.
+    pub terminated_snapshot: Option<String>,
 }
 
 impl JobControlData {

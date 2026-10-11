@@ -1,0 +1,109 @@
+# Both `terminate <job id>` and `host:signal <pid>` must be able to kill a running
+# *external* job -- the former through crush's own job-control plumbing, the latter by
+# sending a real OS signal directly to the process, bypassing that plumbing entirely.
+#
+# Checking the killed job's status must filter down to that specific job's own row via
+# `jobs | where {($id == ...)} | select status`, not just grep the rendered screen for
+# the word "Terminated" -- same reasoning as `vt_bg_resumes_without_foregrounding.crush`.
+# It must go further here, though: this script performs *two* such checks (one per
+# mechanism), so by the time the second one runs, the word "Terminated" has already
+# legitimately appeared once on the growing screen from the first check -- `wait_for`'s
+# plain-string match is "does this text appear *anywhere* on the screen", so a second
+# bare `wait_for "Terminated"` would trivially re-match that earlier occurrence and pass
+# even if the second mechanism (`host:signal`) never worked at all. Confirmed directly:
+# temporarily disabling just the `host:signal`-path fix (`spawn_child_wait`'s `Signaled`
+# arm in `src/builtins/control/cmd.rs`) while leaving `terminate`'s own fix intact still
+# made this test pass, for exactly that reason, when the second check used a bare
+# `wait_for "Terminated"`.
+#
+# Each check's own status is instead formatted into a distinct, single-use marker string
+# (`TERM_CHECK_<status>` / `SIG_CHECK_<status>`) built from the *actual* captured status
+# value, and `wait_for` is given that whole marker -- so a passing match can only mean
+# that specific check's own `jobs | where {($id == ...)}` row genuinely read back
+# "Terminated" at the point it ran, not a stale echo of the other check's marker (the two
+# prefixes are textually disjoint) or of the word "Terminated" by itself.
+#
+# Job id `0`, both times: confirmed directly against the debug binary (see
+# `vt_bg_resumes_without_foregrounding.crush` for why ids are deterministic for a given,
+# fixed script structure). The first `cmd sleep 100 &` is the first job ever started in
+# this fresh nested session, so it gets id 0; the `terminate 0`/status-check commands
+# that follow are themselves short-lived jobs that finish and get reaped well within the
+# settle delays below, freeing ids 0 and 1 again -- so the *second* `cmd sleep 101 &`
+# also lands back on id 0.
+#
+# `host:procs`'s `name` column is the process's own *executable path* (e.g. `/bin/sleep`,
+# not the bare string `"sleep"` the plan's original brief guessed), and on a machine
+# running other tests concurrently there can be more than one `/bin/sleep` process alive
+# at once (including a stray already-dead one sysinfo can still briefly report) -- so the
+# filter also requires `$ppid == $my_pid` (this nested session's own pid, captured via
+# `crush:pid` up front) to uniquely identify *this* script's own backgrounded `sleep`,
+# not some unrelated one. Confirmed directly: without the `ppid` half of the filter, the
+# lookup intermittently returned a stale, already-dead pid instead of the real one. Even
+# with that filter, the earlier, now-`Terminated` `sleep 100` from the first half is this
+# same nested session's own child too, and briefly matches alongside the real `sleep 101`
+# if sysinfo's scan catches it mid-reap -- so the result is also sorted by `pid`
+# descending before taking the first row, since the later-spawned `sleep 101` always has
+# the higher pid.
+#
+# `$my_pid` is captured into a variable *before* the `where` pipeline rather than calling
+# `$(crush:pid)` directly inside the `where` block's closure -- confirmed directly that
+# calling it from inside the closure silently breaks the filter (the pipeline's `where`
+# runs on its own worker thread, where `crush:pid` doesn't resolve the way it does from
+# the top-level/outer script).
+#
+# `host:signal` takes the pid as a plain unnamed argument, not via a piped value -- `pid`
+# is an unnamed argument slot the `#[signature]` parser fills positionally, but `host:
+# signal`'s own handler never reads from `context.input`, so piping a pid into it (as the
+# plan's original brief guessed) is silently accepted but never actually signals
+# anything. Confirmed directly: with the pid piped in instead of passed positionally, the
+# `sleep` process was still alive afterward (checked via a real `ps`), and the status
+# check below never read back `Terminated` for it.
+#
+# A settle delay follows *every* `wait_for "# "` below, same precedent as the sibling vt
+# job-control tests (e.g. `vt_fg_moves_control_between_jobs.crush`): the prompt text is
+# part of the same rendered line a freshly-typed command appears on, so `wait_for "# "`
+# can be satisfied instantly by the prompt that was already on screen *before* the write,
+# regardless of whether the previous command has actually been submitted yet. Confirmed
+# directly: without a delay after every single one of these (an earlier version of this
+# script only delayed after some of them), lines typed back-to-back raced the nested
+# session's own line-by-line processing and ended up visibly concatenated/corrupted on
+# the rendered screen, intermittently failing the second half.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "$my_pid := $(crush:pid)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "cmd sleep 100 &\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "terminate 0\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$status0 := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "echo $(\"TERM_CHECK_{}\":format $status0)\n"
+$t:wait_for "TERM_CHECK_Terminated"
+sleep $(duration:of milliseconds=300)
+
+$t:write "cmd sleep 101 &\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "host:signal $pid signal=SIGKILL\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$status1 := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "echo $(\"SIG_CHECK_{}\":format $status1)\n"
+$t:wait_for "SIG_CHECK_Terminated"
+
+$t:close
+echo "ok"

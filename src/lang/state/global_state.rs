@@ -6,7 +6,7 @@ use crate::lang::parser::Parser;
 use crate::lang::pipe::ValueReceiver;
 use crate::lang::printer::Printer;
 use crate::lang::state::handles::JobType::Background;
-use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, JobType};
+use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, JobStatus, JobType};
 use crate::lang::state::id::JobId;
 use crate::lang::state::warning::Warning;
 use crate::lang::threads::ThreadStore;
@@ -192,6 +192,7 @@ impl GlobalState {
             job_type,
             parent,
             job_control_data: job.weak_ref(),
+            terminated_snapshot: None,
         };
         data.jobs.push(jd);
         job
@@ -419,9 +420,22 @@ impl GlobalState {
         data.title = prompt;
     }
 
+    /// See `JobData::terminated_snapshot`'s doc comment for why the `None` arm here
+    /// falls back to a snapshot instead of just omitting the job: without it, a job
+    /// killed via `terminate` (and, since `spawn_child_wait` in `cmd.rs` now also calls
+    /// `terminate` when an external process dies from a real signal, via `host:signal`
+    /// too) would never actually be observable as `Terminated` through `jobs` -- its
+    /// entry would just silently disappear, every time, because creating *this* `jobs`
+    /// job already reaped it (see `create_job_handle_with_parent`) before this method
+    /// ever got to look.
+    ///
+    /// Reported snapshots are consumed here (cleared back to `None`) so each one is only
+    /// ever shown once -- the next reap pass (`remove_finished_jobs`) then actually
+    /// removes the now-unconsumed, dead entry.
     pub fn jobs(&self) -> Vec<JobInfo> {
-        let data = self.data.lock().unwrap();
+        let mut data = self.data.lock().unwrap();
         let mut res = Vec::new();
+        let mut consumed = Vec::new();
         for jd in data.jobs.iter() {
             match jd.job_control_data.upgrade() {
                 Some(arc) => {
@@ -434,7 +448,23 @@ impl GlobalState {
                         parent: jd.parent,
                     });
                 }
-                None => {}
+                None => {
+                    if let Some(definition) = &jd.terminated_snapshot {
+                        res.push(JobInfo {
+                            id: jd.id,
+                            job_type: jd.job_type,
+                            definition: definition.clone(),
+                            status: JobStatus::Terminated,
+                            parent: jd.parent,
+                        });
+                        consumed.push(jd.id);
+                    }
+                }
+            }
+        }
+        for id in consumed {
+            if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == id) {
+                jd.terminated_snapshot = None;
             }
         }
         res
@@ -446,13 +476,9 @@ impl GlobalState {
     /// not just `jid`'s own directly-registered controllers.
     pub fn terminate(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
-        let res = get_job(&mut data, jid, false)?.lock()?.terminate();
+        let res = terminate_one(&mut data, jid);
         for id in descendant_job_ids(&data, jid) {
-            if let Ok(job) = get_job(&mut data, id, false) {
-                if let Ok(mut guard) = job.lock() {
-                    let _ = guard.terminate();
-                }
-            }
+            let _ = terminate_one(&mut data, id);
         }
         res
     }
@@ -622,6 +648,24 @@ fn get_job(
     command_error(format!("Unknown job `{}`", target_id))
 }
 
+/// Terminates a single job (not its descendants -- see `GlobalState::terminate`, the
+/// only caller, for that) and snapshots its definition into its `JobData` entry's
+/// `terminated_snapshot` (see that field's doc comment for why) in the same breath,
+/// while `job_control_data` (found via `get_job`, just above) is still guaranteed alive.
+fn terminate_one(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
+    let arc = get_job(data, jid, false)?;
+    let definition = {
+        let mut guard = arc.lock()?;
+        let definition = guard.definition.clone();
+        guard.terminate()?;
+        definition
+    };
+    if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == jid) {
+        jd.terminated_snapshot = Some(definition);
+    }
+    Ok(())
+}
+
 /// Every currently-live job nested (directly or transitively) inside `jid` -- e.g. a
 /// closure/block body being evaluated as part of a job somewhere under `jid`, however
 /// many levels deep -- found by walking `parent` links (see `JobData::parent` and
@@ -680,7 +724,13 @@ fn remove_finished_jobs(data: &mut MutexGuard<StateData>) {
     let mut dead_ids = HashSet::new();
     for jd in data.jobs.drain(..) {
         match jd.job_control_data.strong_count() {
-            0 => {
+            // A dead job that still carries an unconsumed `terminated_snapshot` (see that
+            // field's doc comment) is kept around for one more generation, so a `jobs()`
+            // call gets a chance to report it `Terminated` before it's actually pruned --
+            // without this, it would be removed right here, in the very same
+            // `create_job_handle_with_parent` call that's about to dispatch the `jobs`
+            // job that would otherwise have reported it.
+            0 if jd.terminated_snapshot.is_none() => {
                 dead_ids.insert(jd.id);
             }
             _ => {

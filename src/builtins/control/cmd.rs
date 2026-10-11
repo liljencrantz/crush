@@ -217,6 +217,11 @@ fn spawn_child_wait(
 ) -> CrushResult<Receiver<ChildEvent>> {
     let (event_sender, event_receiver) = bounded(8);
     let pid = Pid::from_raw(child.id() as i32);
+    // Cloned/copied out of `context` up front (rather than capturing `context` itself,
+    // which isn't `'static`) so this thread can call `GlobalState::terminate` below --
+    // see the `Signaled` arm's own comment for why.
+    let global_state = context.global_state.clone();
+    let job_id = context.command_handle().job_handle.id();
     context.global_state.threads().spawn(
         "cmd:wait",
         &context.next_command_handle(),
@@ -228,7 +233,23 @@ fn spawn_child_wait(
             loop {
                 let event = match waitpid(pid, Some(WaitPidFlag::WUNTRACED)) {
                     Ok(WaitStatus::Stopped(_, _)) => ChildEvent::Stopped,
-                    Ok(WaitStatus::Exited(_, _)) | Ok(WaitStatus::Signaled(_, _, _)) => {
+                    Ok(WaitStatus::Exited(_, _)) => ChildEvent::Done(Ok(())),
+                    Ok(WaitStatus::Signaled(_, _, _)) => {
+                        // The child died because it received a real OS signal directly
+                        // (e.g. via `host:signal ... SIGKILL`), entirely bypassing
+                        // crush's own job-control plumbing -- unlike crush's own
+                        // `terminate`, nothing has called `GlobalState::terminate` for
+                        // this job, so nothing has marked it `Terminated` yet, and
+                        // `jobs` would otherwise just silently stop listing it with no
+                        // indication it was ever killed. Call it here instead, while
+                        // this thread's own still-registered `CommandHandle` guarantees
+                        // `job_control_data` is still alive (see `JobData::
+                        // terminated_snapshot`'s doc comment) -- this is a no-op beyond
+                        // that status bookkeeping: the process is already dead, so the
+                        // stray `StreamControlMessage::Terminate` this also fans out to
+                        // this job's other registered controllers (e.g. a redundant
+                        // `signal::kill`, in `wait_for_child_inner` below) is harmless.
+                        let _ = global_state.terminate(job_id);
                         ChildEvent::Done(Ok(()))
                     }
                     Ok(_) => continue,

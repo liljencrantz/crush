@@ -32,6 +32,14 @@ sleep $(duration:of milliseconds=300)
 terminate $job_id
 sleep $(duration:of milliseconds=500)
 
+# `terminate` leaves a one-time snapshot behind (`JobData::terminated_snapshot`, see
+# `src/lang/state/global_state.rs`) specifically so a *subsequent* `jobs` can report
+# "Terminated" for this job at least once -- see `tests/vt_terminate_and_signal_
+# external_job.crush`. That snapshot is consumed (and the job actually pruned) by the
+# first `jobs` call to read it, so this throwaway listing exists purely to consume it
+# before the real assertion below, which must still see the job gone one listing later.
+$(jobs | materialize)
+
 # Matched by a distinctive sleep duration rather than by id: ids get recycled (see
 # tests/job_orphaning_on_parent_death.crush), so a later job here could plausibly be
 # handed $job_id's own freed id.
