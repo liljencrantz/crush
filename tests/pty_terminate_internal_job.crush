@@ -5,9 +5,9 @@
 # `$marker`) never actually ran.
 #
 # Detecting "did the second statement run" via a real file-touch side effect, not by
-# scanning the vt screen for text, after this exact approach was reviewed and found
+# scanning the pty screen for text, after this exact approach was reviewed and found
 # broken three independent ways:
-# 1. A glob pattern's `*` doesn't match across `/` -- every vt screen also contains the
+# 1. A glob pattern's `*` doesn't match across `/` -- every pty screen also contains the
 #    prompt's own cwd path, so a `*MARKER*`-style glob against the *whole* screen can
 #    read as not-matching regardless of what the backgrounded job actually did, purely
 #    because of an unrelated `/` elsewhere on screen.
@@ -17,9 +17,9 @@
 #    what the statement should do), a screen-text search would trivially "find" it from
 #    that echo alone, regardless of whether the statement ever actually ran.
 # 3. Even independent of both of the above, a backgrounded job's own output in this
-#    exact shape did not reliably reach the rendered vt screen at all in practice.
+#    exact shape did not reliably reach the rendered pty screen at all in practice.
 # A side effect with its own persistent, independently-observable state (a file either
-# existing or not, checked from *this* script, entirely outside the vt session) has
+# existing or not, checked from *this* script, entirely outside the pty session) has
 # none of these problems.
 #
 # This is deliberately *not* the "status flag" scenario `tests/vt_terminate_and_signal_
@@ -33,7 +33,7 @@
 # purely by checking whether `ThreadStore::join_job` returned an error for the one that
 # just ran -- and that join is not race-free (two independent races; see
 # `JobHandle::termination_requested`'s own doc comment in `src/lang/state/handles.rs`
-# for both). Not reproducible on every single run through this exact vt-driven,
+# for both). Not reproducible on every single run through this exact pty-driven,
 # interactive-session timing specifically -- seen directly: running this file's own
 # scenario (file-touch check included) against a deliberately-reverted build showed
 # the marker file wrongly created on roughly half of a batch of repeated runs, not
@@ -41,9 +41,9 @@
 # caught, not to pin down its exact odds.
 #
 # Job id `0` for the backgrounded block: confirmed directly against the debug binary
-# (dumping `$t:contents` after the first `jobs` call) -- in a freshly created vt
-# session, the first job ever typed gets id 0, same precedent as the sibling vt
-# job-control tests (e.g. `vt_bg_resumes_without_foregrounding.crush`).
+# (dumping `$t:contents` after the first `jobs` call) -- in a freshly created pty
+# session, the first job ever typed gets id 0, same precedent as the sibling pty
+# job-control tests (e.g. `pty_bg_resumes_without_foregrounding.crush`).
 #
 # The marker path is unique per run (suffixed with this *outer* script's own pid, via
 # `crush:pid`, not the nested session's) so concurrent test runs can never collide on
@@ -56,8 +56,8 @@
 # statement ran" on *this* run before it ever got a chance to actually create it.
 #
 
-# A settle delay follows each `wait_for "# "` below, same precedent as the sibling vt
-# tests (e.g. `vt_terminate_and_signal_external_job.crush`): the prompt text is part of
+# A settle delay follows each `wait_for "# "` below, same precedent as the sibling pty
+# tests (e.g. `pty_terminate_and_signal_external_job.crush`): the prompt text is part of
 # the same rendered line a freshly-typed command appears on, so a bare `wait_for "# "`
 # can be satisfied by a prompt already on screen before the write actually lands.
 $crush_bin := $(crush:env["CRUSH_BIN"])
@@ -69,7 +69,7 @@ try {
 }
 $cmd_line := $("{{sleep $(duration:of seconds=100); cmd touch \"{}\"}} &\n":format $marker)
 
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

@@ -1,8 +1,8 @@
-//! `VtSession` -- a real pty-backed child process plus everything needed to drive and
-//! inspect it from a script. Lives in a private, global `id -> Option<VtSession>`
+//! `PtySession` -- a real pty-backed child process plus everything needed to drive and
+//! inspect it from a script. Lives in a private, global `id -> Option<PtySession>`
 //! registry (`SESSIONS` below), exactly like `GrpcClient` in
 //! `src/builtins/grpc/client.rs`: scripts never hold a Rust handle to this directly, only
-//! the plain integer id embedded in the `Struct` `vt:create` returns (see `create.rs`).
+//! the plain integer id embedded in the `Struct` `pty:create` returns (see `create.rs`).
 
 use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};
@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration as StdDuration, Instant};
 
-static SESSIONS: LazyLock<RwLock<HashMap<i32, Option<VtSession>>>> =
+static SESSIONS: LazyLock<RwLock<HashMap<i32, Option<PtySession>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 static NEXT_ID: AtomicI32 = AtomicI32::new(1);
 
@@ -34,7 +34,7 @@ static NEXT_ID: AtomicI32 = AtomicI32::new(1);
 /// busy-spinning.
 const POLL_INTERVAL: StdDuration = StdDuration::from_millis(20);
 
-pub struct VtSession {
+pub struct PtySession {
     pid: i32,
     master: Mutex<std::fs::File>,
     child: Mutex<Child>,
@@ -42,8 +42,8 @@ pub struct VtSession {
     parser: Mutex<vt100::Parser>,
 }
 
-impl VtSession {
-    fn sessions() -> &'static RwLock<HashMap<i32, Option<VtSession>>> {
+impl PtySession {
+    fn sessions() -> &'static RwLock<HashMap<i32, Option<PtySession>>> {
         &SESSIONS
     }
 
@@ -108,7 +108,7 @@ impl VtSession {
             }
         });
 
-        let session = VtSession {
+        let session = PtySession {
             pid,
             master: Mutex::new(std::fs::File::from(master)),
             child: Mutex::new(child),
@@ -140,14 +140,14 @@ impl VtSession {
         }
     }
 
-    pub fn get(s: &Struct) -> CrushResult<MappedRwLockReadGuard<'static, VtSession>> {
+    pub fn get(s: &Struct) -> CrushResult<MappedRwLockReadGuard<'static, PtySession>> {
         match s.get("id") {
             Some(crate::lang::value::Value::Integer(id)) => Self::get_from_id(id as i32),
-            _ => command_error("Missing or invalid id field in vt method object"),
+            _ => command_error("Missing or invalid id field in pty method object"),
         }
     }
 
-    pub fn get_from_id(id: i32) -> CrushResult<MappedRwLockReadGuard<'static, VtSession>> {
+    pub fn get_from_id(id: i32) -> CrushResult<MappedRwLockReadGuard<'static, PtySession>> {
         let res = RwLockReadGuard::try_map(Self::sessions().read(), |map| match map.get(&id) {
             Some(Some(session)) => Some(session),
             _ => None,
@@ -155,7 +155,7 @@ impl VtSession {
         match res {
             Ok(session) => Ok(session),
             _ => command_error(format!(
-                "Unknown vt session id {}. Did you already close it?",
+                "Unknown pty session id {}. Did you already close it?",
                 id
             )),
         }
@@ -238,7 +238,7 @@ impl VtSession {
     }
 }
 
-impl Drop for VtSession {
+impl Drop for PtySession {
     fn drop(&mut self) {
         kill_process_tree(self.pid as u32);
         let _ = self.child.lock().wait();

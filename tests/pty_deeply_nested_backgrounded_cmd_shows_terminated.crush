@@ -9,9 +9,9 @@
 # Checked by counting `Terminated` rows rather than filtering by id or definition: the
 # nested job's id depends on how many intermediate jobs exist, and this session has
 # nothing else that could be `Terminated`. Pid lookup and settle delays follow
-# `vt_terminate_and_signal_external_job.crush` (see its header for why each is needed).
+# `pty_terminate_and_signal_external_job.crush` (see its header for why each is needed).
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

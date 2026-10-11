@@ -1,6 +1,6 @@
 use crate::CrushResult;
-use crate::builtins::vt::control::control_value;
-use crate::builtins::vt::create::Create;
+use crate::builtins::pty::control::control_value;
+use crate::builtins::pty::create::Create;
 use crate::lang::state::scope::Scope;
 
 mod control;
@@ -10,8 +10,8 @@ mod session;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
     root.create_namespace(
-        "vt",
-        "Virtual terminals, for driving and inspecting a real interactive session from a script",
+        "pty",
+        "Pseudo-terminal sessions, for driving and inspecting a real interactive session from a script",
         None,
         Box::new(move |env| {
             Create::declare(env)?;
@@ -23,7 +23,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
 }
 
 /// Called exactly once, unconditionally, near the end of `main.rs`'s `run()` -- see
-/// src/builtins/vt/session.rs's `VtSession::close_all` doc comment for why.
+/// src/builtins/pty/session.rs's `PtySession::close_all` doc comment for why.
 pub fn close_all_sessions() {
-    session::VtSession::close_all();
+    session::PtySession::close_all();
 }

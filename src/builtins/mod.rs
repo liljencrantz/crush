@@ -18,6 +18,7 @@ mod grpc;
 mod host;
 mod io;
 mod math;
+pub mod pty;
 mod random;
 mod remote;
 mod stream;
@@ -27,7 +28,6 @@ mod term;
 pub mod types;
 mod users;
 mod var;
-pub mod vt;
 mod sockets;
 
 pub fn declare(root: &Scope) -> CrushResult<()> {
@@ -45,6 +45,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     host::declare(root)?;
     io::declare(root)?;
     math::declare(root)?;
+    pty::declare(root)?;
     random::declare(root)?;
     remote::declare(root)?;
     stream::declare(root)?;
@@ -54,7 +55,6 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     types::declare(root)?;
     users::declare(root)?;
     var::declare(root)?;
-    vt::declare(root)?;
     sockets::declare(root)?;
     root.read_only();
     Ok(())

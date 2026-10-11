@@ -1,6 +1,6 @@
 # Ctrl-Z on a *foreground* block containing a `cmd` (`{ { cmd sleep N } }`), then `bg`,
 # then killing the process with `host:signal`, must leave the `cmd` job reported as
-# `Terminated` -- same as `vt_ctrl_z_bg_then_signal_shows_terminated.crush`, but nested.
+# `Terminated` -- same as `pty_ctrl_z_bg_then_signal_shows_terminated.crush`, but nested.
 #
 # This shape pauses only the innermost statement's job (the one `current_job()` finds),
 # and no `Job::eval` ever registers it as a background job, so "this job left the
@@ -10,9 +10,9 @@
 #
 # The paused job's id is looked up (highest-id `Paused` row) rather than hardcoded, since
 # it depends on how many intermediate block jobs exist. Pid lookup and settle delays
-# follow `vt_terminate_and_signal_external_job.crush` (see its header).
+# follow `pty_terminate_and_signal_external_job.crush` (see its header).
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

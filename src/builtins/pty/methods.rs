@@ -1,4 +1,4 @@
-use crate::builtins::vt::session::VtSession;
+use crate::builtins::pty::session::PtySession;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
@@ -27,12 +27,12 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 }
 
 #[signature(
-    vt.session.write,
+    pty.session.write,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Write literal text to this virtual terminal, as if typed at the keyboard.",
     long = "No newline or key translation is added -- include `\\n` explicitly to submit a",
-    long = "command line, and use `$t:control:<name>` (see `vt:control`) for control",
+    long = "command line, and use `$t:control:<name>` (see `pty:control`) for control",
     long = "characters such as Ctrl-Z.",
     example = "$t:write \"echo hello\\n\"",
     example = "$t:write $t:control:z",
@@ -44,13 +44,13 @@ struct Write {
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Write = Write::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let session = VtSession::get(&context.this.r#struct()?)?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
     session.write_raw(&cfg.text)?;
     context.output.send(Value::Empty)
 }
 
 #[signature(
-    vt.session.wait_for,
+    pty.session.wait_for,
     can_block = true,
     output = Known(ValueType::Empty),
     short = "Block until the virtual terminal's rendered screen contains a pattern, or error out after a timeout.",
@@ -74,13 +74,13 @@ struct WaitFor {
 fn wait_for(mut context: CommandContext) -> CrushResult<()> {
     let cfg: WaitFor =
         WaitFor::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let session = VtSession::get(&context.this.r#struct()?)?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
     session.wait_for(&cfg.pattern, cfg.timeout)?;
     context.output.send(Value::Empty)
 }
 
 #[signature(
-    vt.session.contents,
+    pty.session.contents,
     can_block = false,
     output = Known(ValueType::String),
     short = "The virtual terminal's current rendered screen, as plain text.",
@@ -88,12 +88,12 @@ fn wait_for(mut context: CommandContext) -> CrushResult<()> {
 struct Contents {}
 
 fn contents(mut context: CommandContext) -> CrushResult<()> {
-    let session = VtSession::get(&context.this.r#struct()?)?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
     context.output.send(Value::from(session.contents()))
 }
 
 #[signature(
-    vt.session.pid,
+    pty.session.pid,
     can_block = false,
     output = Known(ValueType::Integer),
     short = "The process id of the command this virtual terminal is running.",
@@ -101,12 +101,12 @@ fn contents(mut context: CommandContext) -> CrushResult<()> {
 struct Pid {}
 
 fn pid(mut context: CommandContext) -> CrushResult<()> {
-    let session = VtSession::get(&context.this.r#struct()?)?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
     context.output.send(Value::from(session.pid()))
 }
 
 #[signature(
-    vt.session.alive,
+    pty.session.alive,
     can_block = false,
     output = Known(ValueType::Bool),
     short = "Whether the command this virtual terminal is running is still alive.",
@@ -114,12 +114,12 @@ fn pid(mut context: CommandContext) -> CrushResult<()> {
 struct Alive {}
 
 fn alive(mut context: CommandContext) -> CrushResult<()> {
-    let session = VtSession::get(&context.this.r#struct()?)?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
     context.output.send(Value::Bool(session.alive()?))
 }
 
 #[signature(
-    vt.session.close,
+    pty.session.close,
     can_block = false,
     output = Known(ValueType::Empty),
     short = "Terminate this virtual terminal's command and release its resources.",
@@ -130,7 +130,7 @@ fn close(mut context: CommandContext) -> CrushResult<()> {
     let this = context.this.r#struct()?;
     match this.get("id") {
         Some(Value::Integer(id)) => {
-            VtSession::close(id as i32);
+            PtySession::close(id as i32);
             context.output.send(Value::Empty)
         }
         _ => crate::lang::errors::command_error("Invalid method id"),

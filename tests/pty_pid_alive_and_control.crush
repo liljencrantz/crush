@@ -1,7 +1,7 @@
 # `cat` has no prompt of its own to `wait_for`, so "did Ctrl-D actually end it" is checked
 # by polling `:alive` directly in a loop (with a hard iteration cap so a real bug makes the
 # test fail promptly instead of hanging) rather than waiting for any particular screen text.
-$t := $(vt:create cat)
+$t := $(pty:create cat)
 assert ($t:alive())
 assert (($t:pid()) > 0)
 $t:write $t:control:d

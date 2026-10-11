@@ -24,7 +24,7 @@
 # pruning could ever sever it), rather than discovered later by walking live `parent`
 # links.
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

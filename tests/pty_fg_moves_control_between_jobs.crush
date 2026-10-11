@@ -37,7 +37,7 @@
 #
 # Both markers are built from two separate pieces joined via `:format`/`printf`
 # (`"{}_{}":format "INTERNAL" "MARKER"`, `printf '%s_%s' EXTERNAL MARKER`) rather than
-# written as one contiguous literal (`"INTERNAL_MARKER"`) -- `vt`'s pty is a real
+# written as one contiguous literal (`"INTERNAL_MARKER"`) -- `pty`'s pty is a real
 # terminal, and the command *line* that starts each background job is itself echoed
 # onto the rendered screen by the pty's own line discipline the instant it's typed,
 # well before the job has actually produced anything. A one-piece literal marker
@@ -57,7 +57,7 @@
 # directly against the debug binary.
 #
 # A settle delay follows every `wait_for "# "` here, same precedent as
-# `tests/cmd_paused_then_terminated_is_reaped.crush` and the sibling vt Ctrl-Z tests --
+# `tests/cmd_paused_then_terminated_is_reaped.crush` and the sibling pty Ctrl-Z tests --
 # but for a different reason than those: the prompt text (e.g. "...# ") is part of
 # the *same* rendered line a freshly-typed command appears on (a real terminal echoes
 # keystrokes right after the still-visible prompt, on the same line, until Enter is
@@ -73,7 +73,7 @@
 # two end up visibly concatenated/corrupted on the rendered screen rather than
 # appearing as two separate, correctly-ordered command lines.
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

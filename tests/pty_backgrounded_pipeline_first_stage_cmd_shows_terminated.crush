@@ -5,9 +5,9 @@
 # earlier stages create nested jobs too (see `JobData::backgrounded`).
 #
 # Counts `Terminated` rows rather than filtering by id; pid lookup and settle delays
-# follow `vt_terminate_and_signal_external_job.crush` (see its header).
+# follow `pty_terminate_and_signal_external_job.crush` (see its header).
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

@@ -270,8 +270,8 @@ fn start_test_servers() {
         std::env::set_var("DNS_PORT", dns_port.to_string());
         std::env::set_var("GRPC_PORT", grpc_port.to_string());
         std::env::set_var("SSHD_PORT", ssh_port.to_string());
-        // So a .crush test can spawn *the exact binary under test* inside a vt session
-        // (vt:create $(crush:env["CRUSH_BIN"])) instead of relying on a `crush` found on
+        // So a .crush test can spawn *the exact binary under test* inside a pty session
+        // (pty:create $(crush:env["CRUSH_BIN"])) instead of relying on a `crush` found on
         // $PATH -- which during `cargo test` is not guaranteed to be this build at all.
         std::env::set_var("CRUSH_BIN", env!("CARGO_BIN_EXE_crush"));
     }

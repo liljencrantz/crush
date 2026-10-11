@@ -1,8 +1,8 @@
-# Smoke test for the vt builtin itself: spawn a trivial external command, drive it, and
+# Smoke test for the pty builtin itself: spawn a trivial external command, drive it, and
 # check its output through a real pty -- `cat` simply echoes back whatever it reads, which
 # a pty's own line discipline (in its default cooked mode) already echoes too, so "hello"
 # is guaranteed to show up on screen one way or another once cat has had a chance to run.
-$t := $(vt:create cat)
+$t := $(pty:create cat)
 $t:write "hello\n"
 $t:wait_for "hello"
 $t:close

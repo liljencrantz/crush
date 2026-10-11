@@ -6,10 +6,10 @@
 # interrupted at the prompt was never put in the background, so it should just be
 # reaped silently. Found by a whole-branch review: this used to leave a phantom row.
 #
-# A settle delay follows each `wait_for "# "`, same precedent as the sibling vt tests:
+# A settle delay follows each `wait_for "# "`, same precedent as the sibling pty tests:
 # the prompt text can already be on screen before the typed line actually lands.
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

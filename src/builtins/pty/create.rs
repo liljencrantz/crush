@@ -1,6 +1,6 @@
-use crate::builtins::vt::control::control_value;
-use crate::builtins::vt::methods::methods;
-use crate::builtins::vt::session::VtSession;
+use crate::builtins::pty::control::control_value;
+use crate::builtins::pty::methods::methods;
+use crate::builtins::pty::session::PtySession;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::text::Text;
@@ -9,13 +9,13 @@ use crate::lang::value::Value;
 use signature::signature;
 
 #[signature(
-    vt.create,
+    pty.create,
     can_block = true,
     short = "Spawn a command attached to a fresh virtual terminal, for driving and inspecting a real interactive session from a script.",
     long = "Returns a struct with one method per operation (`write`, `wait_for`, `contents`,",
     long = "`close`, plus `pid`/`alive`) and a `control` struct of named control-character",
     long = "constants. Always call `close` once done, to release the underlying process.",
-    example = "$t := $(vt:create crush)",
+    example = "$t := $(pty:create crush)",
     example = "$t:write \"echo hello\\n\"",
     example = "$t:wait_for \"hello\"",
     example = "$t:close",
@@ -38,7 +38,7 @@ fn create(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Create = Create::parse(context.remove_arguments(), &context.global_state.printer())?;
     let rows = terminal_dimension("rows", cfg.rows)?;
     let cols = terminal_dimension("cols", cfg.cols)?;
-    let id = VtSession::create(&cfg.command.as_path(), &cfg.arguments, rows, cols)?;
+    let id = PtySession::create(&cfg.command.as_path(), &cfg.arguments, rows, cols)?;
 
     let mut fields = vec![];
     for name in ["write", "wait_for", "contents", "pid", "alive", "close"] {
@@ -67,7 +67,7 @@ fn terminal_dimension(name: &str, value: i128) -> CrushResult<u16> {
 fn method_struct(id: i32, name: &str) -> CrushResult<Value> {
     let cmd = match methods().get(name) {
         Some(cmd) => cmd.clone(),
-        None => return command_error(format!("Unknown vt method `{}`", name)),
+        None => return command_error(format!("Unknown pty method `{}`", name)),
     };
     Ok(Value::Struct(Struct::new(
         vec![("id", Value::from(id)), ("__call__", Value::Command(cmd))],

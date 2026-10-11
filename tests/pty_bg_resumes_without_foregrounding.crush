@@ -15,7 +15,7 @@
 # "Running" status is never part of the filtered result.
 #
 # Job id `0`, not `1`: confirmed directly against the debug binary by dumping
-# `$t:contents` right after the first (unfiltered) `jobs` call -- in a freshly created vt
+# `$t:contents` right after the first (unfiltered) `jobs` call -- in a freshly created pty
 # session, the first job ever typed (`cmd sleep 100` here) gets id 0, and the `jobs`
 # command used to inspect it is itself id 1 (ids are assigned per *nested* session, not
 # globally, so this is deterministic for this script's structure: `cmd sleep 100` is
@@ -27,7 +27,7 @@
 # way (`bg` on an already-finished job is a harmless no-op), and the sleep job is still
 # reported "Paused" by a filtered `jobs | where {($id == 0)}` check afterwards.
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 
 $t:write "cmd sleep 100\n"

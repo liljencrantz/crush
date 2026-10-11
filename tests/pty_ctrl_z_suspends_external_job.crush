@@ -1,7 +1,7 @@
 # Ctrl-Z on a running *external* job (`cmd sleep 100`) must suspend it and return control
 # to the nested crush session's own prompt, with the job showing up as Paused.
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 $t:write "cmd sleep 100\n"
 $t:wait_for "sleep"

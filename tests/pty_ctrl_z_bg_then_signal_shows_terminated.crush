@@ -2,7 +2,7 @@
 # was then resumed in place with `bg`) -- rather than via a trailing `&` -- must still
 # show up as `Terminated` in `jobs` after being killed by a real signal sent straight to
 # its process with `host:signal`, exactly like a `cmd sleep N &` job does (see
-# `vt_terminate_and_signal_external_job.crush`).
+# `pty_terminate_and_signal_external_job.crush`).
 #
 # Root cause: `cmd.rs`'s signal-death bookkeeping is deliberately limited to jobs that
 # aren't holding the foreground (so an ordinary foreground command dying from an
@@ -12,12 +12,12 @@
 # `jobs` instead. Fixed by having `GlobalState::pause` mark the job too (see
 # `JobData::backgrounded`).
 #
-# Job id `0`: same reasoning as `vt_bg_resumes_without_foregrounding.crush` -- the sleep
+# Job id `0`: same reasoning as `pty_bg_resumes_without_foregrounding.crush` -- the sleep
 # is the first command typed into this fresh nested session. `$my_pid` is captured only
 # afterwards so that holds. The pid lookup and settle delays follow
-# `vt_terminate_and_signal_external_job.crush` (see its header for why each is needed).
+# `pty_terminate_and_signal_external_job.crush` (see its header for why each is needed).
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

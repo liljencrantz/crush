@@ -4,7 +4,7 @@
 #
 # Checking the killed job's status must filter down to that specific job's own row via
 # `jobs | where {($id == ...)} | select status`, not just grep the rendered screen for
-# the word "Terminated" -- same reasoning as `vt_bg_resumes_without_foregrounding.crush`.
+# the word "Terminated" -- same reasoning as `pty_bg_resumes_without_foregrounding.crush`.
 # It must go further here, though: this script performs *two* such checks (one per
 # mechanism), so by the time the second one runs, the word "Terminated" has already
 # legitimately appeared once on the growing screen from the first check -- `wait_for`'s
@@ -24,7 +24,7 @@
 # prefixes are textually disjoint) or of the word "Terminated" by itself.
 #
 # Job id `0`, both times: confirmed directly against the debug binary (see
-# `vt_bg_resumes_without_foregrounding.crush` for why ids are deterministic for a given,
+# `pty_bg_resumes_without_foregrounding.crush` for why ids are deterministic for a given,
 # fixed script structure). The first `cmd sleep 100 &` is the first job ever started in
 # this fresh nested session, so it gets id 0; the `terminate 0`/status-check commands
 # that follow are themselves short-lived jobs that finish and get reaped well within the
@@ -59,8 +59,8 @@
 # `sleep` process was still alive afterward (checked via a real `ps`), and the status
 # check below never read back `Terminated` for it.
 #
-# A settle delay follows *every* `wait_for "# "` below, same precedent as the sibling vt
-# job-control tests (e.g. `vt_fg_moves_control_between_jobs.crush`): the prompt text is
+# A settle delay follows *every* `wait_for "# "` below, same precedent as the sibling pty
+# job-control tests (e.g. `pty_fg_moves_control_between_jobs.crush`): the prompt text is
 # part of the same rendered line a freshly-typed command appears on, so `wait_for "# "`
 # can be satisfied instantly by the prompt that was already on screen *before* the write,
 # regardless of whether the previous command has actually been submitted yet. Confirmed
@@ -69,7 +69,7 @@
 # session's own line-by-line processing and ended up visibly concatenated/corrupted on
 # the rendered screen, intermittently failing the second half.
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 

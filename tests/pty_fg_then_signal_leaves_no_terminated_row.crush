@@ -1,4 +1,4 @@
-# The other side of `vt_terminate_and_signal_external_job.crush`: once `fg` has brought a
+# The other side of `pty_terminate_and_signal_external_job.crush`: once `fg` has brought a
 # backgrounded external job back into the foreground, it *is* the foreground job again,
 # so its process dying from a signal is an ordinary foreground death (like Ctrl-C) and
 # must not leave a one-time "Terminated" row behind in `jobs` (see `cmd.rs`'s `Signaled`
@@ -8,7 +8,7 @@
 # The nested session's prompt is blocked by `fg`, so the signal is sent from this outer
 # script, looking up the `sleep` by its parent pid (the nested session's own, `$t:pid`).
 $crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(vt:create $crush_bin)
+$t := $(pty:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 
