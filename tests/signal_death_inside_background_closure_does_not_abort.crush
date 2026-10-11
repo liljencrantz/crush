@@ -1,0 +1,30 @@
+# Regression test for a real bug introduced by this task's own first attempt at
+# fixing Task 10 (`terminate` not stopping an internal job's closure -- see
+# `tests/terminate_mid_closure_statement_stops_next_statement.crush`): an external
+# `cmd` whose process dies from an ordinary, unrelated OS signal -- not through
+# crush's own `terminate` -- must not abort the rest of its *enclosing closure*,
+# the same way `tests/cmd_signal_death_does_not_abort_script.crush` (Task 9) already
+# confirms it must not abort the rest of a plain top-level script.
+#
+# Root cause of the regression: the first fix read `JobHandle::is_terminated()` as
+# "this job's live `status` reads `Terminated`" -- but `status` is set to `Terminated`
+# by *two* different, unrelated paths: `JobControlData::terminate` (an explicit
+# `terminate` request) and `JobControlData::mark_terminated` (bookkeeping only, used by
+# `GlobalState::mark_terminated_by_signal` when `cmd.rs`'s `spawn_child_wait` notices an
+# external process died from a real OS signal sent for entirely unrelated reasons --
+# see that function's own doc comment). `Closure::eval_inner`'s sequential-statement
+# loop checking the generic status flag couldn't tell these apart, so a signal-killed
+# `cmd` running as the first statement of a backgrounded closure made the *whole
+# closure* stop advancing, even though nothing ever asked for it to be terminated.
+#
+# Confirmed directly: simulating the old, generic-status-based check against this
+# exact script printed only `MARKER` (never `after-bg`), 3/3 runs; the real fix below
+# (a dedicated `termination_requested` flag, set *only* by `JobControlData::terminate`,
+# never by `mark_terminated`) prints both, reliably, every time.
+#
+# `sleep` instead of a settle-delay-then-`jobs`-check: the only thing this test cares
+# about is whether `echo "after-bg"` -- the closure's second statement -- actually ran,
+# which a plain stdout diff already answers for free.
+{ cmd sh -c "kill -TERM $$"; echo "after-bg" } &
+sleep $(duration:of milliseconds=500)
+echo MARKER

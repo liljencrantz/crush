@@ -1,44 +1,68 @@
 # `terminate` must stop an *internal* job's underlying execution, not just flip its
 # status flag -- confirmed here by backgrounding a two-statement block (`{sleep ...;
-# echo SHOULD_NOT_APPEAR} &`), terminating it while the first statement (a long `sleep`)
-# is still running, and then confirming the second statement (`echo
-# SHOULD_NOT_APPEAR`) never actually ran.
+# cmd touch $marker} &`), terminating it while the first statement (a long `sleep`) is
+# still running, and then confirming the second statement (which would create
+# `$marker`) never actually ran.
+#
+# Detecting "did the second statement run" via a real file-touch side effect, not by
+# scanning the vt screen for text, after this exact approach was reviewed and found
+# broken three independent ways:
+# 1. A glob pattern's `*` doesn't match across `/` -- every vt screen also contains the
+#    prompt's own cwd path, so a `*MARKER*`-style glob against the *whole* screen can
+#    read as not-matching regardless of what the backgrounded job actually did, purely
+#    because of an unrelated `/` elsewhere on screen.
+# 2. The line a human/script *types* into the session is itself echoed back onto the
+#    screen by the pty's own line discipline -- so if the second statement's own marker
+#    text appears literally in the *typed* `{...} &` command line (as it must, to name
+#    what the statement should do), a screen-text search would trivially "find" it from
+#    that echo alone, regardless of whether the statement ever actually ran.
+# 3. Even independent of both of the above, a backgrounded job's own output in this
+#    exact shape did not reliably reach the rendered vt screen at all in practice.
+# A side effect with its own persistent, independently-observable state (a file either
+# existing or not, checked from *this* script, entirely outside the vt session) has
+# none of these problems.
 #
 # This is deliberately *not* the "status flag" scenario `tests/vt_terminate_and_signal_
 # external_job.crush`/Task 9 already cover (those are about an *external* `cmd` job's
-# `jobs` row correctly reading `Terminated`). The sibling, narrower bug this test
-# exists to catch is real and was confirmed directly: `GlobalState::terminate` already
-# marks the targeted job (and every job nested inside it -- see `descendant_job_ids`)
-# `Terminated` synchronously, and `sleep` itself (being cooperative -- see
-# `tests/terminate.crush`) does stop its own underlying wait almost immediately. But
-# `Closure::eval_inner`'s sequential-statement loop used to decide whether to advance
-# to the *next* statement purely by checking whether `ThreadStore::join_job` returned
-# an error for the one that just ran -- and that join is not race-free: `ThreadStore::
-# reap` is called by *any* new job being created anywhere in the system (here, the
-# nested session's own next top-level statement, running concurrently with this
-# backgrounded block's own worker thread), and it can win the race to consume the
-# terminated statement's own thread and its real error first, leaving the closure's
-# own, later `join_job` call with nothing left to join -- so it saw no error and wrongly
-# ran the next statement anyway. Reproduced directly, 100% of the time across dozens of
-# runs, before `Closure::eval_inner` started also checking `JobHandle::is_terminated`
-# (a plain, synchronously-set status flag, independent of that race) directly. See that
-# method's own doc comment in `src/lang/state/handles.rs` for the full race.
+# `jobs` row correctly reading `Terminated`). The narrower bug this test guards against
+# is real, found and fixed in this same task: `GlobalState::terminate` already marks the
+# targeted job (and every job nested inside it -- see `descendant_job_ids`) `Terminated`
+# synchronously, and `sleep` itself (being cooperative -- see `tests/terminate.crush`)
+# does stop its own underlying wait almost immediately. But `Closure::eval_inner`'s
+# sequential-statement loop used to decide whether to advance to the *next* statement
+# purely by checking whether `ThreadStore::join_job` returned an error for the one that
+# just ran -- and that join is not race-free (two independent races; see
+# `JobHandle::termination_requested`'s own doc comment in `src/lang/state/handles.rs`
+# for both). Not reproducible on every single run through this exact vt-driven,
+# interactive-session timing specifically -- seen directly: running this file's own
+# scenario (file-touch check included) against a deliberately-reverted build showed
+# the marker file wrongly created on roughly half of a batch of repeated runs, not
+# every one -- but genuinely reproducible, and the point of this test is to keep it
+# caught, not to pin down its exact odds.
 #
 # Job id `0` for the backgrounded block: confirmed directly against the debug binary
 # (dumping `$t:contents` after the first `jobs` call) -- in a freshly created vt
 # session, the first job ever typed gets id 0, same precedent as the sibling vt
 # job-control tests (e.g. `vt_bg_resumes_without_foregrounding.crush`).
 #
+# The marker path is unique per run (suffixed with this *outer* script's own pid, via
+# `crush:pid`, not the nested session's) so concurrent test runs can never collide on
+# the same file.
+#
 # A settle delay follows each `wait_for "# "` below, same precedent as the sibling vt
 # tests (e.g. `vt_terminate_and_signal_external_job.crush`): the prompt text is part of
 # the same rendered line a freshly-typed command appears on, so a bare `wait_for "# "`
 # can be satisfied by a prompt already on screen before the write actually lands.
 $crush_bin := $(crush:env["CRUSH_BIN"])
+$my_pid := $(crush:pid)
+$marker := $("/tmp/vt_terminate_internal_job_marker_{}":format $my_pid)
+$cmd_line := $("{{sleep $(duration:of seconds=100); cmd touch \"{}\"}} &\n":format $marker)
+
 $t := $(vt:create $crush_bin)
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 
-$t:write "{sleep $(duration:of seconds=100); echo SHOULD_NOT_APPEAR} &\n"
+$t:write $cmd_line
 $t:wait_for "# "
 sleep $(duration:of milliseconds=300)
 
@@ -48,11 +72,15 @@ sleep $(duration:of milliseconds=300)
 
 $t:write "jobs\n"
 $t:wait_for "Terminated"
-sleep $(duration:of milliseconds=1000)
+sleep $(duration:of milliseconds=1500)
 
-$t:write "echo MARKER\n"
-$t:wait_for "MARKER"
-assert (!$(like $($t:contents) *SHOULD_NOT_APPEAR*)) "terminate must actually stop the backgrounded block, not just flip its status -- SHOULD_NOT_APPEAR must never run"
+$marker_exists := $true
+try {
+    fs:stat $marker
+} catch {
+    $marker_exists = $false
+}
+assert (!$marker_exists) "terminate must actually stop the backgrounded block's underlying execution, not just flip its status -- the second statement must never run"
 
 $t:close
 echo "ok"

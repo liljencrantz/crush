@@ -14,31 +14,37 @@
 # terminating it while the long `sleep` is still running, and observing that the
 # `echo` afterward still ran sometimes anyway.
 #
-# Root cause: `ThreadStore::join_job` (the mechanism `Closure::eval_inner` relied on to
-# decide whether to advance to the next statement) first collects the ids of every
-# thread registered under the just-terminated statement's job, then joins each
-# separately -- and in the gap between those two steps, `ThreadStore::reap` (called by
-# *any* new job being created anywhere in the system, not just this closure's own
-# worker thread -- here, this very script's own subsequent top-level `jobs`/`sleep`
-# statements, running concurrently with the backgrounded block) can win the race to
-# remove and join that same thread first, leaving `join_job`'s own attempt with nothing
-# left to find -- which `ThreadStore::join_one` treats the same as "that thread
-# finished cleanly", silently discarding the statement's real `Err` and letting the
-# loop advance. Not reliably reproducible on every single run (it depends on exactly
-# when the racing `reap()` call lands), but reproduced directly, repeatedly, across
-# dozens of runs before the fix below existed; after it, 30 consecutive runs all showed
-# the correct behavior.
+# Root cause: `ThreadStore::join_job` (the mechanism `Closure::eval_inner` used to rely
+# on, alone, to decide whether to advance to the next statement) is not race-free in
+# two independent ways -- see `JobHandle::termination_requested`'s own doc comment in
+# `src/lang/state/handles.rs` for both in full. The one actually observed causing this
+# specific failure: `join_job` first collects the ids of every thread registered under
+# the just-terminated statement's job, then joins each separately -- and in the gap
+# between those two steps, `ThreadStore::reap` (called by *any* new job being created
+# anywhere in the system, not just this closure's own worker thread -- here, this very
+# script's own subsequent top-level `jobs`/`sleep` statements, running concurrently
+# with the backgrounded block) can win the race to remove and join that same thread
+# first, leaving `join_job`'s own attempt with nothing left to find -- which
+# `ThreadStore::join_one` treats the same as "that thread finished cleanly", silently
+# discarding the statement's real `Err` and letting the loop advance. Not reliably
+# reproducible on every single run (it depends on exactly when the racing `reap()` call
+# lands), but reproduced directly, repeatedly, across dozens of runs before the fix
+# below existed; after it, 30 consecutive runs all showed the correct behavior.
 #
-# Fixed by having `Closure::eval_inner` additionally check `JobHandle::is_terminated`
-# (see its doc comment in `src/lang/state/handles.rs`) after `join_job` returns, rather
-# than trusting `join_job`'s own success/failure alone: `GlobalState::terminate` sets
-# that status synchronously, independent of the join race above, so checking it
-# directly is race-free.
+# Fixed by having `Closure::eval_inner` additionally check `JobHandle::
+# termination_requested` (not the generic `status` field -- see that method's own doc
+# comment for why the distinction matters, including a real regression this task's
+# first attempt introduced and then fixed: `tests/signal_death_inside_background_
+# closure_does_not_abort.crush`) after `join_job` returns, rather than trusting
+# `join_job`'s own success/failure alone. `GlobalState::terminate` sets that flag
+# synchronously, independent of either join race, so checking it directly is
+# race-free.
 #
-# The extra `jobs` calls and settle delays below are deliberate, not incidental --
-# removing them makes the *unfixed* code reproduce this far less reliably (each `jobs`
-# call is itself a new job, giving `reap()` another concurrent opportunity to race
-# against the backgrounded block's own join) -- see the root-cause paragraph above.
+# The extra `jobs` calls and settle delays below are deliberate, not incidental, and
+# somewhat fragile as a result -- each `jobs` call only matters here because it's
+# itself a new job, giving `ThreadStore::reap` another concurrent opportunity to race
+# against the backgrounded block's own join (see the root-cause paragraph above);
+# removing them makes the *unfixed* code reproduce this far less reliably.
 {sleep $(duration:of seconds=100); echo SHOULD_NOT_APPEAR} &
 sleep $(duration:of milliseconds=200)
 jobs

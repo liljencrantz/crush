@@ -721,13 +721,14 @@ impl Closure {
                     let join_res = context.global_state.threads().join_job(job.id());
                     // `join_job`'s own success/failure isn't a reliable way to tell
                     // whether this statement was terminated -- see `JobHandle::
-                    // is_terminated`'s doc comment for the race that can silently
-                    // discard its real error before `join_job` here ever sees it.
-                    // Checking the job's own status directly is race-free, and must
-                    // win over whatever `join_job` returned: an explicitly terminated
-                    // statement must stop this closure from advancing to the next one
-                    // regardless of how that race happened to resolve this time.
-                    if job.is_terminated() {
+                    // termination_requested`'s own doc comment for the two independent
+                    // races that can silently discard its real error before `join_job`
+                    // here ever sees it. Checking the job's own flag directly is
+                    // race-free, and must win over whatever `join_job` returned: an
+                    // explicitly terminated statement must stop this closure from
+                    // advancing to the next one regardless of how either race happened
+                    // to resolve this time.
+                    if job.termination_requested() {
                         return terminate();
                     }
                     join_res?;

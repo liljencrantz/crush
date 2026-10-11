@@ -22,6 +22,7 @@ impl JobHandle {
                 senders: HashMap::new(),
                 next_command_id: CommandId::first(),
                 status: JobStatus::Running,
+                termination_requested: false,
             })),
         }
     }
@@ -89,30 +90,54 @@ impl JobHandle {
         live_job.definition.clone()
     }
 
-    /// True if this job's live status currently reads `Terminated`.
+    /// True if `terminate` has *actually been explicitly requested* on this job --
+    /// deliberately not the same question as "does this job's live status currently
+    /// read `Terminated`" (see `JobControlData::termination_requested`'s own doc
+    /// comment for why conflating the two is a real bug, not just imprecise naming:
+    /// `status` also reads `Terminated` after `mark_terminated`, used for an external
+    /// `cmd` job's child dying from an unrelated OS signal -- a case that must *not* be
+    /// treated as an explicit termination request).
     ///
     /// `GlobalState::terminate` sets this *synchronously*, inside the same call that
     /// broadcasts a `StreamControlMessage::Terminate` to this job's registered
     /// controllers -- independent of whether any of those controllers' own command
     /// threads ever actually get joined, let alone whether a specific join call
-    /// happens to observe their real result. That join is *not* race-free:
-    /// `ThreadStore::join_job` first collects the ids of every thread currently
-    /// registered under this job, then joins each separately -- and in the gap between
-    /// those two steps, `ThreadStore::reap` (called by *any* new job being created
-    /// anywhere in the system, not just this one) can win the race to remove and join
-    /// one of those threads itself first, leaving the original `join_job` call with
-    /// nothing left to find for that thread and so no error to propagate (see
-    /// `ThreadStore::join_one`: finding nothing for an id is treated the same as "that
-    /// thread finished cleanly"). Checking this status flag instead sidesteps that race
-    /// entirely: it's set the moment termination is requested, regardless of how or
-    /// when (or by whom) this job's thread is eventually reaped. Confirmed directly:
-    /// `{sleep $(duration:of seconds=100); echo SHOULD_NOT_APPEAR} &` followed by
-    /// `terminate` on the whole block still occasionally ran the `echo` statement
-    /// anyway, before `Closure::eval_inner` started checking this (see
-    /// `tests/terminate_mid_closure_statement_stops_next_statement.crush`).
-    pub fn is_terminated(&self) -> bool {
+    /// happens to observe their real result. Checking this flag directly (rather than
+    /// relying on a join's return value to infer "was this terminated") sidesteps two
+    /// independent races that can otherwise silently discard a terminated statement's
+    /// real `Err` result, confirmed directly via `{sleep $(duration:of seconds=100);
+    /// echo SHOULD_NOT_APPEAR} &` followed by `terminate` on the whole block -- see
+    /// `tests/terminate_mid_closure_statement_stops_next_statement.crush`:
+    ///
+    /// 1. **`ThreadStore::reap` racing a deliberate `join_job`/`join_one` call.**
+    ///    `ThreadStore::join_job` first collects the ids of every thread currently
+    ///    registered under a job, then joins each separately -- and in the gap between
+    ///    those two steps, `ThreadStore::reap` (called by *any* new job being created
+    ///    anywhere in the system, not just the one actually waiting on this result) can
+    ///    win the race to remove and join that same thread first, leaving the original
+    ///    `join_job` call with nothing left to find for that thread id (treated the
+    ///    same as "that thread already finished cleanly"). This was the mechanism
+    ///    actually observed causing the failure above, confirmed via targeted tracing.
+    /// 2. **The generic wrapper controller racing the command's own result, even with
+    ///    no `reap` involved at all.** `ThreadStore::spawn` always registers its own
+    ///    generic `ChannelBasedController` under the same `CommandId` a command like
+    ///    `sleep` separately self-registers under, so `GlobalState::terminate`'s
+    ///    broadcast loop sends a `StreamControlMessage::Terminate` to *both*. Even when
+    ///    a single caller legitimately owns the join with nobody else racing it,
+    ///    `InterruptibleJoinHandle::join`'s own `select!` between the thread's real
+    ///    result and that generic wrapper's raw control message doesn't prefer the
+    ///    result when both happen to already be ready -- and `ThreadStore::join_one`
+    ///    treats a raw `Right(Terminate)` the same as "no error" (`StreamControlMessage
+    ///    ::Terminate => {}`), discarding the command's real `Err` just the same. This
+    ///    path doesn't need any other thread/job in the system to trigger it.
+    ///
+    /// Both races only ever matter once a termination was genuinely requested in the
+    /// first place, so reading this flag directly -- set unconditionally and
+    /// synchronously the moment that happens -- is race-free regardless of which of the
+    /// two (or whether either) actually fired on any given run.
+    pub fn termination_requested(&self) -> bool {
         let live_job = self.live_job.lock().unwrap();
-        live_job.status() == JobStatus::Terminated
+        live_job.termination_requested()
     }
 }
 
@@ -181,6 +206,20 @@ pub struct JobControlData {
     /// The job's definition, i.e. the invocation that started it, as source text.
     pub definition: String,
     status: JobStatus,
+    /// True once `terminate` (not `mark_terminated`) has been called on this job --
+    /// i.e. an *explicit* termination was actually requested, as opposed to `status`
+    /// merely reading `Terminated` because `mark_terminated` recorded an external
+    /// process dying from some unrelated signal (see `mark_terminated`'s own doc
+    /// comment). `status == Terminated` alone can't be used to tell these apart, and
+    /// conflating them is a real regression, not a hypothetical one: a backgrounded
+    /// closure containing a `cmd` that dies from an ordinary, unrelated signal (e.g.
+    /// `cmd sh -c "kill -TERM $$"`) must keep running its closure's remaining
+    /// statements exactly as before -- see `tests/cmd_signal_death_does_not_abort_
+    /// script.crush` (Task 9) for why that case must *not* abort anything, and
+    /// `tests/signal_death_inside_background_closure_does_not_abort.crush` for the
+    /// regression this field exists to prevent. See `JobHandle::termination_requested`
+    /// for where this is actually read.
+    termination_requested: bool,
     senders: HashMap<CommandId, Vec<JobController>>,
     next_command_id: CommandId,
 }
@@ -290,6 +329,11 @@ impl JobControlData {
         self.status
     }
 
+    /// See `termination_requested`'s own doc comment.
+    pub fn termination_requested(&self) -> bool {
+        self.termination_requested
+    }
+
     pub fn terminate(&mut self) -> CrushResult<()> {
         for vc in self.senders.values() {
             for c in vc {
@@ -297,6 +341,7 @@ impl JobControlData {
             }
         }
         self.status = JobStatus::Terminated;
+        self.termination_requested = true;
         Ok(())
     }
 
