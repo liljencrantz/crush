@@ -465,7 +465,11 @@ struct Jobs {}
 
 fn jobs(context: CommandContext) -> CrushResult<()> {
     let output = context.initialize_output(&JOB_OUTPUT_TYPE)?;
-    let jobs = context.global_state.jobs();
+    // `jobs_for_listing`, not plain `jobs`: this builtin is the one place a job that
+    // was just terminated (or, for an external job, observed to have died from a real
+    // signal) should still be reported one last time -- see
+    // `GlobalState::jobs_for_listing`'s doc comment.
+    let jobs = context.global_state.jobs_for_listing();
     for job in jobs {
         output.send(Row::new(vec![
             Value::from(job.id),

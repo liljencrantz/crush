@@ -180,12 +180,28 @@ pub struct JobData {
     /// never actually be observed as `Terminated` -- it would just silently vanish, every
     /// single time, not merely as an occasional race.
     ///
-    /// `Some(definition)` means this job was explicitly terminated and hasn't been
-    /// reported as `Terminated` by a `jobs()` call yet; `jobs()` clears it back to `None`
-    /// once it has, so the entry is eligible for actual removal on the next reap pass
-    /// (see `remove_finished_jobs`) -- giving it exactly one listing, the same "reported
-    /// once, then gone" shape a POSIX shell's own job control has.
+    /// `Some(definition)` means this job was explicitly terminated (or, for an external
+    /// `cmd` job, was observed to have died from a real OS signal -- see
+    /// `GlobalState::mark_terminated_by_signal`) and hasn't been reported as
+    /// `Terminated` by a `jobs` *listing* call yet (`GlobalState::jobs_for_listing`,
+    /// used only by the `jobs` builtin -- never by `GlobalState::jobs`, which every
+    /// other internal caller uses and which only ever reports genuinely live jobs).
+    /// `jobs_for_listing` clears it back to `None` once reported, so the entry is
+    /// eligible for actual removal on the next reap pass (see `remove_finished_jobs`)
+    /// -- giving it exactly one listing, the same "reported once, then gone" shape a
+    /// POSIX shell's own job control has.
+    ///
+    /// Only ever set for the one job actually terminated/killed, never for its
+    /// descendants (see `GlobalState::terminate`) -- otherwise terminating a job with
+    /// several nested closure jobs underneath it would produce one phantom row per
+    /// descendant instead of just the one the user actually asked about.
     pub terminated_snapshot: Option<String>,
+    /// How many `remove_finished_jobs` passes this entry has survived purely because of
+    /// an unconsumed `terminated_snapshot` -- bounds the snapshot's lifetime (see
+    /// `MAX_TERMINATED_SNAPSHOT_AGE` in `global_state.rs`) so a terminated job whose
+    /// snapshot nobody ever consumes (no `jobs` call made afterward) doesn't pin this
+    /// `JobData` entry, and its id, in `data.jobs` forever.
+    pub terminated_snapshot_age: u32,
 }
 
 impl JobControlData {
@@ -201,6 +217,30 @@ impl JobControlData {
         }
         self.status = JobStatus::Terminated;
         Ok(())
+    }
+
+    /// Like `terminate`, but *only* updates this job's own status -- it never notifies
+    /// any registered controller via `StreamControlMessage::Terminate`. Used when a
+    /// job's underlying process is already known to be dead (e.g. an external `cmd`
+    /// job's child killed by a real OS signal sent directly to it, bypassing crush's
+    /// own job control entirely -- see `GlobalState::mark_terminated_by_signal`), so
+    /// there is nothing left to notify and no OS process left to (redundantly, and
+    /// racily -- the pid could already have been reused by an unrelated process) signal
+    /// again.
+    ///
+    /// Broadcasting a real `StreamControlMessage::Terminate` here would be actively
+    /// wrong, not just redundant: every controller registered for this job -- including,
+    /// for a `cmd` job, `wait_for_child_inner`'s own control-channel listener -- treats
+    /// that message as "a termination was explicitly requested", which makes `cmd`
+    /// return an error (aborting the whole script, not just this one command) even for
+    /// an entirely ordinary signal-caused death (e.g. a pipeline stage killed by
+    /// `SIGPIPE`, or a process that terminates itself with `kill -TERM $$`) that was
+    /// never meant to be treated as a `terminate` request at all. Confirmed directly:
+    /// routing a plain `SIGTERM`-killed `cmd sh -c 'kill -TERM $$'` through the full
+    /// `terminate()` above made the enclosing script abort instead of continuing past
+    /// it, exactly the regression this method exists to avoid.
+    pub fn mark_terminated(&mut self) {
+        self.status = JobStatus::Terminated;
     }
 
     pub fn pause(&mut self) -> CrushResult<()> {

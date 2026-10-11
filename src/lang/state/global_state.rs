@@ -193,6 +193,7 @@ impl GlobalState {
             parent,
             job_control_data: job.weak_ref(),
             terminated_snapshot: None,
+            terminated_snapshot_age: 0,
         };
         data.jobs.push(jd);
         job
@@ -420,46 +421,78 @@ impl GlobalState {
         data.title = prompt;
     }
 
-    /// See `JobData::terminated_snapshot`'s doc comment for why the `None` arm here
-    /// falls back to a snapshot instead of just omitting the job: without it, a job
-    /// killed via `terminate` (and, since `spawn_child_wait` in `cmd.rs` now also calls
-    /// `terminate` when an external process dies from a real signal, via `host:signal`
-    /// too) would never actually be observable as `Terminated` through `jobs` -- its
-    /// entry would just silently disappear, every time, because creating *this* `jobs`
-    /// job already reaped it (see `create_job_handle_with_parent`) before this method
-    /// ever got to look.
+    /// The plain list of currently *live* jobs -- never includes a merely-remembered
+    /// `terminated_snapshot` row (see that field's doc comment, and
+    /// `jobs_for_listing` just below). Every internal caller that needs to know whether
+    /// work is still genuinely running -- `exit`'s own "are there other jobs" check,
+    /// `timeout`'s grace-period polling loop, anything else under `src/builtins` -- must
+    /// keep using this one, not `jobs_for_listing`. Confirmed directly: handing a
+    /// snapshot row to `exit`'s check made `exit` wrongly refuse ("There are running
+    /// jobs.") long after a terminated job's process was actually gone, and handing one
+    /// to `timeout`'s polling loop made it treat an already-dead job as still alive.
+    pub fn jobs(&self) -> Vec<JobInfo> {
+        let data = self.data.lock().unwrap();
+        let mut res = Vec::new();
+        for jd in data.jobs.iter() {
+            if let Some(arc) = jd.job_control_data.upgrade() {
+                let live_job = arc.lock().unwrap();
+                res.push(JobInfo {
+                    id: jd.id,
+                    job_type: jd.job_type,
+                    definition: live_job.definition.clone(),
+                    status: live_job.status(),
+                    parent: jd.parent,
+                });
+            }
+        }
+        res
+    }
+
+    /// Like `jobs`, but used *only* by the `jobs` builtin command itself (see
+    /// `src/builtins/control/mod.rs`): additionally reports a job that was just
+    /// terminated -- via `terminate`, or a signal death noticed by `cmd.rs`'s
+    /// `spawn_child_wait` -- one last time, falling back to its `terminated_snapshot`
+    /// once its live data is already gone (see that field's doc comment for why a
+    /// fallback is needed at all: an external job's underlying thread can finish, and
+    /// so get reaped, within microseconds of being killed -- long before *any*
+    /// subsequent `jobs` listing, which always reaps already-finished jobs first, could
+    /// otherwise have seen it).
+    ///
+    /// A job with an unconsumed snapshot is always reported *from the snapshot*, even
+    /// if its live data happens to still be alive at this exact instant (about to die
+    /// any moment) -- never from both, and never live-then-snapshot across two calls
+    /// reporting the same status twice: there is exactly one source of truth for a
+    /// terminated job's row at any given moment, and once it has one it stays that way
+    /// until actually removed.
     ///
     /// Reported snapshots are consumed here (cleared back to `None`) so each one is only
     /// ever shown once -- the next reap pass (`remove_finished_jobs`) then actually
     /// removes the now-unconsumed, dead entry.
-    pub fn jobs(&self) -> Vec<JobInfo> {
+    pub fn jobs_for_listing(&self) -> Vec<JobInfo> {
         let mut data = self.data.lock().unwrap();
         let mut res = Vec::new();
         let mut consumed = Vec::new();
         for jd in data.jobs.iter() {
-            match jd.job_control_data.upgrade() {
-                Some(arc) => {
-                    let live_job = arc.lock().unwrap();
-                    res.push(JobInfo {
-                        id: jd.id,
-                        job_type: jd.job_type,
-                        definition: live_job.definition.clone(),
-                        status: live_job.status(),
-                        parent: jd.parent,
-                    });
-                }
-                None => {
-                    if let Some(definition) = &jd.terminated_snapshot {
-                        res.push(JobInfo {
-                            id: jd.id,
-                            job_type: jd.job_type,
-                            definition: definition.clone(),
-                            status: JobStatus::Terminated,
-                            parent: jd.parent,
-                        });
-                        consumed.push(jd.id);
-                    }
-                }
+            if let Some(definition) = &jd.terminated_snapshot {
+                res.push(JobInfo {
+                    id: jd.id,
+                    job_type: jd.job_type,
+                    definition: definition.clone(),
+                    status: JobStatus::Terminated,
+                    parent: jd.parent,
+                });
+                consumed.push(jd.id);
+                continue;
+            }
+            if let Some(arc) = jd.job_control_data.upgrade() {
+                let live_job = arc.lock().unwrap();
+                res.push(JobInfo {
+                    id: jd.id,
+                    job_type: jd.job_type,
+                    definition: live_job.definition.clone(),
+                    status: live_job.status(),
+                    parent: jd.parent,
+                });
             }
         }
         for id in consumed {
@@ -474,13 +507,41 @@ impl GlobalState {
     /// comment) -- so terminating a job that's currently running a closure (e.g. one of
     /// `stream:tee`'s branches) also reaches whatever that closure's own body is doing,
     /// not just `jid`'s own directly-registered controllers.
+    ///
+    /// Only `jid` itself gets a `terminated_snapshot` (see that field's doc comment) --
+    /// descendants are terminated exactly as before this existed (status flip + control
+    /// broadcast only). Otherwise a single `terminate` on a job with several nested
+    /// closure jobs underneath it would leave one phantom "Terminated" row per
+    /// descendant for `jobs` to report, instead of just the one row the user actually
+    /// asked about.
     pub fn terminate(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
-        let res = terminate_one(&mut data, jid);
+        let res = terminate_and_snapshot(&mut data, jid);
         for id in descendant_job_ids(&data, jid) {
-            let _ = terminate_one(&mut data, id);
+            if let Ok(job) = get_job(&mut data, id, false) {
+                if let Ok(mut guard) = job.lock() {
+                    let _ = guard.terminate();
+                }
+            }
         }
         res
+    }
+
+    /// Notes that `jid`'s underlying external process was observed to have died from a
+    /// real OS signal sent directly to it (e.g. via `host:signal`), entirely bypassing
+    /// crush's own job-control plumbing -- called from `cmd.rs`'s `spawn_child_wait`.
+    /// Bookkeeping only (see `JobControlData::mark_terminated`): deliberately does
+    /// *not* notify this job's registered controllers the way `terminate` does, since
+    /// the process is already dead and nothing needs telling -- broadcasting a real
+    /// `StreamControlMessage::Terminate` here would instead make `cmd`'s own
+    /// `wait_for_child_inner` treat this as an explicit termination request and return
+    /// an error, aborting the enclosing script even for an entirely ordinary
+    /// signal-caused death (a pipeline stage killed by `SIGPIPE`, say). Takes the same
+    /// `terminated_snapshot` as `terminate` so `jobs` can still report it once, for the
+    /// same reason.
+    pub fn mark_terminated_by_signal(&self, jid: JobId) {
+        let mut data = self.data.lock().unwrap();
+        let _ = mark_terminated_and_snapshot(&mut data, jid);
     }
 
     /// Like `terminate`, but pauses `jid` and every job nested inside it.
@@ -652,7 +713,7 @@ fn get_job(
 /// only caller, for that) and snapshots its definition into its `JobData` entry's
 /// `terminated_snapshot` (see that field's doc comment for why) in the same breath,
 /// while `job_control_data` (found via `get_job`, just above) is still guaranteed alive.
-fn terminate_one(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
+fn terminate_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
     let arc = get_job(data, jid, false)?;
     let definition = {
         let mut guard = arc.lock()?;
@@ -660,10 +721,35 @@ fn terminate_one(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()
         guard.terminate()?;
         definition
     };
+    snapshot(data, jid, definition);
+    Ok(())
+}
+
+/// Like `terminate_and_snapshot`, but for `GlobalState::mark_terminated_by_signal`:
+/// marks the job `Terminated` via `JobControlData::mark_terminated` (bookkeeping only,
+/// no controller broadcast -- see that method's doc comment for why) rather than the
+/// full `terminate`, and likewise takes a snapshot while `job_control_data` is still
+/// guaranteed alive.
+fn mark_terminated_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
+    let arc = get_job(data, jid, false)?;
+    let definition = {
+        let mut guard = arc.lock()?;
+        let definition = guard.definition.clone();
+        guard.mark_terminated();
+        definition
+    };
+    snapshot(data, jid, definition);
+    Ok(())
+}
+
+/// Records `definition` as `jid`'s `terminated_snapshot`, resetting its reap-pass age
+/// (see `JobData::terminated_snapshot_age`) back to 0 -- shared by
+/// `terminate_and_snapshot` and `mark_terminated_and_snapshot`.
+fn snapshot(data: &mut MutexGuard<StateData>, jid: JobId, definition: String) {
     if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == jid) {
         jd.terminated_snapshot = Some(definition);
+        jd.terminated_snapshot_age = 0;
     }
-    Ok(())
 }
 
 /// Every currently-live job nested (directly or transitively) inside `jid` -- e.g. a
@@ -709,6 +795,14 @@ fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
     result
 }
 
+/// How many `remove_finished_jobs` passes an unconsumed `terminated_snapshot` survives
+/// before being dropped anyway -- see `JobData::terminated_snapshot_age`. `jobs`
+/// listings and job creation happen often enough in any normal session that this bounds
+/// the leak without ever realistically being hit by a user who checks `jobs` at any
+/// point afterward; it only kicks in if a terminated/signal-killed job's snapshot is
+/// simply never looked at again.
+const MAX_TERMINATED_SNAPSHOT_AGE: u32 = 1000;
+
 /// Reaps dead jobs and orphans anything that pointed at one as its `parent`.
 ///
 /// `JobId`s are recycled (`next_id` hands out the smallest currently-unused one) the
@@ -722,15 +816,23 @@ fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
 fn remove_finished_jobs(data: &mut MutexGuard<StateData>) {
     let mut res = Vec::new();
     let mut dead_ids = HashSet::new();
-    for jd in data.jobs.drain(..) {
+    for mut jd in data.jobs.drain(..) {
         match jd.job_control_data.strong_count() {
             // A dead job that still carries an unconsumed `terminated_snapshot` (see that
-            // field's doc comment) is kept around for one more generation, so a `jobs()`
-            // call gets a chance to report it `Terminated` before it's actually pruned --
-            // without this, it would be removed right here, in the very same
-            // `create_job_handle_with_parent` call that's about to dispatch the `jobs`
-            // job that would otherwise have reported it.
-            0 if jd.terminated_snapshot.is_none() => {
+            // field's doc comment) is kept around for one more generation, so a
+            // `jobs_for_listing` call gets a chance to report it `Terminated` before
+            // it's actually pruned -- without this, it would be removed right here, in
+            // the very same `create_job_handle_with_parent` call that's about to
+            // dispatch the `jobs` job that would otherwise have reported it. Bounded by
+            // `terminated_snapshot_age` (see `MAX_TERMINATED_SNAPSHOT_AGE`) so a
+            // snapshot nobody ever consumes doesn't keep this entry around forever.
+            0 if jd.terminated_snapshot.is_some()
+                && jd.terminated_snapshot_age < MAX_TERMINATED_SNAPSHOT_AGE =>
+            {
+                jd.terminated_snapshot_age += 1;
+                res.push(jd);
+            }
+            0 => {
                 dead_ids.insert(jd.id);
             }
             _ => {

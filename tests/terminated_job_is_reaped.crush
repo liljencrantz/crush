@@ -24,22 +24,34 @@ terminate $job_id
 sleep $(duration:of milliseconds=500)
 
 # `terminate` leaves a one-time snapshot behind (`JobData::terminated_snapshot`, see
-# `src/lang/state/global_state.rs`) specifically so a *subsequent* `jobs` can report
+# `src/lang/state/global_state.rs`) specifically so the *next* `jobs` listing can report
 # "Terminated" for this job at least once -- see `tests/vt_terminate_and_signal_
 # external_job.crush` -- rather than it silently vanishing before anyone ever gets a
 # chance to see it died (an external `cmd` job's underlying thread can finish, and so
 # get reaped, within microseconds of being killed -- long before any human or script
-# could plausibly react). That snapshot is consumed (and the job actually pruned) by
-# the first `jobs` call to read it, so this throwaway listing exists purely to consume
-# it before the real assertion below, which must still see the job gone one listing
-# later.
-$(jobs | materialize)
-
+# could plausibly react). Pin that contract directly rather than just consuming past
+# it: the first `jobs` call after termination must show exactly this one row, with
+# status "Terminated"; only the *second* call (which consumes the snapshot) must show
+# it gone.
+#
 # Matched by a distinctive sleep duration rather than by id: ids get recycled (see
-# tests/job_orphaning_on_parent_death.crush), so the very next job created here --
-# this jobs pipeline itself -- could plausibly be handed $job_id's own freed id,
-# and filtering on `id == $job_id` would then wrongly match jobs' own still-running
-# row instead of correctly finding nothing.
+# tests/job_orphaning_on_parent_death.crush), so a later job created here (a `jobs`
+# pipeline itself) could plausibly be handed $job_id's own freed id, and filtering on
+# `id == $job_id` would then wrongly match jobs' own still-running row instead of
+# correctly finding nothing.
+#
+# `count`/field access are read from a plain variable assigned *once* up front
+# (`$first_rows`/`$first_count`), rather than re-piping `$first_rows | count` inline a
+# second time inside the `assert` call itself -- confirmed directly that re-evaluating
+# the same materialized table through a second `| count` this way, rather than through
+# a variable already holding the computed integer, does not reliably return the same
+# answer twice.
+$first_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | materialize)
+$first_count := $($first_rows | count)
+assert ($first_count == 1) "a terminated external-command job should be reported once, with status Terminated, on the next jobs listing"
+$first_status := ($first_rows[0]):status
+assert ($first_status == "Terminated") "the one-time report of a terminated external-command job should have status Terminated"
+
 $remaining_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | materialize)
 $remaining_count := $($remaining_rows | count)
 assert ($remaining_count == 0) "a terminated external-command job should eventually be reaped from jobs, not linger forever"

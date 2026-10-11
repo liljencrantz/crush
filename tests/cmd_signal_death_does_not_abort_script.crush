@@ -1,0 +1,22 @@
+# Regression test: an external `cmd` whose process dies from an ordinary OS signal
+# (not through crush's own `terminate`) must not abort the rest of the script.
+#
+# Root cause: `spawn_child_wait`'s waiter thread (src/builtins/control/cmd.rs) used to
+# route *any* signal-caused child death through the full `GlobalState::terminate`, which
+# broadcasts a real `StreamControlMessage::Terminate` to every controller registered for
+# the job -- including `wait_for_child_inner`'s own control-channel listener, which
+# treats that message as an explicit termination request and returns an error. That
+# made `cmd` itself fail (aborting the enclosing script) even for a signal the user
+# never asked crush to send -- here, the child process terminates *itself* with
+# `kill -TERM $$`, something a perfectly ordinary external command might do for its own
+# reasons, with nothing to do with crush's job control at all.
+#
+# Fixed by routing a signal-caused death through `GlobalState::mark_terminated_by_signal`
+# instead: bookkeeping only (status + the one-time `jobs` snapshot, see
+# `tests/terminated_job_is_reaped.crush`), with no controller broadcast.
+#
+# A top-level job's error aborts the rest of the script (see `execute.rs`'s `source()`),
+# so performing the fragile operation and then echoing a marker afterward turns "does
+# this abort?" into a plain stdout diff: the marker only appears if it didn't.
+cmd sh -c "kill -TERM $$"
+echo "after"

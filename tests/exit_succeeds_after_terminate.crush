@@ -1,0 +1,21 @@
+# Regression test: `exit` must succeed normally after a job was `terminate`d, even
+# though `terminate` leaves a one-time "Terminated" snapshot behind for `jobs` to report
+# (see `tests/terminated_job_is_reaped.crush`).
+#
+# Root cause: `GlobalState::jobs()` used to hand back that snapshot row to *every*
+# caller, not just the `jobs` builtin -- including `exit`'s own `random_other_job` check
+# (src/builtins/control/mod.rs), which treats any row `jobs()` returns as "another job
+# still running" and refuses to exit ("There are running jobs.") unless `--force` is
+# given. That made a single terminated job -- long after its process was actually
+# gone -- block the *next* `exit` call, even with no snapshot ever consumed via a `jobs`
+# listing in between.
+#
+# Fixed by splitting `GlobalState::jobs()` (live jobs only -- used by `exit`, `timeout`,
+# and everything else that needs to know whether work is still genuinely running) from
+# `GlobalState::jobs_for_listing()` (used only by the `jobs` builtin itself, which is the
+# one place that should still report a job that was just terminated).
+$job_id := $(cmd sleep 8171 &)
+sleep $(duration:of milliseconds=300)
+terminate $job_id
+sleep $(duration:of milliseconds=500)
+exit
