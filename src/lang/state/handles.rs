@@ -227,20 +227,36 @@ pub struct JobData {
     /// `mark_terminated_and_snapshot`'s own re-snapshot guard in place -- the second
     /// one via the live branch, not a second snapshot.
     pub terminated_reported: bool,
-    /// True if this job was itself started with a trailing `&`, or is nested (however
-    /// many levels deep, via `parent`) inside one that was -- inherited from the
-    /// parent's own value at *creation* time (`GlobalState::create_job_handle_with_parent`)
-    /// and set on a top-level backgrounded job itself by `GlobalState::
-    /// mark_background_context` (called from `Job::eval`'s `is_background` branch,
-    /// before dispatching anything that could create a nested job under it).
+    /// True while this job is *not* holding the foreground -- directly, or because some
+    /// job it's nested inside (however many levels deep) isn't. The single source of
+    /// truth for that question; query it via `GlobalState::is_backgrounded`.
     ///
-    /// Deliberately baked in at creation rather than discovered later by walking live
-    /// `parent` links -- see `GlobalState::is_in_background_context`'s doc comment for
-    /// why a live walk doesn't work here (the outer backgrounded job in a shape like
-    /// `{ cmd sleep 100 } &` typically finishes and gets reaped, its `parent` link
-    /// severed by `remove_finished_jobs`'s orphaning logic, well before anything might
-    /// need to ask "was this nested job's ancestor ever backgrounded").
-    pub background_context: bool,
+    /// Maintained at every transition, never derived later:
+    /// - **Creation:** copied from the parent's own value
+    ///   (`GlobalState::create_job_handle_with_parent`).
+    /// - **Leaving the foreground** -- set to `true` on the job *and every live
+    ///   descendant*, at exactly two places:
+    ///   - a trailing `&`: the very top of `Job::eval`, before any stage dispatches;
+    ///   - any pause: `GlobalState::pause`, the single choke point every pause goes
+    ///     through (Ctrl-Z, the `pause` builtin, a kernel stop seen by `cmd`, a re-pause
+    ///     while `fg` waits), before any controller hears about it. This matters even
+    ///     when no `Job::eval` ever registers the paused job as a background job -- e.g.
+    ///     Ctrl-Z on `{ { cmd sleep 100 } }` pauses only the innermost statement's job.
+    ///   (`bg`/`resume` resume a job in place and leave it `true`.)
+    /// - **Regaining the foreground** -- `fg` (`wait_for_background_job`) sets it on the
+    ///   job and its live descendants to the `fg` caller's *own* value: the job now holds
+    ///   exactly as much of the foreground as whoever is waiting on it.
+    ///
+    /// Baked into each job's own entry rather than discovered later by walking live
+    /// `parent` links, because that walk doesn't survive the case that matters: the outer
+    /// backgrounded job in a shape like `{ cmd sleep 100 } &` finishes its own dispatch
+    /// and gets reaped almost immediately, and `remove_finished_jobs`'s orphaning logic
+    /// then clears `parent` on the nested `cmd` job, long before the `sleep` dies. The
+    /// descendant walks at the transitions above happen while the job being changed is
+    /// alive by definition, and use the very same walk `pause`/`resume_foreground`
+    /// themselves use to reach descendants, so "which jobs were paused/resumed" and
+    /// "which jobs changed foreground status" always agree.
+    pub backgrounded: bool,
 }
 
 impl JobControlData {

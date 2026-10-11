@@ -1,0 +1,33 @@
+# A `cmd` inside a block in a *non-last* stage of a trailing-`&` pipeline
+# (`{ cmd sleep N; seq 3 } | count &`) must still show up as `Terminated` after its
+# process is killed with `host:signal`. `Job::eval` must mark a trailing-`&` job as not
+# holding the foreground before *any* stage dispatches, not just before the last one --
+# earlier stages create nested jobs too (see `JobData::backgrounded`).
+#
+# Counts `Terminated` rows rather than filtering by id; pid lookup and settle delays
+# follow `vt_terminate_and_signal_external_job.crush` (see its header).
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "$my_pid := $(crush:pid)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "{ cmd sleep 7433; seq 3 } | count &\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=1000)
+$t:write "host:signal $pid signal=SIGKILL\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "echo $(\"FIRST_STAGE_CHECK_{}\":format $n)\n"
+$t:wait_for "FIRST_STAGE_CHECK_1"
+
+$t:close
+echo "ok"

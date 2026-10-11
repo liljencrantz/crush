@@ -257,20 +257,20 @@ fn spawn_child_wait(
                         // script aborted instead of continuing past it when this instead
                         // called the full `terminate`.
                         //
-                        // Only for a job started with a trailing `&` -- possibly
-                        // several levels up (`is_in_background_context`; e.g. `{ cmd
-                        // sleep 100 } &`, where this specific `cmd`'s own job id is
-                        // nested under the backgrounded block's): every
-                        // `terminate`/`host:signal` scenario this exists for targets
-                        // one, and gating on it avoids leaving a misleading one-time
-                        // "Terminated" row behind for an entirely ordinary
+                        // Only for a job not currently holding the foreground, directly
+                        // or via an ancestor, however it got there (`is_backgrounded`:
+                        // trailing `&`, `{ cmd sleep 100 } &` where this `cmd`'s own
+                        // job id is nested under the block's, or a pause such as
+                        // Ctrl-Z followed by `bg`): every `terminate`/`host:signal`
+                        // scenario this exists for targets one, and gating on it
+                        // avoids leaving a misleading one-time "Terminated" row behind for an entirely ordinary
                         // *foreground* command that happens to die from a signal for
                         // reasons that have nothing to do with job control at all (e.g.
                         // an interactive pipeline stage killed by `SIGPIPE`) -- nobody
                         // asked job control about that command at all, so `jobs`
                         // reporting it one more time after the fact would be
                         // misleading, not helpful.
-                        if global_state.is_in_background_context(job_id) {
+                        if global_state.is_backgrounded(job_id) {
                             global_state.mark_terminated_by_signal(job_id);
                         }
                         ChildEvent::Done(Ok(()))

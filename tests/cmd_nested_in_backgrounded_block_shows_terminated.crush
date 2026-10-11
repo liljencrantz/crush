@@ -19,7 +19,7 @@
 # showed zero `Terminated` rows afterward (should show one, same as a bare `cmd sleep
 # 7413 &`).
 #
-# Fixed by `JobData::background_context` (see `src/lang/state/global_state.rs`):
+# Fixed by `JobData::backgrounded` (see `src/lang/state/handles.rs`):
 # inherited from the parent's own value at job *creation* time (baked in before any
 # pruning could ever sever it), rather than discovered later by walking live `parent`
 # links.

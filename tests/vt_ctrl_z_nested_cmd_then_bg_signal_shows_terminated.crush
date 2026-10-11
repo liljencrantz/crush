@@ -1,0 +1,48 @@
+# Ctrl-Z on a *foreground* block containing a `cmd` (`{ { cmd sleep N } }`), then `bg`,
+# then killing the process with `host:signal`, must leave the `cmd` job reported as
+# `Terminated` -- same as `vt_ctrl_z_bg_then_signal_shows_terminated.crush`, but nested.
+#
+# This shape pauses only the innermost statement's job (the one `current_job()` finds),
+# and no `Job::eval` ever registers it as a background job, so "this job left the
+# foreground" can't be tied to that registration -- it's recorded by
+# `GlobalState::pause` itself (see `JobData::backgrounded`). Found while enumerating
+# every way a job can stop holding the foreground.
+#
+# The paused job's id is looked up (highest-id `Paused` row) rather than hardcoded, since
+# it depends on how many intermediate block jobs exist. Pid lookup and settle delays
+# follow `vt_terminate_and_signal_external_job.crush` (see its header).
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "{ { cmd sleep 7432 } }\n"
+$t:wait_for "sleep"
+sleep $(duration:of milliseconds=500)
+$t:write $t:control:z
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "$bgid := ($(jobs | where {($status == \"Paused\")} | select id | sort id reverse=$true))[0]:id\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "bg $bgid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+
+$t:write "$my_pid := $(crush:pid)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=1000)
+$t:write "host:signal $pid signal=SIGKILL\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "echo $(\"NESTED_Z_CHECK_{}\":format $n)\n"
+$t:wait_for "NESTED_Z_CHECK_1"
+
+$t:close
+echo "ok"

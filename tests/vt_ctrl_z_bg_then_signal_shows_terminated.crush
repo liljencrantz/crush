@@ -1,0 +1,50 @@
+# Regression test: an external job that stopped holding the foreground via Ctrl-Z (and
+# was then resumed in place with `bg`) -- rather than via a trailing `&` -- must still
+# show up as `Terminated` in `jobs` after being killed by a real signal sent straight to
+# its process with `host:signal`, exactly like a `cmd sleep N &` job does (see
+# `vt_terminate_and_signal_external_job.crush`).
+#
+# Root cause: `cmd.rs`'s signal-death bookkeeping is deliberately limited to jobs that
+# aren't holding the foreground (so an ordinary foreground command dying from an
+# unrelated signal doesn't leave a phantom "Terminated" row), but the check it used only
+# knew about the trailing-`&` way of not holding the foreground -- Ctrl-Z/`pause` is a
+# separate code path, so a Ctrl-Z'd, `bg`'d job killed this way silently vanished from
+# `jobs` instead. Fixed by having `GlobalState::pause` mark the job too (see
+# `JobData::backgrounded`).
+#
+# Job id `0`: same reasoning as `vt_bg_resumes_without_foregrounding.crush` -- the sleep
+# is the first command typed into this fresh nested session. `$my_pid` is captured only
+# afterwards so that holds. The pid lookup and settle delays follow
+# `vt_terminate_and_signal_external_job.crush` (see its header for why each is needed).
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "cmd sleep 7419\n"
+$t:wait_for "sleep"
+sleep $(duration:of milliseconds=300)
+$t:write $t:control:z
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "bg 0\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "$my_pid := $(crush:pid)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "host:signal $pid signal=SIGKILL\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$status := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "echo $(\"BG_SIG_CHECK_{}\":format $status)\n"
+$t:wait_for "BG_SIG_CHECK_Terminated"
+
+$t:close
+echo "ok"

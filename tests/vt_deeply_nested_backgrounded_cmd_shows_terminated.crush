@@ -1,0 +1,37 @@
+# A `cmd` nested three blocks deep inside a trailing-`&` job (`{ { { cmd sleep N } } } &`)
+# must still show up as `Terminated` after its process is killed by a real signal sent
+# straight to it with `host:signal` -- the deeper sibling of
+# `cmd_nested_in_backgrounded_block_shows_terminated.crush`. Every intermediate block job
+# finishes and is reaped long before the `sleep` dies, severing the `parent` links in
+# between, so this only works because "not holding the foreground" is inherited by each
+# nested job at creation time (see `JobData::backgrounded`).
+#
+# Checked by counting `Terminated` rows rather than filtering by id or definition: the
+# nested job's id depends on how many intermediate jobs exist, and this session has
+# nothing else that could be `Terminated`. Pid lookup and settle delays follow
+# `vt_terminate_and_signal_external_job.crush` (see its header for why each is needed).
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "$my_pid := $(crush:pid)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "{ { { cmd sleep 7431 } } } &\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=1000)
+$t:write "host:signal $pid signal=SIGKILL\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "echo $(\"DEEP_CHECK_{}\":format $n)\n"
+$t:wait_for "DEEP_CHECK_1"
+
+$t:close
+echo "ok"

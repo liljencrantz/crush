@@ -188,11 +188,11 @@ impl GlobalState {
         let id = next_id(&data);
         let job = JobHandle::new(id);
         // Inherited from the parent's own value, if it has one, at creation time --
-        // see `JobData::background_context`'s doc comment for why this must happen
-        // now rather than being discovered later by walking `parent`.
-        let background_context = parent
+        // see `JobData::backgrounded`'s doc comment for why this must happen now rather
+        // than being discovered later by walking `parent`.
+        let backgrounded = parent
             .and_then(|p| data.jobs.iter().find(|jd| jd.id == p))
-            .is_some_and(|jd| jd.background_context);
+            .is_some_and(|jd| jd.backgrounded);
         let jd = JobData {
             id,
             job_type,
@@ -201,7 +201,7 @@ impl GlobalState {
             terminated_snapshot: None,
             terminated_snapshot_age: 0,
             terminated_reported: false,
-            background_context,
+            backgrounded,
         };
         data.jobs.push(jd);
         job
@@ -607,9 +607,19 @@ impl GlobalState {
     }
 
     /// Like `terminate`, but pauses `jid` and every job nested inside it.
+    ///
+    /// A paused job no longer holds the foreground (the prompt comes back; only `fg`
+    /// gives it the foreground again -- `bg`/`resume` resume it in place), so this is
+    /// also the one place every pause -- Ctrl-Z, the `pause` builtin, a kernel-imposed
+    /// stop of an external command (`cmd.rs`'s `Stopped` arm) -- marks the job and its
+    /// descendants `backgrounded` (see `JobData::backgrounded`).
     pub fn pause(&self, jid: JobId) -> CrushResult<()> {
         let mut data = self.data.lock().unwrap();
-        let res = get_job(&mut data, jid, true)?.lock()?.pause();
+        let arc = get_job(&mut data, jid, true)?;
+        // Before any controller hears about the pause, so nothing woken by it (e.g.
+        // `Job::eval`'s pause branch) can observe the job as still foreground.
+        set_backgrounded(&mut data, jid, true);
+        let res = arc.lock()?.pause();
         for id in descendant_job_ids(&data, jid) {
             if let Ok(job) = get_job(&mut data, id, false) {
                 if let Ok(mut guard) = job.lock() {
@@ -668,60 +678,53 @@ impl GlobalState {
         Ok(JobHandle::from(jid, arc))
     }
 
-    /// Register a job started in the background (i.e. `Job::eval()` saw its
-    /// `is_background` flag set): `value` is the receiver for whatever the pipeline's
-    /// actual last stage eventually sends, to be retrieved later via `fg`.
+    /// Register a job whose eventual result should be retrievable later via `fg` --
+    /// started with a trailing `&`, or paused (e.g. Ctrl-Z) while `Job::eval` or `fg`
+    /// was waiting on it: `value` is the receiver for whatever the pipeline's actual last
+    /// stage eventually sends.
+    ///
+    /// Deliberately *not* where a job's foreground status changes (see
+    /// `JobData::backgrounded`): by the time any caller registers a job here, it has
+    /// already been marked -- by `Job::eval`'s trailing-`&` check, or by `pause` -- and
+    /// a paused job nested inside a foreground one is never registered here at all.
     pub fn add_background_job(&self, job_id: JobId, value: ValueReceiver) {
         let mut data = self.data.lock().unwrap();
         data.background_jobs.push(BackgroundJob { job_id, value });
     }
 
-    /// True if `job_id` is currently registered as a background job (started with a
-    /// trailing `&`, not yet `fg`'d). See `recv_job_result`'s doc comment for why this
-    /// matters: a background job's own real work is deliberately left running, unjoined,
-    /// under this same `job_id` even after the wrapper value announcing it has already
-    /// been delivered -- so, unlike an ordinary plain value, receiving that announcement
-    /// must never be treated as "this job_id has nothing left to do".
+    /// True if `job_id` currently has a pending result registered in the background-job
+    /// registry (not yet `fg`'d). This is a question about that *registry* -- "is there
+    /// a parked result receiver for this exact id" -- used by `recv_job_result` to decide
+    /// whether receiving a plain value means the job's threads are done (see its doc
+    /// comment). It is deliberately *not* the answer to "is this job holding the
+    /// foreground": a job nested inside a backgrounded one is never itself registered
+    /// here. Use `is_backgrounded` for that.
     pub fn is_background_job(&self, job_id: JobId) -> bool {
         let data = self.data.lock().unwrap();
         data.background_jobs.iter().any(|job| job.job_id == job_id)
     }
 
-    /// True if `job_id` was itself started with a trailing `&`, or is nested (however
-    /// many levels deep) inside a job that was -- e.g. a `cmd` running inside a
-    /// backgrounded block (`{ cmd sleep 100 } &`) gets its own, distinct, *nested* job
-    /// id (`create_nested_job_handle`), never itself registered in `background_jobs`.
-    ///
-    /// Backed by `JobData::background_context`, inherited from the parent at job
-    /// *creation* time (`create_job_handle_with_parent`) rather than discovered by
-    /// walking live `parent` links when asked: a parent-link walk turns out to be
-    /// structurally insufficient here, because the *outer* backgrounded job in a shape
-    /// like `{ cmd sleep 100 } &` finishes its own synchronous dispatch (handing off to
-    /// the external process and returning) essentially immediately, and gets reaped --
-    /// at which point `remove_finished_jobs`'s own orphaning logic deliberately clears
-    /// `parent` on every job that pointed at it (see that function's doc comment for
-    /// why: a dead job's id gets recycled, and a stale `parent` pointing at it would
-    /// otherwise misattribute ancestry to whatever unrelated job reuses that id).
-    /// `background_context` survives exactly that, because it's copied into the child's
-    /// own `JobData` once, up front, before any of that pruning can happen.
-    pub fn is_in_background_context(&self, job_id: JobId) -> bool {
+    /// True if `job_id` is currently not holding the foreground, directly or via any
+    /// job it's nested inside (however many levels deep), however it got there --
+    /// trailing `&`, or a pause (Ctrl-Z, `pause`, a kernel stop), possibly followed by
+    /// `bg`. See `JobData::backgrounded` for how that's kept current at every
+    /// transition, and why it's stored per job rather than computed by walking
+    /// `parent` links at query time.
+    pub fn is_backgrounded(&self, job_id: JobId) -> bool {
         let data = self.data.lock().unwrap();
         data.jobs
             .iter()
             .find(|jd| jd.id == job_id)
-            .is_some_and(|jd| jd.background_context)
+            .is_some_and(|jd| jd.backgrounded)
     }
 
-    /// Marks `job_id`'s own `JobData` entry as a background-context job (see
-    /// `JobData::background_context`) -- called by `Job::eval`'s `is_background`
-    /// branch, on *itself*, before dispatching its last stage, so any nested job
-    /// created during that dispatch (e.g. `new_nested` for a closure body's
-    /// statements) inherits it at creation time.
-    pub fn mark_background_context(&self, job_id: JobId) {
+    /// Sets `job_id`'s and its live descendants' foreground status (see
+    /// `JobData::backgrounded`). Called with `true` by `Job::eval` for a trailing-`&`
+    /// job, before any of its stages dispatch, and by `fg` with its own caller's value
+    /// when handing a job the foreground back. (`pause` sets it too, internally.)
+    pub fn set_backgrounded(&self, job_id: JobId, backgrounded: bool) {
         let mut data = self.data.lock().unwrap();
-        if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == job_id) {
-            jd.background_context = true;
-        }
+        set_backgrounded(&mut data, job_id, backgrounded);
     }
 
     /// Remove and return the named background job's receiver, if one is registered.
@@ -910,6 +913,18 @@ fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
         }
     }
     result
+}
+
+/// Sets `JobData::backgrounded` on `jid` and every job currently nested inside it (the
+/// same `descendant_job_ids` walk `pause`/`resume_foreground` use to reach descendants).
+fn set_backgrounded(data: &mut MutexGuard<StateData>, jid: JobId, backgrounded: bool) {
+    let mut ids = descendant_job_ids(data, jid);
+    ids.push(jid);
+    for jd in data.jobs.iter_mut() {
+        if ids.contains(&jd.id) {
+            jd.backgrounded = backgrounded;
+        }
+    }
 }
 
 /// How many `remove_finished_jobs` passes an unconsumed `terminated_snapshot` survives

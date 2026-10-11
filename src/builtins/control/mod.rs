@@ -395,6 +395,17 @@ fn wait_for_background_job(
     // the terminal again if it wants it (e.g. a stopped `cmd emacs &`), unlike `bg`,
     // which deliberately leaves the terminal with crush's own process group. See
     // `JobControl::resume_foreground`.
+    //
+    // The job now holds exactly as much of the foreground as this `fg` invocation
+    // itself does (fully, from the interactive prompt; not at all, from inside a
+    // backgrounded block) -- see `JobData::backgrounded`. Set before resuming, so the
+    // job never runs with a stale value.
+    let caller_backgrounded = context
+        .global_state
+        .is_backgrounded(context.command_handle().job_handle.id());
+    context
+        .global_state
+        .set_backgrounded(job_id, caller_backgrounded);
     let _ = context.global_state.resume_foreground(job_id);
 
     match v.recv_or_pause(&control_receiver)? {
