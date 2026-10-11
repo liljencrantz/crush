@@ -202,6 +202,26 @@ pub struct JobData {
     /// snapshot nobody ever consumes (no `jobs` call made afterward) doesn't pin this
     /// `JobData` entry, and its id, in `data.jobs` forever.
     pub terminated_snapshot_age: u32,
+    /// Set the first time `GlobalState::jobs_for_listing` ever reports this job as
+    /// `Terminated` -- via *either* `terminated_snapshot` or its live status happening
+    /// to already read `Terminated` -- and checked (and never unset) by every later
+    /// call, which skips this job entirely once it's set, regardless of whether its
+    /// live data is still alive.
+    ///
+    /// Exists because the one-time `terminated_snapshot` fallback alone isn't enough to
+    /// guarantee "reported exactly once": once consumed, a later `jobs_for_listing`
+    /// call falls through to the live branch, which can still legitimately read
+    /// `Terminated` for a while (the underlying thread hasn't finished exiting and
+    /// being reaped yet) -- or, for a job whose work never actually stops at all (e.g.
+    /// an internal closure/loop that never checks its own control channel), forever.
+    /// Confirmed directly: two back-to-back `jobs` listings right after `terminate`,
+    /// with no settle delay in between, intermittently both reported the job
+    /// `Terminated` even with `mark_terminated_and_snapshot`'s own re-snapshot guard in
+    /// place -- the second one via the live branch, not a second snapshot. Reset back
+    /// to `false` by `snapshot` (see that function) whenever a fresh `terminate` call
+    /// takes a new snapshot, so an explicit second `terminate` on the same job still
+    /// gets its own one-time report.
+    pub terminated_reported: bool,
 }
 
 impl JobControlData {

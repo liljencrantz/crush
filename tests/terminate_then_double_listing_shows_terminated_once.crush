@@ -1,0 +1,55 @@
+# Regression test: a `terminate`d job must be reported `Terminated` by `jobs` exactly
+# once, even when two `jobs` listings are taken back-to-back with no settle delay in
+# between -- not "Terminated" on both.
+#
+# Root cause (two, actually, both closed by the same fix): `terminate` kills an
+# external `cmd` job's child with a real signal. `cmd.rs`'s own waiter thread
+# (`spawn_child_wait`) then separately observes that signal death and calls
+# `GlobalState::mark_terminated_by_signal` -- which used to unconditionally take a
+# *second* `terminated_snapshot`, resurrecting one a first `jobs` listing may have
+# already consumed and reported. Even after guarding that re-snapshot (skip it if the
+# job's status already reads `Terminated`), a *second*, more fundamental race remained:
+# once the one-time snapshot is consumed, a later listing falls through to the job's
+# live data, which can still legitimately read `Terminated` for a little while after
+# the snapshot was consumed (the underlying thread hasn't finished exiting and being
+# reaped yet) -- so an immediate second listing could still show the job a second time,
+# just via the live branch instead of a resurrected snapshot.
+#
+# Fixed by `JobData::terminated_reported` (see `src/lang/state/global_state.rs`): set
+# the very first time `jobs_for_listing` ever reports a job `Terminated`, via *either*
+# path, and checked by every later call, which skips that job entirely once it's set --
+# regardless of whether its live data is still alive. This is the one place the
+# existing, sleep-500ms-delayed sibling tests (`terminated_job_is_reaped.crush`,
+# `cmd_paused_then_terminated_is_reaped.crush`) don't actually exercise: with a 500ms
+# gap before the first listing, the job's underlying thread had already finished and
+# been reaped by then in practice, so their "first listing" always read from the
+# snapshot branch, never raced the live branch at all.
+#
+# Each listing is a bare `jobs | materialize` -- deliberately *not* `jobs | where
+# {...} | materialize` (the pattern the sibling tests use): the extra `where` pipeline
+# stage's own setup overhead was enough, in practice, to incidentally give the killed
+# job's underlying thread time to finish and get reaped between the two listings,
+# masking the exact race this test exists to catch. Confirmed directly: with `where`
+# added back in, this test still passed even with the `terminated_reported` fix
+# disabled (only the narrower, insufficient-by-itself re-snapshot guard in place).
+# Filtering by the distinctive sleep duration happens *after* both listings are
+# already captured, on the already-materialized tables, instead.
+$job_id := $(cmd sleep 8172 &)
+sleep $(duration:of milliseconds=300)
+terminate $job_id
+
+# No settle delay between these two listings -- that's the entire point: catching the
+# job mid-death, not safely after it's already fully gone.
+$first_all := $(jobs | materialize)
+$second_all := $(jobs | materialize)
+
+$first_rows := $($first_all | where {$definition:starts_with "\$cmd \"sleep\" 8172"} | materialize)
+$second_rows := $($second_all | where {$definition:starts_with "\$cmd \"sleep\" 8172"} | materialize)
+
+$first_count := $($first_rows | count)
+$second_count := $($second_rows | count)
+assert ($first_count == 1) "a terminated job should be reported once on the first jobs listing after terminate"
+$first_status := ($first_rows[0]):status
+assert ($first_status == "Terminated") "the one-time report of a terminated job should have status Terminated"
+assert ($second_count == 0) "an immediate second jobs listing, with no settle delay, must not report the same terminated job again"
+echo "done"

@@ -43,9 +43,9 @@ sleep $(duration:of milliseconds=500)
 # tests/job_orphaning_on_parent_death.crush), so a later job here could plausibly be
 # handed $job_id's own freed id.
 #
-# `count`/field access are read from a plain variable assigned *once* up front, rather
-# than re-piping `| count` inline a second time inside the `assert` call itself --
-# see `tests/terminated_job_is_reaped.crush` for why.
+# `count`/field access are read from a plain variable assigned once up front, matching
+# this file's own existing style for the second check below -- see
+# `tests/terminated_job_is_reaped.crush` for more on this pattern.
 $first_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 6234"} | materialize)
 $first_count := $($first_rows | count)
 assert ($first_count == 1) "a job that was ever paused and then terminated should be reported once, with status Terminated, on the next jobs listing"

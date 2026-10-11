@@ -194,6 +194,7 @@ impl GlobalState {
             job_control_data: job.weak_ref(),
             terminated_snapshot: None,
             terminated_snapshot_age: 0,
+            terminated_reported: false,
         };
         data.jobs.push(jd);
         job
@@ -458,21 +459,36 @@ impl GlobalState {
     /// subsequent `jobs` listing, which always reaps already-finished jobs first, could
     /// otherwise have seen it).
     ///
-    /// A job with an unconsumed snapshot is always reported *from the snapshot*, even
-    /// if its live data happens to still be alive at this exact instant (about to die
-    /// any moment) -- never from both, and never live-then-snapshot across two calls
-    /// reporting the same status twice: there is exactly one source of truth for a
-    /// terminated job's row at any given moment, and once it has one it stays that way
-    /// until actually removed.
+    /// A job is reported *at most once* after it's been marked `Terminated` -- not just
+    /// "once from the snapshot, then never from both at once": `JobData::
+    /// terminated_reported` is set the very first time this method reports a
+    /// `Terminated` status for a given job, via *either* path (the one-time
+    /// `terminated_snapshot` fallback, or live data that happens to already read
+    /// `Terminated`), and every later call skips that job entirely once it's set,
+    /// regardless of whether its live data is still technically alive.
     ///
-    /// Reported snapshots are consumed here (cleared back to `None`) so each one is only
-    /// ever shown once -- the next reap pass (`remove_finished_jobs`) then actually
-    /// removes the now-unconsumed, dead entry.
+    /// This closes two races a narrower "only guard against re-snapshotting" fix does
+    /// not: confirmed directly that even with `mark_terminated_and_snapshot`'s own
+    /// re-snapshot guard in place (necessary, but insufficient alone), two back-to-back
+    /// listings right after `terminate`, with no settle delay, still intermittently
+    /// both reported the job `Terminated` -- not because of a second snapshot, but
+    /// because its live data can still legitimately read `Terminated` for a little
+    /// while after the snapshot from the first listing was already consumed (the
+    /// underlying thread hasn't finished exiting and being reaped yet). The same
+    /// `terminated_reported` flag also happens to close the separate "a job that never
+    /// actually stops after being marked `Terminated`" case (an internal job -- a
+    /// closure/loop -- that never checks its own control channel): its live status
+    /// would otherwise keep reading `Terminated` and being reported indefinitely, for
+    /// as long as that job's thread keeps running, which contradicted "reported once"
+    /// just as much.
     pub fn jobs_for_listing(&self) -> Vec<JobInfo> {
         let mut data = self.data.lock().unwrap();
         let mut res = Vec::new();
-        let mut consumed = Vec::new();
+        let mut just_reported_terminated = Vec::new();
         for jd in data.jobs.iter() {
+            if jd.terminated_reported {
+                continue;
+            }
             if let Some(definition) = &jd.terminated_snapshot {
                 res.push(JobInfo {
                     id: jd.id,
@@ -481,23 +497,28 @@ impl GlobalState {
                     status: JobStatus::Terminated,
                     parent: jd.parent,
                 });
-                consumed.push(jd.id);
+                just_reported_terminated.push(jd.id);
                 continue;
             }
             if let Some(arc) = jd.job_control_data.upgrade() {
                 let live_job = arc.lock().unwrap();
+                let status = live_job.status();
                 res.push(JobInfo {
                     id: jd.id,
                     job_type: jd.job_type,
                     definition: live_job.definition.clone(),
-                    status: live_job.status(),
+                    status,
                     parent: jd.parent,
                 });
+                if status == JobStatus::Terminated {
+                    just_reported_terminated.push(jd.id);
+                }
             }
         }
-        for id in consumed {
+        for id in just_reported_terminated {
             if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == id) {
                 jd.terminated_snapshot = None;
+                jd.terminated_reported = true;
             }
         }
         res
@@ -730,25 +751,43 @@ fn terminate_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> Crush
 /// no controller broadcast -- see that method's doc comment for why) rather than the
 /// full `terminate`, and likewise takes a snapshot while `job_control_data` is still
 /// guaranteed alive.
+///
+/// Skips re-snapshotting if the job's status is *already* `Terminated`: for an external
+/// `cmd` job, crush's own `terminate` kills the child with a real signal too, so the
+/// same death this is reacting to is very often *also* a direct, near-simultaneous
+/// side effect of a `terminate_and_snapshot` call that already ran moments ago and
+/// already took its own snapshot. Without this guard, this call would take a *second*
+/// snapshot regardless of whether the first one had already been reported and consumed
+/// by a `jobs` listing in between -- resurrecting it, and making the job show
+/// `Terminated` twice instead of once. Confirmed directly: `terminate`, then two
+/// back-to-back `jobs | materialize` listings with no settle delay between them, both
+/// showed the row as `Terminated` before this guard existed (a third listing, after a
+/// delay, finally showed it gone) -- see
+/// `tests/terminate_then_double_listing_shows_terminated_once.crush`.
 fn mark_terminated_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
     let arc = get_job(data, jid, false)?;
-    let definition = {
+    let snapshot_definition = {
         let mut guard = arc.lock()?;
+        let already_terminated = guard.status() == JobStatus::Terminated;
         let definition = guard.definition.clone();
         guard.mark_terminated();
-        definition
+        if already_terminated { None } else { Some(definition) }
     };
-    snapshot(data, jid, definition);
+    if let Some(definition) = snapshot_definition {
+        snapshot(data, jid, definition);
+    }
     Ok(())
 }
 
 /// Records `definition` as `jid`'s `terminated_snapshot`, resetting its reap-pass age
-/// (see `JobData::terminated_snapshot_age`) back to 0 -- shared by
-/// `terminate_and_snapshot` and `mark_terminated_and_snapshot`.
+/// (see `JobData::terminated_snapshot_age`) and its `terminated_reported` flag (see that
+/// field's doc comment for why a fresh snapshot re-arms it) back to their initial
+/// values -- shared by `terminate_and_snapshot` and `mark_terminated_and_snapshot`.
 fn snapshot(data: &mut MutexGuard<StateData>, jid: JobId, definition: String) {
     if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == jid) {
         jd.terminated_snapshot = Some(definition);
         jd.terminated_snapshot_age = 0;
+        jd.terminated_reported = false;
     }
 }
 
