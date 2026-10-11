@@ -1,0 +1,48 @@
+# Regression test: `terminate` on a job that's a *statement inside a closure/block
+# body* (not just a single bare top-level job) must actually stop that closure from
+# advancing to its next statement -- not just flip the terminated statement's own
+# status flag while the closure sails on regardless.
+#
+# This is deliberately narrower than, and not already covered by, `tests/terminate.
+# crush` (which confirms a plain backgrounded `sleep` stops almost immediately, purely
+# via wall-clock timing) or the `vt_terminate_*` tests (which confirm `jobs` correctly
+# reports a terminated job's *status*). Both of those were already fine before the fix
+# this test exists for. The bug here was specifically about `Closure::eval_inner`'s own
+# sequential-statement loop silently treating a terminated statement as having
+# succeeded anyway, letting the closure run its *next* statement -- confirmed directly
+# by backgrounding a two-statement block (`{sleep ...; echo SHOULD_NOT_APPEAR} &`),
+# terminating it while the long `sleep` is still running, and observing that the
+# `echo` afterward still ran sometimes anyway.
+#
+# Root cause: `ThreadStore::join_job` (the mechanism `Closure::eval_inner` relied on to
+# decide whether to advance to the next statement) first collects the ids of every
+# thread registered under the just-terminated statement's job, then joins each
+# separately -- and in the gap between those two steps, `ThreadStore::reap` (called by
+# *any* new job being created anywhere in the system, not just this closure's own
+# worker thread -- here, this very script's own subsequent top-level `jobs`/`sleep`
+# statements, running concurrently with the backgrounded block) can win the race to
+# remove and join that same thread first, leaving `join_job`'s own attempt with nothing
+# left to find -- which `ThreadStore::join_one` treats the same as "that thread
+# finished cleanly", silently discarding the statement's real `Err` and letting the
+# loop advance. Not reliably reproducible on every single run (it depends on exactly
+# when the racing `reap()` call lands), but reproduced directly, repeatedly, across
+# dozens of runs before the fix below existed; after it, 30 consecutive runs all showed
+# the correct behavior.
+#
+# Fixed by having `Closure::eval_inner` additionally check `JobHandle::is_terminated`
+# (see its doc comment in `src/lang/state/handles.rs`) after `join_job` returns, rather
+# than trusting `join_job`'s own success/failure alone: `GlobalState::terminate` sets
+# that status synchronously, independent of the join race above, so checking it
+# directly is race-free.
+#
+# The extra `jobs` calls and settle delays below are deliberate, not incidental --
+# removing them makes the *unfixed* code reproduce this far less reliably (each `jobs`
+# call is itself a new job, giving `reap()` another concurrent opportunity to race
+# against the backgrounded block's own join) -- see the root-cause paragraph above.
+{sleep $(duration:of seconds=100); echo SHOULD_NOT_APPEAR} &
+sleep $(duration:of milliseconds=200)
+jobs
+terminate 0
+sleep $(duration:of milliseconds=800)
+jobs
+echo MARKER

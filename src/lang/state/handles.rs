@@ -88,6 +88,32 @@ impl JobHandle {
         let live_job = self.live_job.lock().unwrap();
         live_job.definition.clone()
     }
+
+    /// True if this job's live status currently reads `Terminated`.
+    ///
+    /// `GlobalState::terminate` sets this *synchronously*, inside the same call that
+    /// broadcasts a `StreamControlMessage::Terminate` to this job's registered
+    /// controllers -- independent of whether any of those controllers' own command
+    /// threads ever actually get joined, let alone whether a specific join call
+    /// happens to observe their real result. That join is *not* race-free:
+    /// `ThreadStore::join_job` first collects the ids of every thread currently
+    /// registered under this job, then joins each separately -- and in the gap between
+    /// those two steps, `ThreadStore::reap` (called by *any* new job being created
+    /// anywhere in the system, not just this one) can win the race to remove and join
+    /// one of those threads itself first, leaving the original `join_job` call with
+    /// nothing left to find for that thread and so no error to propagate (see
+    /// `ThreadStore::join_one`: finding nothing for an id is treated the same as "that
+    /// thread finished cleanly"). Checking this status flag instead sidesteps that race
+    /// entirely: it's set the moment termination is requested, regardless of how or
+    /// when (or by whom) this job's thread is eventually reaped. Confirmed directly:
+    /// `{sleep $(duration:of seconds=100); echo SHOULD_NOT_APPEAR} &` followed by
+    /// `terminate` on the whole block still occasionally ran the `echo` statement
+    /// anyway, before `Closure::eval_inner` started checking this (see
+    /// `tests/terminate_mid_closure_statement_stops_next_statement.crush`).
+    pub fn is_terminated(&self) -> bool {
+        let live_job = self.live_job.lock().unwrap();
+        live_job.status() == JobStatus::Terminated
+    }
 }
 
 #[derive(Clone)]
