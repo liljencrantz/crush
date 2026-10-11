@@ -693,8 +693,7 @@ impl Closure {
                 // stop immediately on its very next condition check -- which sounds
                 // like a strict improvement, but it's a real, cross-cutting behavior
                 // change: it makes such a loop *stop ignoring* `terminate`, breaking
-                // `tests/resume_after_terminate_shows_current_status.crush` (Task 9),
-                // whose whole scenario depends on `while {$true} {}` specifically
+                // `tests/resume_after_terminate_shows_current_status.crush`, whose whole scenario depends on `while {$true} {}` specifically
                 // staying unresponsive to `terminate` (to exercise a *different*
                 // feature: a job marked `Terminated` that never actually dies, later
                 // `resume`d, must show up again as `Running`). Confirmed directly by

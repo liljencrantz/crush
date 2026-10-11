@@ -8,6 +8,7 @@ use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::patterns::Patterns;
 use chrono::Duration;
+use nix::fcntl::{FcntlArg, FdFlag, fcntl};
 use nix::libc;
 use nix::pty::{OpenptyResult, Winsize, openpty};
 use nix::sys::signal::{Signal, kill};
@@ -58,6 +59,10 @@ impl VtSession {
             ws_ypixel: 0,
         };
         let OpenptyResult { master, slave } = openpty(&winsize, None)?;
+        // `openpty` has no flag for this: without it, the master fd would be inherited
+        // by the child spawned below, and by any process another thread happens to
+        // spawn before this session closes it.
+        fcntl(&master, FcntlArg::F_SETFD(FdFlag::FD_CLOEXEC))?;
 
         let ioctl_fd = slave.as_raw_fd();
         let slave_stdin = slave.try_clone()?;

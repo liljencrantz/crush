@@ -55,10 +55,16 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Block until the virtual terminal's rendered screen contains a pattern, or error out after a timeout.",
     long = "`pattern` may be a plain string (substring match), a glob, or a regular expression.",
+    long = "",
+    long = "A glob's `*` does not match `/`, and the screen almost always contains one (e.g.",
+    long = "the prompt's current directory), so a glob like `*hello*` will usually never match.",
+    long = "Use a plain string, or a regular expression such as `^(hel+o)`, for anything that",
+    long = "may need to match across `/` or arbitrary screen content.",
     example = "$t:wait_for \"# \"",
+    example = "$t:wait_for ^(hel+o)",
 )]
 struct WaitFor {
-    #[description("the text (string, glob, or regular expression) to wait for.")]
+    #[description("the text (string, glob, or regular expression) to wait for. A glob's `*` does not match `/`; prefer a regular expression.")]
     pattern: Patterns,
     #[default(Duration::seconds(5))]
     #[description("how long to wait before giving up.")]

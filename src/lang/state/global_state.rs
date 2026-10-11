@@ -570,7 +570,8 @@ impl GlobalState {
     /// `stream:tee`'s branches) also reaches whatever that closure's own body is doing,
     /// not just `jid`'s own directly-registered controllers.
     ///
-    /// Only `jid` itself gets a `terminated_snapshot` (see that field's doc comment) --
+    /// Only `jid` itself gets a `terminated_snapshot` (see that field's doc comment), and
+    /// only if it isn't holding the foreground (see `terminate_and_snapshot`) --
     /// descendants are terminated exactly as before this existed (status flip + control
     /// broadcast only). Otherwise a single `terminate` on a job with several nested
     /// closure jobs underneath it would leave one phantom "Terminated" row per
@@ -815,6 +816,13 @@ fn get_job(
 /// only caller, for that) and snapshots its definition into its `JobData` entry's
 /// `terminated_snapshot` (see that field's doc comment for why) in the same breath,
 /// while `job_control_data` (found via `get_job`, just above) is still guaranteed alive.
+///
+/// The snapshot is only taken for a job not holding the foreground (`JobData::
+/// backgrounded`) -- the same gate `cmd.rs`'s `Signaled` arm applies to its own
+/// signal-death bookkeeping, for the same reason. A foreground job interrupted by
+/// Ctrl-C, or the jobs `timeout`'s sweep terminates under the command it's running,
+/// were never put in the background by anyone, so a one-time "Terminated" row for them
+/// in `jobs` afterward would be a misleading phantom; they're just reaped silently.
 fn terminate_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
     let arc = get_job(data, jid, false)?;
     let definition = {
@@ -823,7 +831,14 @@ fn terminate_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> Crush
         guard.terminate()?;
         definition
     };
-    snapshot(data, jid, definition);
+    let backgrounded = data
+        .jobs
+        .iter()
+        .find(|jd| jd.id == jid)
+        .is_some_and(|jd| jd.backgrounded);
+    if backgrounded {
+        snapshot(data, jid, definition);
+    }
     Ok(())
 }
 

@@ -1,0 +1,29 @@
+# Regression test: Ctrl-C on a *foreground* internal job (crush's own builtin `sleep`)
+# must not leave a one-time "Terminated" row behind in `jobs` afterward -- the same as
+# Ctrl-C on a foreground external `cmd sleep` already didn't (`cmd.rs`'s `Signaled` arm
+# gates its own bookkeeping on `is_backgrounded`). That one-time report is only for a
+# job not holding the foreground (see `GlobalState::terminate`); a job the user just
+# interrupted at the prompt was never put in the background, so it should just be
+# reaped silently. Found by a whole-branch review: this used to leave a phantom row.
+#
+# A settle delay follows each `wait_for "# "`, same precedent as the sibling vt tests:
+# the prompt text can already be on screen before the typed line actually lands.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "sleep $(duration:of seconds=100)\n"
+sleep $(duration:of milliseconds=500)
+$t:write $t:control:c
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+
+$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=500)
+$t:write "echo $(\"CTRL_C_CHECK_{}\":format $n)\n"
+$t:wait_for "CTRL_C_CHECK_0"
+
+$t:close
+echo "ok"

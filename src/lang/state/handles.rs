@@ -215,7 +215,7 @@ pub struct JobControlData {
     /// closure containing a `cmd` that dies from an ordinary, unrelated signal (e.g.
     /// `cmd sh -c "kill -TERM $$"`) must keep running its closure's remaining
     /// statements exactly as before -- see `tests/cmd_signal_death_does_not_abort_
-    /// script.crush` (Task 9) for why that case must *not* abort anything, and
+    /// script.crush` for why that case must *not* abort anything, and
     /// `tests/signal_death_inside_background_closure_does_not_abort.crush` for the
     /// regression this field exists to prevent. See `JobHandle::termination_requested`
     /// for where this is actually read.

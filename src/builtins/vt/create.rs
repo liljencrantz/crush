@@ -36,12 +36,9 @@ pub struct Create {
 
 fn create(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Create = Create::parse(context.remove_arguments(), &context.global_state.printer())?;
-    let id = VtSession::create(
-        &cfg.command.as_path(),
-        &cfg.arguments,
-        cfg.rows as u16,
-        cfg.cols as u16,
-    )?;
+    let rows = terminal_dimension("rows", cfg.rows)?;
+    let cols = terminal_dimension("cols", cfg.cols)?;
+    let id = VtSession::create(&cfg.command.as_path(), &cfg.arguments, rows, cols)?;
 
     let mut fields = vec![];
     for name in ["write", "wait_for", "contents", "pid", "alive", "close"] {
@@ -52,9 +49,22 @@ fn create(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Struct(Struct::new(fields, None)))
 }
 
-// `pub(super)` (not private) so Task 3 can reuse this when it extends the field list with
-// `pid`/`alive`/`control`.
-pub(super) fn method_struct(id: i32, name: &str) -> CrushResult<Value> {
+/// Validates a terminal dimension: the pty and the screen emulator both need it to be a
+/// positive `u16`, and a silently wrapped value (or `0`) would otherwise surface only
+/// as an opaque failure deep inside the session.
+fn terminal_dimension(name: &str, value: i128) -> CrushResult<u16> {
+    match u16::try_from(value) {
+        Ok(v) if v >= 1 => Ok(v),
+        _ => command_error(format!(
+            "`{}` must be between 1 and {}, got {}",
+            name,
+            u16::MAX,
+            value
+        )),
+    }
+}
+
+fn method_struct(id: i32, name: &str) -> CrushResult<Value> {
     let cmd = match methods().get(name) {
         Some(cmd) => cmd.clone(),
         None => return command_error(format!("Unknown vt method `{}`", name)),

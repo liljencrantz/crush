@@ -1,0 +1,13 @@
+# Regression test: `timeout` terminating the (foreground) command it runs, via its
+# descendant-termination sweep (see `timeout` in `src/builtins/control/mod.rs`), must
+# not leave any one-time "Terminated" rows behind in `jobs`. That one-time report is
+# only for a job not holding the foreground (see `GlobalState::terminate`) -- nobody put
+# anything here in the background, so the swept jobs should just be reaped silently.
+# Found by a whole-branch review: this used to leave two phantom rows, one of them with
+# an empty job definition.
+try {
+    timeout $(duration:of milliseconds=300) {sleep $(duration:of seconds=100); echo "x"}
+} catch {
+}
+$n := $(jobs | where {($status == "Terminated")} | count)
+echo $n
