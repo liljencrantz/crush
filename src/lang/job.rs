@@ -88,6 +88,15 @@ impl Job {
         let last_call_def = &self.commands[last_command_idx];
 
         if self.is_background {
+            // Marked on *this* job's own `JobData` entry before dispatching anything
+            // below, not after: any nested job created while dispatching the last
+            // stage (e.g. `create_nested_job_handle` for a closure body's statements,
+            // in a shape like `{ cmd sleep 100 } &`) inherits this at creation time
+            // (see `JobData::background_context`'s doc comment for why that ordering
+            // matters -- this job itself typically finishes and gets reaped well
+            // before anything might need to ask "was this nested job's ancestor ever
+            // backgrounded", so a live lookup after the fact wouldn't see it).
+            context.global_state.mark_background_context(context.handle.id());
             // A background job is its own independent execution context: dispatch the
             // pipeline's real last stage exactly as normal, but don't wait for it --
             // or any earlier stage -- to actually finish; that's the entire point of

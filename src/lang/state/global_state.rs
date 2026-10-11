@@ -187,6 +187,12 @@ impl GlobalState {
         remove_finished_jobs(&mut data);
         let id = next_id(&data);
         let job = JobHandle::new(id);
+        // Inherited from the parent's own value, if it has one, at creation time --
+        // see `JobData::background_context`'s doc comment for why this must happen
+        // now rather than being discovered later by walking `parent`.
+        let background_context = parent
+            .and_then(|p| data.jobs.iter().find(|jd| jd.id == p))
+            .is_some_and(|jd| jd.background_context);
         let jd = JobData {
             id,
             job_type,
@@ -195,6 +201,7 @@ impl GlobalState {
             terminated_snapshot: None,
             terminated_snapshot_age: 0,
             terminated_reported: false,
+            background_context,
         };
         data.jobs.push(jd);
         job
@@ -459,36 +466,66 @@ impl GlobalState {
     /// subsequent `jobs` listing, which always reaps already-finished jobs first, could
     /// otherwise have seen it).
     ///
-    /// A job is reported *at most once* after it's been marked `Terminated` -- not just
-    /// "once from the snapshot, then never from both at once": `JobData::
-    /// terminated_reported` is set the very first time this method reports a
-    /// `Terminated` status for a given job, via *either* path (the one-time
-    /// `terminated_snapshot` fallback, or live data that happens to already read
-    /// `Terminated`), and every later call skips that job entirely once it's set,
-    /// regardless of whether its live data is still technically alive.
+    /// A specific *termination event* is reported at most once -- not "this job is
+    /// hidden forever once it's ever been Terminated": `JobData::terminated_reported`
+    /// is set the very first time this method reports a `Terminated` status for a
+    /// given job, via *either* path (the one-time `terminated_snapshot` fallback, or
+    /// live data that happens to already read `Terminated`), and a later call skips
+    /// that job *only while* it's still observably `Terminated` -- either still alive
+    /// with that same live status, or already fully gone (no live data and no
+    /// snapshot, i.e. it finished dying in between and there's nothing further to
+    /// report). If its live status has since moved away from `Terminated` (e.g.
+    /// `resume` on an internal job that was marked `Terminated` but never actually
+    /// stopped -- see `tests/resume_after_terminate_shows_current_status.crush`), it is
+    /// reported again under its *current* status, and `terminated_reported` is cleared
+    /// so a later, genuinely new termination gets its own one-time report too (on top
+    /// of the same clearing `snapshot` already does for an explicit fresh `terminate`
+    /// call).
     ///
-    /// This closes two races a narrower "only guard against re-snapshotting" fix does
-    /// not: confirmed directly that even with `mark_terminated_and_snapshot`'s own
-    /// re-snapshot guard in place (necessary, but insufficient alone), two back-to-back
-    /// listings right after `terminate`, with no settle delay, still intermittently
-    /// both reported the job `Terminated` -- not because of a second snapshot, but
-    /// because its live data can still legitimately read `Terminated` for a little
-    /// while after the snapshot from the first listing was already consumed (the
-    /// underlying thread hasn't finished exiting and being reaped yet). The same
-    /// `terminated_reported` flag also happens to close the separate "a job that never
-    /// actually stops after being marked `Terminated`" case (an internal job -- a
-    /// closure/loop -- that never checks its own control channel): its live status
-    /// would otherwise keep reading `Terminated` and being reported indefinitely, for
-    /// as long as that job's thread keeps running, which contradicted "reported once"
-    /// just as much.
+    /// The one-time-report mechanism (regardless of the above) exists to close two
+    /// races a narrower "only guard against re-snapshotting" fix does not: confirmed
+    /// directly that even with `mark_terminated_and_snapshot`'s own re-snapshot guard
+    /// in place (necessary, but insufficient alone), two back-to-back listings right
+    /// after `terminate`, with no settle delay, still intermittently both reported the
+    /// job `Terminated` -- not because of a second snapshot, but because its live data
+    /// can still legitimately read `Terminated` for a little while after the snapshot
+    /// from the first listing was already consumed (the underlying thread hasn't
+    /// finished exiting and being reaped yet). The same flag also closes the separate
+    /// "a job that never actually stops after being marked `Terminated`" case (an
+    /// internal job -- a closure/loop -- that never checks its own control channel):
+    /// its live status would otherwise keep reading `Terminated` and being reported
+    /// indefinitely, for as long as that job's thread keeps running, which
+    /// contradicted "reported once" just as much -- *unless* it's since been
+    /// `resume`d, in which case it should show up again as `Running`/`Paused`, not
+    /// stay hidden just because it was once `Terminated`.
     pub fn jobs_for_listing(&self) -> Vec<JobInfo> {
         let mut data = self.data.lock().unwrap();
         let mut res = Vec::new();
         let mut just_reported_terminated = Vec::new();
+        let mut no_longer_terminated = Vec::new();
         for jd in data.jobs.iter() {
+            let live = jd
+                .job_control_data
+                .upgrade()
+                .map(|arc| {
+                    let live_job = arc.lock().unwrap();
+                    (live_job.status(), live_job.definition.clone())
+                });
+
             if jd.terminated_reported {
-                continue;
+                match &live {
+                    // Fully gone, with nothing left to report -- stays hidden.
+                    None => continue,
+                    // Still the same termination this job was already reported for --
+                    // stays hidden.
+                    Some((status, _)) if *status == JobStatus::Terminated => continue,
+                    // Resumed (or otherwise no longer Terminated) since its one-time
+                    // report -- fall through and report its current status instead,
+                    // and stop suppressing this job going forward.
+                    Some(_) => no_longer_terminated.push(jd.id),
+                }
             }
+
             if let Some(definition) = &jd.terminated_snapshot {
                 res.push(JobInfo {
                     id: jd.id,
@@ -500,13 +537,12 @@ impl GlobalState {
                 just_reported_terminated.push(jd.id);
                 continue;
             }
-            if let Some(arc) = jd.job_control_data.upgrade() {
-                let live_job = arc.lock().unwrap();
-                let status = live_job.status();
+
+            if let Some((status, definition)) = live {
                 res.push(JobInfo {
                     id: jd.id,
                     job_type: jd.job_type,
-                    definition: live_job.definition.clone(),
+                    definition,
                     status,
                     parent: jd.parent,
                 });
@@ -519,6 +555,11 @@ impl GlobalState {
             if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == id) {
                 jd.terminated_snapshot = None;
                 jd.terminated_reported = true;
+            }
+        }
+        for id in no_longer_terminated {
+            if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == id) {
+                jd.terminated_reported = false;
             }
         }
         res
@@ -644,6 +685,43 @@ impl GlobalState {
     pub fn is_background_job(&self, job_id: JobId) -> bool {
         let data = self.data.lock().unwrap();
         data.background_jobs.iter().any(|job| job.job_id == job_id)
+    }
+
+    /// True if `job_id` was itself started with a trailing `&`, or is nested (however
+    /// many levels deep) inside a job that was -- e.g. a `cmd` running inside a
+    /// backgrounded block (`{ cmd sleep 100 } &`) gets its own, distinct, *nested* job
+    /// id (`create_nested_job_handle`), never itself registered in `background_jobs`.
+    ///
+    /// Backed by `JobData::background_context`, inherited from the parent at job
+    /// *creation* time (`create_job_handle_with_parent`) rather than discovered by
+    /// walking live `parent` links when asked: a parent-link walk turns out to be
+    /// structurally insufficient here, because the *outer* backgrounded job in a shape
+    /// like `{ cmd sleep 100 } &` finishes its own synchronous dispatch (handing off to
+    /// the external process and returning) essentially immediately, and gets reaped --
+    /// at which point `remove_finished_jobs`'s own orphaning logic deliberately clears
+    /// `parent` on every job that pointed at it (see that function's doc comment for
+    /// why: a dead job's id gets recycled, and a stale `parent` pointing at it would
+    /// otherwise misattribute ancestry to whatever unrelated job reuses that id).
+    /// `background_context` survives exactly that, because it's copied into the child's
+    /// own `JobData` once, up front, before any of that pruning can happen.
+    pub fn is_in_background_context(&self, job_id: JobId) -> bool {
+        let data = self.data.lock().unwrap();
+        data.jobs
+            .iter()
+            .find(|jd| jd.id == job_id)
+            .is_some_and(|jd| jd.background_context)
+    }
+
+    /// Marks `job_id`'s own `JobData` entry as a background-context job (see
+    /// `JobData::background_context`) -- called by `Job::eval`'s `is_background`
+    /// branch, on *itself*, before dispatching its last stage, so any nested job
+    /// created during that dispatch (e.g. `new_nested` for a closure body's
+    /// statements) inherits it at creation time.
+    pub fn mark_background_context(&self, job_id: JobId) {
+        let mut data = self.data.lock().unwrap();
+        if let Some(jd) = data.jobs.iter_mut().find(|jd| jd.id == job_id) {
+            jd.background_context = true;
+        }
     }
 
     /// Remove and return the named background job's receiver, if one is registered.

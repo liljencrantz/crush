@@ -1,0 +1,60 @@
+# Regression test: a job that's marked `Terminated` but never actually dies (e.g. an
+# internal loop that doesn't check its own control channel), and is later `resume`d,
+# must show up again as `Running` -- not stay hidden forever just because it was once
+# `Terminated`.
+#
+# Root cause: `JobData::terminated_reported` (see `src/lang/state/global_state.rs`),
+# added to guarantee a terminated job is reported by `jobs` at most once (see
+# `tests/terminate_then_double_listing_shows_terminated_once.crush`), had no check on
+# whether the job's *current* live status had moved away from `Terminated` -- only
+# `snapshot` cleared it, and only to re-arm it for a fresh `terminate`, not to un-hide
+# an already-flagged job. But status can leave `Terminated`: `resume`/
+# `resume_foreground`/`pause` all set it back to `Running`/`Paused` regardless of its
+# current value. Reproduced directly: `terminate` a backgrounded `while {$true} {}`
+# loop (which ignores the signal entirely and keeps running), list `jobs` twice (both
+# correctly showed it once, then hidden), then `resume` it -- before the fix, every
+# listing afterward showed nothing for it at all, even though its thread was still
+# genuinely running; after the fix, it shows up again with status `Running`.
+#
+# Fixed by only suppressing a job while it's observably *still* `Terminated` (either
+# still alive with that same live status, or already fully gone) -- if its live status
+# has since moved away from `Terminated`, it's reported again under its current
+# status, and `terminated_reported` is cleared so a later, genuinely new termination
+# gets its own one-time report too.
+#
+# `terminate` is called immediately after starting the loop, before anything else that
+# could fail: a `while {$true} {}` loop ignores its own control channel entirely and
+# never actually stops, and (confirmed directly) a script that ends with such a job
+# still running *and never terminated* hangs waiting for it at exit -- `terminate`
+# itself is enough to let the process exit cleanly despite the loop still spinning
+# (crush's own exit path doesn't wait on a job once it's been told to stop, whether or
+# not the job's own thread actually honors that), so issuing it first makes every
+# later assertion below safe to fail without hanging the whole test run.
+$job_id := $({while {$true} {}} &)
+terminate $job_id
+
+# First listing after terminate: reported once, Terminated.
+$first_rows := $(jobs | where {($id == $job_id)} | materialize)
+$first_count := $($first_rows | count)
+assert ($first_count == 1) "a terminated job should be reported once on the first jobs listing after terminate"
+$first_status := ($first_rows[0]):status
+assert ($first_status == "Terminated") "the one-time report should have status Terminated"
+
+# Second listing: already reported once, and still Terminated (the loop ignores the
+# signal and keeps running) -- hidden.
+$second_rows := $(jobs | where {($id == $job_id)} | materialize)
+$second_count := $($second_rows | count)
+assert ($second_count == 0) "a terminated job already reported once should be hidden on the next listing, as long as it's still Terminated"
+
+resume $job_id
+
+# After resume: no longer Terminated (the loop was never actually stopped) -- must
+# show up again, as Running, not stay hidden.
+$third_rows := $(jobs | where {($id == $job_id)} | materialize)
+$third_count := $($third_rows | count)
+assert ($third_count == 1) "a job resumed after being marked Terminated (but never actually stopped) must show up again"
+$third_status := ($third_rows[0]):status
+assert ($third_status == "Running") "a job resumed after being marked Terminated should show its current status, Running"
+
+terminate $job_id
+echo "done"

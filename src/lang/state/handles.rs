@@ -204,24 +204,43 @@ pub struct JobData {
     pub terminated_snapshot_age: u32,
     /// Set the first time `GlobalState::jobs_for_listing` ever reports this job as
     /// `Terminated` -- via *either* `terminated_snapshot` or its live status happening
-    /// to already read `Terminated` -- and checked (and never unset) by every later
-    /// call, which skips this job entirely once it's set, regardless of whether its
-    /// live data is still alive.
+    /// to already read `Terminated`. While set, a later `jobs_for_listing` call skips
+    /// this job *only as long as it's still observably `Terminated`* (still alive with
+    /// that same live status, or already fully gone with nothing left to report) --
+    /// it is cleared again, by `jobs_for_listing` itself, the moment live data shows
+    /// this job's status has moved away from `Terminated` (e.g. `resume` on an
+    /// internal job that was marked `Terminated` but never actually stopped), so it
+    /// shows up again under its current status rather than staying hidden forever.
+    /// It's also cleared by `snapshot` (see that function) whenever a fresh
+    /// `terminate` call takes a new snapshot, so an explicit second `terminate` on the
+    /// same job gets its own one-time report too.
     ///
     /// Exists because the one-time `terminated_snapshot` fallback alone isn't enough to
-    /// guarantee "reported exactly once": once consumed, a later `jobs_for_listing`
-    /// call falls through to the live branch, which can still legitimately read
-    /// `Terminated` for a while (the underlying thread hasn't finished exiting and
-    /// being reaped yet) -- or, for a job whose work never actually stops at all (e.g.
-    /// an internal closure/loop that never checks its own control channel), forever.
-    /// Confirmed directly: two back-to-back `jobs` listings right after `terminate`,
-    /// with no settle delay in between, intermittently both reported the job
-    /// `Terminated` even with `mark_terminated_and_snapshot`'s own re-snapshot guard in
-    /// place -- the second one via the live branch, not a second snapshot. Reset back
-    /// to `false` by `snapshot` (see that function) whenever a fresh `terminate` call
-    /// takes a new snapshot, so an explicit second `terminate` on the same job still
-    /// gets its own one-time report.
+    /// guarantee "a given termination event is reported exactly once": once consumed,
+    /// a later `jobs_for_listing` call falls through to the live branch, which can
+    /// still legitimately read `Terminated` for a while (the underlying thread hasn't
+    /// finished exiting and being reaped yet) -- or, for a job whose work never
+    /// actually stops at all (e.g. an internal closure/loop that never checks its own
+    /// control channel), indefinitely. Confirmed directly: two back-to-back `jobs`
+    /// listings right after `terminate`, with no settle delay in between,
+    /// intermittently both reported the job `Terminated` even with
+    /// `mark_terminated_and_snapshot`'s own re-snapshot guard in place -- the second
+    /// one via the live branch, not a second snapshot.
     pub terminated_reported: bool,
+    /// True if this job was itself started with a trailing `&`, or is nested (however
+    /// many levels deep, via `parent`) inside one that was -- inherited from the
+    /// parent's own value at *creation* time (`GlobalState::create_job_handle_with_parent`)
+    /// and set on a top-level backgrounded job itself by `GlobalState::
+    /// mark_background_context` (called from `Job::eval`'s `is_background` branch,
+    /// before dispatching anything that could create a nested job under it).
+    ///
+    /// Deliberately baked in at creation rather than discovered later by walking live
+    /// `parent` links -- see `GlobalState::is_in_background_context`'s doc comment for
+    /// why a live walk doesn't work here (the outer backgrounded job in a shape like
+    /// `{ cmd sleep 100 } &` typically finishes and gets reaped, its `parent` link
+    /// severed by `remove_finished_jobs`'s orphaning logic, well before anything might
+    /// need to ask "was this nested job's ancestor ever backgrounded").
+    pub background_context: bool,
 }
 
 impl JobControlData {

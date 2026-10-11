@@ -1,0 +1,51 @@
+# Regression test: a `cmd` running inside a backgrounded *block* (`{ cmd sleep N } &`,
+# as opposed to a bare `cmd sleep N &`) must still show up as `Terminated` after being
+# killed by a real signal (`host:signal`), the same as a bare backgrounded `cmd` does.
+#
+# Root cause: `cmd.rs`'s signal-death bookkeeping only ran for a background job
+# (gating added to avoid a misleading "Terminated" row for an ordinary *foreground*
+# command that dies from an unrelated signal -- see
+# `tests/cmd_signal_death_does_not_abort_script.crush`'s sibling fix), checked via the
+# `cmd` command's own exact job id. But a `cmd` inside a backgrounded block runs under
+# a *nested* job id (`create_nested_job_handle`) -- the block's own job is what's
+# actually registered as background, not the `cmd` invocation's own, distinct, nested
+# one. A plain ancestor walk via `JobData::parent` turns out to be structurally
+# insufficient here too: the outer backgrounded block typically finishes its own
+# synchronous dispatch (handing off to the external process and returning) and gets
+# reaped well before the signal ever arrives, and `remove_finished_jobs`'s own
+# orphaning logic deliberately clears a surviving job's `parent` once its own parent
+# is pruned -- severing the very link an after-the-fact walk would need. Reproduced
+# directly: `{ cmd sleep 7413 } &` followed by signaling the `sleep` process directly
+# showed zero `Terminated` rows afterward (should show one, same as a bare `cmd sleep
+# 7413 &`).
+#
+# Fixed by `JobData::background_context` (see `src/lang/state/global_state.rs`):
+# inherited from the parent's own value at job *creation* time (baked in before any
+# pruning could ever sever it), rather than discovered later by walking live `parent`
+# links.
+$crush_bin := $(crush:env["CRUSH_BIN"])
+$t := $(vt:create $crush_bin)
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "$my_pid := $(crush:pid)\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+
+$t:write "{cmd sleep 7413} &\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "host:signal $pid signal=SIGKILL\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "$status := ($(jobs | where {$definition:starts_with \"\\$cmd \\\"sleep\\\" 7413\"} | select status))[0]:status\n"
+$t:wait_for "# "
+sleep $(duration:of milliseconds=300)
+$t:write "echo $(\"NESTED_CHECK_{}\":format $status)\n"
+$t:wait_for "NESTED_CHECK_Terminated"
+
+$t:close
+echo "ok"
