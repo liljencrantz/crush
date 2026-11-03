@@ -17,7 +17,7 @@
 # fixed here. A single destructuring assignment is exactly one top-level statement/
 # job, so it never hits this.
 
-[$pty_spawn $pty_child_pid $pty_assert_job_status $pty_assert_no_thread] := $(list:of {||
+[$pty_spawn $pty_child_pid $pty_assert_job_status $pty_assert_no_thread $pty_enable_counted_prompt $pty_run] := $(list:of {||
     # Spawns a nested crush session and waits for its first prompt. Replaces the
     # "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
     # $t:wait_for \"# \"" preamble duplicated at the top of every existing
@@ -37,9 +37,30 @@
     # `host:procs | where {...}` is a one-shot stream -- reading it once (e.g. via
     # `count`) drains it, leaving nothing for a second read -- so it's materialized
     # into a reusable `list:collect`ed list of pids before being read twice below.
-    $pids := $(host:procs | where {(($ppid == ($t:pid())) and ($name =~ $name_pattern))} | select pid | list:collect pid)
-    $match_count := $($pids | count)
-    assert (($match_count) == 1) $("expected exactly one child of pid {} matching {}, found {}":format ($t:pid()) $name_pattern $match_count)
+    #
+    # Retries (up to 1s total, same budget as `pty_assert_job_status`/
+    # `pty_assert_no_thread` below) rather than checking once: the real external
+    # process a backgrounded `cmd ... &` starts isn't necessarily visible in a fresh
+    # `host:procs` scan yet at the exact instant this is called -- `cmd`'s own
+    # `std::process::Command::spawn()` call happens inside that job's worker thread,
+    # some unknown amount of real time after the backgrounding statement's own prompt
+    # already returned (which only proves the *crush-side* job was created and
+    # dispatched, not that the OS has actually forked/exec'd it yet). A single check
+    # would wrongly fail during that window instead of waiting it out -- the same
+    # reasoning as the two retry-based helpers below, just for OS process-table
+    # visibility instead of crush's own job-status/thread bookkeeping.
+    $pids := $(list:of 0)
+    $match_count := 0
+    $tries := 0
+    while {(($tries < 20) and ($match_count != 1))} {
+        $pids = $(host:procs | where {(($ppid == ($t:pid())) and ($name =~ $name_pattern))} | select pid | list:collect pid)
+        $match_count = $($pids | count)
+        if (($match_count) != 1) {
+            sleep 50ms
+            $tries = ($tries + 1)
+        }
+    }
+    assert (($match_count) == 1) $("expected exactly one child of pid {} matching {}, found {} within the retry budget":format ($t:pid()) $name_pattern $match_count)
     $pids[0]
 } {|$t $job_id $expected|
     # Asserts that job $job_id's `status` column, read out of the nested session $t's
@@ -92,4 +113,38 @@
         }
     }
     assert $matched $("expected no thread left running under job {} within the retry budget":format $job_id)
+} {|$t|
+    # Replaces the nested session $t's prompt with one that counts the commands it has
+    # actually finished running, and returns the starting counter value (`1`, since
+    # setting the prompt is itself the first counted command). See `pty_run`'s own doc
+    # comment for why this exists: `wait_for "PROMPT <n>#"` can only ever be satisfied
+    # by the *n*th prompt genuinely being rendered -- unlike a bare `wait_for "# "`,
+    # which a prompt already on screen *before* the write can satisfy instantly,
+    # regardless of whether the command just written has been submitted yet, let
+    # alone finished. Every prompt this produces is numbered once and never repeats,
+    # so there is no stale earlier prompt a later wait could mistake for a new one.
+    $t:write "$cmd_counter := 0; crush:prompt:set {$cmd_counter = ($cmd_counter+1); \"PROMPT {}#\":format $cmd_counter}\n"
+    $t:wait_for "PROMPT 1#"
+    1
+} {|$t $n $command_line|
+    # Submits $command_line to the nested session $t (a trailing newline is added
+    # automatically) and blocks until it has *actually finished running* -- not just
+    # until some prompt-like text appears on screen -- by waiting for the next
+    # counted prompt `pty_enable_counted_prompt` set up. Returns the new counter
+    # value; callers thread it through explicitly (`$n = $(pty_run $t $n "...")`)
+    # since the count lives in the nested session's own scope, not anywhere this
+    # function could persist it between calls on its own.
+    #
+    # This is the replacement for the "`$t:write \"...\\n\"; $t:wait_for \"# \"; sleep
+    # <N>ms`" idiom used throughout the older pty tests: that bare `wait_for \"# \"`
+    # provides essentially no synchronization by itself (a prompt already on screen
+    # before the write satisfies it instantly), so every one of those tests also
+    # needed a fixed settle delay afterward to actually wait out the command -- too
+    # short and it flakes under load, too long and every run pays for the worst case.
+    # A counted prompt has no such tradeoff: this returns the instant (and not before)
+    # the nth prompt is genuinely rendered, however long that actually took.
+    $t:write $("{}\n":format $command_line)
+    $next := ($n + 1)
+    $t:wait_for $("PROMPT {}#":format $next)
+    $next
 })

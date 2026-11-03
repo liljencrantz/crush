@@ -4,28 +4,23 @@
 # holding the foreground before *any* stage dispatches, not just before the last one --
 # earlier stages create nested jobs too (see `JobData::backgrounded`).
 #
-# Counts `Terminated` rows rather than filtering by id; pid lookup and settle delays
-# follow `pty_terminate_and_signal_external_job.crush` (see its header).
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+# Counts `Terminated` rows rather than filtering by id. Uses `pty_run`'s counted prompt
+# (see pty_test_helpers.crush) instead of a bare `wait_for "# "` plus a settle delay --
+# a bare `wait_for "# "` can be satisfied by a prompt already on screen *before* the
+# write, so it proves nothing about whether the command just written has actually
+# finished; a counted prompt can only ever be satisfied once the right command
+# genuinely has. `pty_child_pid` (also counted-retry rather than a fixed delay) finds
+# the backgrounded `sleep`'s pid without needing to round-trip a `host:procs` query
+# through the nested session's own screen.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:write "$my_pid := $(crush:pid)\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "{ cmd sleep 7433; seq 3 } | count &\n"
-$t:wait_for "# "
-sleep 500ms
-$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
-$t:wait_for "# "
-sleep 1000ms
-$t:write "host:signal $pid signal=SIGKILL\n"
-$t:wait_for "# "
-sleep 500ms
-$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
-$t:wait_for "# "
-sleep 500ms
+$n = $(pty_run $t $n "{ cmd sleep 7433; seq 3 } | count &")
+$pid := $(pty_child_pid $t ^(.*sleep))
+host:signal $pid signal=SIGKILL
+
+$n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
 $t:write "echo $(\"FIRST_STAGE_CHECK_{}\":format $n)\n"
 $t:wait_for "FIRST_STAGE_CHECK_1"
 

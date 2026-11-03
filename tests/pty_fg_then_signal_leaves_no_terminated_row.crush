@@ -5,26 +5,34 @@
 # arm). Guards against "not holding the foreground" being sticky: `fg` must reset it
 # (see `JobData::backgrounded`).
 #
-# The nested session's prompt is blocked by `fg`, so the signal is sent from this outer
-# script, looking up the `sleep` by its parent pid (the nested session's own, `$t:pid`).
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+# KNOWN GAP, not yet closed like the sibling pty tests' sleeps: `fg 0` blocks the
+# nested session's own prompt until the job it resumed actually finishes, so there is
+# no prompt (counted or otherwise) to synchronize on between submitting it and sending
+# the signal that lets it finish -- and nothing else observable from outside this pty
+# (no `jobs` column, no other query) reveals "has `fg`'s dispatch actually reached
+# `GlobalState::set_backgrounded` yet", which is the specific internal state this
+# test's own correctness guarantee depends on. Confirmed directly: removing this delay
+# entirely made the check below fail *every* time (5/5), not occasionally -- sending
+# the signal immediately after writing "fg 0\n" reliably outraces the nested session's
+# own dispatch of that line, landing while the job is still considered backgrounded
+# and producing a spurious `Terminated` row. This is the same shape of problem as the
+# Ctrl-Z/Ctrl-C pty tests' settle delays (signaling a job from outside crush's own
+# control flow, with nothing to synchronize on): left as a fixed delay pending that
+# same investigation, rather than converted to a guess disguised as something more
+# precise.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:write "cmd sleep 7434 &\n"
-$t:wait_for "# "
-sleep 300ms
+$n = $(pty_run $t $n "cmd sleep 7434 &")
+$pid := $(pty_child_pid $t ^(.*sleep))
 $t:write "fg 0\n"
 sleep 800ms
-$vt_pid := $($t:pid)
-$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $vt_pid))} | select pid | sort pid reverse=$true))[0]:pid
 host:signal $pid signal=SIGKILL
-$t:wait_for "# "
-sleep 500ms
-$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
-$t:wait_for "# "
-sleep 500ms
+$n = ($n + 1)
+$t:wait_for $("PROMPT {}#":format $n)
+
+$n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
 $t:write "echo $(\"FG_SIG_CHECK_{}\":format $n)\n"
 $t:wait_for "FG_SIG_CHECK_0"
 

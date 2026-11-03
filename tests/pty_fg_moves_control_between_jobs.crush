@@ -56,42 +56,29 @@
 # first `fg` resumes it, and the second `fg` resumes the external one. Confirmed
 # directly against the debug binary.
 #
-# A settle delay follows every `wait_for "# "` here, same precedent as
-# `tests/cmd_paused_then_terminated_is_reaped.crush` and the sibling pty Ctrl-Z tests --
-# but for a different reason than those: the prompt text (e.g. "...# ") is part of
-# the *same* rendered line a freshly-typed command appears on (a real terminal echoes
-# keystrokes right after the still-visible prompt, on the same line, until Enter is
-# pressed) -- so `wait_for "# "` can be satisfied instantly by the prompt that was
-# already on screen *before* the write, regardless of whether the command just
-# written has actually been submitted, let alone finished running. It provides
-# essentially no synchronization by itself; the real pacing comes from the delay
-# that follows. Confirmed directly against the debug binary: starting the external
-# `cmd ... | convert $string &` pipeline (a real fork/exec plus a second pipeline
-# stage) can take noticeably longer than the 300ms that's otherwise plenty for a
-# plain builtin -- without a long-enough delay after that specific write, the next
-# command gets typed before the first has actually been submitted/executed, and the
-# two end up visibly concatenated/corrupted on the rendered screen rather than
-# appearing as two separate, correctly-ordered command lines.
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+# Uses `pty_run`'s counted prompt (see pty_test_helpers.crush) instead of a bare
+# `wait_for "# "` plus a settle delay: a bare `wait_for "# "` can be satisfied by a
+# prompt already on screen *before* the write, so it proves nothing about whether the
+# command just written has actually been submitted, let alone finished -- which is
+# exactly why the external `cmd ... | convert $string &` pipeline here used to need a
+# full 1s settle delay (a real fork/exec plus a second pipeline stage genuinely can
+# take that long to even get started) while a plain builtin needed only 300ms, and
+# guessing wrong in either direction either slowed every run down for the worst case
+# or corrupted the rendered screen under load. A counted prompt has no such tradeoff:
+# `pty_run` returns the instant (and not before) the right prompt is genuinely
+# rendered, however long that actually took.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:write "cmd sh -c 'sleep 1; printf \"%s_%s\" EXTERNAL MARKER' | convert $string &\n"
-$t:wait_for "# "
-sleep 1s
-$t:write "{sleep 1s; \"{}_{}\":format \"INTERNAL\" \"MARKER\"} &\n"
-$t:wait_for "# "
-sleep 500ms
+$n = $(pty_run $t $n "cmd sh -c 'sleep 1; printf \"%s_%s\" EXTERNAL MARKER' | convert $string &")
+$n = $(pty_run $t $n "{sleep 1s; \"{}_{}\":format \"INTERNAL\" \"MARKER\"} &")
 
-$t:write "echo $(convert $string $(fg))\n"
+$n = $(pty_run $t $n "echo $(convert $string $(fg))")
 $t:wait_for "INTERNAL_MARKER"
-$t:wait_for "# "
-sleep 300ms
 
-$t:write "echo $(convert $string $(fg))\n"
+$n = $(pty_run $t $n "echo $(convert $string $(fg))")
 $t:wait_for "EXTERNAL_MARKER"
-$t:wait_for "# "
 
 $t:close
 echo "ok"

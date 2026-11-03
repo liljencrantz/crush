@@ -55,35 +55,32 @@
 # here) -- and an already-existing file would wrongly read back as "the second
 # statement ran" on *this* run before it ever got a chance to actually create it.
 #
+# Uses `pty_run`'s counted prompt (see pty_test_helpers.crush) instead of a bare
+# `wait_for "# "` plus a settle delay -- a bare `wait_for "# "` can be satisfied by a
+# prompt already on screen *before* the write, proving nothing about whether the
+# command just written has actually finished. The final check -- proving the second
+# statement *never* ran, not just that it hasn't run *yet* -- uses `pty_assert_no_thread`
+# (an existing shared helper, bounded retry rather than a fixed wait) instead of a
+# blind `sleep 1500ms`: once no thread remains tracked under the backgrounded job, its
+# entire execution has definitely ended, so the marker file's absence at that point is
+# conclusive, whereas a fixed sleep either risks checking too early (flaking under
+# load) or always pays for the worst case even when the job finished almost instantly.
+source tests/pty_test_helpers.crush
 
-# A settle delay follows each `wait_for "# "` below, same precedent as the sibling pty
-# tests (e.g. `pty_terminate_and_signal_external_job.crush`): the prompt text is part of
-# the same rendered line a freshly-typed command appears on, so a bare `wait_for "# "`
-# can be satisfied by a prompt already on screen before the write actually lands.
-$crush_bin := $(crush:env["CRUSH_BIN"])
 $my_pid := $(crush:pid)
 $marker := $("/tmp/vt_terminate_internal_job_marker_{}":format $my_pid)
 try {
     cmd rm "-f" $marker
 } catch {
 }
-$cmd_line := $("{{sleep 100s; cmd touch \"{}\"}} &\n":format $marker)
+$cmd_line := $("{{sleep 100s; cmd touch \"{}\"}} &":format $marker)
 
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:write $cmd_line
-$t:wait_for "# "
-sleep 300ms
-
-$t:write "terminate 0\n"
-$t:wait_for "# "
-sleep 300ms
-
-$t:write "jobs\n"
-$t:wait_for "Terminated"
-sleep 1500ms
+$n = $(pty_run $t $n $cmd_line)
+$n = $(pty_run $t $n "terminate 0")
+pty_assert_no_thread $t 0
 
 $marker_exists := $true
 try {
