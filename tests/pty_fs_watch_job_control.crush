@@ -1,0 +1,24 @@
+# Regression test: `fs:watch` already cooperates with job control correctly
+# (registers its own `ChannelBasedController` and `select!`s against it alongside
+# the OS filesystem-event channel, see src/builtins/fs/watch.rs) -- confirmed during
+# this plan's audit of every stream-source command. This test is not expected to find
+# a bug; it's here so a future regression (e.g. someone reworking watch's event loop
+# and dropping the control-message handling) gets caught. See tests/fs_watch.crush
+# for coverage of fs:watch's actual row shape/event data, which this file does not
+# repeat.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+
+$t:run "cmd mkdir -p /tmp/pty_fs_watch_job_control_dir"
+$t:run "fs:watch /tmp/pty_fs_watch_job_control_dir &"
+pty_assert_job_status $t 0 "Running"
+
+$t:run "cmd touch /tmp/pty_fs_watch_job_control_dir/created.txt"
+$t:run "terminate 0"
+pty_assert_job_status $t 0 "Terminated"
+$t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format 0)
+$t:wait_for "__PTY_THREAD_COUNT__0"
+
+$t:run "cmd rm -rf /tmp/pty_fs_watch_job_control_dir"
+$t:close
+echo "ok"
