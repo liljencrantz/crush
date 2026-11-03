@@ -1,0 +1,27 @@
+# Lightweight pty/job-control integration coverage for `fs:usage`: confirms
+# backgrounding and `terminate` both work through a real interactive session
+# without hanging or corrupting it. The actual claim this plan cares about -- that
+# `terminate`/`pause` now stop the recursive walk promptly instead of only being
+# noticed once it happens to hit an output `send()` -- is proven by the fast,
+# deterministic Rust unit test `size_is_interrupted_by_terminate` in
+# src/builtins/fs/usage.rs itself (using a synthetic, sleep-delayed in-memory
+# `DirectoryLister`): reproducing that scenario through a real pty needs a
+# multi-hundred-thousand-file directory tree slow enough to still be scanning after
+# `terminate`, and creating/deleting one that large on a real filesystem does not fit
+# in this test harness's own 30-second per-test hang-detection budget (confirmed
+# directly: a 500,000-file version of this test reliably exceeded it).
+#
+# A plain `fs:usage .` on this repo's own small tree finishes in well under the time
+# it takes to check its status, so the job backgrounded here also runs a `sleep`
+# after it, purely to keep the *job* alive long enough to check/terminate it --
+# `fs:usage` itself still runs for real as the first statement.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+
+$t:run "{fs:usage . ; sleep $(duration:of seconds=100)} &"
+pty_assert_job_status $t 0 "Running"
+$t:run "terminate 0"
+pty_assert_job_status $t 0 "Terminated"
+
+$t:close
+echo "ok"
