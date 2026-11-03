@@ -18,6 +18,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
         let mut res: OrderedMap<String, Command> = OrderedMap::new();
         Write::declare_method(&mut res);
         WaitFor::declare_method(&mut res);
+        WaitQuiet::declare_method(&mut res);
+        Run::declare_method(&mut res);
         Contents::declare_method(&mut res);
         Pid::declare_method(&mut res);
         Alive::declare_method(&mut res);
@@ -76,6 +78,66 @@ fn wait_for(mut context: CommandContext) -> CrushResult<()> {
         WaitFor::parse(context.remove_arguments(), &context.global_state.printer())?;
     let session = PtySession::get(&context.this.r#struct()?)?;
     session.wait_for(&cfg.pattern, cfg.timeout)?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    pty.session.wait_quiet,
+    can_block = true,
+    output = Known(ValueType::Empty),
+    short = "Block until the virtual terminal's rendered screen stops changing, or error out after a timeout.",
+    long = "Unlike `wait_for`, there is no pattern to match -- use this to synchronize on \"the",
+    long = "command has actually run and the terminal has settled\" for commands that print",
+    long = "nothing distinctive (e.g. a bare `sleep`), instead of a blind `sleep $(duration:of",
+    long = "milliseconds=300)` after every interaction.",
+    example = "$t:write \"sleep $(duration:of seconds=100)\\n\"",
+    example = "$t:wait_quiet",
+    example = "$t:write $t:control:z",
+)]
+struct WaitQuiet {
+    #[default(Duration::milliseconds(100))]
+    #[description("how long the screen must stay unchanged before this is considered quiet.")]
+    quiet: Duration,
+    #[default(Duration::seconds(5))]
+    #[description("how long to wait before giving up.")]
+    timeout: Duration,
+}
+
+fn wait_quiet(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: WaitQuiet =
+        WaitQuiet::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
+    session.wait_quiet(cfg.quiet, cfg.timeout)?;
+    context.output.send(Value::Empty)
+}
+
+#[signature(
+    pty.session.run,
+    can_block = true,
+    output = Known(ValueType::Empty),
+    short = "Submit a command line, then block until the virtual terminal's rendered screen stops changing.",
+    long = "Sugar for `$t:write (text + \"\\n\")` followed by `$t:wait_quiet` -- the common case of",
+    long = "\"run this one command and don't do anything else until the session has actually",
+    long = "processed it\", without needing a specific string to wait for.",
+    example = "$t:run \"echo hello\"",
+    example = "$t:wait_for \"hello\"",
+)]
+struct Run {
+    #[description("the command line to submit -- a trailing newline is added automatically.")]
+    text: String,
+    #[default(Duration::milliseconds(100))]
+    #[description("how long the screen must stay unchanged before this is considered quiet.")]
+    quiet: Duration,
+    #[default(Duration::seconds(5))]
+    #[description("how long to wait before giving up.")]
+    timeout: Duration,
+}
+
+fn run(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Run = Run::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let session = PtySession::get(&context.this.r#struct()?)?;
+    session.write_raw(&(cfg.text + "\n"))?;
+    session.wait_quiet(cfg.quiet, cfg.timeout)?;
     context.output.send(Value::Empty)
 }
 
