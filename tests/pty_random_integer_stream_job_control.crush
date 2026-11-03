@@ -1,18 +1,23 @@
-# `random:integer_stream` registers no job-control controller of its own -- its loop
-# is just `loop { output.send(...)?; }`. Investigated whether this is an observable
-# bug (as the design's command inventory assumed from reading the code shape alone,
-# without having run it) across several real scenarios: backgrounded with no
-# consumer, backgrounded piped into `count` (an active, indefinite drain) then
-# `pause`d, and foregrounded then Ctrl-Z'd. In every case, `host:procs`' own `cpu`
-# column (total CPU time used) was measured flat across a 1-second window once
-# paused/terminated, and `crush:threads` showed no thread left tracked under the job
-# after `terminate` -- confirmed directly, no regression in this file is expected to
-# ever fail on today's code. The reason: this command's *entire* body is "generate a
-# value, then block sending it downstream" -- any teardown of its output channel
-# (which job termination/pause already causes via the pipeline's normal lifecycle,
-# independent of this command cooperating at all) unblocks and stops it immediately.
-# There was therefore no failing test to drive a Rust change here (the TDD Iron Law:
-# no production code without a failing test first) -- this is a regression guard, not
+# `random:integer_stream`'s loop is just `loop { output.send(...)?; }`, with no
+# separate, hand-rolled job-control controller of its own -- which the design's
+# command inventory read, from the code shape alone, as "doesn't cooperate at all".
+# That reading was wrong: `output` comes from `context.initialize_output(...)`,
+# which already registers a controller (see `CommandContext::initialize_output` in
+# src/lang/state/contexts.rs), and `TableOutputStream::send` already `select!`s
+# against that controller's channel on every single call (src/lang/pipe.rs) --
+# Terminate/Pause are handled right there, every iteration, with no extra code
+# needed. Corrected after Task 4 found the same `initialize_output`/`poll_control`
+# mechanism while fixing `fs:usage` and `types.file.remove`'s *different* gap (those
+# two don't call `send` for every entry, so they needed an explicit extra check
+# between entries -- this command calls `send` every iteration already).
+#
+# Confirmed directly across several real scenarios: backgrounded with no consumer,
+# backgrounded piped into `count` (an active, indefinite drain) then `pause`d, and
+# foregrounded then Ctrl-Z'd. In every case, `host:procs`' own `cpu` column (total
+# CPU time used) was measured flat across a 1-second window once paused/terminated,
+# and `crush:threads` showed no thread left tracked under the job after `terminate`.
+# There was no failing test to drive a Rust change here (the TDD Iron Law: no
+# production code without a failing test first) -- this is a regression guard, not
 # a bug fix, same treatment as fs:watch/remote:pexec get in this plan.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
@@ -30,8 +35,7 @@ assert ($cpu_b <= ($cpu_a + $(duration:of milliseconds=50))) $("expected no meas
 $t:run "resume 0"
 $t:run "terminate 0"
 pty_assert_job_status $t 0 "Terminated"
-$t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format 0)
-$t:wait_for "__PTY_THREAD_COUNT__0"
+pty_assert_no_thread $t 0
 
 $t:close
 

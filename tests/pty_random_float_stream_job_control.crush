@@ -1,10 +1,11 @@
 # Same investigation and conclusion as pty_random_integer_stream_job_control.crush --
-# see that file's header comment. `random:float_stream` has the identical loop shape
-# (`loop { output.send(...)?; }`, no job-control registration of its own) and the
-# same empirical result: terminate/pause already stop it promptly in every real
-# scenario tested, because its output-send is what blocks it, and the pipeline's own
-# teardown on terminate/pause always breaks that send regardless of this command
-# cooperating. No failing test to drive a Rust change -- regression guard only.
+# see that file's header comment for the full explanation (and the correction to it:
+# `output` already has a registered controller via `context.initialize_output`, and
+# `TableOutputStream::send` already checks it on every call -- that, not generic
+# backpressure, is why this command already cooperates with no extra code).
+# `random:float_stream` has the identical loop shape and the same empirical result:
+# terminate/pause already stop it promptly in every real scenario tested. No failing
+# test to drive a Rust change -- regression guard only.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 
@@ -21,8 +22,7 @@ assert ($cpu_b <= ($cpu_a + $(duration:of milliseconds=50))) $("expected no meas
 $t:run "resume 0"
 $t:run "terminate 0"
 pty_assert_job_status $t 0 "Terminated"
-$t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format 0)
-$t:wait_for "__PTY_THREAD_COUNT__0"
+pty_assert_no_thread $t 0
 
 $t:close
 

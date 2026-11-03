@@ -20,8 +20,7 @@ $t := $(pty_spawn)
 $t:run "systemd:journal follow=$true &"
 $t:run "terminate 0"
 pty_assert_job_status $t 0 "Terminated"
-$t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format 0)
-$t:wait_for "__PTY_THREAD_COUNT__0"
+pty_assert_no_thread $t 0
 
 $t:close
 echo "ok"

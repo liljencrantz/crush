@@ -17,7 +17,7 @@
 # fixed here. A single destructuring assignment is exactly one top-level statement/
 # job, so it never hits this.
 
-[$pty_spawn $pty_child_pid $pty_assert_job_status] := $(list:of {||
+[$pty_spawn $pty_child_pid $pty_assert_job_status $pty_assert_no_thread] := $(list:of {||
     # Spawns a nested crush session and waits for its first prompt. Replaces the
     # "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
     # $t:wait_for \"# \"" preamble duplicated at the top of every existing
@@ -56,6 +56,40 @@
     # called more than once against the same nested session (e.g. "Running" then
     # later "Terminated" for the same job id), and `:=` errors if the variable it
     # declares already exists in that session's scope from an earlier call.
-    $t:write $("echo $(\"__PTY_JOB_STATUS__{{}}\":format ($(jobs | where {{($id == {})}} | select status))[0]:status)\n":format $job_id)
-    $t:wait_for $("__PTY_JOB_STATUS__{}":format $expected)
+    #
+    # Retries (re-querying `jobs` each time, up to 1s total) rather than checking
+    # once: the status this helper is asked to wait for (e.g. "Terminated" right
+    # after calling `terminate`) isn't always true at the exact instant this helper
+    # is called -- a single check would wrongly fail on a real, if brief, status
+    # transition instead of waiting it out.
+    $matched := $false
+    $tries := 0
+    while {(($tries < 20) and (!$matched))} {
+        $t:write $("echo $(\"__PTY_JOB_STATUS__{{}}\":format ($(jobs | where {{($id == {})}} | select status))[0]:status)\n":format $job_id)
+        try {
+            $t:wait_for $("__PTY_JOB_STATUS__{}":format $expected) timeout=$(duration:of milliseconds=250)
+            $matched = $true
+        } catch {|$e|
+            $tries = ($tries + 1)
+        }
+    }
+    assert $matched $("job {} never reached status {} within the retry budget":format $job_id $expected)
+} {|$t $job_id|
+    # Asserts that no thread remains tracked (`crush:threads`) under job $job_id in
+    # the nested session $t -- replaces the identical write+wait_for pair that was
+    # duplicated across four separate tests. Same retry rationale as
+    # `pty_assert_job_status`: right after `terminate`, thread-tracking cleanup may
+    # not have happened yet at the exact instant this is checked.
+    $matched := $false
+    $tries := 0
+    while {(($tries < 20) and (!$matched))} {
+        $t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format $job_id)
+        try {
+            $t:wait_for "__PTY_THREAD_COUNT__0" timeout=$(duration:of milliseconds=250)
+            $matched = $true
+        } catch {|$e|
+            $tries = ($tries + 1)
+        }
+    }
+    assert $matched $("expected no thread left running under job {} within the retry budget":format $job_id)
 })

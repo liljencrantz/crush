@@ -12,12 +12,21 @@
 # a crush loop, since crush's own per-iteration overhead would make *setup* the slow
 # part instead of the delete -- a one-liner specifically, not a multi-line script:
 # `cmd` splits every argument's string value on `\n` into separate argv entries (see
-# pty_fs_usage_job_control.crush's own note on this).
+# pty_fs_usage_job_control.crush's own note on this). Path is randomized (not a fixed
+# name) so two worktrees/runs of this suite can never collide on the same tree.
+#
+# The decisive check is comparing the remaining-file count right after `terminate`
+# against the same count a second later, not just CPU: a CPU-only check can pass
+# trivially if the delete happens to finish inside this test's own timing budget
+# regardless of whether `terminate` did anything, and a single remaining-file count
+# right after `terminate` can't tell "stopped early" apart from "still mid-delete at
+# the moment checked" either -- it's always well above 0 either way, this early. A
+# *second* count taken a second later directly answers "did deleting actually stop":
+# unchanged means it stopped; still dropping means it didn't.
 source tests/pty_test_helpers.crush
-$tree := "/tmp/pty_file_remove_job_control_tree"
-cmd rm "-rf" $tree
+$tree := $("/tmp/pty_file_remove_job_control_tree_{}":format $(random:integer 1000000000))
 cmd mkdir "-p" $tree
-cmd python3 "-c" "import os; os.chdir('/tmp/pty_file_remove_job_control_tree'); [open(f'f{i}', 'w').close() for i in range(100000)]"
+cmd python3 "-c" $("import os; os.chdir('{}'); [open('f' + str(i), 'w').close() for i in range(100000)]":format $tree)
 
 $t := $(pty_spawn)
 $t:write $("$tree := $(convert $file {})\n":format $tree)
@@ -27,9 +36,14 @@ sleep $(duration:of milliseconds=500)
 $cpu_before := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
 
 $t:run "terminate 0"
-sleep $(duration:of seconds=1)
-$cpu_after := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+$remaining_a := $(fs:files $tree | count)
+assert ($remaining_a > 0) $("expected terminate to stop the delete early, but all files were already gone ({} remaining)":format $remaining_a)
 
+sleep $(duration:of seconds=1)
+$remaining_b := $(fs:files $tree | count)
+assert ($remaining_b == $remaining_a) $("expected no further files to be deleted in the second after terminate, went from {} to {} remaining":format $remaining_a $remaining_b)
+
+$cpu_after := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
 assert ($cpu_after <= ($cpu_before + $(duration:of milliseconds=300))) $("expected no significant CPU growth in the second after terminate, got {} -> {}":format $cpu_before $cpu_after)
 
 $t:close
@@ -40,4 +54,5 @@ $tmp := $(convert $file $("/tmp/pty_file_remove_job_control_check_{}":format $(r
 $tmp:mkdir
 $tmp["a"]:touch
 $tmp:remove recursive=$true
+assert (!($tmp:exists())) "the directory should no longer exist after an uninterrupted recursive remove"
 echo "ok"

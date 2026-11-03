@@ -1,0 +1,79 @@
+# Smoke tests for the remaining bounded, one-shot stream-source commands (each
+# returns well under a second) -- nothing to interrupt mid-flight (see this plan's
+# Review Focus). Consolidated into one pty session rather than one file per command:
+# a final review found that many separate pty-spawning tests measurably increase the
+# process/PTY contention that destabilizes a couple of unrelated, pre-existing
+# timing-sensitive tests elsewhere in the suite under `cargo test`'s default
+# parallelism.
+#
+# Each command is backgrounded, then its *actual result* is retrieved via a bare
+# `fg` (operates on the most recently backgrounded job) and asserted to look like a
+# real integer -- not just "didn't crash". An earlier version of this file
+# (superseded, never committed) called `bg`/`fg` with no job id around an
+# already-finished job to simulate Ctrl-Z/bg/fg mechanics; `bg` actually requires a
+# job id and errored every time inside the nested session, silently, because
+# `$t:run` only waits for the screen to go quiet, not for the typed command to
+# actually succeed -- so that version never caught its own `bg` failing and asserted
+# nothing about any command's real result. Dropped that dance: Ctrl-Z/bg/fg
+# mechanics for a job that's still genuinely running are already covered thoroughly
+# by existing non-bounded tests (e.g. tests/pty_ctrl_z_suspends_internal_job.crush);
+# there is no "still running" moment to catch for a command that finishes in
+# milliseconds.
+#
+# `remote:identity`/`remote:host:list` are wrapped in `try`/`catch` (falling back to
+# 0) since they depend on the local environment having an ssh-agent / known_hosts
+# file, which this test doesn't control -- the point here is that job control around
+# them doesn't hang or corrupt the session, not that they succeed everywhere.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+
+$t:run "$r := $(sockets:tcp | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(sockets:udp | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(host:battery | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(host:procs | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(host:threads | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(groups:list | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(users:list | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(fs:stat . | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(fs:mounts | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(crush:history | count &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(try { remote:identity | count } catch {|$e| 0 } &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:run "$r := $(try { remote:host:list | count } catch {|$e| 0 } &)"
+$t:run "echo $(\"__RESULT__{}\":format $(fg))"
+$t:wait_for ^(__RESULT__-?[0-9]+)
+
+$t:close
+echo "ok"

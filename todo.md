@@ -35,3 +35,4 @@
 * Regular file completion of strings
 * crush:commands command, showing all currently executing commands
 * Reserve `$global`. Possibly also `$true`, `$false` and a few more?
+* Fix `source`/`execute::file` deadlocking when sourcing a file with 3+ top-level statements from an already-running script (repro: tests/source_three_statements.crush, deliberately committed RED -- suspected cause: `execute::file`'s shared output pipe in `src/lang/execute.rs`'s `source()`, reused unconsumed across every job in the sourced file)
