@@ -3,20 +3,19 @@
 # the job showing up as Paused -- same as tests/pty_ctrl_z_suspends_external_job.crush,
 # but exercising job-control signal delivery against a builtin command instead of a
 # forked child process.
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
+#
+# `pty_send_control` (see pty_test_helpers.crush) sends the Ctrl-Z byte and resends it
+# if it doesn't land rather than waiting out a fixed guess beforehand -- see that
+# file's own doc comment, and `pty_ctrl_z_suspends_external_job.crush`'s, for why a
+# fixed settle delay can't actually guarantee this (the kernel generates SIGTSTP for
+# whichever process owns the terminal independent of whether crush has dispatched the
+# job yet) and why resending is the correct fix instead of a longer guess.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
+
 $t:write "sleep 100s\n"
-# Unlike the external-command case, a bare `sleep ...` prints nothing distinctive while
-# it runs (no fork/exec handoff output to wait_for on) and no new prompt appears until
-# it's done or interrupted -- there is nothing to wait_for between submitting it and
-# sending Ctrl-Z. Use the same settle delay as pty_ctrl_z_suspends_external_job.crush
-# instead, giving crush time to actually start running the builtin before the
-# keystroke is delivered.
-sleep 300ms
-$t:write $t:control:z
-$t:wait_for "# "
-$t:write "jobs\n"
-$t:wait_for "Paused"
+$n = $(pty_send_control $t $n $t:control:z)
+pty_assert_job_status $t 0 "Paused"
 $t:close
 echo "ok"

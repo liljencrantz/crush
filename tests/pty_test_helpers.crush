@@ -17,7 +17,7 @@
 # fixed here. A single destructuring assignment is exactly one top-level statement/
 # job, so it never hits this.
 
-[$pty_spawn $pty_child_pid $pty_assert_job_status $pty_assert_no_thread $pty_enable_counted_prompt $pty_run] := $(list:of {||
+[$pty_spawn $pty_child_pid $pty_assert_job_status $pty_assert_no_thread $pty_send_control $pty_enable_counted_prompt $pty_run] := $(list:of {||
     # Spawns a nested crush session and waits for its first prompt. Replaces the
     # "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
     # $t:wait_for \"# \"" preamble duplicated at the top of every existing
@@ -113,6 +113,57 @@
         }
     }
     assert $matched $("expected no thread left running under job {} within the retry budget":format $job_id)
+} {|$t $n $control_char|
+    # Sends a raw control byte (e.g. `$t:control:z`/`$t:control:c`) to the nested
+    # session $t, resending it only if it genuinely doesn't land within a generous
+    # per-attempt window, until the job it interrupted (paused or terminated) has
+    # actually stopped occupying the foreground -- evidenced by the *next counted
+    # prompt* appearing, exactly like `pty_run`. No separate marker command is
+    # written to check this (an earlier version of this helper did, and that was
+    # itself buggy -- see below): interrupting the foreground job is *already* what
+    # makes the interactive loop move on and show a new prompt, the same way
+    # finishing normally does, so there's nothing else to submit. Returns the new
+    # counter value; the caller threads it through exactly like `pty_run`.
+    #
+    # Why resending is necessary, not just rechecking: a real pty's line discipline
+    # generates the signal (SIGTSTP/SIGINT) the instant it sees the byte, entirely at
+    # the kernel level -- independent of whether crush has actually gotten around to
+    # creating/dispatching the job that byte is meant to reach. A byte that arrives
+    # before that job exists finds nothing to interrupt and is simply gone; waiting
+    # longer for a status that will never change doesn't help, but sending the byte
+    # again does.
+    #
+    # Why there's no separate marker command written right after the control byte,
+    # the way `pty_assert_job_status`'s retries do: confirmed directly that writing
+    # one immediately -- even separated into its own `$t:write` call -- is itself
+    # racy. The kernel's own signal-generation handling for the control byte can
+    # still be in the middle of settling when that write lands, and the marker text
+    # can be swallowed by the same mechanism that makes combining a command and a
+    # control byte in one write unsafe (see the sibling tests' own header comments) --
+    # even though the control byte's *real* effect (interrupting the job) still goes
+    # through untouched. Waiting for the side effect the interrupt itself already
+    # produces (a new prompt) sidesteps this entirely: nothing new is ever written
+    # until the one the interrupt caused is confirmed.
+    #
+    # `wait_quiet` was tried in place of this and rejected: it only proves the screen
+    # stopped changing for a moment, which is equally true whether the control byte
+    # actually interrupted anything or was silently lost and the job is simply still
+    # running quietly in the background -- confirmed directly, it returned "success"
+    # on a run where the job was never actually touched at all.
+    $matched := $false
+    $tries := 0
+    $next := ($n + 1)
+    while {(($tries < 5) and (!$matched))} {
+        $t:write $control_char
+        try {
+            $t:wait_for $("PROMPT {}#":format $next) timeout=500ms
+            $matched = $true
+        } catch {|$e|
+            $tries = ($tries + 1)
+        }
+    }
+    assert $matched "control byte never landed within the retry budget"
+    $next
 } {|$t|
     # Replaces the nested session $t's prompt with one that counts the commands it has
     # actually finished running, and returns the starting counter value (`1`, since

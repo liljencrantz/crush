@@ -9,19 +9,26 @@
 # `sleep 300ms` that every existing tests/pty_*.crush file
 # uses after writing a command, with "wait until nothing new has arrived for a while"
 # instead of "wait a fixed guess and hope it was long enough".
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
 
 $t:run "echo hello"
 $t:wait_for "hello"
 
+# The Ctrl-Z below is unrelated to what this file actually smoke-tests (`run`/
+# `wait_quiet` above already covered that) -- it's just exercising that the session
+# remains usable afterward. `pty_enable_counted_prompt`/`pty_send_control` (see
+# pty_test_helpers.crush) are used for it rather than a bare `wait_for "# "`, for the
+# same reason every other pty job-control test uses them now: a bare `wait_for "# "`
+# can't actually prove the Ctrl-Z landed (a prompt already on screen satisfies it
+# instantly), and `wait_quiet` alone can't either -- confirmed directly elsewhere in
+# this investigation that `wait_quiet` reports "settled" just as readily when a
+# control byte was silently lost and the job is simply still running quietly as when
+# it actually worked.
+$n := $(pty_enable_counted_prompt $t)
 $t:write "sleep 100s\n"
-$t:wait_quiet
-$t:write $t:control:z
-$t:wait_for "# "
-$t:write "jobs\n"
-$t:wait_for "Paused"
+$n = $(pty_send_control $t $n $t:control:z)
+pty_assert_job_status $t 0 "Paused"
 
 $t:close
 echo "ok"

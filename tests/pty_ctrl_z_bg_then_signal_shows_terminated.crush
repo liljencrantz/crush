@@ -12,37 +12,23 @@
 # `jobs` instead. Fixed by having `GlobalState::pause` mark the job too (see
 # `JobData::backgrounded`).
 #
-# Job id `0`: same reasoning as `pty_bg_resumes_without_foregrounding.crush` -- the sleep
-# is the first command typed into this fresh nested session. `$my_pid` is captured only
-# afterwards so that holds. The pid lookup and settle delays follow
-# `pty_terminate_and_signal_external_job.crush` (see its header for why each is needed).
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+# Job id `0`: the sleep is the first command typed into this fresh nested session (after
+# the counted-prompt setup, which finishes and is reaped first -- see
+# pty_test_helpers.crush). `pty_send_control` (see that file) sends the Ctrl-Z byte and
+# resends it if it doesn't land rather than waiting out a fixed guess. `pty_child_pid`
+# (also retry-based, not a fixed delay) finds the backgrounded `sleep`'s pid without
+# round-tripping a `host:procs` query through the nested session's own screen.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
 $t:write "cmd sleep 7419\n"
-$t:wait_for "sleep"
-sleep 300ms
-$t:write $t:control:z
-$t:wait_for "# "
-sleep 300ms
-$t:write "bg 0\n"
-$t:wait_for "# "
-sleep 300ms
+$n = $(pty_send_control $t $n $t:control:z)
+$n = $(pty_run $t $n "bg 0")
 
-$t:write "$my_pid := $(crush:pid)\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "host:signal $pid signal=SIGKILL\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "$status := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
-$t:wait_for "# "
-sleep 300ms
+$pid := $(pty_child_pid $t ^(.*sleep))
+host:signal $pid signal=SIGKILL
+$n = $(pty_run $t $n "$status := ($(jobs | where {($id == 0)} | select status))[0]:status")
 $t:write "echo $(\"BG_SIG_CHECK_{}\":format $status)\n"
 $t:wait_for "BG_SIG_CHECK_Terminated"
 

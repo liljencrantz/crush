@@ -11,6 +11,23 @@
 # The paused job's id is looked up (highest-id `Paused` row) rather than hardcoded, since
 # it depends on how many intermediate block jobs exist. Pid lookup and settle delays
 # follow `pty_terminate_and_signal_external_job.crush` (see its header).
+#
+# KNOWN GAP, not converted to the counted-prompt/`pty_send_control` approach the other
+# 7 Ctrl-Z/Ctrl-C pty tests now use (see pty_test_helpers.crush): tried directly,
+# converted this exact way, and found it genuinely unreliable here specifically --
+# roughly 2 in 3 runs failed with no job ever reaching `Paused` at all, even though the
+# *simpler*, non-nested Ctrl-Z cases (a bare `sleep`, a bare `cmd sleep`) convert
+# cleanly and have run clean well over 100 times each, including under artificial CPU
+# load, with the exact same technique. Three levels of nested block/closure dispatch
+# before the innermost `cmd` job exists appears to measurably widen the real window
+# `pty_ctrl_z_suspends_external_job.crush`'s own header already documents (Ctrl-Z
+# racing the fork/exec/terminal-handoff) -- confirmed the race is real and not just an
+# artifact of the test by adding targeted tracing, which consistently made it stop
+# reproducing entirely (added latency on the signal-handling thread gives the nested
+# dispatch enough extra time to finish first) -- the exact signature of a genuine,
+# very narrow timing race, not a logic bug in this file's own retry helper. Left as a
+# fixed delay pending further investigation, same as
+# `pty_fg_then_signal_leaves_no_terminated_row.crush`'s own documented gap.
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "

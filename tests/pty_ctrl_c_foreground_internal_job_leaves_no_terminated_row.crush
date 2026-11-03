@@ -6,22 +6,15 @@
 # interrupted at the prompt was never put in the background, so it should just be
 # reaped silently. Found by a whole-branch review: this used to leave a phantom row.
 #
-# A settle delay follows each `wait_for "# "`, same precedent as the sibling pty tests:
-# the prompt text can already be on screen before the typed line actually lands.
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+# `pty_send_control` (see pty_test_helpers.crush) sends the Ctrl-C byte and resends it
+# if it doesn't land rather than waiting out a fixed guess beforehand or afterward.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
 $t:write "sleep 100s\n"
-sleep 500ms
-$t:write $t:control:c
-$t:wait_for "# "
-sleep 500ms
-
-$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
-$t:wait_for "# "
-sleep 500ms
+$n = $(pty_send_control $t $n $t:control:c)
+$n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
 $t:write "echo $(\"CTRL_C_CHECK_{}\":format $n)\n"
 $t:wait_for "CTRL_C_CHECK_0"
 
