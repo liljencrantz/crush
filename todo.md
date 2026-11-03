@@ -10,7 +10,7 @@
 * fix dynamic loading deadlocks
 * tab completions for external commands
 * Make IFS configurable for cmd command
-* Add signal handlers to fix ^C and ^Z during regular execution
+* ~~Add signal handlers to fix ^C and ^Z during regular execution~~ (resolved: see `GlobalState::terminate`/`pause`/`resume`, `JobHandle`, and the many `tests/pty_*.crush` tests exercising Ctrl-C/Ctrl-Z on internal and external jobs)
 * Dict literals in expression mode ({key: value})
 * Better syntax highlighting for expression mode
 * Move yaml builtin to use saphyr
@@ -27,9 +27,9 @@
 * syntax highlighting does not understand closure parameters
 * Implement job control for timeit
 * Make sure that passing through streams from closures doesn't block
-* Job control for cmd command
-* Document what causes the next job to execute
-* Document job control
+* ~~Job control for cmd command~~ (resolved: see `src/builtins/control/cmd.rs`'s own `ChannelBasedController` registration and `ChildEvent::Stopped` signal-death handling)
+* ~~Document what causes the next job to execute~~ (resolved: see docs/language_reference.md's "Job ids and parentage" section)
+* ~~Document job control~~ (resolved: see docs/language_reference.md's "Background jobs" / "Suspending, resuming, and canceling jobs interactively" sections)
 * A token like 123abc results in separate integer and a string tokens. Should this maybe be a tokenizer error instead? Or possibly a single working string argument?
 * Entering an unknown command, e.g. `fnorp` gives an unhelpful error message.
 * Regular file completion of strings
