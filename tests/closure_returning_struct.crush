@@ -1,0 +1,13 @@
+# A struct with no `__call__` member, returned as the final value of a zero-argument
+# closure, must behave exactly like every other value type when that closure is
+# invoked as a bare statement (`$(f)`) -- the struct is the *result*, not something
+# to be called further. Found while building a pty test helper that wraps `pty:
+# create` (whose own result is exactly such a struct) in a closure: `eval_struct` in
+# src/lang/command_invocation.rs unconditionally required a `__call__` member,
+# even with zero arguments, instead of falling through to the generic "forward this
+# value" behavior every other type gets in that same zero-argument case (see
+# `eval_command_definition`'s final catch-all arm).
+$f := {|| $(struct:of x=1 y=2)}
+$r := $(f)
+assert (($r:x) == 1) "closure's returned struct should be usable after the call"
+echo "ok"

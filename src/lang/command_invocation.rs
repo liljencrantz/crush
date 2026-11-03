@@ -242,7 +242,16 @@ fn eval_struct(
             .as_str(),
         ),
 
-        _ => error(
+        // A struct with no `__call__`, given no arguments, is just a value -- exactly
+        // like every other type in that case (see `eval_command_definition`'s final
+        // catch-all arm). Only a struct *given arguments* without a `__call__` is an
+        // actual "not a command" mistake.
+        None if local_arguments.is_empty() => {
+            context.output.send(Value::Struct(struct_value))?;
+            Ok(None)
+        }
+
+        None => error(
             format!(
                 "Struct must have a member `__call__` to be used as a command {}",
                 struct_value.to_string()
