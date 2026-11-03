@@ -1,0 +1,29 @@
+# Regression test: `remote:pexec` already cooperates with job control correctly --
+# each worker thread registers its own controller via `run_remote` (see
+# src/builtins/remote.rs) -- confirmed during this plan's audit of every
+# stream-source command. Not expected to find a bug; here so a future regression
+# gets caught. Uses the in-process test sshd fixture (same pattern as
+# tests/ssh_pexec_partial_failure.crush), never a real network host.
+source tests/pty_test_helpers.crush
+$host_file := $(convert $file $(".ssh_known_hosts_pexec_job_control_{}":format $(random:integer 1000000000)))
+bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
+
+$t := $(pty_spawn)
+$t:write $("$host_file := {}\n":format $host_file)
+$t:wait_quiet
+$t:write $("$addr := \"127.0.0.1:{}\"\n":format ($(crush:env["SSHD_PORT"])))
+$t:wait_quiet
+$t:write "$user := \"crushtest\"\n"
+$t:wait_quiet
+$t:write "$pass := \"crushtest-password\"\n"
+$t:wait_quiet
+
+$t:run "remote:pexec {sleep $(duration:of seconds=100)} $addr $addr username=$user password=$pass host_file=$host_file parallel=2 | count &"
+pty_assert_job_status $t 0 "Running"
+
+$t:run "terminate 0"
+pty_assert_job_status $t 0 "Terminated"
+
+$t:close
+$host_file:remove
+echo "ok"
