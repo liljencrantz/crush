@@ -423,6 +423,15 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
                         match next.clone().read_dir() {
                             Ok(rd) => {
                                 for e in rd {
+                                    // `output` is already interruptible
+                                    // (`CommandContext::initialize_output` wires its
+                                    // controller up), and `send` already checks it on
+                                    // every call -- but a file that isn't itself
+                                    // reported (the default, non-`verbose` case) never
+                                    // reaches a `send` at all, so this walk needs its
+                                    // own check between entries, same gap `fs:usage`
+                                    // had (see that fix's own commit).
+                                    output.poll_control()?;
                                     match e {
                                         Ok(e) => match e.metadata() {
                                             Ok(meta) => {

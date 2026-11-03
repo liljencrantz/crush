@@ -1,0 +1,18 @@
+# Smoke test: `fs:stat` is a bounded, one-shot source (returns well under a second)
+# -- nothing to interrupt mid-flight (see this plan's Review Focus). Confirms it
+# still completes when run through a real interactive pty session, and that
+# backgrounding, Ctrl-Z/bg/fg around it, and the session itself afterward all keep
+# working.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+
+$t:run "fs:stat . &"
+$t:write $t:control:z
+$t:wait_for "# "
+$t:run "bg"
+$t:run "fg"
+$t:write "echo still_alive_marker\n"
+$t:wait_for "still_alive_marker"
+
+$t:close
+echo "ok"

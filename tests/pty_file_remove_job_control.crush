@@ -1,0 +1,43 @@
+# `types.file.remove`'s recursive delete (a `file` value's `:remove recursive=$true`
+# method, src/builtins/types/file.rs) does real filesystem I/O for every entry, and
+# -- in the default (non-verbose, no errors) case -- never calls `output.send()` at
+# all until it's completely done, the same gap `fs:usage` had (see that fix's own
+# commit): confirmed directly, measuring `host:procs`' own `cpu` column showed the
+# delete kept consuming CPU for a noticeable stretch after `terminate` before this
+# task's fix.
+#
+# 100,000 files, chosen empirically: deletes in ~4s uninterrupted on a normal dev
+# machine, comfortably longer than the time it takes this test to issue `terminate`
+# after backgrounding it. Built with a `python3 -c` one-liner (via `cmd`) rather than
+# a crush loop, since crush's own per-iteration overhead would make *setup* the slow
+# part instead of the delete -- a one-liner specifically, not a multi-line script:
+# `cmd` splits every argument's string value on `\n` into separate argv entries (see
+# pty_fs_usage_job_control.crush's own note on this).
+source tests/pty_test_helpers.crush
+$tree := "/tmp/pty_file_remove_job_control_tree"
+cmd rm "-rf" $tree
+cmd mkdir "-p" $tree
+cmd python3 "-c" "import os; os.chdir('/tmp/pty_file_remove_job_control_tree'); [open(f'f{i}', 'w').close() for i in range(100000)]"
+
+$t := $(pty_spawn)
+$t:write $("$tree := $(convert $file {})\n":format $tree)
+$t:wait_quiet
+$t:run "$tree:remove recursive=$true &"
+sleep $(duration:of milliseconds=500)
+$cpu_before := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+
+$t:run "terminate 0"
+sleep $(duration:of seconds=1)
+$cpu_after := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+
+assert ($cpu_after <= ($cpu_before + $(duration:of milliseconds=300))) $("expected no significant CPU growth in the second after terminate, got {} -> {}":format $cpu_before $cpu_after)
+
+$t:close
+cmd rm "-rf" $tree
+
+# Uninterrupted case must keep working identically to before this task.
+$tmp := $(convert $file $("/tmp/pty_file_remove_job_control_check_{}":format $(random:integer 1000000000)))
+$tmp:mkdir
+$tmp["a"]:touch
+$tmp:remove recursive=$true
+echo "ok"
