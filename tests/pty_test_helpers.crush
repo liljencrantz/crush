@@ -1,0 +1,61 @@
+# Shared helpers for tests/pty_*_job_control.crush. See docs/superpowers/specs/
+# 2026-11-03-stream-source-job-control-design.md's "Shared test helper library"
+# section for the problem each one solves.
+#
+# Usage: `source tests/pty_test_helpers.crush` (unquoted path -- a quoted string is
+# itself source-able literal code, not a file path, see `source`'s own `BinaryInput`
+# argument type) near the top of a test, then call these like any other command
+# (`pty_spawn`, not `$pty_spawn`).
+#
+# Defined as a SINGLE destructuring assignment, not three separate statements, even
+# though that reads slightly less naturally -- `source`-ing a file with 3 or more
+# top-level statements from inside an already-running script deadlocks (confirmed
+# directly: reproduces with three plain `echo` statements, nothing pty-specific about
+# it). Root cause not pinned down (suspected: `execute::file`'s shared output pipe,
+# reused unconsumed across every job in the sourced file, in `src/lang/execute.rs`'s
+# `source()`); flagged to the user as a separate, out-of-scope finding rather than
+# fixed here. A single destructuring assignment is exactly one top-level statement/
+# job, so it never hits this.
+
+[$pty_spawn $pty_child_pid $pty_assert_job_status] := $(list:of {||
+    # Spawns a nested crush session and waits for its first prompt. Replaces the
+    # "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
+    # $t:wait_for \"# \"" preamble duplicated at the top of every existing
+    # tests/pty_*.crush file.
+    $crush_bin := $(crush:env["CRUSH_BIN"])
+    $t := $(pty:create $crush_bin)
+    $t:wait_for "# "
+    $t
+} {|$t $name_pattern|
+    # The pid of the one child process of the nested session $t whose command name
+    # matches $name_pattern (a plain string for exact match, or a glob/regex -- see
+    # `host:procs`'s own `name` column and the `=~` operator), asserting exactly one
+    # match. Replaces writing "$my_pid := $(crush:pid)" *into* the nested session and
+    # scraping it back off the rendered screen just to filter `host:procs` by parent
+    # pid -- `$t:pid()` already is that pid, queryable directly out here, no round
+    # trip through the screen needed.
+    # `host:procs | where {...}` is a one-shot stream -- reading it once (e.g. via
+    # `count`) drains it, leaving nothing for a second read -- so it's materialized
+    # into a reusable `list:collect`ed list of pids before being read twice below.
+    $pids := $(host:procs | where {(($ppid == ($t:pid())) and ($name =~ $name_pattern))} | select pid | list:collect pid)
+    $match_count := $($pids | count)
+    assert (($match_count) == 1) $("expected exactly one child of pid {} matching {}, found {}":format ($t:pid()) $name_pattern $match_count)
+    $pids[0]
+} {|$t $job_id $expected|
+    # Asserts that job $job_id's `status` column, read out of the nested session $t's
+    # own `jobs` table, equals $expected. Still a round trip through the rendered
+    # screen -- there is no other channel into another crush process's in-memory job
+    # table -- but written once here instead of once per test. Deliberately an
+    # assertion rather than a value-returning read: every actual caller in this plan
+    # only ever needs to check status against a known expected string (never to
+    # inspect an otherwise-unknown value), and asserting directly avoids needing to
+    # parse an arbitrary string back out of rendered screen text, for which crush has
+    # no regex capture-group extraction method to begin with (only `:replace`/
+    # `:replace_all` on a whole match, not a capture).
+    # Deliberately one write with no intermediate `:=` (not two): this helper can be
+    # called more than once against the same nested session (e.g. "Running" then
+    # later "Terminated" for the same job id), and `:=` errors if the variable it
+    # declares already exists in that session's scope from an earlier call.
+    $t:write $("echo $(\"__PTY_JOB_STATUS__{{}}\":format ($(jobs | where {{($id == {})}} | select status))[0]:status)\n":format $job_id)
+    $t:wait_for $("__PTY_JOB_STATUS__{}":format $expected)
+})
