@@ -1,0 +1,42 @@
+# `random:integer_stream` registers no job-control controller of its own -- its loop
+# is just `loop { output.send(...)?; }`. Investigated whether this is an observable
+# bug (as the design's command inventory assumed from reading the code shape alone,
+# without having run it) across several real scenarios: backgrounded with no
+# consumer, backgrounded piped into `count` (an active, indefinite drain) then
+# `pause`d, and foregrounded then Ctrl-Z'd. In every case, `host:procs`' own `cpu`
+# column (total CPU time used) was measured flat across a 1-second window once
+# paused/terminated, and `crush:threads` showed no thread left tracked under the job
+# after `terminate` -- confirmed directly, no regression in this file is expected to
+# ever fail on today's code. The reason: this command's *entire* body is "generate a
+# value, then block sending it downstream" -- any teardown of its output channel
+# (which job termination/pause already causes via the pipeline's normal lifecycle,
+# independent of this command cooperating at all) unblocks and stops it immediately.
+# There was therefore no failing test to drive a Rust change here (the TDD Iron Law:
+# no production code without a failing test first) -- this is a regression guard, not
+# a bug fix, same treatment as fs:watch/remote:pexec get in this plan.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+
+$t:run "random:integer_stream | count &"
+sleep $(duration:of milliseconds=300)
+$cpu_running := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+
+$t:run "pause 0"
+$cpu_a := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+sleep $(duration:of milliseconds=500)
+$cpu_b := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+assert ($cpu_b <= ($cpu_a + $(duration:of milliseconds=50))) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)":format $cpu_a $cpu_b $cpu_running)
+
+$t:run "resume 0"
+$t:run "terminate 0"
+pty_assert_job_status $t 0 "Terminated"
+$t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format 0)
+$t:wait_for "__PTY_THREAD_COUNT__0"
+
+$t:close
+
+# Uninterrupted case must keep working identically to before this plan.
+$rows := $(random:integer_stream 100 | head 5 | count)
+assert ($rows == 5) "random:integer_stream must still work normally when never interrupted"
+
+echo "ok"

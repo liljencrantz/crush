@@ -1,0 +1,33 @@
+# Same investigation and conclusion as pty_random_integer_stream_job_control.crush --
+# see that file's header comment. `random:float_stream` has the identical loop shape
+# (`loop { output.send(...)?; }`, no job-control registration of its own) and the
+# same empirical result: terminate/pause already stop it promptly in every real
+# scenario tested, because its output-send is what blocks it, and the pipeline's own
+# teardown on terminate/pause always breaks that send regardless of this command
+# cooperating. No failing test to drive a Rust change -- regression guard only.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+
+$t:run "random:float_stream | count &"
+sleep $(duration:of milliseconds=300)
+$cpu_running := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+
+$t:run "pause 0"
+$cpu_a := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+sleep $(duration:of milliseconds=500)
+$cpu_b := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+assert ($cpu_b <= ($cpu_a + $(duration:of milliseconds=50))) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)":format $cpu_a $cpu_b $cpu_running)
+
+$t:run "resume 0"
+$t:run "terminate 0"
+pty_assert_job_status $t 0 "Terminated"
+$t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format 0)
+$t:wait_for "__PTY_THREAD_COUNT__0"
+
+$t:close
+
+# Uninterrupted case must keep working identically to before this plan.
+$rows := $(random:float_stream 100 | head 5 | count)
+assert ($rows == 5) "random:float_stream must still work normally when never interrupted"
+
+echo "ok"
