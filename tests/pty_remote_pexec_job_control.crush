@@ -18,7 +18,7 @@ $t:wait_quiet
 $t:write "$pass := \"crushtest-password\"\n"
 $t:wait_quiet
 
-$t:run "remote:pexec {sleep $(duration:of seconds=100)} $addr $addr username=$user password=$pass host_file=$host_file parallel=2 | count &"
+$t:run "remote:pexec {sleep 100s} $addr $addr username=$user password=$pass host_file=$host_file parallel=2 | count &"
 pty_assert_job_status $t 0 "Running"
 
 $t:run "terminate 0"

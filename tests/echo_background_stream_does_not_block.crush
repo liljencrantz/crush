@@ -24,7 +24,7 @@
 # unconditional exit --force 1 that follows, which the sibling .crush.status file
 # checks for.
 
-seq 1 1000001 | schedule $(duration:of seconds=2) | echo &
+seq 1 1000001 | schedule 2s | echo &
 
 try {
     exit

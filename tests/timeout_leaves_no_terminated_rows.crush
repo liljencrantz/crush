@@ -6,7 +6,7 @@
 # Found by a whole-branch review: this used to leave two phantom rows, one of them with
 # an empty job definition.
 try {
-    timeout $(duration:of milliseconds=300) {sleep $(duration:of seconds=100); echo "x"}
+    timeout 300ms {sleep 100s; echo "x"}
 } catch {
 }
 $n := $(jobs | where {($status == "Terminated")} | count)

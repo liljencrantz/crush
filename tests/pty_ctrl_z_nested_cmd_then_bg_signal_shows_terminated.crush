@@ -14,33 +14,33 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "{ { cmd sleep 7432 } }\n"
 $t:wait_for "sleep"
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $t:write $t:control:z
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $t:write "$bgid := ($(jobs | where {($status == \"Paused\")} | select id | sort id reverse=$true))[0]:id\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $t:write "bg $bgid\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 
 $t:write "$my_pid := $(crush:pid)\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=1000)
+sleep 1000ms
 $t:write "host:signal $pid signal=SIGKILL\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $t:write "echo $(\"NESTED_Z_CHECK_{}\":format $n)\n"
 $t:wait_for "NESTED_Z_CHECK_1"
 

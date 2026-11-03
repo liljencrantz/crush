@@ -19,30 +19,30 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "cmd sleep 7419\n"
 $t:wait_for "sleep"
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write $t:control:z
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "bg 0\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "$my_pid := $(crush:pid)\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "host:signal $pid signal=SIGKILL\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "$status := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "echo $(\"BG_SIG_CHECK_{}\":format $status)\n"
 $t:wait_for "BG_SIG_CHECK_Terminated"
 

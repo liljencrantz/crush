@@ -3,7 +3,7 @@
 # `type` column holds an actual $type value, not its string representation.
 
 $d := $($(dict $string $duration):new)
-$d["key"] = $(duration:of seconds=1)
+$d["key"] = 1s
 $m := $($d | members | materialize)
 $expected := $($(csv:from "key,value\n" head=1 key=$string value=$duration) | members | materialize)
 assert ($m == $expected) "members on a dict should report key/value columns with their real types"

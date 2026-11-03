@@ -6,7 +6,7 @@
 # needing a specific string to match (unlike `wait_for`).
 #
 # A bare `wait_quiet` (no pattern) is also useful standalone: it replaces the blind
-# `sleep $(duration:of milliseconds=300)` that every existing tests/pty_*.crush file
+# `sleep 300ms` that every existing tests/pty_*.crush file
 # uses after writing a command, with "wait until nothing new has arrived for a while"
 # instead of "wait a fixed guess and hope it was long enough".
 $crush_bin := $(crush:env["CRUSH_BIN"])
@@ -16,7 +16,7 @@ $t:wait_for "# "
 $t:run "echo hello"
 $t:wait_for "hello"
 
-$t:write "sleep $(duration:of seconds=100)\n"
+$t:write "sleep 100s\n"
 $t:wait_quiet
 $t:write $t:control:z
 $t:wait_for "# "

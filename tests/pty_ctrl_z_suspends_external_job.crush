@@ -16,7 +16,7 @@ $t:wait_for "sleep"
 # `tests/cmd_paused_then_terminated_is_reaped.crush`'s `pause $job_id` after `cmd ... &`)
 # gives the fork/exec/terminal-handoff -- empirically on the order of ~1ms -- time to
 # actually finish first.
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write $t:control:z
 $t:wait_for "# "
 $t:write "jobs\n"

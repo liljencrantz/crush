@@ -4,7 +4,7 @@
 # technique as tests/terminate.crush.
 
 # A command that finishes well within the duration returns its result normally.
-$r := $(timeout $(duration:of seconds=5) {(1 + 1)})
+$r := $(timeout 5s {(1 + 1)})
 assert ($r == 2) "a command that finishes in time should return its result normally"
 
 # A command that runs past the duration, but cooperates with termination (sleep does,
@@ -14,7 +14,7 @@ $start := $(time:now)
 $timed_out := $false
 $msg := ""
 try {
-    timeout $(duration:of milliseconds=200) {sleep $(duration:of seconds=30)}
+    timeout 200ms {sleep 30s}
 } catch {
     |$e| $timed_out = $true
     $msg = $e:message
@@ -22,13 +22,13 @@ try {
 $elapsed := $(($(time:now) - $start))
 assert $timed_out "a command exceeding the duration should be caught as an error, not silently succeed"
 assert ($msg == "Command timed out") "the error should say the command timed out"
-assert ($elapsed < $(duration:of seconds=5)) "the cooperating command should be interrupted almost immediately, not wait out its own full duration"
+assert ($elapsed < 5s) "the cooperating command should be interrupted almost immediately, not wait out its own full duration"
 
 # A command that errors on its own, before the duration elapses, should propagate its
 # real error rather than being reported as a timeout.
 $real_error := ""
 try {
-    timeout $(duration:of seconds=5) {convert $integer "notanumber"}
+    timeout 5s {convert $integer "notanumber"}
 } catch {
     |$e| $real_error = $e:message
 }

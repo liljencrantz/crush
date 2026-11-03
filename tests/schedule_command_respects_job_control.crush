@@ -34,8 +34,8 @@
 # never manages to actually finish either, and run_system_test's own 30s timeout fails
 # the test.
 
-$job_id := $(schedule $(duration:of seconds=100) initial_delay=$(duration:of milliseconds=100) command={while {$true} {}} &)
-sleep $(duration:of milliseconds=300)
+$job_id := $(schedule 100s initial_delay=100ms command={while {$true} {}} &)
+sleep 300ms
 
 try {
     exit

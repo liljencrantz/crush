@@ -26,5 +26,5 @@
 # about is whether `echo "after-bg"` -- the closure's second statement -- actually ran,
 # which a plain stdout diff already answers for free.
 { cmd sh -c "kill -TERM $$"; echo "after-bg" } &
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 echo MARKER

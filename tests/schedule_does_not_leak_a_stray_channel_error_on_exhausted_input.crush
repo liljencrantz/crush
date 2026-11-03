@@ -21,5 +21,5 @@
 # which isn't ordered against the next top-level statement's own output, so leaving it
 # printing directly here would make the "reached" marker's position in stdout racy
 # against unrelated printer-thread timing, not just against the bug this test guards.
-$row_count := $(seq 0 2 | schedule $(duration:of milliseconds=1) | count)
+$row_count := $(seq 0 2 | schedule 1ms | count)
 echo "reached"

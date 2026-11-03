@@ -1,9 +1,9 @@
 $tm := $(time:parse format="%+" "2020-01-02T03:04:05+06:07")
-$tm = ($tm - $(duration:of hours=1 seconds=66))
+$tm = ($tm - (1h + 66s))
 $fmt := $($tm:format "%s")
 assert ($fmt == "1577908559")
 
 $t1 := $(time:now)
-sleep $(duration:of milliseconds=50)
+sleep 50ms
 $t2 := $(time:now)
-assert (($t2 - $t1) >= $(duration:of milliseconds=50)) "at least 50ms should have elapsed after sleeping 50ms"
+assert (($t2 - $t1) >= 50ms) "at least 50ms should have elapsed after sleeping 50ms"

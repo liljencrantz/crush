@@ -10,14 +10,14 @@ source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 
 $t:run "random:float_stream | count &"
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $cpu_running := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
 
 $t:run "pause 0"
 $cpu_a := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $cpu_b := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
-assert ($cpu_b <= ($cpu_a + $(duration:of milliseconds=50))) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)":format $cpu_a $cpu_b $cpu_running)
+assert ($cpu_b <= ($cpu_a + 50ms)) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)":format $cpu_a $cpu_b $cpu_running)
 
 $t:run "resume 0"
 $t:run "terminate 0"

@@ -67,7 +67,7 @@
     while {(($tries < 20) and (!$matched))} {
         $t:write $("echo $(\"__PTY_JOB_STATUS__{{}}\":format ($(jobs | where {{($id == {})}} | select status))[0]:status)\n":format $job_id)
         try {
-            $t:wait_for $("__PTY_JOB_STATUS__{}":format $expected) timeout=$(duration:of milliseconds=250)
+            $t:wait_for $("__PTY_JOB_STATUS__{}":format $expected) timeout=250ms
             $matched = $true
         } catch {|$e|
             $tries = ($tries + 1)
@@ -85,7 +85,7 @@
     while {(($tries < 20) and (!$matched))} {
         $t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format $job_id)
         try {
-            $t:wait_for "__PTY_THREAD_COUNT__0" timeout=$(duration:of milliseconds=250)
+            $t:wait_for "__PTY_THREAD_COUNT__0" timeout=250ms
             $matched = $true
         } catch {|$e|
             $tries = ($tries + 1)

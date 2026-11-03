@@ -31,7 +31,7 @@ $expected_schema := $($(csv:from "path,kind,timestamp\n" head=1 path=$file kind=
 assert ($schema == $expected_schema) "fs:watch's row shape should be path:file, kind:string, timestamp:time"
 
 $event_job := $(fs:watch ./.fs_watch_test_dir | head 1 | materialize &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 ./.fs_watch_test_dir/created.txt:touch
 ./.fs_watch_test_dir/created2.txt:touch
 $row := $(fg $event_job)

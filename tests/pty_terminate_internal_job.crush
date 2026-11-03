@@ -67,23 +67,23 @@ try {
     cmd rm "-f" $marker
 } catch {
 }
-$cmd_line := $("{{sleep $(duration:of seconds=100); cmd touch \"{}\"}} &\n":format $marker)
+$cmd_line := $("{{sleep 100s; cmd touch \"{}\"}} &\n":format $marker)
 
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write $cmd_line
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "terminate 0\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "jobs\n"
 $t:wait_for "Terminated"
-sleep $(duration:of milliseconds=1500)
+sleep 1500ms
 
 $marker_exists := $true
 try {

@@ -24,7 +24,7 @@
 # the test.
 
 $job_id := $(cmd sleep 100 &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 try {
     exit

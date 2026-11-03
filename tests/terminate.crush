@@ -9,21 +9,21 @@
 # state isn't otherwise observable from a script.
 
 $start := $(time:now)
-$job_id := $(sleep $(duration:of seconds=5) &)
+$job_id := $(sleep 5s &)
 terminate $job_id
 try {
     $(fg $job_id)
 } catch {|$e|
 }
 $end := $(time:now)
-assert (($end - $start) < $(duration:of seconds=2)) "terminate should interrupt a running sleep almost immediately, not wait out its full duration"
+assert (($end - $start) < 2s) "terminate should interrupt a running sleep almost immediately, not wait out its full duration"
 
 # pause should actually stop a running sleep's countdown, not just fail to error.
 $start2 := $(time:now)
-$job_id2 := $(sleep $(duration:of seconds=5) &)
+$job_id2 := $(sleep 5s &)
 pause $job_id2
 $mid := $(time:now)
-assert (($mid - $start2) < $(duration:of seconds=2)) "pause should stop a running sleep from completing at its original deadline"
+assert (($mid - $start2) < 2s) "pause should stop a running sleep from completing at its original deadline"
 
 # Resuming a paused sleep continues counting down its remaining duration, rather than
 # ending the wait immediately -- the pause itself shouldn't shorten the sleep. The pause
@@ -33,5 +33,5 @@ assert (($mid - $start2) < $(duration:of seconds=2)) "pause should stop a runnin
 resume $job_id2
 $(fg $job_id2)
 $end2 := $(time:now)
-assert (($end2 - $mid) > $(duration:of seconds=1)) "resume should let a paused sleep continue counting down its remaining duration, not finish immediately"
-assert (($end2 - $mid) < $(duration:of seconds=6)) "resume should not wait any longer than the sleep's original total duration"
+assert (($end2 - $mid) > 1s) "resume should let a paused sleep continue counting down its remaining duration, not finish immediately"
+assert (($end2 - $mid) < 6s) "resume should not wait any longer than the sleep's original total duration"

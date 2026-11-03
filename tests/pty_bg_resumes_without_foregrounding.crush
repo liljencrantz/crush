@@ -32,7 +32,7 @@ $t:wait_for "# "
 
 $t:write "cmd sleep 100\n"
 $t:wait_for "sleep"
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write $t:control:z
 $t:wait_for "# "
 $t:write "jobs | where {($id == 0)} | select status\n"
@@ -40,7 +40,7 @@ $t:wait_for "Paused"
 
 $t:write "bg 0\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "jobs | where {($id == 0)} | select status\n"
 $t:wait_for "Running"
 

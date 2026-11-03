@@ -29,12 +29,12 @@ assert (1.0 != 2.0)
 assert (!(1.0 == 2.0))
 
 # Duration comparisons
-assert (!($(duration:of seconds=1) > $(duration:of seconds=2)))
-assert ($(duration:of seconds=1) < $(duration:of seconds=2))
-assert (!($(duration:of seconds=1) >= $(duration:of seconds=2)))
-assert ($(duration:of seconds=1) <= $(duration:of seconds=2))
-assert ($(duration:of seconds=1) != $(duration:of seconds=2))
-assert (!($(duration:of seconds=1) == $(duration:of seconds=2)))
+assert (!(1s > 2s))
+assert (1s < 2s)
+assert (!(1s >= 2s))
+assert (1s <= 2s)
+assert (1s != 2s)
+assert (!(1s == 2s))
 
 # Time comparisons
 $t1 := (time.now())

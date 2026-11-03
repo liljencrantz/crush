@@ -6,7 +6,7 @@ assert ($(typeof $(host:name)) == $string) "host:name should return a string"
 assert (($(host:name):len()) > 0) "host:name should return a non-empty string"
 
 assert ($(typeof $(host:uptime)) == $duration) "host:uptime should return a duration"
-assert ($(host:uptime) >= $(duration:of seconds=0)) "host:uptime should be non-negative"
+assert ($(host:uptime) >= 0s) "host:uptime should be non-negative"
 
 $mem := $(host:memory)
 assert ($(typeof $mem) == $struct) "host:memory should return a struct"

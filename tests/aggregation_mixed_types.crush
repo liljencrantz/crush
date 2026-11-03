@@ -5,8 +5,8 @@
 # $any-typed columns unconditionally, whether or not the actual content happens to be
 # homogeneous.
 $mixed_int_float := $(list:of 1 2.5)
-$mixed_int_duration := $(list:of 1 $(duration:of seconds=1))
-$mixed_float_duration := $(list:of 1.5 $(duration:of seconds=1))
+$mixed_int_duration := $(list:of 1 1s)
+$mixed_float_duration := $(list:of 1.5 1s)
 $non_numeric := $(list:of 1 "hello")
 
 $sum_errored := $false

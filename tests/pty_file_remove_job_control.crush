@@ -32,19 +32,19 @@ $t := $(pty_spawn)
 $t:write $("$tree := $(convert $file {})\n":format $tree)
 $t:wait_quiet
 $t:run "$tree:remove recursive=$true &"
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $cpu_before := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
 
 $t:run "terminate 0"
 $remaining_a := $(fs:files $tree | count)
 assert ($remaining_a > 0) $("expected terminate to stop the delete early, but all files were already gone ({} remaining)":format $remaining_a)
 
-sleep $(duration:of seconds=1)
+sleep 1s
 $remaining_b := $(fs:files $tree | count)
 assert ($remaining_b == $remaining_a) $("expected no further files to be deleted in the second after terminate, went from {} to {} remaining":format $remaining_a $remaining_b)
 
 $cpu_after := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
-assert ($cpu_after <= ($cpu_before + $(duration:of milliseconds=300))) $("expected no significant CPU growth in the second after terminate, got {} -> {}":format $cpu_before $cpu_after)
+assert ($cpu_after <= ($cpu_before + 300ms)) $("expected no significant CPU growth in the second after terminate, got {} -> {}":format $cpu_before $cpu_after)
 
 $t:close
 cmd rm "-rf" $tree

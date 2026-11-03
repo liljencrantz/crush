@@ -75,19 +75,19 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "cmd sh -c 'sleep 1; printf \"%s_%s\" EXTERNAL MARKER' | convert $string &\n"
 $t:wait_for "# "
-sleep $(duration:of seconds=1)
-$t:write "{sleep $(duration:of seconds=1); \"{}_{}\":format \"INTERNAL\" \"MARKER\"} &\n"
+sleep 1s
+$t:write "{sleep 1s; \"{}_{}\":format \"INTERNAL\" \"MARKER\"} &\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 
 $t:write "echo $(convert $string $(fg))\n"
 $t:wait_for "INTERNAL_MARKER"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "echo $(convert $string $(fg))\n"
 $t:wait_for "EXTERNAL_MARKER"

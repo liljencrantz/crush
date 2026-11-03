@@ -14,9 +14,9 @@
 # actual interactive terminal.
 
 $job_id := $(cmd sleep 15 &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 pause $job_id
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 # A second pause, timed to land while `fg` below is already waiting on the (by then
 # resumed) job. Uses `schedule ... --once &`, not a plain `{...} &` closure: a closure
@@ -25,7 +25,7 @@ sleep $(duration:of milliseconds=300)
 # accidental id collision this whole file is testing around. `schedule`'s `command`
 # runs via a direct Command::eval, not another Job::eval, so it doesn't allocate a job
 # of its own; the outer `schedule` job is the only new one.
-$repause_job := $(schedule $(duration:of milliseconds=500) command={pause $job_id} --once &)
+$repause_job := $(schedule 500ms command={pause $job_id} --once &)
 
 fg $job_id
 fg $repause_job

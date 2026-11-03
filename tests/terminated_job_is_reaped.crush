@@ -19,9 +19,9 @@
 # reaping now happens lazily and uniformly regardless of whether crush is being driven
 # interactively or by a script.
 $job_id := $(cmd sleep 8171 &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 terminate $job_id
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 
 # `terminate` leaves a one-time snapshot behind (`JobData::terminated_snapshot`, see
 # `src/lang/state/global_state.rs`) specifically so the *next* `jobs` listing can report

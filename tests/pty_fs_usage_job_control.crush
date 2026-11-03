@@ -18,7 +18,7 @@
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 
-$t:run "{fs:usage . ; sleep $(duration:of seconds=100)} &"
+$t:run "{fs:usage . ; sleep 100s} &"
 pty_assert_job_status $t 0 "Running"
 $t:run "terminate 0"
 pty_assert_job_status $t 0 "Terminated"

@@ -11,17 +11,17 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
-$t:write "sleep $(duration:of seconds=100)\n"
-sleep $(duration:of milliseconds=500)
+$t:write "sleep 100s\n"
+sleep 500ms
 $t:write $t:control:c
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 
 $t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 $t:write "echo $(\"CTRL_C_CHECK_{}\":format $n)\n"
 $t:wait_for "CTRL_C_CHECK_0"
 

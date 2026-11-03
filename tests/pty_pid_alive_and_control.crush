@@ -7,7 +7,7 @@ assert (($t:pid()) > 0)
 $t:write $t:control:d
 $tries := 0
 while {($tries < 50 and $t:alive())} {
-    sleep $(duration:of milliseconds=100)
+    sleep 100ms
     $tries = ($tries + 1)
 }
 assert (not ($t:alive()))

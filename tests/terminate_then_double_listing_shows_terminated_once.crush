@@ -38,7 +38,7 @@
 # Filtering by the distinctive sleep duration happens *after* both listings are
 # already captured, on the already-materialized tables, instead.
 $job_id := $(cmd sleep 8172 &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 terminate $job_id
 
 # No settle delay between these two listings -- that's the entire point: catching the

@@ -27,6 +27,6 @@
 # workers ever actually seeing a pause/terminate).
 
 $job_id := $(seq 1 10000 | tee {while {$true} {}} {count} {materialize} | count &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 terminate $job_id
 echo "ok"

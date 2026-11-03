@@ -45,10 +45,10 @@
 # itself a new job, giving `ThreadStore::reap` another concurrent opportunity to race
 # against the backgrounded block's own join (see the root-cause paragraph above);
 # removing them makes the *unfixed* code reproduce this far less reliably.
-{sleep $(duration:of seconds=100); echo SHOULD_NOT_APPEAR} &
-sleep $(duration:of milliseconds=200)
+{sleep 100s; echo SHOULD_NOT_APPEAR} &
+sleep 200ms
 jobs
 terminate 0
-sleep $(duration:of milliseconds=800)
+sleep 800ms
 jobs
 echo MARKER

@@ -1,9 +1,9 @@
 # Found while testing duration literals: `timeout`'s termination retry loop
 # (src/builtins/control/mod.rs) works when its `duration` argument is written as an
-# inline substitution (`timeout $(duration:of milliseconds=200) {...}`, exactly what
+# inline substitution (`timeout 200ms {...}`, exactly what
 # tests/timeout.crush uses) but NOT when the exact same Duration value is read from a
 # variable that was assigned by an earlier, already-finished top-level statement
-# (`$d := $(duration:of milliseconds=200)`, then `timeout $d {...}`) -- the terminate
+# (`$d := 200ms`, then `timeout $d {...}`) -- the terminate
 # signal is still sent (confirmed by instrumenting the retry loop directly: job
 # structure and `join_one`'s result were byte-for-byte identical between the working
 # and failing cases), yet the caught error is the generic "receiving on an empty and
@@ -17,10 +17,10 @@
 # job trees were observed to be structurally identical (same ids, same parent chain),
 # so this alone doesn't explain the divergence yet.
 
-$d := $(duration:of milliseconds=200)
+$d := 200ms
 $msg := ""
 try {
-    timeout $d {sleep $(duration:of seconds=30)}
+    timeout $d {sleep 30s}
 } catch {
     |$e| $msg = $e:message
 }

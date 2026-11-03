@@ -71,37 +71,37 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "$my_pid := $(crush:pid)\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "cmd sleep 100 &\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "terminate 0\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "$status0 := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "echo $(\"TERM_CHECK_{}\":format $status0)\n"
 $t:wait_for "TERM_CHECK_Terminated"
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 
 $t:write "cmd sleep 101 &\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "host:signal $pid signal=SIGKILL\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "$status1 := ($(jobs | where {($id == 0)} | select status))[0]:status\n"
 $t:wait_for "# "
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write "echo $(\"SIG_CHECK_{}\":format $status1)\n"
 $t:wait_for "SIG_CHECK_Terminated"
 

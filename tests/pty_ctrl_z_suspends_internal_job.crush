@@ -6,14 +6,14 @@
 $crush_bin := $(crush:env["CRUSH_BIN"])
 $t := $(pty:create $crush_bin)
 $t:wait_for "# "
-$t:write "sleep $(duration:of seconds=100)\n"
+$t:write "sleep 100s\n"
 # Unlike the external-command case, a bare `sleep ...` prints nothing distinctive while
 # it runs (no fork/exec handoff output to wait_for on) and no new prompt appears until
 # it's done or interrupted -- there is nothing to wait_for between submitting it and
 # sending Ctrl-Z. Use the same settle delay as pty_ctrl_z_suspends_external_job.crush
 # instead, giving crush time to actually start running the builtin before the
 # keystroke is delivered.
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 $t:write $t:control:z
 $t:wait_for "# "
 $t:write "jobs\n"

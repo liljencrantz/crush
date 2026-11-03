@@ -55,7 +55,7 @@ $check "empty" $(echo "x")
 $check "string" "hello"
 $check "integer" 42
 $check "time" $(time:now)
-$check "duration" $(duration:of seconds=10)
+$check "duration" 10s
 $check "glob" *.txt
 $check "regex" ^(a+)
 $check "file" './Cargo.toml'

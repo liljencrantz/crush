@@ -15,7 +15,7 @@
 # `GlobalState::jobs_for_listing()` (used only by the `jobs` builtin itself, which is the
 # one place that should still report a job that was just terminated).
 $job_id := $(cmd sleep 8171 &)
-sleep $(duration:of milliseconds=300)
+sleep 300ms
 terminate $job_id
-sleep $(duration:of milliseconds=500)
+sleep 500ms
 exit
