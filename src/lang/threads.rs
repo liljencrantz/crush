@@ -76,7 +76,7 @@ impl ThreadStore {
         let (control_sender, control_receiver) = unbounded();
         let (result_sender, result_receiver) = bounded(1);
 
-        command.register(Box::from(ChannelBasedController::new(control_sender)));
+        command.register(Arc::from(ChannelBasedController::new(control_sender)));
 
         let handle = thread::Builder::new()
             .name(name.to_string())

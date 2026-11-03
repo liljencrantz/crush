@@ -223,7 +223,7 @@ impl TableOutputStream {
                 control: Some(control_receiver),
                 types: self.types,
             },
-            Box::from(ChannelBasedController::new(control_sender)),
+            Arc::from(ChannelBasedController::new(control_sender)),
         )
     }
 
@@ -345,7 +345,7 @@ impl TableInputStream {
                 input: self.clone(),
                 control: control_receiver,
             }),
-            Box::from(ChannelBasedController::new(control_sender)),
+            Arc::from(ChannelBasedController::new(control_sender)),
         )
     }
 

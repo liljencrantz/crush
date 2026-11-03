@@ -17,6 +17,7 @@ use nix::unistd::{Pid, getpgrp, tcsetpgrp};
 use signature::signature;
 use std::borrow::BorrowMut;
 use std::io::{Read, Write};
+use std::sync::Arc;
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::{Child, Stdio};
@@ -296,7 +297,7 @@ fn cmd_internal(
     mut arguments: Vec<Argument>,
 ) -> CrushResult<()> {
     let (control_sender, control_receiver) = bounded(1);
-    let control = Box::from(ChannelBasedController::new(control_sender));
+    let control = Arc::from(ChannelBasedController::new(control_sender));
     context.command_handle().register(control);
 
     let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();

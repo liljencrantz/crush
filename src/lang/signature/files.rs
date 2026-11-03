@@ -93,7 +93,7 @@ impl TryInto<Box<dyn BinaryWriter>> for Files {
 /// default no-op.
 fn register_control(writer: &mut Box<dyn BinaryWriter>, command_handle: &CommandHandle) {
     let (control_sender, control_receiver) = unbounded();
-    command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
+    command_handle.register(Arc::from(ChannelBasedController::new(control_sender)));
     writer.register_control(control_receiver);
 }
 

@@ -22,7 +22,7 @@ use std::sync::Arc;
 /// identical wiring for table streams (`TableInputStream::interruptible`).
 fn register_control(reader: &mut Box<dyn BinaryReader + Send + Sync>, command_handle: &CommandHandle) {
     let (control_sender, control_receiver) = unbounded();
-    command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
+    command_handle.register(Arc::from(ChannelBasedController::new(control_sender)));
     reader.register_control(control_receiver);
 }
 

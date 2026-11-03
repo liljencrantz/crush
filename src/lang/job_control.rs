@@ -3,6 +3,7 @@ use crate::lang::state::contexts::CommandContext;
 use crossbeam::channel::{Receiver, Sender, unbounded};
 use crossbeam::select;
 use itertools::Either;
+use std::sync::Arc;
 use std::thread::ThreadId;
 
 pub trait JobControl {
@@ -19,7 +20,17 @@ pub trait JobControl {
     fn resume_foreground(&self) -> CrushResult<()>;
 }
 
-pub type JobController = Box<dyn JobControl + Send>;
+/// `Arc`, not `Box`: a job's state-changing calls (`terminate`/`pause`/`resume`/
+/// `resume_foreground`) need to notify every registered controller for a job *without*
+/// holding that job's own state lock while doing so -- a controller's method can block
+/// (e.g. `ChannelBasedController` sending into a bounded channel nobody is draining
+/// yet), and holding the lock through that block would stop every other, unrelated
+/// caller needing the same lock (e.g. a sibling command just registering its own
+/// controller) dead until the block resolves, which can be never. `Arc` lets the lock
+/// holder clone out exactly the controllers it needs to call, drop the lock, and only
+/// then make the (possibly blocking) calls -- see `JobHandle::register_command` and
+/// `JobControlData::terminate`/`pause`/`resume`/`resume_foreground`.
+pub type JobController = Arc<dyn JobControl + Send + Sync>;
 
 pub struct ChannelBasedController(Sender<StreamControlMessage>);
 

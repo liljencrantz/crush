@@ -11,6 +11,7 @@ use crossbeam::channel::{bounded, select, unbounded};
 use notify::{RecursiveMode, Watcher};
 use signature::signature;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 static WATCH_OUTPUT_TYPE: [ColumnType; 3] = [
     ColumnType::new("path", ValueType::File, "the file or directory the change was observed on."),
@@ -62,7 +63,7 @@ pub fn watch(mut context: CommandContext) -> CrushResult<()> {
     )?;
 
     let (control_sender, control_receiver) = bounded(1);
-    let control = Box::from(ChannelBasedController::new(control_sender));
+    let control = Arc::from(ChannelBasedController::new(control_sender));
     context.command_handle().register(control);
 
     let output = context.initialize_output(&WATCH_OUTPUT_TYPE)?;

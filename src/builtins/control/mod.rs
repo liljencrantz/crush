@@ -22,6 +22,7 @@ use os_pipe::PipeReader;
 use rand::RngExt;
 use signature::signature;
 use std::io::Read;
+use std::sync::Arc;
 use crate::util::interruptible_sleep::interruptible_sleep;
 
 mod cmd;
@@ -167,7 +168,7 @@ fn sleep(mut context: CommandContext) -> CrushResult<()> {
     let (control_sender, control_receiver) = bounded(1);
     context
         .command_handle()
-        .register(Box::from(ChannelBasedController::new(control_sender)));
+        .register(Arc::from(ChannelBasedController::new(control_sender)));
 
     interruptible_sleep(&cfg.duration, &control_receiver)?;
 
@@ -388,7 +389,7 @@ fn wait_for_background_job(
     if let Ok(job_handle) = context.global_state.job_handle(job_id) {
         job_handle
             .next_command_handle()
-            .register(Box::from(ChannelBasedController::new(control_sender)));
+            .register(Arc::from(ChannelBasedController::new(control_sender)));
     }
 
     // `resume_foreground`, not plain `resume`: `fg` means the job should genuinely own

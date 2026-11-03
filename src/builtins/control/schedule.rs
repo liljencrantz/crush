@@ -10,6 +10,7 @@ use chrono::{Duration, Local};
 use crossbeam::channel::{Receiver, bounded, select};
 use signature::signature;
 use std::mem::swap;
+use std::sync::Arc;
 use crate::util::interruptible_sleep::interruptible_sleep;
 
 #[signature(
@@ -54,7 +55,7 @@ fn schedule(mut context: CommandContext) -> CrushResult<()> {
         Schedule::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let (control_sender, control_receiver) = bounded(1);
-    let control = Box::from(ChannelBasedController::new(control_sender));
+    let control = Arc::from(ChannelBasedController::new(control_sender));
     context.command_handle().register(control);
 
     let initial_delay = if let Some(id) = &cfg.initial_delay {

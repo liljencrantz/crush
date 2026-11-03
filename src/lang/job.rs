@@ -9,6 +9,7 @@ use crate::lang::state::contexts::{EvalContext, JobContext};
 use crate::lang::value::Value;
 use crossbeam::channel::unbounded;
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use std::thread::ThreadId;
 
 /// An executable pipeline of one or more commands.
@@ -127,7 +128,7 @@ impl Job {
         context
             .handle
             .next_command_handle()
-            .register(Box::from(ChannelBasedController::new(control_sender)));
+            .register(Arc::from(ChannelBasedController::new(control_sender)));
         match last_input.recv_or_pause(&control_receiver) {
             Ok(Some(v)) => {
                 context.output.send(v)?;

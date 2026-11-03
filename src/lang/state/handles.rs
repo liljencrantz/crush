@@ -1,5 +1,5 @@
 use crate::lang::errors::CrushResult;
-use crate::lang::job_control::JobController;
+use crate::lang::job_control::{JobController, StreamControlMessage};
 use crate::lang::state::id::CommandId;
 use crate::lang::state::id::JobId;
 use std::collections::HashMap;
@@ -62,13 +62,59 @@ impl JobHandle {
         }
     }
 
+    /// Registers `controller` for `command_handle`, then replays the job's
+    /// already-settled state to it if one exists.
+    ///
+    /// Closes the registration race between `ThreadStore::spawn`'s generic controller
+    /// (registered on the *calling* thread before the worker thread is even created,
+    /// so inherently race-free) and the second, real controller several builtins
+    /// (`cmd`, `sleep`, `fs:watch`, `schedule`, `remote:pexec`, and
+    /// `CommandContext::initialize_output`, used by every stream-source builtin)
+    /// register from *inside* that worker thread, once the OS actually schedules it --
+    /// which can be arbitrarily later. Before this, a `terminate`/`pause` landing in
+    /// that window reached only the inert generic controller; the real controller,
+    /// not existing in `senders` yet, never found out, so the real work (killing an
+    /// external process, breaking out of `sleep`) silently never happened.
+    ///
+    /// Gated on `termination_requested`, not raw `status == Terminated`: `status` also
+    /// reads `Terminated` after `mark_terminated` (an external process dying from an
+    /// unrelated signal, bookkeeping only -- see its own doc comment for why that must
+    /// never broadcast a real `StreamControlMessage::Terminate`), and
+    /// `termination_requested` stays true forever once an explicit terminate actually
+    /// happens even if the job is later resumed (see that field's own doc comment) --
+    /// so the live `status` is still checked too, to avoid replaying a stale terminate
+    /// to a controller for a job that is, right now, genuinely running again.
+    ///
+    /// The replay call itself -- like every `JobController` call, see that type's own
+    /// doc comment -- happens *after* `live_job`'s lock is dropped, not while still
+    /// holding it: `controller`'s method can block (a `ChannelBasedController` sending
+    /// into a bounded channel nobody is draining yet), and this job's lock is shared
+    /// with every other command under it still trying to register or look up state --
+    /// holding it through a block here would stop all of them too, for as long as the
+    /// block lasts, which can be forever.
     pub fn register_command(&self, command_handle: &CommandHandle, controller: JobController) {
-        let mut live_job = self.live_job.lock().unwrap();
-        match live_job.senders.entry(command_handle.id) {
-            Entry::Occupied(mut e) => e.get_mut().push(controller),
-            Entry::Vacant(e) => {
-                e.insert(vec![controller]);
+        let replay = {
+            let mut live_job = self.live_job.lock().unwrap();
+            match live_job.senders.entry(command_handle.id) {
+                Entry::Occupied(mut e) => e.get_mut().push(controller.clone()),
+                Entry::Vacant(e) => {
+                    e.insert(vec![controller.clone()]);
+                }
             }
+            if live_job.termination_requested && live_job.status == JobStatus::Terminated {
+                Some(StreamControlMessage::Terminate)
+            } else if live_job.status == JobStatus::Paused {
+                Some(StreamControlMessage::Pause)
+            } else {
+                None
+            }
+        };
+        if let Some(message) = replay {
+            let _ = match message {
+                StreamControlMessage::Terminate => controller.terminate(),
+                StreamControlMessage::Pause => controller.pause(),
+                StreamControlMessage::Resume | StreamControlMessage::ResumeForeground => Ok(()),
+            };
         }
     }
 
@@ -333,6 +379,38 @@ pub struct JobData {
     pub backgrounded: bool,
 }
 
+/// Calls `terminate()` on every controller in `controllers`. Meant to run *after* the
+/// caller has dropped whatever job-state lock produced this list -- see
+/// `JobController`'s own doc comment for why calling a controller while still holding
+/// that lock is unsafe (it can block, e.g. `ChannelBasedController` sending into a
+/// bounded channel nobody is draining yet).
+pub fn notify_terminate(controllers: &[JobController]) {
+    for c in controllers {
+        let _ = c.terminate();
+    }
+}
+
+/// Like `notify_terminate`, but for `pause`.
+pub fn notify_pause(controllers: &[JobController]) {
+    for c in controllers {
+        let _ = c.pause();
+    }
+}
+
+/// Like `notify_terminate`, but for `resume`.
+pub fn notify_resume(controllers: &[JobController]) {
+    for c in controllers {
+        let _ = c.resume();
+    }
+}
+
+/// Like `notify_terminate`, but for `resume_foreground`.
+pub fn notify_resume_foreground(controllers: &[JobController]) {
+    for c in controllers {
+        let _ = c.resume_foreground();
+    }
+}
+
 impl JobControlData {
     pub fn status(&self) -> JobStatus {
         self.status
@@ -343,15 +421,17 @@ impl JobControlData {
         self.termination_requested
     }
 
-    pub fn terminate(&mut self) -> CrushResult<()> {
-        for vc in self.senders.values() {
-            for c in vc {
-                let _ = c.terminate();
-            }
-        }
+    /// Updates this job's own state and returns every controller that must now be told
+    /// to terminate -- it does *not* call them itself. See `JobController`'s own doc
+    /// comment: a controller's `terminate()` can block, and this method runs while the
+    /// caller holds this job's state lock (needed to update `status`/
+    /// `termination_requested` atomically with reading `senders`), so the caller must
+    /// drop that lock before actually calling `terminate()` on what's returned here.
+    pub fn terminate(&mut self) -> CrushResult<Vec<JobController>> {
+        let controllers = self.senders.values().flatten().cloned().collect();
         self.status = JobStatus::Terminated;
         self.termination_requested = true;
-        Ok(())
+        Ok(controllers)
     }
 
     /// Like `terminate`, but *only* updates this job's own status -- it never notifies
@@ -378,36 +458,229 @@ impl JobControlData {
         self.status = JobStatus::Terminated;
     }
 
-    pub fn pause(&mut self) -> CrushResult<()> {
-        for (_, vc) in &self.senders {
-            for c in vc {
-                let _ = c.pause();
-            }
-        }
+    /// Like `terminate`, but for `pause` -- see that method's own doc comment for why
+    /// this returns the controllers to notify rather than notifying them itself.
+    pub fn pause(&mut self) -> CrushResult<Vec<JobController>> {
+        let controllers = self.senders.values().flatten().cloned().collect();
         self.status = JobStatus::Paused;
-        Ok(())
+        Ok(controllers)
     }
 
-    pub fn resume(&mut self) -> CrushResult<()> {
-        for vc in self.senders.values() {
-            for c in vc {
-                let _ = c.resume();
-            }
-        }
+    /// Like `terminate`, but for `resume` -- see that method's own doc comment for why
+    /// this returns the controllers to notify rather than notifying them itself.
+    pub fn resume(&mut self) -> CrushResult<Vec<JobController>> {
+        let controllers = self.senders.values().flatten().cloned().collect();
         self.status = JobStatus::Running;
-        Ok(())
+        Ok(controllers)
     }
 
     /// Like `resume`, but for a job being brought into the foreground (`fg`) rather
     /// than just unpaused in place (`bg`/`resume`) -- see
-    /// `JobControl::resume_foreground`.
-    pub fn resume_foreground(&mut self) -> CrushResult<()> {
-        for vc in self.senders.values() {
-            for c in vc {
-                let _ = c.resume_foreground();
-            }
-        }
+    /// `JobControl::resume_foreground`. Like `terminate`, returns the controllers to
+    /// notify rather than notifying them itself.
+    pub fn resume_foreground(&mut self) -> CrushResult<Vec<JobController>> {
+        let controllers = self.senders.values().flatten().cloned().collect();
         self.status = JobStatus::Running;
-        Ok(())
+        Ok(controllers)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::job_control::{ChannelBasedController, JobControl};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// A `JobController` spy: records how many times each `JobControl` method was
+    /// called on it, so a test can assert a controller that registered *after* a
+    /// terminate/pause already happened still actually heard about it.
+    #[derive(Clone)]
+    struct SpyController {
+        terminate_calls: Arc<AtomicUsize>,
+        pause_calls: Arc<AtomicUsize>,
+    }
+
+    impl SpyController {
+        fn new() -> (Self, Arc<AtomicUsize>, Arc<AtomicUsize>) {
+            let terminate_calls = Arc::new(AtomicUsize::new(0));
+            let pause_calls = Arc::new(AtomicUsize::new(0));
+            (
+                SpyController {
+                    terminate_calls: terminate_calls.clone(),
+                    pause_calls: pause_calls.clone(),
+                },
+                terminate_calls,
+                pause_calls,
+            )
+        }
+    }
+
+    impl JobControl for SpyController {
+        fn terminate(&self) -> CrushResult<()> {
+            self.terminate_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+        fn pause(&self) -> CrushResult<()> {
+            self.pause_calls.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+        fn resume(&self) -> CrushResult<()> {
+            Ok(())
+        }
+        fn resume_foreground(&self) -> CrushResult<()> {
+            Ok(())
+        }
+    }
+
+    // Regression test for the registration race this plan's job-control audit found:
+    // `ThreadStore::spawn` registers a generic controller for a command *before*
+    // spawning its worker thread, but commands like `cmd`/`sleep`/`fs:watch`/
+    // `schedule`/`remote:pexec` (and `CommandContext::initialize_output`, used by every
+    // stream-source builtin) each register their own *second*, real controller only
+    // once their already-spawned worker thread actually starts running -- which can be
+    // arbitrarily later, purely depending on OS thread scheduling. A `terminate` sent
+    // in that window previously reached only the inert generic controller (the real one
+    // didn't exist in `senders` yet), so the real work (e.g. killing an external
+    // process, breaking out of `sleep`) never happened at all.
+    #[test]
+    fn a_controller_registered_after_terminate_still_gets_terminated() {
+        let handle = JobHandle::new(JobId::from(1));
+        let command_handle = handle.next_command_handle();
+
+        let (early, early_terminate_calls, _) = SpyController::new();
+        command_handle.register(Arc::from(early));
+
+        // Simulates `GlobalState::terminate` -- the real caller goes through more
+        // machinery (locating the job, taking a snapshot) and, like here, notifies the
+        // returned controllers only after dropping the lock (see `JobController`'s own
+        // doc comment for why).
+        let controllers = handle.live_job.lock().unwrap().terminate().unwrap();
+        notify_terminate(&controllers);
+        assert_eq!(
+            early_terminate_calls.load(Ordering::SeqCst),
+            1,
+            "the already-registered controller must see the terminate immediately"
+        );
+
+        // The "real" controller a command like `cmd` registers from inside its own
+        // worker thread, after the generic one already received the terminate above.
+        let (late, late_terminate_calls, _) = SpyController::new();
+        command_handle.register(Arc::from(late));
+
+        assert_eq!(
+            late_terminate_calls.load(Ordering::SeqCst),
+            1,
+            "a controller that registers after the job was already terminated must be \
+             told immediately -- otherwise the real work it's about to do (e.g. `cmd` \
+             spawning an external process, `sleep` starting its wait) never learns the \
+             job was terminated at all"
+        );
+    }
+
+    // Same race, for `pause` -- a controller registering after a Ctrl-Z/`pause` already
+    // landed must still be told to pause, not just whichever controller happened to
+    // exist at that moment.
+    #[test]
+    fn a_controller_registered_after_pause_still_gets_paused() {
+        let handle = JobHandle::new(JobId::from(1));
+        let command_handle = handle.next_command_handle();
+
+        let (early, _, early_pause_calls) = SpyController::new();
+        command_handle.register(Arc::from(early));
+
+        let controllers = handle.live_job.lock().unwrap().pause().unwrap();
+        notify_pause(&controllers);
+        assert_eq!(early_pause_calls.load(Ordering::SeqCst), 1);
+
+        let (late, _, late_pause_calls) = SpyController::new();
+        command_handle.register(Arc::from(late));
+
+        assert_eq!(
+            late_pause_calls.load(Ordering::SeqCst),
+            1,
+            "a controller that registers after the job was already paused must be told \
+             immediately"
+        );
+    }
+
+    // Regression test for the deadlock the replay fix above introduced, and this test
+    // caught before it ever shipped: `register_command`'s replay call used to run
+    // *while still holding* `live_job`'s lock. A `ChannelBasedController` sending into
+    // a bounded channel nobody is draining yet blocks -- and since every other
+    // command under the same job (e.g. a sibling worker thread calling
+    // `next_command_handle` to register its own controller) needs that exact same
+    // lock, one controller with a full channel could freeze the entire job, not just
+    // itself. Confirmed directly against the real bug: `cmd sleep 100 &` immediately
+    // followed by `terminate`/`fg` deadlocked this way under real OS thread
+    // scheduling, with `fg`'s own `resume_foreground` call blocked sending into
+    // `cmd`'s already-full one-slot control channel while still holding the job's
+    // lock, starving `cmd`'s own `next_command_handle` call for a lock that was never
+    // coming back.
+    #[test]
+    fn register_command_does_not_hold_the_job_lock_while_replaying_to_a_blocked_controller() {
+        let handle = JobHandle::new(JobId::from(1));
+        let blocked_command = handle.next_command_handle();
+
+        handle.live_job.lock().unwrap().terminate().unwrap();
+
+        // A one-slot channel, already full -- `ChannelBasedController::terminate`'s
+        // send into it will block forever, since nothing in this test ever drains it.
+        let (sender, _receiver_kept_alive_but_never_drained) = crossbeam::channel::bounded(1);
+        sender.send(StreamControlMessage::Resume).unwrap();
+        let blocking_controller = Arc::from(ChannelBasedController::new(sender));
+
+        std::thread::spawn(move || {
+            // Expected to block forever inside the replay's `controller.terminate()`
+            // call -- this thread is deliberately never joined.
+            blocked_command.register(blocking_controller);
+        });
+
+        // Give the spawned thread a moment to actually reach (and block inside) the
+        // replay call, then confirm a totally unrelated command on the *same* job can
+        // still get the job's lock to register its own controller -- proving the lock
+        // isn't held hostage by the other thread's block.
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let (done_sender, done_receiver) = crossbeam::channel::bounded(1);
+        let handle2 = handle.clone();
+        std::thread::spawn(move || {
+            let _ = handle2.next_command_handle();
+            let _ = done_sender.send(());
+        });
+        assert!(
+            done_receiver
+                .recv_timeout(std::time::Duration::from_millis(500))
+                .is_ok(),
+            "next_command_handle on an unrelated command was still blocked 500ms after \
+             a different controller's replay call started blocking on a full channel -- \
+             the job's lock is being held hostage across that call"
+        );
+    }
+
+    // A job that was terminated once and then resumed (e.g. an ineffective terminate
+    // against a job that never actually died) must NOT replay a stale terminate to a
+    // controller registering afterward -- `termination_requested` stays true forever
+    // once set (see its own doc comment), so gating replay on raw `status ==
+    // Terminated` alone would wrongly kill a controller for a job that is, right now,
+    // actually running again.
+    #[test]
+    fn a_controller_registered_after_resume_following_an_ineffective_terminate_is_not_terminated() {
+        let handle = JobHandle::new(JobId::from(1));
+        let command_handle = handle.next_command_handle();
+
+        {
+            let mut live_job = handle.live_job.lock().unwrap();
+            live_job.terminate().unwrap();
+            live_job.resume().unwrap();
+        }
+
+        let (late, late_terminate_calls, _) = SpyController::new();
+        command_handle.register(Arc::from(late));
+
+        assert_eq!(
+            late_terminate_calls.load(Ordering::SeqCst),
+            0,
+            "a job that was resumed after an ineffective terminate is running again -- a \
+             controller registering now must not be told to terminate"
+        );
     }
 }

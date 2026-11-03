@@ -5,8 +5,12 @@ use crate::lang::errors::{CrushError, CrushResult, command_error};
 use crate::lang::parser::Parser;
 use crate::lang::pipe::ValueReceiver;
 use crate::lang::printer::Printer;
+use crate::lang::job_control::JobController;
 use crate::lang::state::handles::JobType::Background;
-use crate::lang::state::handles::{JobControlData, JobData, JobHandle, JobInfo, JobStatus, JobType};
+use crate::lang::state::handles::{
+    JobControlData, JobData, JobHandle, JobInfo, JobStatus, JobType, notify_pause,
+    notify_resume, notify_resume_foreground, notify_terminate,
+};
 use crate::lang::state::id::JobId;
 use crate::lang::state::warning::Warning;
 use crate::lang::threads::ThreadStore;
@@ -578,15 +582,31 @@ impl GlobalState {
     /// descendant for `jobs` to report, instead of just the one row the user actually
     /// asked about.
     pub fn terminate(&self, jid: JobId) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
-        let res = terminate_and_snapshot(&mut data, jid);
-        for id in descendant_job_ids(&data, jid) {
-            if let Ok(job) = get_job(&mut data, id, false) {
-                if let Ok(mut guard) = job.lock() {
-                    let _ = guard.terminate();
+        let mut to_notify: Vec<JobController> = Vec::new();
+        let res = {
+            let mut data = self.data.lock().unwrap();
+            let res = terminate_and_snapshot(&mut data, jid);
+            if let Ok(controllers) = &res {
+                to_notify.extend(controllers.iter().cloned());
+            }
+            for id in descendant_job_ids(&data, jid) {
+                if let Ok(job) = get_job(&mut data, id, false) {
+                    if let Ok(mut guard) = job.lock() {
+                        if let Ok(controllers) = guard.terminate() {
+                            to_notify.extend(controllers);
+                        }
+                    }
                 }
             }
-        }
+            res.map(|_| ())
+        };
+        // Notified only after every lock above (this job's, every descendant's, and
+        // `data` itself) is dropped -- see `JobController`'s own doc comment for why: a
+        // controller's `terminate()` can block (e.g. a bounded channel nobody is
+        // draining yet), and calling it while still holding any of those locks would
+        // stop every other, unrelated caller needing the same lock dead until the block
+        // resolves, which can be forever.
+        notify_terminate(&to_notify);
         res
     }
 
@@ -615,33 +635,57 @@ impl GlobalState {
     /// stop of an external command (`cmd.rs`'s `Stopped` arm) -- marks the job and its
     /// descendants `backgrounded` (see `JobData::backgrounded`).
     pub fn pause(&self, jid: JobId) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
-        let arc = get_job(&mut data, jid, true)?;
-        // Before any controller hears about the pause, so nothing woken by it (e.g.
-        // `Job::eval`'s pause branch) can observe the job as still foreground.
-        set_backgrounded(&mut data, jid, true);
-        let res = arc.lock()?.pause();
-        for id in descendant_job_ids(&data, jid) {
-            if let Ok(job) = get_job(&mut data, id, false) {
-                if let Ok(mut guard) = job.lock() {
-                    let _ = guard.pause();
+        let mut to_notify: Vec<JobController> = Vec::new();
+        let res = {
+            let mut data = self.data.lock().unwrap();
+            let arc = get_job(&mut data, jid, true)?;
+            // Before any controller hears about the pause, so nothing woken by it (e.g.
+            // `Job::eval`'s pause branch) can observe the job as still foreground.
+            set_backgrounded(&mut data, jid, true);
+            let res = arc.lock()?.pause();
+            if let Ok(controllers) = &res {
+                to_notify.extend(controllers.iter().cloned());
+            }
+            for id in descendant_job_ids(&data, jid) {
+                if let Ok(job) = get_job(&mut data, id, false) {
+                    if let Ok(mut guard) = job.lock() {
+                        if let Ok(controllers) = guard.pause() {
+                            to_notify.extend(controllers);
+                        }
+                    }
                 }
             }
-        }
+            res.map(|_| ())
+        };
+        // See `GlobalState::terminate`'s own comment for why this happens only after
+        // every lock above is dropped.
+        notify_pause(&to_notify);
         res
     }
 
     /// Like `terminate`, but resumes `jid` and every job nested inside it.
     pub fn resume(&self, jid: JobId) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
-        let res = get_job(&mut data, jid, true)?.lock()?.resume();
-        for id in descendant_job_ids(&data, jid) {
-            if let Ok(job) = get_job(&mut data, id, false) {
-                if let Ok(mut guard) = job.lock() {
-                    let _ = guard.resume();
+        let mut to_notify: Vec<JobController> = Vec::new();
+        let res = {
+            let mut data = self.data.lock().unwrap();
+            let res = get_job(&mut data, jid, true)?.lock()?.resume();
+            if let Ok(controllers) = &res {
+                to_notify.extend(controllers.iter().cloned());
+            }
+            for id in descendant_job_ids(&data, jid) {
+                if let Ok(job) = get_job(&mut data, id, false) {
+                    if let Ok(mut guard) = job.lock() {
+                        if let Ok(controllers) = guard.resume() {
+                            to_notify.extend(controllers);
+                        }
+                    }
                 }
             }
-        }
+            res.map(|_| ())
+        };
+        // See `GlobalState::terminate`'s own comment for why this happens only after
+        // every lock above is dropped.
+        notify_resume(&to_notify);
         res
     }
 
@@ -649,15 +693,27 @@ impl GlobalState {
     /// for what that changes and why `bg`/`resume` must keep using plain
     /// `resume` instead.
     pub fn resume_foreground(&self, jid: JobId) -> CrushResult<()> {
-        let mut data = self.data.lock().unwrap();
-        let res = get_job(&mut data, jid, true)?.lock()?.resume_foreground();
-        for id in descendant_job_ids(&data, jid) {
-            if let Ok(job) = get_job(&mut data, id, false) {
-                if let Ok(mut guard) = job.lock() {
-                    let _ = guard.resume_foreground();
+        let mut to_notify: Vec<JobController> = Vec::new();
+        let res = {
+            let mut data = self.data.lock().unwrap();
+            let res = get_job(&mut data, jid, true)?.lock()?.resume_foreground();
+            if let Ok(controllers) = &res {
+                to_notify.extend(controllers.iter().cloned());
+            }
+            for id in descendant_job_ids(&data, jid) {
+                if let Ok(job) = get_job(&mut data, id, false) {
+                    if let Ok(mut guard) = job.lock() {
+                        if let Ok(controllers) = guard.resume_foreground() {
+                            to_notify.extend(controllers);
+                        }
+                    }
                 }
             }
-        }
+            res.map(|_| ())
+        };
+        // See `GlobalState::terminate`'s own comment for why this happens only after
+        // every lock above is dropped.
+        notify_resume_foreground(&to_notify);
         res
     }
 
@@ -823,13 +879,16 @@ fn get_job(
 /// Ctrl-C, or the jobs `timeout`'s sweep terminates under the command it's running,
 /// were never put in the background by anyone, so a one-time "Terminated" row for them
 /// in `jobs` afterward would be a misleading phantom; they're just reaped silently.
-fn terminate_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> CrushResult<()> {
+fn terminate_and_snapshot(
+    data: &mut MutexGuard<StateData>,
+    jid: JobId,
+) -> CrushResult<Vec<JobController>> {
     let arc = get_job(data, jid, false)?;
-    let definition = {
+    let (definition, controllers) = {
         let mut guard = arc.lock()?;
         let definition = guard.definition.clone();
-        guard.terminate()?;
-        definition
+        let controllers = guard.terminate()?;
+        (definition, controllers)
     };
     let backgrounded = data
         .jobs
@@ -839,7 +898,7 @@ fn terminate_and_snapshot(data: &mut MutexGuard<StateData>, jid: JobId) -> Crush
     if backgrounded {
         snapshot(data, jid, definition);
     }
-    Ok(())
+    Ok(controllers)
 }
 
 /// Like `terminate_and_snapshot`, but for `GlobalState::mark_terminated_by_signal`:

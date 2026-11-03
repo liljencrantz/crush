@@ -26,6 +26,7 @@ use std::cmp::min;
 use std::io::{ErrorKind, Read, Write};
 use std::net::{Ipv6Addr, SocketAddr, TcpStream};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 static IDENTITY_OUTPUT_TYPE: [ColumnType; 2] = [
     ColumnType::new("identity", ValueType::String, "the identity's comment, usually describing which key it is."),
@@ -250,7 +251,7 @@ fn run_remote(
     // actual waiting.
     const POLL_INTERVAL_MS: u32 = 50;
     let (control_sender, control_receiver) = bounded(1);
-    command_handle.register(Box::from(ChannelBasedController::new(control_sender)));
+    command_handle.register(Arc::from(ChannelBasedController::new(control_sender)));
     sess.set_timeout(POLL_INTERVAL_MS);
     let mut out_buf = Vec::new();
     let mut chunk = [0u8; 16384];

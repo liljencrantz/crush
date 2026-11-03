@@ -1,0 +1,31 @@
+# Regression test for a real deadlock found while investigating why so many pty tests
+# sleep after backgrounding a job before signaling it: `terminate`/`pause`/`resume`/
+# `resume_foreground` used to notify every registered controller for a job *while still
+# holding that job's own state lock* (`JobControlData`'s internal mutex). A
+# `ChannelBasedController` sending into a bounded channel nobody is draining yet blocks
+# -- and `cmd`'s own real controller (registered from inside its freshly-spawned worker
+# thread, moments after `ThreadStore::spawn`'s generic one) uses exactly such a
+# one-slot channel. `terminate` immediately followed by `fg`, with no sleep in between,
+# could land `fg`'s own `resume_foreground` broadcast -- sent while still holding the
+# job's lock -- into that already-full channel before `cmd`'s worker thread got far
+# enough to drain it, permanently blocking the one thread that would ever drain it from
+# ever reaching the point where it could (it needed that same lock, now held hostage,
+# just to allocate its next command id). Confirmed directly via `sample`-based thread
+# backtraces during this investigation.
+#
+# No sleep anywhere in this test, deliberately: the bug only reproduces when `terminate`
+# and `fg` can land before `cmd`'s worker thread finishes its own setup, which a sleep
+# would paper over. Looping gives the real race many chances to fire against genuine OS
+# thread scheduling; if the underlying lock-holding bug is still present, this hangs and
+# `run_system_test`'s own 30s timeout fails the test instead of ever reaching `echo`.
+$i := 0
+while {($i < 20)} {
+    $job_id := $(cmd sleep 100 &)
+    terminate $job_id
+    try {
+        $(fg $job_id)
+    } catch {|$e|
+    }
+    $i = ($i + 1)
+}
+echo "ok"
