@@ -100,7 +100,14 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
 
     loop {
         match if cfg.follow {
-            journal.await_next_entry(None)
+            // A short poll timeout instead of `None` (wait forever): `output` is
+            // already interruptible (`CommandContext::initialize_output` wires its
+            // controller up) and `send()` below already checks it, but nothing ever
+            // reaches `send()` while this call is still blocked waiting for the next
+            // entry that may never come -- same gap `fs:usage` had, see that fix's
+            // commit. 200ms is short enough that `terminate`/Ctrl-Z feel responsive,
+            // long enough not to busy-poll the journal.
+            journal.await_next_entry(Some(std::time::Duration::from_millis(200)))
         } else {
             journal.next_entry()
         }? {
@@ -108,6 +115,9 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
                 if !cfg.follow {
                     break;
                 }
+                // No new entry arrived within the poll window above -- check for
+                // terminate/pause before waiting again.
+                output.poll_control()?;
             }
             Some(row) => {
                 let data = Value::Struct(Struct::new(
