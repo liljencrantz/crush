@@ -196,13 +196,18 @@ mod cpu {
     }
 }
 
-static PROCS_OUTPUT_TYPE: [ColumnType; 7] = [
+static PROCS_OUTPUT_TYPE: [ColumnType; 8] = [
     ColumnType::new("pid", ValueType::Integer, "the process id."),
     ColumnType::new("ppid", ValueType::OneOf(AnySequence::Slice(&[ValueType::Integer, ValueType::Empty])), "the parent process's id, if known."),
     ColumnType::new("user", ValueType::String, "the name of the user running the process."),
     ColumnType::new_with_format("rss", ColumnFormat::ByteUnit, ValueType::Integer, "the process's resident set size, i.e. physical memory in use."),
     ColumnType::new_with_format("vms", ColumnFormat::ByteUnit, ValueType::Integer, "the process's virtual memory size."),
     ColumnType::new("cpu", ValueType::Duration, "the total CPU time the process has used."),
+    ColumnType::new(
+        "status",
+        ValueType::String,
+        "the OS-level process state (e.g. \"Runnable\", \"Sleeping\", \"Stopped\", \"Zombie\") -- see sysinfo's `ProcessStatus`.",
+    ),
     ColumnType::new("name", ValueType::String, "the process's executable path, or its name if the path isn't known."),
 ];
 
@@ -232,6 +237,7 @@ fn procs(context: CommandContext) -> CrushResult<()> {
                 Value::from(proc.memory()),
                 Value::from(proc.virtual_memory()),
                 Value::from(Duration::milliseconds(proc.accumulated_cpu_time() as i64)),
+                Value::from(proc.status().to_string()),
                 Value::from(
                     proc.exe()
                         .map(|s| s.to_str())

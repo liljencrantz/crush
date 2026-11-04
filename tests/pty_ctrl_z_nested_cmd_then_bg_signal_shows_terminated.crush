@@ -9,55 +9,69 @@
 # every way a job can stop holding the foreground.
 #
 # The paused job's id is looked up (highest-id `Paused` row) rather than hardcoded, since
-# it depends on how many intermediate block jobs exist. Pid lookup and settle delays
-# follow `pty_terminate_and_signal_external_job.crush` (see its header).
+# it depends on how many intermediate block jobs exist. `pty_child_pid` finds the real
+# external `sleep`'s pid once, before Ctrl-Z -- `bg` only sends SIGCONT to the same
+# process (no new fork), so that pid is still valid after Ctrl-Z/`bg` and is reused
+# directly for `host:signal`, rather than re-deriving it a second time.
 #
-# KNOWN GAP, not converted to the counted-prompt/`pty_send_control` approach the other
-# 7 Ctrl-Z/Ctrl-C pty tests now use (see pty_test_helpers.crush): tried directly,
-# converted this exact way, and found it genuinely unreliable here specifically --
-# roughly 2 in 3 runs failed with no job ever reaching `Paused` at all, even though the
-# *simpler*, non-nested Ctrl-Z cases (a bare `sleep`, a bare `cmd sleep`) convert
-# cleanly and have run clean well over 100 times each, including under artificial CPU
-# load, with the exact same technique. Three levels of nested block/closure dispatch
-# before the innermost `cmd` job exists appears to measurably widen the real window
-# `pty_ctrl_z_suspends_external_job.crush`'s own header already documents (Ctrl-Z
-# racing the fork/exec/terminal-handoff) -- confirmed the race is real and not just an
-# artifact of the test by adding targeted tracing, which consistently made it stop
-# reproducing entirely (added latency on the signal-handling thread gives the nested
-# dispatch enough extra time to finish first) -- the exact signature of a genuine,
-# very narrow timing race, not a logic bug in this file's own retry helper. Left as a
-# fixed delay pending further investigation, same as
-# `pty_fg_then_signal_leaves_no_terminated_row.crush`'s own documented gap.
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+# KNOWN GAP: sending Ctrl-Z itself is NOT converted to the counted-prompt/
+# `pty_send_control` approach the other 7 Ctrl-Z/Ctrl-C pty tests now use (see
+# pty_test_helpers.crush): tried directly, converted this exact way, and found it
+# genuinely unreliable here specifically -- roughly 2 in 3 runs failed with no job ever
+# reaching `Paused` at all, even though the *simpler*, non-nested Ctrl-Z cases (a bare
+# `sleep`, a bare `cmd sleep`) convert cleanly and have run clean well over 100 times
+# each, including under artificial CPU load, with the exact same technique. Three
+# levels of nested block/closure dispatch before the innermost `cmd` job exists appears
+# to measurably widen the real window `pty_ctrl_z_suspends_external_job.crush`'s own
+# header already documents (Ctrl-Z racing the fork/exec/terminal-handoff) -- confirmed
+# the race is real and not just an artifact of the test by adding targeted tracing,
+# which consistently made it stop reproducing entirely (added latency on the
+# signal-handling thread gives the nested dispatch enough extra time to finish first) --
+# the exact signature of a genuine, very narrow timing race, not a logic bug in this
+# file's own retry helper. The fixed delay right after Ctrl-Z is left in place pending
+# that investigation, same as `pty_fg_then_signal_leaves_no_terminated_row.crush`'s own
+# documented gap.
+#
+# What *is* resolved without guessing: once Ctrl-Z has landed, `GlobalState::pause`
+# sends its target job's controller a `Pause` message over a channel -- a send that
+# returns immediately, well before `cmd.rs`'s worker thread actually gets around to
+# delivering the real `SIGSTOP` to the external process (see `wait_for_child_inner`'s
+# `Pause` arm in control/cmd.rs). So the external process's own OS-level state
+# (exposed by `host:procs`'s `status` column, backed by `sysinfo::Process::status`)
+# only ever flips to "Stopped" *after* `GlobalState::pause`'s synchronous status flip
+# has already happened -- waiting for it, directly from out here with no round trip
+# through the nested session's own `jobs` table at all, is a strictly later but
+# sufficient, OS-observable proxy for "this pause has genuinely landed," confirmed
+# directly: `kill -STOP`/`kill -CONT` on a plain background process flip `host:procs`'s
+# `status` between "Runnable" and "Stopped" exactly as expected.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
 $t:write "{ { cmd sleep 7432 } }\n"
 $t:wait_for "sleep"
-sleep 500ms
+$pid := $(pty_child_pid $t ^(.*sleep))
 $t:write $t:control:z
 $t:wait_for "# "
 sleep 500ms
-$t:write "$bgid := ($(jobs | where {($status == \"Paused\")} | select id | sort id reverse=$true))[0]:id\n"
-$t:wait_for "# "
-sleep 500ms
-$t:write "bg $bgid\n"
-$t:wait_for "# "
-sleep 500ms
 
-$t:write "$my_pid := $(crush:pid)\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
-$t:wait_for "# "
-sleep 1000ms
-$t:write "host:signal $pid signal=SIGKILL\n"
-$t:wait_for "# "
-sleep 500ms
-$t:write "$n := $(jobs | where {($status == \"Terminated\")} | count)\n"
-$t:wait_for "# "
-sleep 500ms
+$target_pid := $pid
+$os_status := ""
+$tries := 0
+while {(($tries < 20) and ($os_status != "Stopped"))} {
+    $os_status = ($(host:procs | where {($pid == $target_pid)} | select status | list:collect status))[0]
+    if (($os_status) != "Stopped") {
+        sleep 50ms
+        $tries = ($tries + 1)
+    }
+}
+assert (($os_status) == "Stopped") $("expected pid {} to reach OS status Stopped within the retry budget, found {}":format $target_pid $os_status)
+
+$n = $(pty_run $t $n "$bgid := ($(jobs | where {($status == \"Paused\")} | select id | sort id reverse=$true))[0]:id")
+$n = $(pty_run $t $n "bg $bgid")
+
+host:signal $pid signal=SIGKILL
+$n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
 $t:write "echo $(\"NESTED_Z_CHECK_{}\":format $n)\n"
 $t:wait_for "NESTED_Z_CHECK_1"
 
