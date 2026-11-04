@@ -32,7 +32,6 @@ $t := $(pty_spawn)
 $t:write $("$tree := $(convert $file {})\n":format $tree)
 $t:wait_quiet
 $t:run "$tree:remove recursive=$true &"
-sleep 500ms
 $cpu_before := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
 
 $t:run "terminate 0"

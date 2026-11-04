@@ -31,6 +31,15 @@ $expected_schema := $($(csv:from "path,kind,timestamp\n" head=1 path=$file kind=
 assert ($schema == $expected_schema) "fs:watch's row shape should be path:file, kind:string, timestamp:time"
 
 $event_job := $(fs:watch ./.fs_watch_test_dir | head 1 | materialize &)
+
+# fs:watch's real OS-level watch (inotify/FSEvents) is armed from inside its own
+# worker thread, once the OS actually schedules it -- not synchronously as part of
+# dispatching the backgrounded job above (see handles.rs's `register_command` doc
+# comment on this general class of builtin). Touching the file before the watch is
+# actually armed means the event never reaches it at all, not merely late: there is no
+# OS-level replay, and no crush-visible signal for "the watch is now active" to poll on
+# instead. Confirmed directly: removing this wait makes `fg $event_job` below hang
+# waiting for an event that already happened and was missed, until something kills it.
 sleep 300ms
 ./.fs_watch_test_dir/created.txt:touch
 ./.fs_watch_test_dir/created2.txt:touch

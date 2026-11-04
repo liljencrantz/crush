@@ -23,27 +23,24 @@
 # inherited from the parent's own value at job *creation* time (baked in before any
 # pruning could ever sever it), rather than discovered later by walking live `parent`
 # links.
-$crush_bin := $(crush:env["CRUSH_BIN"])
-$t := $(pty:create $crush_bin)
-$t:wait_for "# "
-sleep 300ms
+#
+# Uses `pty_run`'s counted prompt (see pty_test_helpers.crush) instead of a bare
+# `wait_for "# "` plus a fixed settle delay after every write -- this was previously
+# one of the two known-flaky tests in the suite, failing intermittently under the full
+# suite's concurrent load (confirmed directly: isolated runs passed cleanly, but a
+# bare `wait_for "# "` can be satisfied by a prompt already on screen *before* the
+# write, so under load it proved nothing about whether the command just written had
+# actually finished). `pty_child_pid` finds the backgrounded `sleep`'s pid directly via
+# `host:procs`, without needing to capture the session's own pid from inside it first.
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:write "$my_pid := $(crush:pid)\n"
-$t:wait_for "# "
-sleep 300ms
+$n = $(pty_run $t $n "{cmd sleep 7413} &")
+$pid := $(pty_child_pid $t ^(.*sleep))
+host:signal $pid signal=SIGKILL
 
-$t:write "{cmd sleep 7413} &\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "$pid := ($(host:procs | where {(($name =~ ^(.*sleep)) and ($ppid == $my_pid))} | select pid | sort pid reverse=$true))[0]:pid\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "host:signal $pid signal=SIGKILL\n"
-$t:wait_for "# "
-sleep 300ms
-$t:write "$status := ($(jobs | where {$definition:starts_with \"\\$cmd \\\"sleep\\\" 7413\"} | select status))[0]:status\n"
-$t:wait_for "# "
-sleep 300ms
+$n = $(pty_run $t $n "$status := ($(jobs | where {$definition:starts_with \"\\$cmd \\\"sleep\\\" 7413\"} | select status))[0]:status")
 $t:write "echo $(\"NESTED_CHECK_{}\":format $status)\n"
 $t:wait_for "NESTED_CHECK_Terminated"
 

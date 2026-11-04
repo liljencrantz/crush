@@ -11,9 +11,7 @@
 # cmd_respects_job_control.crush.
 
 $job_id := $(cmd sleep 2 &)
-sleep 300ms
 pause $job_id
-sleep 300ms
 
 $status := $($(jobs | where {($id == $job_id)} | select status | list:collect)[0])
 assert ($status == "Paused") "job should be Paused after pause"

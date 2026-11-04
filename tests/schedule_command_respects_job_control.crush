@@ -35,7 +35,6 @@
 # the test.
 
 $job_id := $(schedule 100s initial_delay=100ms command={while {$true} {}} &)
-sleep 300ms
 
 try {
     exit

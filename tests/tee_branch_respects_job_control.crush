@@ -26,6 +26,18 @@
 # once, the same class of bug stream:group had before its own fix (only one of several
 # workers ever actually seeing a pause/terminate).
 
+# `tee` dispatches each branch closure's body by spawning a fresh OS thread per branch
+# (`thread::Builder::new().spawn(...)` in tee.rs) and calling `branch.eval(...)` on it --
+# the nested job a closure body runs as (`create_nested_job_handle`) is only created
+# once that thread actually gets scheduled, which can be arbitrarily later than the
+# backgrounded pipeline statement above returning. Unlike controller *registration*
+# (see handles.rs's `register_command`, which replays an already-settled pause/
+# terminate to a controller that registers late), there is no equivalent replay for
+# descendant *job creation* itself: `GlobalState::terminate`'s descendant walk only
+# notifies jobs that already exist in `data.jobs` at the exact moment it runs, so a
+# `terminate` landing before a branch's nested job has been created never reaches that
+# branch at all. Confirmed directly: removing this wait makes the `while` branch
+# sometimes never get terminated, hanging the script until something kills it.
 $job_id := $(seq 1 10000 | tee {while {$true} {}} {count} {materialize} | count &)
 sleep 300ms
 terminate $job_id

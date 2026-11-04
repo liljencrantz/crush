@@ -14,9 +14,7 @@
 # actual interactive terminal.
 
 $job_id := $(cmd sleep 15 &)
-sleep 300ms
 pause $job_id
-sleep 300ms
 
 # A second pause, timed to land while `fg` below is already waiting on the (by then
 # resumed) job. Uses `schedule ... --once &`, not a plain `{...} &` closure: a closure

@@ -23,7 +23,6 @@ source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 
 $t:run "random:integer_stream | count &"
-sleep 300ms
 $cpu_running := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
 
 $t:run "pause 0"

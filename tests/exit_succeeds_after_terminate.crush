@@ -14,8 +14,27 @@
 # and everything else that needs to know whether work is still genuinely running) from
 # `GlobalState::jobs_for_listing()` (used only by the `jobs` builtin itself, which is the
 # one place that should still report a job that was just terminated).
+# `exit`'s own "are there other jobs" check (`GlobalState::jobs()`) only excludes a job
+# once its `JobControlData` has actually been dropped -- a job whose worker thread
+# hasn't yet finished returning from `cmd.rs` (after observing the SIGKILL'd child's
+# death) still resolves via `job_control_data.upgrade()` and reads as "still there"
+# even though its live status already says Terminated (confirmed directly: removing
+# this wait entirely makes `exit` fail with "There are running jobs." on nearly every
+# run). Poll until it's actually reaped instead of guessing a fixed delay.
+#
+# Matched by a distinctive sleep duration rather than by id: ids get recycled (see
+# tests/job_orphaning_on_parent_death.crush), and this very polling loop creates new
+# jobs of its own on every iteration -- one of which could plausibly be handed
+# $job_id's own freed id, making the filter match the loop's own still-running job
+# forever instead of correctly reaching zero.
 $job_id := $(cmd sleep 8171 &)
-sleep 300ms
 terminate $job_id
-sleep 500ms
+
+$tries := 0
+while {(($tries < 20) and (($(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | count)) > 0))} {
+    sleep 50ms
+    $tries = ($tries + 1)
+}
+assert (($(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | count)) == 0) "expected the terminated sleep job to be fully reaped within the retry budget"
+
 exit
