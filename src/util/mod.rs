@@ -3,6 +3,7 @@ pub mod directory_lister;
 pub mod display_non_recursive;
 pub mod escape;
 pub mod file;
+pub mod file_remover;
 pub mod glob;
 pub mod hex;
 pub mod highlight;

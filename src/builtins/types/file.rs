@@ -24,6 +24,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use crate::lang::value::Value::Empty;
+use crate::util::directory_lister::{DirectoryLister, directory_lister};
+use crate::util::file_remover::{FileRemover, file_remover};
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
     static CELL: OnceLock<OrderedMap<String, Command>> = OnceLock::new();
@@ -393,18 +395,48 @@ fn remove_file_of_unknown_type(
     }
 }
 
-fn remove_known_directory(
-    path: Arc<Path>,
+// Generic over `DirectoryLister`/`FileRemover` (same fake-for-tests/real-for-the-shell split
+// `glob_files` uses, see src/util/directory_lister.rs) so the interruption behavior below can
+// be verified by a deterministic unit test, with no real filesystem, timing, or job control
+// involved: see the `tests` module at the bottom of this file.
+fn remove_recursive(
+    root: Arc<Path>,
     out: &TableOutputStream,
     verbose: bool,
+    lister: &impl DirectoryLister,
+    remover: &impl FileRemover,
 ) -> CrushResult<()> {
-    let res = remove_dir(path.deref());
-    handle_remove_result(path, res, out, verbose)
-}
+    let mut directories = vec![(root, false)];
 
-fn remove_known_file(path: Arc<Path>, out: &TableOutputStream, verbose: bool) -> CrushResult<()> {
-    let res = remove_file(path.deref());
-    handle_remove_result(path, res, out, verbose)
+    while let Some((next, subdirectories_already_deleted)) = directories.pop() {
+        if subdirectories_already_deleted {
+            let res = remover.remove_dir(&next);
+            handle_remove_result(next, res, out, verbose)?;
+        } else {
+            directories.push((next.clone(), true));
+            match lister.list(next.to_path_buf()) {
+                Ok(entries) => {
+                    for e in entries {
+                        // `output` is already interruptible (`CommandContext::initialize_output`
+                        // wires its controller up), and `send` already checks it on every call --
+                        // but a file that isn't itself reported (the default, non-`verbose` case)
+                        // never reaches a `send` at all, so this walk needs its own check between
+                        // entries, same gap `fs:usage` had (see that fix's own commit).
+                        out.poll_control()?;
+                        if e.is_directory {
+                            directories.push((Arc::from(e.full_path.as_path()), false));
+                        } else {
+                            let path: Arc<Path> = Arc::from(e.full_path.as_path());
+                            let res = remover.remove_file(&path);
+                            handle_remove_result(path, res, out, verbose)?;
+                        }
+                    }
+                }
+                Err(e) => out.send(remove_outcome_to_row(next.clone(), Err(e)))?,
+            }
+        }
+    }
+    Ok(())
 }
 
 fn remove(mut context: CommandContext) -> CrushResult<()> {
@@ -413,54 +445,13 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     match context.this {
         Some(Value::File(file)) => {
             if cfg.recursive {
-                let mut directories = vec![(file, false)];
-
-                while let Some((next, subdirectories_already_deleted)) = directories.pop() {
-                    if subdirectories_already_deleted {
-                        remove_known_directory(next, &output, cfg.verbose)?;
-                    } else {
-                        directories.push((next.clone(), true));
-                        match next.clone().read_dir() {
-                            Ok(rd) => {
-                                for e in rd {
-                                    // `output` is already interruptible
-                                    // (`CommandContext::initialize_output` wires its
-                                    // controller up), and `send` already checks it on
-                                    // every call -- but a file that isn't itself
-                                    // reported (the default, non-`verbose` case) never
-                                    // reaches a `send` at all, so this walk needs its
-                                    // own check between entries, same gap `fs:usage`
-                                    // had (see that fix's own commit).
-                                    output.poll_control()?;
-                                    match e {
-                                        Ok(e) => match e.metadata() {
-                                            Ok(meta) => {
-                                                if meta.is_dir() {
-                                                    directories.push((Arc::from(e.path()), false));
-                                                } else {
-                                                    remove_known_file(
-                                                        Arc::from(e.path()),
-                                                        &output,
-                                                        cfg.verbose,
-                                                    )?;
-                                                }
-                                            }
-                                            Err(e) => output.send(remove_outcome_to_row(
-                                                next.clone(),
-                                                Err(e),
-                                            ))?,
-                                        },
-
-                                        Err(e) => output
-                                            .send(remove_outcome_to_row(next.clone(), Err(e)))?,
-                                    }
-                                }
-                            }
-                            Err(e) => output.send(remove_outcome_to_row(next.clone(), Err(e)))?,
-                        }
-                    }
-                }
-                Ok(())
+                remove_recursive(
+                    file,
+                    &output,
+                    cfg.verbose,
+                    &directory_lister(),
+                    &file_remover(),
+                )
             } else {
                 remove_file_of_unknown_type(file, &output, cfg.verbose)
             }
@@ -538,5 +529,92 @@ fn touch(mut context: CommandContext) -> CrushResult<()> {
             context.output.send(Empty)
         }
         Err(err) => error(err.to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::pipe::unlimited_streams;
+    use crate::util::directory_lister::tests::FakeDirectoryLister;
+    use crate::util::file_remover::tests::FakeFileRemover;
+    use std::path::PathBuf;
+
+    // /root
+    // |- a       (file)
+    // `- sub     (dir)
+    //    `- b    (file)
+    fn fake_tree() -> FakeDirectoryLister {
+        let mut lister = FakeDirectoryLister::new("/");
+        lister.add("/root/sub", &vec!["b"]);
+        lister.add("/root", &vec!["a"]);
+        lister
+    }
+
+    // Deliberately synchronous and deterministic, no real filesystem, pty, subprocess, job
+    // control, or timing involved: a Terminate message is queued on the output's control
+    // channel *before* remove_recursive is ever called, so the very first poll_control() call
+    // inside the walk -- which happens before the first entry is even looked at, see that call
+    // site's own comment -- is guaranteed to observe it. This is the same race-free pattern
+    // src/lang/pipe.rs's own
+    // `plain_clone_of_an_interruptible_table_output_stream_does_not_broadcast_control` test
+    // uses. (An end-to-end version of this property used to be tested via a real 100,000-file
+    // pty session racing `terminate` against the delete finishing -- replaced by this test,
+    // since that approach could never fully remove the possibility of flaking under load; see
+    // this commit.)
+    #[test]
+    fn recursive_remove_stops_before_touching_anything_when_already_terminated() {
+        let lister = fake_tree();
+        let remover = FakeFileRemover::new();
+        let (output, controller) = unlimited_streams(vec![]).0.interruptible();
+        controller.terminate().unwrap();
+
+        let result = remove_recursive(
+            Arc::from(Path::new("/root")),
+            &output,
+            false,
+            &lister,
+            &remover,
+        );
+
+        assert!(
+            result.is_err(),
+            "expected a Terminate already queued before the walk starts to abort it"
+        );
+        assert_eq!(
+            remover.removed(),
+            Vec::<PathBuf>::new(),
+            "expected nothing to have been removed: a Terminate queued before the walk starts \
+             must be observed on the very first poll_control() call, before the first entry is \
+             even looked at"
+        );
+    }
+
+    #[test]
+    fn recursive_remove_removes_every_entry_when_uninterrupted() {
+        let lister = fake_tree();
+        let remover = FakeFileRemover::new();
+        let (output, _controller) = unlimited_streams(vec![]).0.interruptible();
+
+        let result = remove_recursive(
+            Arc::from(Path::new("/root")),
+            &output,
+            false,
+            &lister,
+            &remover,
+        );
+
+        assert!(result.is_ok(), "expected an uninterrupted walk to succeed: {:?}", result);
+
+        let mut removed = remover.removed();
+        removed.sort();
+        let mut expected = vec![
+            PathBuf::from("/root/a"),
+            PathBuf::from("/root/sub/b"),
+            PathBuf::from("/root/sub"),
+            PathBuf::from("/root"),
+        ];
+        expected.sort();
+        assert_eq!(removed, expected);
     }
 }
