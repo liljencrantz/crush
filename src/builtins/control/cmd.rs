@@ -300,6 +300,27 @@ fn cmd_internal(
     let control = Arc::from(ChannelBasedController::new(control_sender));
     context.command_handle().register(control);
 
+    // If a termination was already explicitly requested by the time this real
+    // controller registers -- e.g. `terminate $job_id` immediately followed by `fg
+    // $job_id`/`bg $job_id`, racing this worker thread's own registration against
+    // `GlobalState::resume_foreground`/`resume`, which revive `status` back to
+    // Running/Paused even though the kill was never actually delivered to anything
+    // able to carry it out -- `register_command`'s own replay-on-registration logic
+    // is gated on the *current* `status` reading `Terminated`, not just
+    // `termination_requested`, so it can miss exactly this case (see that function's
+    // own doc comment: it needs `status` too, for a different, legitimate scenario --
+    // a job resumed well after an ineffective terminate must NOT replay a stale kill
+    // to a later, unrelated registrant). Checking `termination_requested()` directly
+    // here, before ever spawning the external process, is immune to that race: once
+    // an explicit terminate has happened, it stays true forever, however `status`
+    // gets jostled afterward. Confirmed directly via `sample`-based thread
+    // backtraces: without this, `cmd sleep 100 &; terminate $job_id; fg $job_id`
+    // could leave the external process running forever and this job's own worker
+    // thread parked waiting for it.
+    if context.command_handle().job_handle.termination_requested() {
+        return terminate();
+    }
+
     let use_tty = !context.input.is_pipeline() && !context.output.is_pipeline();
     let mut cmd = std::process::Command::new(file.as_os_str());
     // Every external command gets its own process group -- the same thing a real
