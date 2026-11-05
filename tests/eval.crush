@@ -1,0 +1,6 @@
+# eval runs the given code in the calling scope, so it can mutate an outer variable.
+# (eval is source's counterpart for inline content -- string/binary/stream -- rather
+# than a file; see tests/source.crush for the file case.)
+$ran := $false
+eval "$ran = $true"
+assert $ran "eval should execute the given code in the calling scope"

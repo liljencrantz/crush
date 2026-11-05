@@ -135,7 +135,7 @@ $complex := {|$a $b: $integer = 7 @ $rest @@ $extra|
 }
 $def_text := $(definition $complex)
 $src := $("$restored_complex := {}":format $def_text)
-source $src
+eval $src
 
 $before := $($complex 1 2 3 4 x=10 y=20)
 $after := $($restored_complex 1 2 3 4 x=10 y=20)

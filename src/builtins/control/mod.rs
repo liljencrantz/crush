@@ -9,6 +9,7 @@ use crate::lang::errors::{CrushResult, assertion_error, command_error, throw_err
 use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::{ValueReceiver, black_hole, empty_channel, pipe};
 use crate::lang::signature::binary_input::BinaryInput;
+use crate::lang::signature::files::{Files, into_paths};
 use crate::lang::state::contexts::{CommandContext, JobContext};
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::id::JobId;
@@ -615,72 +616,22 @@ fn exit(mut context: CommandContext) -> CrushResult<()> {
     context.output.send(Value::Empty)
 }
 
-#[signature(
-    control.source,
-    short = "Evaluate files into current crush session",
-    long = "The return value of `source` is the value of the last command actually",
-    long = "executed in the sourced input -- either the last top-level statement, or an",
-    long = "earlier `return` (which also stops the rest of that input from running, same",
-    long = "as inside a closure). Every other statement's value is discarded.",
-    long = "",
-    long = "When sourcing multiple files/streams/strings in one call, only the very last",
-    long = "one's own return value (by the same rule) becomes `source`'s return value --",
-    long = "every earlier file/stream/string is still run to completion (including any of",
-    long = "its own side effects), but its own return value is discarded. A glob or regex",
-    long = "argument counts each file it matches separately for this purpose: the last",
-    long = "file matched wins, not the last argument given.",
-    example = "source *.crush"
-)]
-struct Source {
-    #[unnamed()]
-    #[description("the files to source")]
-    files: Vec<BinaryInput>,
-}
-
-/// A single file-or-string unit to source, after any `BinaryInput::Glob`/`Regex` have
-/// already been expanded to the individual files they matched -- see `source`'s own
-/// comment for why that flattening has to happen before "is this the last one?" can be
-/// answered at all.
-enum SourceUnit {
+/// A single file-or-code unit to run, after any glob/regex argument (`Files::Glob`/
+/// `Regex` for `source`, `BinaryInput::Glob`/`Regex` for `eval`) has already been
+/// expanded to the individual files it matched -- shared by `source` and `eval` since
+/// both need the exact same "flatten first, then only the very last unit's value
+/// counts" dispatch (`run_units` below), just starting from different argument types.
+enum EvalUnit {
     File(PathBuf),
     String(String),
 }
 
-fn source(mut context: CommandContext) -> CrushResult<()> {
-    let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
-    // Flatten every input (including each glob/regex's own matched files) into one
-    // list first: only then does "last" mean anything -- `source a.crush *.crush`'s
-    // last *unit* could be the glob's third match, not the literal last argument.
-    let mut units = Vec::new();
-    for el in cfg.files {
-        match el {
-            BinaryInput::File(path) => units.push(SourceUnit::File(path.to_path_buf())),
-            BinaryInput::Glob(glob) => {
-                let mut paths = Vec::new();
-                glob.glob_files(&cwd()?, &mut paths)?;
-                units.extend(paths.into_iter().map(SourceUnit::File));
-            }
-            BinaryInput::String(string) => units.push(SourceUnit::String(string.to_string())),
-            BinaryInput::Regex(regex) => {
-                let mut paths = Vec::new();
-                regex.match_files(&cwd()?, &mut paths)?;
-                units.extend(paths.into_iter().map(SourceUnit::File));
-            }
-            BinaryInput::BinaryInputStream(mut stream) => {
-                let mut string = String::new();
-                stream.read_to_string(&mut string)?;
-                units.push(SourceUnit::String(string));
-            }
-            BinaryInput::Binary(vec) => {
-                units.push(SourceUnit::String(String::from_utf8_lossy(&vec).into_owned()));
-            }
-        }
-    }
-
-    // Only the last unit's own last statement is this command's result; every earlier
-    // unit gets `black_hole()` instead of `context.output` -- otherwise each one tries
-    // to send its own value onto the same real, bounded(1) `context.output` in turn,
-    // with nothing ever draining it in between (see tests/source_multiple_files.crush).
+/// Run every unit in order; every unit but the last gets `black_hole()` instead of
+/// `context.output` -- otherwise each one tries to send its own value onto the same
+/// real, bounded(1) `context.output` in turn, with nothing ever draining it in between
+/// (see tests/source_multiple_files.crush). Only the last unit's own last statement (or
+/// an earlier `return`, once it unwinds this far) becomes the real result.
+fn run_units(units: Vec<EvalUnit>, context: &CommandContext) -> CrushResult<()> {
     let last_idx = units.len().saturating_sub(1);
     for (idx, unit) in units.into_iter().enumerate() {
         let unit_output = if idx == last_idx {
@@ -689,7 +640,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
             black_hole()
         };
         match unit {
-            SourceUnit::File(path) => {
+            EvalUnit::File(path) => {
                 crate::execute::file(
                     &context.scope,
                     &path,
@@ -697,7 +648,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
                     &context.global_state,
                 )?;
             }
-            SourceUnit::String(string) => {
+            EvalUnit::String(string) => {
                 crate::execute::string(
                     &context.scope,
                     &string,
@@ -710,6 +661,85 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
         }
     }
     Ok(())
+}
+
+#[signature(
+    control.source,
+    short = "Evaluate one or more files into current crush session",
+    long = "The return value of `source` is the value of the last command actually",
+    long = "executed in the sourced file(s) -- either the last top-level statement, or an",
+    long = "earlier `return` (which also stops the rest of the input from running, same",
+    long = "as inside a closure). Every other statement's value is discarded.",
+    long = "",
+    long = "When sourcing multiple files in one call, only the very last one's own return",
+    long = "value (by the same rule) becomes `source`'s return value -- every earlier",
+    long = "file is still run to completion (including any of its own side effects), but",
+    long = "its own return value is discarded. A glob or regex argument counts each file",
+    long = "it matches separately for this purpose: the last file matched wins, not the",
+    long = "last argument given.",
+    example = "source *.crush"
+)]
+struct Source {
+    #[unnamed()]
+    #[description("the files to source")]
+    files: Vec<Files>,
+}
+
+fn source(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let units = into_paths(cfg.files)?
+        .into_iter()
+        .map(EvalUnit::File)
+        .collect();
+    run_units(units, &context)
+}
+
+#[signature(
+    control.eval,
+    short = "Evaluate a string, binary blob, or stream of crush code",
+    long = "The return value of `eval` is the value of the last command actually",
+    long = "executed in `input` -- either the last top-level statement, or an earlier",
+    long = "`return` (which also stops the rest of the input from running, same as",
+    long = "inside a closure). Every other statement's value is discarded.",
+    long = "",
+    long = "`input` may also be a file, glob or regex, in which case `eval` behaves",
+    long = "exactly like `source`: a glob/regex matching more than one file counts each",
+    long = "matched file separately for the \"only the last one's value counts\" rule",
+    long = "above.",
+    example = "eval \"echo hello\""
+)]
+struct Eval {
+    #[unnamed()]
+    #[description("the code to evaluate")]
+    input: BinaryInput,
+}
+
+fn eval(mut context: CommandContext) -> CrushResult<()> {
+    let cfg: Eval = Eval::parse(context.remove_arguments(), &context.global_state.printer())?;
+    let mut units = Vec::new();
+    match cfg.input {
+        BinaryInput::File(path) => units.push(EvalUnit::File(path.to_path_buf())),
+        BinaryInput::Glob(glob) => {
+            let mut paths = Vec::new();
+            glob.glob_files(&cwd()?, &mut paths)?;
+            units.extend(paths.into_iter().map(EvalUnit::File));
+        }
+        BinaryInput::Regex(regex) => {
+            let mut paths = Vec::new();
+            regex.match_files(&cwd()?, &mut paths)?;
+            units.extend(paths.into_iter().map(EvalUnit::File));
+        }
+        BinaryInput::String(string) => units.push(EvalUnit::String(string.to_string())),
+        BinaryInput::BinaryInputStream(mut stream) => {
+            let mut string = String::new();
+            stream.read_to_string(&mut string)?;
+            units.push(EvalUnit::String(string));
+        }
+        BinaryInput::Binary(vec) => {
+            units.push(EvalUnit::String(String::from_utf8_lossy(&vec).into_owned()));
+        }
+    }
+    run_units(units, &context)
 }
 
 #[signature(
@@ -776,6 +806,7 @@ effectively the language's own keywords."
             Exit::declare(env)?;
             help::HelpSignature::declare(env)?;
             Source::declare(env)?;
+            Eval::declare(env)?;
             Which::declare(env)?;
             Ok(())
         }),

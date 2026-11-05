@@ -43,7 +43,7 @@ assert ((5.5 + 1) == 6.5) "plain float arithmetic should be unaffected"
 $c := {sleep 5s}
 $def_text := $(definition $c)
 $src := $("$restored := {}":format $def_text)
-source $src
-assert ($(definition $restored) == $def_text) "a closure using a duration literal argument should round-trip through definition/source unchanged"
+eval $src
+assert ($(definition $restored) == $def_text) "a closure using a duration literal argument should round-trip through definition/eval unchanged"
 
 echo "duration literal tests ok"
