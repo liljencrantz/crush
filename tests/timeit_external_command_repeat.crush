@@ -1,0 +1,18 @@
+# timeit runs the timed closure repeatedly (number * repeat times), see time_run in
+# src/builtins/control/timeit.rs. It used to do that by cloning its own context and
+# overriding just the output while leaving `input` untouched -- but `context.input` is
+# typically an `empty_channel()`, which is deliberately single-shot (one pre-loaded
+# value, sender dropped right after). An external command's own job (`cmd_internal`'s
+# non-tty branch, src/builtins/control/cmd.rs) reads its input exactly once via
+# `context.input.recv()?`, which is correct for an ordinary one-shot job -- but since
+# every repeat reused the very same `context.input`, only the *first* repeat ever saw a
+# value there; every later repeat found that channel already drained and disconnected,
+# failing with "receiving on an empty and disconnected channel". A builtin like `echo`
+# or a constant like `true` never hit this (neither touches `context.input`), which is
+# why the bug only showed up for an actual external command run more than once -- so
+# `repeat=2` here (the default `repeat` is 5, which already triggers it, but naming it
+# documents why two is enough) and a real external binary (`ls`) are both required to
+# reproduce it.
+$d := $(timeit number=1 repeat=2 it={ls})
+assert (($(typeof $d)) == $duration) "timeit should return a duration after running an external command more than once"
+echo "ok"

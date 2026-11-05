@@ -42,7 +42,15 @@ pub fn time_run(it: &Command, context: &CommandContext) -> CrushResult<Duration>
     )?;
 
     let start_time = Local::now();
-    it.eval(context.clone().with_args(vec![], None).with_output(sender))?;
+    // Each repeat must be a genuinely fresh invocation, not a reuse of `context`'s own
+    // `input` -- `context.input` (typically `empty_channel()`) is deliberately single-shot
+    // (one pre-loaded value, sender dropped right after), which is correct for an ordinary
+    // one-shot job but breaks the moment the same context is reused for a second run: an
+    // external command (`cmd_internal`'s non-tty branch) reads its input exactly once via
+    // `context.input.recv()?`, so the second repeat found that channel already drained and
+    // disconnected. `context.empty()` gives every repeat its own fresh input (and clears
+    // arguments/this the same way `with_args(vec![], None)` did), only overriding `output`.
+    it.eval(context.empty().with_output(sender))?;
     context
         .global_state
         .printer()
