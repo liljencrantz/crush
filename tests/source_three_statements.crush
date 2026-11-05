@@ -1,17 +1,16 @@
-# Found incidentally while building tests/pty_test_helpers.crush (see its own header
-# comment): `source`-ing (or `execute::file`-ing) a file with 3 or more top-level
-# statements, from within an already-running script, deadlocks -- reproduces with
-# plain `echo` statements, nothing pty-specific about it. Root cause suspected (not
-# fixed here, out of scope for the plan that found this): `execute::file`'s shared
-# output pipe in `src/lang/execute.rs`'s `source()`, reused unconsumed across every
-# job in the sourced file.
-#
-# Deliberately committed RED: tests/system.rs's own 30-second per-test hang-detection
-# timeout (`TEST_TIMEOUT`) means this fails cleanly after 30s rather than hanging the
-# suite forever, so it stays as a documented, known-failing repro per this repo's
-# convention (see CLAUDE.md: write the repro immediately, even before fixing).
-# tests/pty_test_helpers.crush works around this same bug via a single destructuring
-# assignment instead of three separate statements.
+# Regression test: found incidentally while building tests/pty_test_helpers.crush
+# (see its own header comment), `source`-ing (or `execute::file`-ing) a file with 3 or
+# more top-level statements, from within an already-running script, used to deadlock
+# -- reproduced with plain `echo` statements, nothing pty-specific about it. Root
+# cause: `execute::file`'s `source()` (in `src/lang/execute.rs`) sent *every*
+# statement's value onto the same shared, bounded(1) output channel, with nothing
+# ever draining between sends -- the first one or two fit in the buffer, a third
+# blocked forever. Fixed by only ever forwarding the *last* statement's value (via
+# `GlobalState::eval_statement`, the same "last statement, or discard" dispatch
+# `Closure::eval_inner` and `JobListDefinition::eval` already use); every earlier
+# statement now gets `black_hole()`, which `Job::eval` joins and discards on its own.
+# tests/pty_test_helpers.crush works around this same bug (now moot) via a single
+# destructuring assignment instead of three separate statements.
 $script := $(convert $file $("/tmp/source_three_statements_repro_{}":format $(random:integer 1000000000)))
 cmd rm "-f" $script
 bin:from "echo a\necho b\necho c\n" | bin:to $script

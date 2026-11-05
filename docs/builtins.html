@@ -987,6 +987,16 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <h3 class="cmd-title"><code>control:source</code></h3>
 <div class="cmd-doc"><pre><code><a href="#control-source"><span class="tok-command">control:source</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">files</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-binary"><span class="tok-identifier">$binary</span></a> <span class="tok-identifier">$binary_input_stream</span> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-file_literal">...</span><span class="tok-operator">]</span></code></pre>
 <p>Evaluate files into current crush session</p>
+<p>The return value of <a href="#control-source"><code>source</code></a> is the value of the last command actually
+executed in the sourced input -- either the last top-level statement, or an
+earlier <a href="#control-return"><code>return</code></a> (which also stops the rest of that input from running, same
+as inside a closure). Every other statement&#39;s value is discarded.</p>
+<p>When sourcing multiple files/streams/strings in one call, only the very last
+one&#39;s own return value (by the same rule) becomes <a href="#control-source"><code>source</code></a>&#39;s return value --
+every earlier file/stream/string is still run to completion (including any of
+its own side effects), but its own return value is discarded. A glob or regex
+argument counts each file it matches separately for this purpose: the last
+file matched wins, not the last argument given.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -2036,6 +2046,8 @@ The grpc methods support tab completion of argument names. They also come with h
 <li><p><code>vms</code> (integer) the process&#39;s virtual memory size.</p>
 </li>
 <li><p><code>cpu</code> (duration) the total CPU time the process has used.</p>
+</li>
+<li><p><code>status</code> (string) the OS-level process state (e.g. &quot;Runnable&quot;, &quot;Sleeping&quot;, &quot;Stopped&quot;, &quot;Zombie&quot;) -- see sysinfo&#39;s <code>ProcessStatus</code>.</p>
 </li>
 <li><p><code>name</code> (string) the process&#39;s executable path, or its name if the path isn&#39;t known.</p>
 </li>

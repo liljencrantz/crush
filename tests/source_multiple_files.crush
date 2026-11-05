@@ -1,0 +1,40 @@
+# Regression test: `source`-ing several files in a single statement (`source $a $b
+# $c ...`) used to deadlock, the same root cause as tests/source_three_statements.crush
+# one level up: the `source` builtin (`src/builtins/control/mod.rs`) passes its own
+# `context.output` -- a real, bounded(1) channel, since this statement's own result is
+# read exactly once by `Job::eval` -- unchanged to `execute::file` for *every* file in
+# the list. Once `execute::file`/`source()` (src/lang/execute.rs) only forwards the
+# last statement of *its own* file (the fix for the test above), each file here still
+# has just one statement, so each one *is* that file's own last statement -- meaning
+# each file still tries to send its own value onto that same shared channel, with
+# nothing ever draining it in between. Confirmed directly: 2 files alone weren't always
+# enough to observe this (a little slack elsewhere absorbs the first couple of sends),
+# but it reproduces reliably from 4+ files on -- hence 5 here, with margin.
+#
+# `echo` prints directly (bypassing the output sender entirely -- see its own doc
+# comment) before ever touching its own return value, so each file's visible output
+# still appears even while hung: a hang here shows up as "a".."e" printed followed by
+# the process simply never reaching "done", caught by tests/system.rs's own 30-second
+# per-test hang-detection timeout.
+$f1 := $(convert $file $("/tmp/source_multiple_files_repro_a_{}":format $(random:integer 1000000000)))
+$f2 := $(convert $file $("/tmp/source_multiple_files_repro_b_{}":format $(random:integer 1000000000)))
+$f3 := $(convert $file $("/tmp/source_multiple_files_repro_c_{}":format $(random:integer 1000000000)))
+$f4 := $(convert $file $("/tmp/source_multiple_files_repro_d_{}":format $(random:integer 1000000000)))
+$f5 := $(convert $file $("/tmp/source_multiple_files_repro_e_{}":format $(random:integer 1000000000)))
+cmd rm "-f" $f1
+cmd rm "-f" $f2
+cmd rm "-f" $f3
+cmd rm "-f" $f4
+cmd rm "-f" $f5
+bin:from "echo a\n" | bin:to $f1
+bin:from "echo b\n" | bin:to $f2
+bin:from "echo c\n" | bin:to $f3
+bin:from "echo d\n" | bin:to $f4
+bin:from "echo e\n" | bin:to $f5
+source $f1 $f2 $f3 $f4 $f5
+cmd rm "-f" $f1
+cmd rm "-f" $f2
+cmd rm "-f" $f3
+cmd rm "-f" $f4
+cmd rm "-f" $f5
+echo "done"

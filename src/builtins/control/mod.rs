@@ -7,7 +7,7 @@ use crate::lang::command_invocation::resolve_external_command;
 use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::{CrushResult, assertion_error, command_error, throw_error};
 use crate::lang::job_control::ChannelBasedController;
-use crate::lang::pipe::{ValueReceiver, empty_channel, pipe};
+use crate::lang::pipe::{ValueReceiver, black_hole, empty_channel, pipe};
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::state::contexts::{CommandContext, JobContext};
 use crate::lang::state::handles::JobType::Background;
@@ -22,6 +22,7 @@ use os_pipe::PipeReader;
 use rand::RngExt;
 use signature::signature;
 use std::io::Read;
+use std::path::PathBuf;
 use std::sync::Arc;
 use crate::util::interruptible_sleep::interruptible_sleep;
 
@@ -617,6 +618,17 @@ fn exit(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.source,
     short = "Evaluate files into current crush session",
+    long = "The return value of `source` is the value of the last command actually",
+    long = "executed in the sourced input -- either the last top-level statement, or an",
+    long = "earlier `return` (which also stops the rest of that input from running, same",
+    long = "as inside a closure). Every other statement's value is discarded.",
+    long = "",
+    long = "When sourcing multiple files/streams/strings in one call, only the very last",
+    long = "one's own return value (by the same rule) becomes `source`'s return value --",
+    long = "every earlier file/stream/string is still run to completion (including any of",
+    long = "its own side effects), but its own return value is discarded. A glob or regex",
+    long = "argument counts each file it matches separately for this purpose: the last",
+    long = "file matched wins, not the last argument given.",
     example = "source *.crush"
 )]
 struct Source {
@@ -625,71 +637,72 @@ struct Source {
     files: Vec<BinaryInput>,
 }
 
+/// A single file-or-string unit to source, after any `BinaryInput::Glob`/`Regex` have
+/// already been expanded to the individual files they matched -- see `source`'s own
+/// comment for why that flattening has to happen before "is this the last one?" can be
+/// answered at all.
+enum SourceUnit {
+    File(PathBuf),
+    String(String),
+}
+
 fn source(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Source = Source::parse(context.remove_arguments(), &context.global_state.printer())?;
+    // Flatten every input (including each glob/regex's own matched files) into one
+    // list first: only then does "last" mean anything -- `source a.crush *.crush`'s
+    // last *unit* could be the glob's third match, not the literal last argument.
+    let mut units = Vec::new();
     for el in cfg.files {
         match el {
-            BinaryInput::File(path) => {
-                crate::execute::file(
-                    &context.scope,
-                    &path,
-                    &context.output,
-                    &context.global_state,
-                )?;
-            }
+            BinaryInput::File(path) => units.push(SourceUnit::File(path.to_path_buf())),
             BinaryInput::Glob(glob) => {
                 let mut paths = Vec::new();
                 glob.glob_files(&cwd()?, &mut paths)?;
-                for path in paths {
-                    crate::execute::file(
-                        &context.scope,
-                        &path,
-                        &context.output,
-                        &context.global_state,
-                    )?;
-                }
+                units.extend(paths.into_iter().map(SourceUnit::File));
             }
-            BinaryInput::String(string) => {
-                crate::execute::string(
-                    &context.scope,
-                    &string,
-                    LanguageMode::Command,
-                    &context.output,
-                    &context.global_state,
-                    Background,
-                )?;
-            }
+            BinaryInput::String(string) => units.push(SourceUnit::String(string.to_string())),
             BinaryInput::Regex(regex) => {
                 let mut paths = Vec::new();
                 regex.match_files(&cwd()?, &mut paths)?;
-                for path in paths {
-                    crate::execute::file(
-                        &context.scope,
-                        &path,
-                        &context.output,
-                        &context.global_state,
-                    )?;
-                }
+                units.extend(paths.into_iter().map(SourceUnit::File));
             }
             BinaryInput::BinaryInputStream(mut stream) => {
                 let mut string = String::new();
                 stream.read_to_string(&mut string)?;
-                crate::execute::string(
-                    &context.scope,
-                    &string,
-                    LanguageMode::Command,
-                    &context.output,
-                    &context.global_state,
-                    Background,
-                )?;
+                units.push(SourceUnit::String(string));
             }
             BinaryInput::Binary(vec) => {
-                let string = String::from_utf8_lossy(&vec);
+                units.push(SourceUnit::String(String::from_utf8_lossy(&vec).into_owned()));
+            }
+        }
+    }
+
+    // Only the last unit's own last statement is this command's result; every earlier
+    // unit gets `black_hole()` instead of `context.output` -- otherwise each one tries
+    // to send its own value onto the same real, bounded(1) `context.output` in turn,
+    // with nothing ever draining it in between (see tests/source_multiple_files.crush).
+    let last_idx = units.len().saturating_sub(1);
+    for (idx, unit) in units.into_iter().enumerate() {
+        let unit_output = if idx == last_idx {
+            context.output.clone()
+        } else {
+            black_hole()
+        };
+        match unit {
+            SourceUnit::File(path) => {
+                crate::execute::file(
+                    &context.scope,
+                    &path,
+                    &unit_output,
+                    &context.global_state,
+                )?;
+            }
+            SourceUnit::String(string) => {
                 crate::execute::string(
                     &context.scope,
                     &string,
                     LanguageMode::Command,
-                    &context.output,
+                    &unit_output,
                     &context.global_state,
                     Background,
                 )?;

@@ -113,29 +113,29 @@ fn source(
     let jobs = global_state
         .parser()
         .parse(command, &global_env, initial_mode)?;
-    for job_definition in jobs {
-        let handle = job_definition.eval(JobContext::new(
+    let last_idx = jobs.len().saturating_sub(1);
+    for (idx, job_definition) in jobs.iter().enumerate() {
+        // Only the final statement's value (or an earlier `return` -- see
+        // `global_env.is_stopped()` below) is this call's own result; every other
+        // statement's value is irrelevant and must not be forwarded to `output`. The
+        // old code sent *every* statement's value onto the same shared, bounded(1)
+        // `output` sender, which deadlocked once a third statement tried to send with
+        // nothing ever having drained the first two (see
+        // tests/source_three_statements.crush). `GlobalState::eval_statement` is the
+        // same "last statement, or discard" dispatch `Closure::eval_inner` and
+        // `JobListDefinition::eval` already use for the same reason; `output` is passed
+        // straight through unchanged (same as before) so the final statement's own
+        // `is_pipeline()`-ness is still accurate -- `eval_statement` only ever
+        // substitutes anything for an earlier, discarded statement.
+        let last = idx == last_idx;
+        let job_context = JobContext::new(
             empty_channel(),
             output.clone(),
             global_env.clone(),
             global_state.clone(),
             job_type,
-        ))?;
-        // `handle` is only ever non-empty here when `output` is itself a pipeline
-        // sender (see `Job::eval`'s own doc comment) -- deferred stages this function's
-        // own caller is now responsible for joining, same benign case `Job::eval`
-        // already filters when joining an *earlier* pipeline stage's thread (see the
-        // comment there): the job's own last stage can also run in its own thread (e.g.
-        // `head`, which can_block), and joining it here can likewise surface a
-        // SendError that just means nothing ever consumed the job's output before it
-        // finished sending everything -- not a real failure.
-        for thread_handle in handle {
-            if let Err(e) = global_state.threads().join_one(thread_handle.id()) {
-                if !e.is_send_disconnected() {
-                    return Err(e);
-                }
-            }
-        }
+        );
+        global_state.eval_statement(job_definition, job_context, last)?;
 
         if global_env.is_stopped() {
             break;

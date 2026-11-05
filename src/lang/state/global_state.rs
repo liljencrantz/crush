@@ -2,10 +2,12 @@ use crate::interactive::rustyline_helper::RustylineHelper;
 use crate::lang::ast::lexer::LanguageMode;
 use crate::lang::command::Command;
 use crate::lang::errors::{CrushError, CrushResult, command_error};
+use crate::lang::job::Job;
 use crate::lang::parser::Parser;
-use crate::lang::pipe::ValueReceiver;
+use crate::lang::pipe::{ValueReceiver, black_hole};
 use crate::lang::printer::Printer;
 use crate::lang::job_control::JobController;
+use crate::lang::state::contexts::JobContext;
 use crate::lang::state::handles::JobType::Background;
 use crate::lang::state::handles::{
     JobControlData, JobData, JobHandle, JobInfo, JobStatus, JobType, notify_pause,
@@ -331,6 +333,47 @@ impl GlobalState {
                 Err(recv_err)
             }
         }
+    }
+
+    /// Evaluate `job_definition` as one statement of a sequence where only the final
+    /// statement's value matters -- used by `execute::source` for a sourced script's
+    /// own top-level statements, the same "last statement, or discard" idea
+    /// `Closure::eval_inner` and `ValueDefinition::JobListDefinition::eval` already
+    /// implement for a closure body and a `$(a; b; c)` job list respectively (each
+    /// keeps its own copy rather than calling this: a closure also has to handle a
+    /// bare `return` landing on *any* statement, not just the last, which needs a real
+    /// pipe on every statement, not just this one; see `Closure::eval_inner`'s own
+    /// comments).
+    ///
+    /// Every statement but `last` gets `black_hole()` as its own output in place of
+    /// whatever `job_context.output` already was: `Job::eval` already joins and
+    /// discards a non-pipeline output's job synchronously, all on its own (see that
+    /// function's own doc comment for why), so there's nothing further to do here for
+    /// those. `last` keeps `job_context.output` exactly as the caller set it --
+    /// preserving its real `is_pipeline()`-ness, which some commands (e.g. `cmd`,
+    /// deciding whether to inherit the real terminal or capture its child's output as
+    /// a stream) branch on -- so its value, if any, reaches the real destination
+    /// exactly like it always did; any threads still outstanding for it are joined
+    /// explicitly right here, since `execute::source` has no way to defer them any
+    /// further up the call stack itself.
+    pub fn eval_statement(
+        &self,
+        job_definition: &Job,
+        mut job_context: JobContext,
+        last: bool,
+    ) -> CrushResult<()> {
+        if !last {
+            job_context.output = black_hole();
+        }
+        let handles = job_definition.eval(job_context)?;
+        for handle in handles {
+            if let Err(e) = self.threads().join_one(handle.id()) {
+                if !e.is_send_disconnected() {
+                    return Err(e);
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn printer(&self) -> &Printer {
