@@ -319,6 +319,13 @@ pub fn run(
                     pending_exit_confirmation = true;
                 }
             }
+            Some(Err(ref err)) if is_retryable_readline_error(err) => {
+                // See `is_retryable_readline_error`: this is the expected EIO from
+                // momentarily not being the terminal's foreground process group, not a
+                // real error -- wait briefly for that to resolve and try again rather
+                // than exiting the whole session.
+                thread::sleep(std::time::Duration::from_millis(10));
+            }
             Some(Err(err)) => {
                 global_state.printer().handle_error::<()>(Err(err.into()));
                 break;
@@ -372,5 +379,43 @@ fn ensure_parent_exists(file: &PathBuf) -> CrushResult<()> {
         Ok(fs::create_dir_all(dir)?)
     } else {
         error("Missing parent directory")
+    }
+}
+
+/// Whether a `readline()` error is a transient condition worth retrying rather than
+/// exiting the whole interactive session. `ignore_terminal_control_signals()` deliberately
+/// ignores SIGTTOU/SIGTTIN for crush's own process, which means a terminal read made while
+/// crush is momentarily not the terminal's foreground process group (e.g. during a
+/// Ctrl-Z/`bg` handoff) fails with `EIO` instead of suspending -- that EIO is the expected,
+/// designed-for signal of that condition, not a real fatal error.
+fn is_retryable_readline_error(err: &ReadlineError) -> bool {
+    match err {
+        ReadlineError::Io(io_err) => io_err.raw_os_error() == Some(nix::libc::EIO),
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_retryable_readline_error;
+    use rustyline::error::ReadlineError;
+    use std::io;
+
+    #[test]
+    fn retries_on_eio() {
+        let err = ReadlineError::Io(io::Error::from_raw_os_error(nix::libc::EIO));
+        assert!(is_retryable_readline_error(&err));
+    }
+
+    #[test]
+    fn does_not_retry_on_other_io_errors() {
+        let err = ReadlineError::Io(io::Error::from_raw_os_error(nix::libc::ENOENT));
+        assert!(!is_retryable_readline_error(&err));
+    }
+
+    #[test]
+    fn does_not_retry_on_non_io_errors() {
+        assert!(!is_retryable_readline_error(&ReadlineError::Eof));
+        assert!(!is_retryable_readline_error(&ReadlineError::Interrupted));
     }
 }
