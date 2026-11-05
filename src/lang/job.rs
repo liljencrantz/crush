@@ -6,11 +6,11 @@ use crate::lang::errors::CrushResult;
 use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::{last_element, pipe};
 use crate::lang::state::contexts::{EvalContext, JobContext};
+use crate::lang::threads::ThreadHandle;
 use crate::lang::value::Value;
 use crossbeam::channel::unbounded;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
-use std::thread::ThreadId;
 
 /// An executable pipeline of one or more commands.
 #[derive(Clone)]
@@ -58,8 +58,19 @@ impl Job {
         self.is_background
     }
 
-    /// Evaluate this job in the specified context
-    pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
+    /// Evaluate this job in the specified context.
+    ///
+    /// Returns every `ThreadHandle` still outstanding for this job's own stages once
+    /// this call returns -- empty whenever this function already joined everything
+    /// itself (including every "left running independently" case: background, paused,
+    /// or a benign early exit), non-empty only in the deferred-capture case just below,
+    /// where the caller (ultimately `GlobalState::recv_job_result`) is the one actually
+    /// responsible for joining them, once a returned stream is drained. Holding these
+    /// -- rather than letting them drop here -- is what keeps `ThreadStore::reap`'s
+    /// unscoped sweep from racing that later, deliberate join and silently discarding a
+    /// real error as a plain disconnection instead (see `ThreadHandle`'s own doc
+    /// comment).
+    pub fn eval(&self, context: JobContext) -> CrushResult<Vec<ThreadHandle>> {
         context.set_name(self.to_string());
         if self.is_background {
             // Before *any* stage dispatches -- a closure in an earlier pipeline stage
@@ -67,29 +78,30 @@ impl Job {
             // `JobData::backgrounded`).
             context.global_state.set_backgrounded(context.handle.id(), true);
         }
+        let mut handles: Vec<ThreadHandle> = Vec::new();
         let mut input = context.input.clone();
         let last_command_idx = self.commands.len() - 1;
         for call_def in self.commands[..last_command_idx].iter() {
             let (output, next_input) = pipe();
             match call_def.eval(context.with_io(input, output)) {
-                Ok(_) => {}
+                Ok(handle) => handles.extend(handle),
                 // Same as the join loop below: a stage running synchronously in this
                 // thread (rather than its own spawned one) can still hit a SendError
                 // while writing to a downstream stage that already stopped reading
                 // (e.g. `head`/`take` truncating the stream) -- benign, not a real
                 // failure.
-                Err(e) if e.is_send_disconnected() => return Ok(None),
+                Err(e) if e.is_send_disconnected() => return Ok(Vec::new()),
                 Err(e) => return Err(e),
             }
             input = next_input;
 
             if context.scope.is_stopped() {
-                return Ok(None);
+                return Ok(Vec::new());
             }
         }
 
         if context.scope.is_stopped() {
-            return Ok(None);
+            return Ok(Vec::new());
         }
 
         let last_call_def = &self.commands[last_command_idx];
@@ -102,13 +114,16 @@ impl Job {
             // to even start (e.g. a bad argument); the real work, and any failure in
             // it or in an earlier stage, is deliberately left running unjoined. Its
             // eventual result goes to the background-job registry instead, for later
-            // retrieval via `fg`, and this job returns immediately.
+            // retrieval via `fg`, and this job returns immediately. Every handle
+            // collected so far is deliberately dropped here, not threaded onward: a
+            // background job nobody ever `fg`s again is exactly the case
+            // `ThreadStore::reap`'s own courtesy error-reporting exists for.
             let (last_output, last_input) = last_element();
             last_call_def.eval(context.with_io(input, last_output))?;
             let job_id = context.handle.id();
             context.global_state.add_background_job(job_id, last_input);
             context.output.send(Value::from(job_id))?;
-            return Ok(None);
+            return Ok(Vec::new());
         }
 
         let (last_output, last_input) = if context.output.is_pipeline() {
@@ -116,7 +131,13 @@ impl Job {
         } else {
             last_element()
         };
-        let res = last_call_def.eval(context.with_io_foreground(input, last_output));
+        let res: CrushResult<()> = match last_call_def.eval(context.with_io_foreground(input, last_output)) {
+            Ok(handle) => {
+                handles.extend(handle);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        };
 
         // Race the job's own final value against a pause of this job (e.g. Ctrl-Z):
         // without this, a job that gets paused mid-flight never sends anything here
@@ -139,9 +160,11 @@ impl Job {
                 // eventual result is retrieved later via `fg`/`bg` instead of by this
                 // call ever returning it. (`GlobalState::pause` has already marked it
                 // as no longer holding the foreground -- see `JobData::backgrounded`.)
+                // Same reasoning as the background case above for dropping `handles`
+                // here rather than threading them onward.
                 let job_id = context.handle.id();
                 context.global_state.add_background_job(job_id, last_input);
-                return Ok(None);
+                return Ok(Vec::new());
             }
             Err(_) => {}
         }
@@ -193,10 +216,14 @@ impl Job {
         // finished, so this is never a blocking wait on something still legitimately
         // running.
         if !context.output.is_pipeline() || res.is_err() {
+            // Every thread this job spawned has now either already been joined above
+            // (an earlier stage, via `join_job`) or is about to be; `handles` has
+            // nothing left to protect, so it's fine to let it drop once this returns.
             context.global_state.threads().join_job(context.handle.id())?;
+            return res.map(|_| Vec::new());
         }
 
-        res
+        res.map(|_| handles)
     }
 }
 

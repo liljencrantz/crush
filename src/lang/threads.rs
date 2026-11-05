@@ -6,14 +6,53 @@ use crate::lang::printer::Printer;
 use crate::lang::state::handles::CommandHandle;
 use crate::lang::state::id::{CommandId, JobId};
 use chrono::{DateTime, Local};
-use crossbeam::channel::Sender;
 use crossbeam::channel::unbounded;
-use crossbeam::channel::{Receiver, bounded};
+use crossbeam::channel::bounded;
 use itertools::Either;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::ThreadId;
-use std::time::Duration;
+
+/// A per-spawned-thread receipt, handed back by `ThreadStore::spawn`.
+///
+/// While this is alive, `ThreadStore::reap`'s global sweep leaves the thread alone even
+/// once it's finished -- it's the caller's job to join it (directly, by id/job-id, or
+/// indirectly by tucking this handle into a stream value's producer tag for a later
+/// drain to join). Dropping it marks the thread's `ThreadData` entry `zombie`, which is
+/// what actually orphans it: only then is `reap` free to join it on its next pass and
+/// report any error directly, the same way it always has for a background job nobody
+/// ever came back to check on.
+///
+/// Deliberately not `Clone`: nothing in this codebase ever needs two outstanding claims
+/// on the same thread at once -- `spawn` hands out exactly one of these, and every
+/// consumer (a direct join, the `Vec` collected across a job's stages, a stream's
+/// producer tag) moves it rather than copies it, all the way through to the single
+/// point where it's finally joined or simply allowed to drop. That single owner is what
+/// lets a plain `bool`, flipped on that one `Drop`, stand in for what would otherwise
+/// need an `Arc`/`Weak` refcount.
+///
+/// This is what actually closes the race `try_join_job`'s own doc comment describes
+/// `reap` as having caused before it was scoped to a specific job id: that scoping
+/// stopped `try_join_job`/`join_job` calls from stealing each *other's* threads, but
+/// did nothing about the plain, unscoped `reap` sweep (still called from every new
+/// job's own creation) racing a *deferred* claim -- a stream value that hasn't been
+/// drained yet -- which is exactly the gap this closes instead.
+pub struct ThreadHandle {
+    id: ThreadId,
+    store: ThreadStore,
+}
+
+impl ThreadHandle {
+    pub fn id(&self) -> ThreadId {
+        self.id
+    }
+}
+
+impl Drop for ThreadHandle {
+    fn drop(&mut self) {
+        self.store.mark_orphaned(self.id);
+    }
+}
 
 /**
 A thread management utility. Spawn, track and join on threads.
@@ -25,12 +64,13 @@ struct ThreadData {
     command: CommandHandle,
     job_id: JobId,
     command_id: CommandId,
+    /// Set once this thread's `ThreadHandle` has been dropped (see that type's own doc
+    /// comment). `reap`'s global sweep only ever touches a thread once this is true.
+    zombie: bool,
 }
 
 struct ThreadStoreInternal {
     threads: Vec<ThreadData>,
-    sender: Sender<ThreadId>,
-    receiver: Receiver<ThreadId>,
 }
 
 pub struct ThreadDescription {
@@ -47,32 +87,21 @@ pub struct ThreadStore {
 
 impl ThreadStore {
     pub fn new() -> ThreadStore {
-        let (sender, receiver) = unbounded();
-
         ThreadStore {
             data: Arc::from(Mutex::new(ThreadStoreInternal {
                 threads: Vec::new(),
-                sender,
-                receiver,
             })),
         }
-    }
-
-    fn exit(&self) {
-        let data = self.data.lock().unwrap();
-        let _ = data.sender.send(std::thread::current().id());
     }
 
     /**
     Spawn a new thread
     */
-    pub fn spawn<F>(&self, name: &str, command: &CommandHandle, f: F) -> CrushResult<ThreadId>
+    pub fn spawn<F>(&self, name: &str, command: &CommandHandle, f: F) -> CrushResult<ThreadHandle>
     where
         F: FnOnce() -> CrushResult<()>,
         F: Send + 'static,
     {
-        let slef = self.clone();
-
         let (control_sender, control_receiver) = unbounded();
         let (result_sender, result_receiver) = bounded(1);
 
@@ -82,8 +111,7 @@ impl ThreadStore {
             .name(name.to_string())
             .spawn(move || {
                 let res = f();
-                slef.exit();
-                result_sender.send(res)
+                let _ = result_sender.send(res);
             })?;
         let id = handle.thread().id();
         let handle2 = InterruptibleJoinHandle::new(
@@ -99,8 +127,23 @@ impl ThreadStore {
             command: command.clone(),
             job_id: command.job_handle.id(),
             command_id: command.id,
+            zombie: false,
         });
-        Ok(id)
+        Ok(ThreadHandle {
+            id,
+            store: self.clone(),
+        })
+    }
+
+    /// Mark `id`'s thread as orphaned -- called exactly once, from `ThreadHandle`'s own
+    /// `Drop` impl. A no-op if the thread has already been removed from `self.data`
+    /// (joined directly by id elsewhere, or already reaped): a `ThreadHandle` dropping
+    /// after its thread was already joined isn't an error, just the common case.
+    fn mark_orphaned(&self, id: ThreadId) {
+        let mut data = self.data.lock().unwrap();
+        if let Some(t) = data.threads.iter_mut().find(|t| t.handle.id() == id) {
+            t.zombie = true;
+        }
     }
 
     /**
@@ -120,17 +163,33 @@ impl ThreadStore {
     }
 
     /**
-    Error report all threads that have already exited
+    Error report every *orphaned* thread that has already exited -- one whose
+    `ThreadHandle` has already been dropped, marking it `zombie` (see that type's own
+    doc comment). A thread whose handle is still held is left alone even if it has
+    already finished: something
+    else -- a direct `join_job`/`try_join_job` call, or a stream value still waiting to
+    be drained -- is specifically responsible for it, and stealing its result out from
+    under that would silently turn a real failure into a plain, swallowed disconnection
+    (confirmed directly: this is exactly what used to happen to `try`/`catch` around a
+    stream-producing command whose failure is only discoverable once its output is
+    actually read, e.g. `uniq` on an unhashable column -- a concurrently created,
+    entirely unrelated job's own routine `reap` call could win the race to join the
+    failing thread first, printing its error here instead of letting it reach the
+    `catch` clause waiting for it).
     */
     pub fn reap(&self, printer: &Printer) {
-        let data = self.data.lock().unwrap();
-        let mut kill_list = Vec::new();
-        while let Ok(id) = data.receiver.recv_timeout(Duration::from_nanos(0)) {
-            kill_list.push(id);
-        }
-        drop(data);
-        for id in kill_list {
-            printer.handle_error(self.join_one(id));
+        let ids: Vec<ThreadId> = {
+            let data = self.data.lock().unwrap();
+            data.threads
+                .iter()
+                .filter(|t| t.zombie)
+                .map(|t| t.handle.id())
+                .collect()
+        };
+        for id in ids {
+            if let Some(result) = self.try_reap_one(id) {
+                printer.handle_error(result);
+            }
         }
     }
 
@@ -166,6 +225,22 @@ impl ThreadStore {
             }
         }
         Ok(())
+    }
+
+    /// Like `try_join_one`, but used only by `reap`'s own unscoped sweep: never touches
+    /// the control channel at all, only the thread's real result (see
+    /// `InterruptibleJoinHandle::try_recv_result`'s own doc comment for why that
+    /// distinction matters here specifically -- `try_join_one`'s destructive peek at a
+    /// stale `Terminate`/`Resume` message is correct for a caller specifically
+    /// interested in this one thread, but would silently and permanently throw that
+    /// message away for a thread `reap` is only speculatively checking on, one that may
+    /// never produce a real result at all).
+    fn try_reap_one(&self, id: ThreadId) -> Option<CrushResult<()>> {
+        let mut data = self.data.lock().unwrap();
+        let idx = (0..data.threads.len()).find(|&idx| data.threads[idx].handle.id() == id)?;
+        let result = data.threads[idx].handle.try_recv_result()?;
+        data.threads.remove(idx);
+        Some(result)
     }
 
     /// Non-blocking: if `id`'s thread has *already* finished (a real result, not just a

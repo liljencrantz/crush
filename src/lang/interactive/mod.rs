@@ -63,7 +63,7 @@ fn execute_command(
             );
             let (snd, recv) = pipe();
             let job = Job::new(vec![cmd], Source::new(SourceType::Input, Arc::from("")), false);
-            job.eval(JobContext::new(
+            let handles = job.eval(JobContext::new(
                 empty_channel(),
                 snd,
                 env.clone(),
@@ -71,6 +71,14 @@ fn execute_command(
                 Background,
             ))?;
             let v = recv.recv()?;
+            // `handles` (kept alive through the `recv` above -- see `Job::eval`'s own
+            // doc comment for why `snd` being a `pipe()` defers joining to here) is
+            // joined explicitly rather than just dropped, so a real failure in the
+            // prompt command surfaces here instead of being left for `ThreadStore::
+            // reap`'s own, unrelated courtesy reporting.
+            for handle in handles {
+                global_state.threads().join_one(handle.id())?;
+            }
             match v {
                 Value::String(s) => Ok(Some(s.to_string())),
                 _ => data_error("Wrong output type of prompt command"),

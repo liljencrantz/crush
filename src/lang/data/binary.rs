@@ -1,7 +1,7 @@
 use crate::lang::errors::{CrushError, CrushResult, terminate};
 use crate::lang::job_control::StreamControlMessage;
 use crate::lang::state::handles::JobHandle;
-use crate::lang::threads::ThreadStore;
+use crate::lang::threads::{ThreadHandle, ThreadStore};
 use crossbeam::channel::{Receiver, Sender, bounded};
 use crossbeam::select;
 use std::cmp::min;
@@ -30,7 +30,11 @@ struct ChannelReader {
     /// clone that's never read again (e.g. a script variable still holding the original
     /// `Value::BinaryInputStream`) keeps its own copy of the `JobHandle` alive forever,
     /// even after another clone has fully, successfully drained the same bytes.
-    producer: Arc<Mutex<Option<(JobHandle, ThreadStore)>>>,
+    ///
+    /// The `Vec<ThreadHandle>` alongside `JobHandle`/`ThreadStore` protects this job's
+    /// own threads from `ThreadStore::reap`'s unscoped sweep for as long as this reader
+    /// exists -- see that type's own doc comment, and `TableInputStream::producer`'s.
+    producer: Arc<Mutex<Option<(JobHandle, ThreadStore, Vec<ThreadHandle>)>>>,
     /// The job-control channel registered via `register_control`, if any -- see that
     /// method's own doc comment. `None` (the default) means a blocked `read()` behaves
     /// exactly as before: no control message can ever interrupt it.
@@ -66,8 +70,8 @@ impl BinaryReader for ChannelReader {
         })
     }
 
-    fn set_producer_job(&mut self, job: JobHandle, threads: ThreadStore) {
-        *self.producer.lock().unwrap() = Some((job, threads));
+    fn set_producer_job(&mut self, job: JobHandle, threads: ThreadStore, handles: Vec<ThreadHandle>) {
+        *self.producer.lock().unwrap() = Some((job, threads, handles));
     }
 
     fn register_control(&mut self, control: Receiver<StreamControlMessage>) {
@@ -138,7 +142,7 @@ impl Read for ChannelReader {
                 // every clone of this reader sees it resolved afterward too -- see the
                 // `producer` field's own doc comment for why that sharing is essential.
                 Err(RecvFailure::Disconnected) => match self.producer.lock().unwrap().take() {
-                    Some((job, threads)) => match threads.join_job(job.id()) {
+                    Some((job, threads, _handles)) => match threads.join_job(job.id()) {
                         Ok(()) => Ok(0),
                         Err(real_err) => Err(Error::other(real_err)),
                     },
@@ -251,7 +255,7 @@ pub trait BinaryReader: Read + Debug + Send + Sync {
     /// silently being reported as clean EOF -- see `ChannelReader`'s own `Read` impl.
     /// Most readers (a plain file, an in-memory buffer, ...) have no such notion of an
     /// in-flight producer and just ignore this.
-    fn set_producer_job(&mut self, _job: JobHandle, _threads: ThreadStore) {}
+    fn set_producer_job(&mut self, _job: JobHandle, _threads: ThreadStore, _handles: Vec<ThreadHandle>) {}
 
     /// Registers the job-control channel a paused/terminated job's `pause`/
     /// `terminate` sends `StreamControlMessage`s through, so a `read()` blocked

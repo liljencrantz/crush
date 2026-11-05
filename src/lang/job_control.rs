@@ -149,6 +149,25 @@ impl<T> InterruptibleJoinHandle<T> {
         }
         None
     }
+
+    /// Like `try_join`, but only ever looks at the thread's real result -- never the
+    /// control channel. `try_join`'s own destructive peek at `control_receiver` is
+    /// exactly right for a caller specifically interested in *this* thread (a stale
+    /// `Terminate`/`Resume` sitting there is as good as a real result to them), but
+    /// wrong for `ThreadStore::reap`'s unscoped, repeated sweep across every orphaned
+    /// thread: a thread whose own work never actually checks for termination (e.g. a
+    /// `while {$true} {}` branch, by design -- see `tests/resume_after_terminate_shows_
+    /// current_status.crush`) still has that same stale message sitting in its control
+    /// channel, genuinely finished or not. Draining it speculatively here, only to
+    /// decide "not done yet" and leave the thread in place, would silently throw the
+    /// message away -- the *real* `join`/`try_join` call waiting to resolve this thread
+    /// via that exact message (e.g. the process's own final shutdown `join`) would then
+    /// find the control channel empty and block forever on a thread that was never
+    /// going to produce a real result at all. Confirmed directly: this is exactly what
+    /// used to hang `tests/tee_branch_respects_job_control.crush` at process exit.
+    pub fn try_recv_result(&self) -> Option<T> {
+        self.result_receiver.try_recv().ok()
+    }
 }
 
 /// The fan-out loop behind `spawn_control_fanout`, factored out so it's directly

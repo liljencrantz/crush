@@ -725,7 +725,7 @@ impl Closure {
                     parent_job_id,
                 );
                 let job = job_context.handle.clone();
-                job_definition.eval(job_context)?;
+                let handles = job_definition.eval(job_context)?;
 
                 if env.is_stopped() {
                     // A bare `return` (no explicit value) falls back to *this*
@@ -739,13 +739,13 @@ impl Closure {
                     // `$(...)` substitution capturing a large stream does -- see
                     // GlobalState::recv_job_result's doc comment.
                     let return_value = match env.take_return_value() {
-                        None => context.global_state.recv_job_result(&job, &receiver)?,
+                        None => context.global_state.recv_job_result(&job, &receiver, handles)?,
                         Some(v) => v,
                     };
                     return context.output.send(return_value);
                 } else if last {
                     // The closure's own final result -- same reasoning as above.
-                    let v = context.global_state.recv_job_result(&job, &receiver)?;
+                    let v = context.global_state.recv_job_result(&job, &receiver, handles)?;
                     context.output.send(v)?;
                 } else {
                     // An intermediate statement whose value is simply discarded: ordinary

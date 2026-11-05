@@ -71,10 +71,10 @@ impl ValueDefinition {
                 let (last_output, last_input) = pipe();
                 let job_context = context.job_context(first_input, last_output);
                 let job = job_context.handle.clone();
-                def.eval(job_context)?;
+                let handles = def.eval(job_context)?;
                 (
                     None,
-                    context.global_state.recv_job_result(&job, &last_input)?,
+                    context.global_state.recv_job_result(&job, &last_input, handles)?,
                 )
             }
             ValueDefinition::JobListDefinition(defs, _) => {
@@ -85,10 +85,10 @@ impl ValueDefinition {
                 let last_def = &defs[defs.len() - 1];
                 let job_context = context.job_context(empty_channel(), last_output);
                 let job = job_context.handle.clone();
-                last_def.eval(job_context)?;
+                let handles = last_def.eval(job_context)?;
                 (
                     None,
-                    context.global_state.recv_job_result(&job, &last_input)?,
+                    context.global_state.recv_job_result(&job, &last_input, handles)?,
                 )
             }
 

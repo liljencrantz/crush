@@ -249,13 +249,13 @@ fn timeout(mut context: CommandContext) -> CrushResult<()> {
 
     match child_input.recv_timeout(cfg.duration.to_std()?) {
         Ok(v) => {
-            context.global_state.threads().join_one(thread_id)?;
+            context.global_state.threads().join_one(thread_id.id())?;
             context.output.send(v)
         }
         Err(e) if e.is_disconnected() => {
             // The command finished without ever sending a value (e.g. it errored) --
             // join it to surface that real error instead of this generic one.
-            context.global_state.threads().join_one(thread_id)?;
+            context.global_state.threads().join_one(thread_id.id())?;
             Ok(())
         }
         Err(_) => {
@@ -285,11 +285,11 @@ fn timeout(mut context: CommandContext) -> CrushResult<()> {
                 }
                 match child_input.recv_timeout(poll) {
                     Ok(_) => {
-                        let _ = context.global_state.threads().join_one(thread_id);
+                        let _ = context.global_state.threads().join_one(thread_id.id());
                         break;
                     }
                     Err(e) if e.is_disconnected() => {
-                        let _ = context.global_state.threads().join_one(thread_id);
+                        let _ = context.global_state.threads().join_one(thread_id.id());
                         break;
                     }
                     Err(_) if grace_start.elapsed() < grace => {}

@@ -21,7 +21,7 @@ use crate::util::repr::Repr;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::thread::ThreadId;
+use crate::lang::threads::ThreadHandle;
 
 #[derive(Clone)]
 pub struct CommandInvocation {
@@ -108,7 +108,7 @@ impl CommandInvocation {
         }
     }
 
-    pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadId>> {
+    pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadHandle>> {
         if !self.command.can_block(&mut EvalContext::from(&context)) {
             eval_command_definition(&self.command, &self.arguments, context, &self.source)
         } else {
@@ -125,7 +125,7 @@ impl CommandInvocation {
                     local_context.clone(),
                     &local_source,
                 ) {
-                    Ok(Some(id)) => local_context.global_state.threads().join_one(id),
+                    Ok(Some(handle)) => local_context.global_state.threads().join_one(handle.id()),
                     Ok(None) => Ok(()),
                     Err(e) => Err(e),
                 },
@@ -139,7 +139,7 @@ pub fn eval_command_definition(
     arguments: &Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     match command.eval(&mut EvalContext::from(&context)) {
         Ok((this, value)) => {
             let local_arguments = arguments.clone();
@@ -196,7 +196,7 @@ fn eval_type(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     match value_type.fields().get("__call__") {
         None => {
             if local_arguments.len() == 0 {
@@ -224,7 +224,7 @@ fn eval_struct(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     match struct_value.get("__call__") {
         Some(Value::Command(call)) => eval_command(
             call,
@@ -267,7 +267,7 @@ fn eval_command(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     if !command.might_block(&local_arguments, &mut EvalContext::from(&context))
         && !arg_can_block(&local_arguments, &mut EvalContext::from(&context))
     {
@@ -323,7 +323,7 @@ fn try_external_command(
     cmd: &Source,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     match resolve_external_command(&cmd.str())? {
         None => error(format!("Unknown command name `{}`", cmd.str()).as_str()),
         Some(path) => {
@@ -337,7 +337,7 @@ fn external_command(
     source: &Source,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     arguments.insert(
         0,
         ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(path), source.clone())),
@@ -362,7 +362,7 @@ fn change_directory(
     source: &Source,
     mut arguments: Vec<ArgumentDefinition>,
     context: JobContext,
-) -> CrushResult<Option<ThreadId>> {
+) -> CrushResult<Option<ThreadHandle>> {
     arguments.insert(
         0,
         ArgumentDefinition::unnamed(ValueDefinition::Value(Value::from(path), source.clone())),

@@ -13,7 +13,7 @@ use crate::lang::state::handles::{
 };
 use crate::lang::state::id::JobId;
 use crate::lang::state::warning::Warning;
-use crate::lang::threads::ThreadStore;
+use crate::lang::threads::{ThreadHandle, ThreadStore};
 use crate::lang::value::Value;
 use crate::util::byte_unit::ByteUnit;
 use crate::util::temperature::Temperature;
@@ -289,17 +289,33 @@ impl GlobalState {
     ///
     /// Either way, joining also recovers the job's real error instead of the generic
     /// channel-disconnection one `recv()` alone would otherwise surface.
-    pub fn recv_job_result(&self, job: &JobHandle, last_input: &ValueReceiver) -> CrushResult<Value> {
+    ///
+    /// `handles` is `job`'s own still-outstanding `ThreadHandle`s, as returned by
+    /// whatever `Job::eval` call produced `last_input` (see that function's own doc
+    /// comment). For the two streaming branches below, they're moved into the
+    /// returned value's own producer tag, protecting this job's threads from
+    /// `ThreadStore::reap`'s unscoped sweep for as long as the stream itself lives --
+    /// not just until this function returns. The other two branches already fully
+    /// resolve the job's result inside this call (`try_join_job`/`join_job`, both
+    /// still in scope while `handles` is), so `handles` is simply left to drop at the
+    /// end of this function for them -- see `ThreadHandle`'s own doc comment for why
+    /// that's enough either way.
+    pub fn recv_job_result(
+        &self,
+        job: &JobHandle,
+        last_input: &ValueReceiver,
+        handles: Vec<ThreadHandle>,
+    ) -> CrushResult<Value> {
         match last_input.recv() {
             Ok(Value::TableInputStream(stream)) => {
                 self.threads().try_join_job(job.id())?;
                 Ok(Value::TableInputStream(
-                    stream.with_producer_job(job.clone(), self.threads().clone()),
+                    stream.with_producer_job(job.clone(), self.threads().clone(), handles),
                 ))
             }
             Ok(Value::BinaryInputStream(mut reader)) => {
                 self.threads().try_join_job(job.id())?;
-                reader.set_producer_job(job.clone(), self.threads().clone());
+                reader.set_producer_job(job.clone(), self.threads().clone(), handles);
                 Ok(Value::BinaryInputStream(reader))
             }
             Ok(v) => {

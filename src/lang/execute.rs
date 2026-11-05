@@ -121,14 +121,16 @@ fn source(
             global_state.clone(),
             job_type,
         ))?;
-        if let Some(id) = handle {
-            // Same benign case Job::eval already filters when joining an *earlier*
-            // pipeline stage's thread (see the comment there): the job's own last
-            // stage can also run in its own thread (e.g. `head`, which can_block), and
-            // joining it here can likewise surface a SendError that just means nothing
-            // ever consumed the job's output before it finished sending everything --
-            // not a real failure.
-            if let Err(e) = global_state.threads().join_one(id) {
+        // `handle` is only ever non-empty here when `output` is itself a pipeline
+        // sender (see `Job::eval`'s own doc comment) -- deferred stages this function's
+        // own caller is now responsible for joining, same benign case `Job::eval`
+        // already filters when joining an *earlier* pipeline stage's thread (see the
+        // comment there): the job's own last stage can also run in its own thread (e.g.
+        // `head`, which can_block), and joining it here can likewise surface a
+        // SendError that just means nothing ever consumed the job's output before it
+        // finished sending everything -- not a real failure.
+        for thread_handle in handle {
+            if let Err(e) = global_state.threads().join_one(thread_handle.id()) {
                 if !e.is_send_disconnected() {
                     return Err(e);
                 }

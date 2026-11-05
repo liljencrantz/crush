@@ -148,7 +148,7 @@ fn tee(mut context: CommandContext) -> CrushResult<()> {
     drop(branch_outputs);
 
     for id in branch_threads {
-        if let Err(e) = context.global_state.threads().join_one(id) {
+        if let Err(e) = context.global_state.threads().join_one(id.id()) {
             context.global_state.warn(&e);
         }
     }

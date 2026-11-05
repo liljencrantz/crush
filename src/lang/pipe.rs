@@ -13,7 +13,7 @@ use crate::lang::errors::{CrushError, CrushResult, error, terminate};
 use crate::lang::job_control::{ChannelBasedController, JobController, StreamControlMessage};
 use crate::lang::pipe::SenderType::{BlackHole, LastElement, Pipeline, Printer};
 use crate::lang::state::handles::JobHandle;
-use crate::lang::threads::ThreadStore;
+use crate::lang::threads::{ThreadHandle, ThreadStore};
 use crate::lang::value::Value;
 use chrono::Duration;
 use crossbeam::channel::{Receiver, Select, Sender, bounded, unbounded};
@@ -279,7 +279,14 @@ pub struct TableInputStream {
     /// holding its own `JobHandle` clone forever, keeping the job's `JobControlData`
     /// alive and reporting it as still live (e.g. to `exit`) even though its
     /// stream had already been fully, successfully drained.
-    producer: Arc<Mutex<Option<(JobHandle, ThreadStore)>>>,
+    ///
+    /// The `Vec<ThreadHandle>` riding alongside `JobHandle`/`ThreadStore` is what keeps
+    /// `ThreadStore::reap`'s unscoped sweep from stealing this job's own threads for as
+    /// long as this stream (any clone of it) still exists, whether or not it's ever
+    /// actually drained -- see `ThreadHandle`'s own doc comment. Dropped (releasing the
+    /// claim) the moment this tag is taken in `resolve_end_of_stream_error`, or when
+    /// the whole stream is dropped unread.
+    producer: Arc<Mutex<Option<(JobHandle, ThreadStore, Vec<ThreadHandle>)>>>,
 }
 
 impl TableInputStream {
@@ -288,9 +295,12 @@ impl TableInputStream {
     /// treating early termination as clean end-of-stream -- see
     /// `GlobalState::recv_job_result`'s doc comment for the full explanation of why this
     /// is deferred rather than done eagerly, and this struct's own `producer` field doc
-    /// for why a full `JobHandle` is held rather than just its `JobId`.
-    pub fn with_producer_job(self, job: JobHandle, threads: ThreadStore) -> Self {
-        *self.producer.lock().unwrap() = Some((job, threads));
+    /// for why a full `JobHandle` is held rather than just its `JobId`. `handles` is
+    /// this job's own still-outstanding `ThreadHandle`s (see `Job::eval`'s doc comment)
+    /// -- held here, protecting them from `ThreadStore::reap`'s unscoped sweep, for as
+    /// long as this stream itself lives.
+    pub fn with_producer_job(self, job: JobHandle, threads: ThreadStore, handles: Vec<ThreadHandle>) -> Self {
+        *self.producer.lock().unwrap() = Some((job, threads, handles));
         self
     }
 
@@ -309,12 +319,15 @@ impl TableInputStream {
     /// The tag is taken (cleared), not just read, so this only ever joins once even if
     /// several clones of this same stream all reach end-of-stream (harmless but
     /// pointless to repeat), and so every clone sees it gone afterward -- see the
-    /// `producer` field's own doc comment for why that sharing is essential.
+    /// `producer` field's own doc comment for why that sharing is essential. The tagged
+    /// `handles` are kept alive (not dropped) through the `join_job` call below -- see
+    /// `ThreadHandle`'s own doc comment for why that's what makes this join reliably
+    /// see the real result instead of racing `reap`'s unscoped sweep for it.
     fn resolve_end_of_stream_error(&self, err: CrushError) -> CrushError {
         if !err.is_disconnected() {
             return err;
         }
-        if let Some((job, threads)) = self.producer.lock().unwrap().take() {
+        if let Some((job, threads, _handles)) = self.producer.lock().unwrap().take() {
             if let Err(real_err) = threads.join_job(job.id()) {
                 return real_err;
             }
