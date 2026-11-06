@@ -6,34 +6,26 @@
 # itself source-able literal code, not a file path, see `source`'s own `BinaryInput`
 # argument type) near the top of a test, then call these like any other command
 # (`pty_spawn`, not `$pty_spawn`).
-#
-# Defined as a SINGLE destructuring assignment, not three separate statements, even
-# though that reads slightly less naturally -- `source`-ing a file with 3 or more
-# top-level statements from inside an already-running script deadlocks (confirmed
-# directly: reproduces with three plain `echo` statements, nothing pty-specific about
-# it). Root cause not pinned down (suspected: `execute::file`'s shared output pipe,
-# reused unconsumed across every job in the sourced file, in `src/lang/execute.rs`'s
-# `source()`); flagged to the user as a separate, out-of-scope finding rather than
-# fixed here. A single destructuring assignment is exactly one top-level statement/
-# job, so it never hits this.
 
-[$pty_spawn $pty_child_pid $pty_assert_job_status $pty_assert_no_thread $pty_send_control $pty_enable_counted_prompt $pty_run] := $(list:of {||
-    # Spawns a nested crush session and waits for its first prompt. Replaces the
-    # "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
-    # $t:wait_for \"# \"" preamble duplicated at the top of every existing
-    # tests/pty_*.crush file.
+# Spawns a nested crush session and waits for its first prompt. Replaces the
+# "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
+# $t:wait_for \"# \"" preamble duplicated at the top of every existing
+# tests/pty_*.crush file.
+$pty_spawn := {||
     $crush_bin := $(crush:env["CRUSH_BIN"])
     $t := $(pty:create $crush_bin)
     $t:wait_for "# "
     $t
-} {|$t $name_pattern|
-    # The pid of the one child process of the nested session $t whose command name
-    # matches $name_pattern (a plain string for exact match, or a glob/regex -- see
-    # `host:procs`'s own `name` column and the `=~` operator), asserting exactly one
-    # match. Replaces writing "$my_pid := $(crush:pid)" *into* the nested session and
-    # scraping it back off the rendered screen just to filter `host:procs` by parent
-    # pid -- `$t:pid()` already is that pid, queryable directly out here, no round
-    # trip through the screen needed.
+}
+
+# The pid of the one child process of the nested session $t whose command name
+# matches $name_pattern (a plain string for exact match, or a glob/regex -- see
+# `host:procs`'s own `name` column and the `=~` operator), asserting exactly one
+# match. Replaces writing "$my_pid := $(crush:pid)" *into* the nested session and
+# scraping it back off the rendered screen just to filter `host:procs` by parent
+# pid -- `$t:pid()` already is that pid, queryable directly out here, no round
+# trip through the screen needed.
+$pty_child_pid := {|$t $name_pattern|
     # `host:procs | where {...}` is a one-shot stream -- reading it once (e.g. via
     # `count`) drains it, leaving nothing for a second read -- so it's materialized
     # into a reusable `list:collect`ed list of pids before being read twice below.
@@ -62,17 +54,19 @@
     }
     assert (($match_count) == 1) $("expected exactly one child of pid {} matching {}, found {} within the retry budget":format ($t:pid()) $name_pattern $match_count)
     $pids[0]
-} {|$t $job_id $expected|
-    # Asserts that job $job_id's `status` column, read out of the nested session $t's
-    # own `jobs` table, equals $expected. Still a round trip through the rendered
-    # screen -- there is no other channel into another crush process's in-memory job
-    # table -- but written once here instead of once per test. Deliberately an
-    # assertion rather than a value-returning read: every actual caller in this plan
-    # only ever needs to check status against a known expected string (never to
-    # inspect an otherwise-unknown value), and asserting directly avoids needing to
-    # parse an arbitrary string back out of rendered screen text, for which crush has
-    # no regex capture-group extraction method to begin with (only `:replace`/
-    # `:replace_all` on a whole match, not a capture).
+}
+
+# Asserts that job $job_id's `status` column, read out of the nested session $t's
+# own `jobs` table, equals $expected. Still a round trip through the rendered
+# screen -- there is no other channel into another crush process's in-memory job
+# table -- but written once here instead of once per test. Deliberately an
+# assertion rather than a value-returning read: every actual caller in this plan
+# only ever needs to check status against a known expected string (never to
+# inspect an otherwise-unknown value), and asserting directly avoids needing to
+# parse an arbitrary string back out of rendered screen text, for which crush has
+# no regex capture-group extraction method to begin with (only `:replace`/
+# `:replace_all` on a whole match, not a capture).
+$pty_assert_job_status := {|$t $job_id $expected|
     # Deliberately one write with no intermediate `:=` (not two): this helper can be
     # called more than once against the same nested session (e.g. "Running" then
     # later "Terminated" for the same job id), and `:=` errors if the variable it
@@ -95,12 +89,14 @@
         }
     }
     assert $matched $("job {} never reached status {} within the retry budget":format $job_id $expected)
-} {|$t $job_id|
-    # Asserts that no thread remains tracked (`crush:threads`) under job $job_id in
-    # the nested session $t -- replaces the identical write+wait_for pair that was
-    # duplicated across four separate tests. Same retry rationale as
-    # `pty_assert_job_status`: right after `terminate`, thread-tracking cleanup may
-    # not have happened yet at the exact instant this is checked.
+}
+
+# Asserts that no thread remains tracked (`crush:threads`) under job $job_id in
+# the nested session $t -- replaces the identical write+wait_for pair that was
+# duplicated across four separate tests. Same retry rationale as
+# `pty_assert_job_status`: right after `terminate`, thread-tracking cleanup may
+# not have happened yet at the exact instant this is checked.
+$pty_assert_no_thread := {|$t $job_id|
     $matched := $false
     $tries := 0
     while {(($tries < 20) and (!$matched))} {
@@ -113,43 +109,45 @@
         }
     }
     assert $matched $("expected no thread left running under job {} within the retry budget":format $job_id)
-} {|$t $n $control_char|
-    # Sends a raw control byte (e.g. `pty:control:z`/`pty:control:c`) to the nested
-    # session $t, resending it only if it genuinely doesn't land within a generous
-    # per-attempt window, until the job it interrupted (paused or terminated) has
-    # actually stopped occupying the foreground -- evidenced by the *next counted
-    # prompt* appearing, exactly like `pty_run`. No separate marker command is
-    # written to check this (an earlier version of this helper did, and that was
-    # itself buggy -- see below): interrupting the foreground job is *already* what
-    # makes the interactive loop move on and show a new prompt, the same way
-    # finishing normally does, so there's nothing else to submit. Returns the new
-    # counter value; the caller threads it through exactly like `pty_run`.
-    #
-    # Why resending is necessary, not just rechecking: a real pty's line discipline
-    # generates the signal (SIGTSTP/SIGINT) the instant it sees the byte, entirely at
-    # the kernel level -- independent of whether crush has actually gotten around to
-    # creating/dispatching the job that byte is meant to reach. A byte that arrives
-    # before that job exists finds nothing to interrupt and is simply gone; waiting
-    # longer for a status that will never change doesn't help, but sending the byte
-    # again does.
-    #
-    # Why there's no separate marker command written right after the control byte,
-    # the way `pty_assert_job_status`'s retries do: confirmed directly that writing
-    # one immediately -- even separated into its own `$t:write` call -- is itself
-    # racy. The kernel's own signal-generation handling for the control byte can
-    # still be in the middle of settling when that write lands, and the marker text
-    # can be swallowed by the same mechanism that makes combining a command and a
-    # control byte in one write unsafe (see the sibling tests' own header comments) --
-    # even though the control byte's *real* effect (interrupting the job) still goes
-    # through untouched. Waiting for the side effect the interrupt itself already
-    # produces (a new prompt) sidesteps this entirely: nothing new is ever written
-    # until the one the interrupt caused is confirmed.
-    #
-    # `wait_quiet` was tried in place of this and rejected: it only proves the screen
-    # stopped changing for a moment, which is equally true whether the control byte
-    # actually interrupted anything or was silently lost and the job is simply still
-    # running quietly in the background -- confirmed directly, it returned "success"
-    # on a run where the job was never actually touched at all.
+}
+
+# Sends a raw control byte (e.g. `pty:control:z`/`pty:control:c`) to the nested
+# session $t, resending it only if it genuinely doesn't land within a generous
+# per-attempt window, until the job it interrupted (paused or terminated) has
+# actually stopped occupying the foreground -- evidenced by the *next counted
+# prompt* appearing, exactly like `pty_run`. No separate marker command is
+# written to check this (an earlier version of this helper did, and that was
+# itself buggy -- see below): interrupting the foreground job is *already* what
+# makes the interactive loop move on and show a new prompt, the same way
+# finishing normally does, so there's nothing else to submit. Returns the new
+# counter value; the caller threads it through exactly like `pty_run`.
+#
+# Why resending is necessary, not just rechecking: a real pty's line discipline
+# generates the signal (SIGTSTP/SIGINT) the instant it sees the byte, entirely at
+# the kernel level -- independent of whether crush has actually gotten around to
+# creating/dispatching the job that byte is meant to reach. A byte that arrives
+# before that job exists finds nothing to interrupt and is simply gone; waiting
+# longer for a status that will never change doesn't help, but sending the byte
+# again does.
+#
+# Why there's no separate marker command written right after the control byte,
+# the way `pty_assert_job_status`'s retries do: confirmed directly that writing
+# one immediately -- even separated into its own `$t:write` call -- is itself
+# racy. The kernel's own signal-generation handling for the control byte can
+# still be in the middle of settling when that write lands, and the marker text
+# can be swallowed by the same mechanism that makes combining a command and a
+# control byte in one write unsafe (see the sibling tests' own header comments) --
+# even though the control byte's *real* effect (interrupting the job) still goes
+# through untouched. Waiting for the side effect the interrupt itself already
+# produces (a new prompt) sidesteps this entirely: nothing new is ever written
+# until the one the interrupt caused is confirmed.
+#
+# `wait_quiet` was tried in place of this and rejected: it only proves the screen
+# stopped changing for a moment, which is equally true whether the control byte
+# actually interrupted anything or was silently lost and the job is simply still
+# running quietly in the background -- confirmed directly, it returned "success"
+# on a run where the job was never actually touched at all.
+$pty_send_control := {|$t $n $control_char|
     $matched := $false
     $tries := 0
     $next := ($n + 1)
@@ -164,38 +162,42 @@
     }
     assert $matched "control byte never landed within the retry budget"
     $next
-} {|$t|
-    # Replaces the nested session $t's prompt with one that counts the commands it has
-    # actually finished running, and returns the starting counter value (`1`, since
-    # setting the prompt is itself the first counted command). See `pty_run`'s own doc
-    # comment for why this exists: `wait_for "PROMPT <n>#"` can only ever be satisfied
-    # by the *n*th prompt genuinely being rendered -- unlike a bare `wait_for "# "`,
-    # which a prompt already on screen *before* the write can satisfy instantly,
-    # regardless of whether the command just written has been submitted yet, let
-    # alone finished. Every prompt this produces is numbered once and never repeats,
-    # so there is no stale earlier prompt a later wait could mistake for a new one.
+}
+
+# Replaces the nested session $t's prompt with one that counts the commands it has
+# actually finished running, and returns the starting counter value (`1`, since
+# setting the prompt is itself the first counted command). See `pty_run`'s own doc
+# comment for why this exists: `wait_for "PROMPT <n>#"` can only ever be satisfied
+# by the *n*th prompt genuinely being rendered -- unlike a bare `wait_for "# "`,
+# which a prompt already on screen *before* the write can satisfy instantly,
+# regardless of whether the command just written has been submitted yet, let
+# alone finished. Every prompt this produces is numbered once and never repeats,
+# so there is no stale earlier prompt a later wait could mistake for a new one.
+$pty_enable_counted_prompt := {|$t|
     $t:write "$cmd_counter := 0; crush:prompt:set {$cmd_counter = ($cmd_counter+1); \"PROMPT {}#\":format $cmd_counter}\n"
     $t:wait_for "PROMPT 1#"
     1
-} {|$t $n $command_line|
-    # Submits $command_line to the nested session $t (a trailing newline is added
-    # automatically) and blocks until it has *actually finished running* -- not just
-    # until some prompt-like text appears on screen -- by waiting for the next
-    # counted prompt `pty_enable_counted_prompt` set up. Returns the new counter
-    # value; callers thread it through explicitly (`$n = $(pty_run $t $n "...")`)
-    # since the count lives in the nested session's own scope, not anywhere this
-    # function could persist it between calls on its own.
-    #
-    # This is the replacement for the "`$t:write \"...\\n\"; $t:wait_for \"# \"; sleep
-    # <N>ms`" idiom used throughout the older pty tests: that bare `wait_for \"# \"`
-    # provides essentially no synchronization by itself (a prompt already on screen
-    # before the write satisfies it instantly), so every one of those tests also
-    # needed a fixed settle delay afterward to actually wait out the command -- too
-    # short and it flakes under load, too long and every run pays for the worst case.
-    # A counted prompt has no such tradeoff: this returns the instant (and not before)
-    # the nth prompt is genuinely rendered, however long that actually took.
+}
+
+# Submits $command_line to the nested session $t (a trailing newline is added
+# automatically) and blocks until it has *actually finished running* -- not just
+# until some prompt-like text appears on screen -- by waiting for the next
+# counted prompt `pty_enable_counted_prompt` set up. Returns the new counter
+# value; callers thread it through explicitly (`$n = $(pty_run $t $n "...")`)
+# since the count lives in the nested session's own scope, not anywhere this
+# function could persist it between calls on its own.
+#
+# This is the replacement for the "`$t:write \"...\\n\"; $t:wait_for \"# \"; sleep
+# <N>ms`" idiom used throughout the older pty tests: that bare `wait_for \"# \"`
+# provides essentially no synchronization by itself (a prompt already on screen
+# before the write satisfies it instantly), so every one of those tests also
+# needed a fixed settle delay afterward to actually wait out the command -- too
+# short and it flakes under load, too long and every run pays for the worst case.
+# A counted prompt has no such tradeoff: this returns the instant (and not before)
+# the nth prompt is genuinely rendered, however long that actually took.
+$pty_run := {|$t $n $command_line|
     $t:write $("{}\n":format $command_line)
     $next := ($n + 1)
     $t:wait_for $("PROMPT {}#":format $next)
     $next
-})
+}
