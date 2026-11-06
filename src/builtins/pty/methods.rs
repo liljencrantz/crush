@@ -2,6 +2,7 @@ use crate::builtins::pty::session::PtySession;
 use crate::lang::command::Command;
 use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
+use crate::lang::signature::binary_input::{BinaryInput, ToReader};
 use crate::lang::signature::patterns::Patterns;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::this::This;
@@ -10,6 +11,7 @@ use crate::lang::value::ValueType;
 use chrono::Duration;
 use ordered_map::OrderedMap;
 use signature::signature;
+use std::io::Read;
 use std::sync::OnceLock;
 
 pub fn methods() -> &'static OrderedMap<String, Command> {
@@ -30,9 +32,9 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 
 #[signature(
     pty.session.write,
-    can_block = false,
+    can_block = true,
     output = Known(ValueType::Empty),
-    short = "Write literal text to this virtual terminal, as if typed at the keyboard.",
+    short = "Write input to this virtual terminal, as if typed at the keyboard.",
     long = "No newline or key translation is added -- include `\\n` explicitly to submit a",
     long = "command line, and use `$t:control:<name>` (see `pty:control`) for control",
     long = "characters such as Ctrl-Z.",
@@ -40,14 +42,21 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     example = "$t:write $t:control:z",
 )]
 struct Write {
-    #[description("the literal text to send.")]
-    text: String,
+    #[unnamed()]
+    #[description(
+        "the data to send -- a string, binary, binary_stream, file, or glob/regex matching files. If unspecified, reads from the input pipe instead."
+    )]
+    input: Vec<BinaryInput>,
 }
 
 fn write(mut context: CommandContext) -> CrushResult<()> {
     let cfg: Write = Write::parse(context.remove_arguments(), &context.global_state.printer())?;
     let session = PtySession::get(&context.this.r#struct()?)?;
-    session.write_raw(&cfg.text)?;
+    let command_handle = context.command_handle().clone();
+    let mut reader = cfg.input.to_reader(context.input, &command_handle)?;
+    let mut bytes = Vec::new();
+    reader.read_to_end(&mut bytes)?;
+    session.write_bytes(&bytes)?;
     context.output.send(Value::Empty)
 }
 

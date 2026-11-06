@@ -162,8 +162,12 @@ impl PtySession {
     }
 
     pub fn write_raw(&self, text: &str) -> CrushResult<()> {
+        self.write_bytes(text.as_bytes())
+    }
+
+    pub fn write_bytes(&self, bytes: &[u8]) -> CrushResult<()> {
         let mut master = self.master.lock();
-        master.write_all(text.as_bytes())?;
+        master.write_all(bytes)?;
         master.flush()?;
         Ok(())
     }
