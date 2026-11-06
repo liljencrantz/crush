@@ -47,4 +47,3 @@ assert ($((6 * 7)) == 42) "the * operator should still work for ordinary multipl
 # of panicking -- so that path is unaffected and still works even at i128::MAX.
 assert ($(typeof $($max:__add__ 1.0)) == $float) "adding a float to i128::MAX should still work, returning a float"
 
-echo "integer overflow tests ok"

@@ -36,23 +36,26 @@ libdbus-1-dev + libsystemd-dev) — see README.md for the exact per-OS package l
 - `test_grpc` builds and spawns the `grpc-service` sub-crate binary to exercise the gRPC
   client builtins.
 
-To add/update a golden test: write the `.crush` script, run it manually through the
-debug binary, and save the output as the matching `.crush.output` file.
+To add/update a golden test: write the `.crush` script and check it with `assert`
+(or `pty_assert_job_status`/etc. for pty tests) for anything it needs to verify — then
+leave it with **no `.crush.output` file at all**. `run_system_test` always checks the
+process's exit status (against `.crush.status` if present, otherwise an implicit
+expected `0`) whether or not a `.crush.output` file exists — and any uncaught error
+(an `assert` failure, a `wait_for` timeout, any ordinary builtin error) already exits
+nonzero on its own, with no extra marker statement needed to surface it. A trailing
+`echo "ok"` plus a matching `.crush.output` of `ok` checks nothing a bare exit-status
+comparison wasn't already checking for free — don't add one. Add a `.crush.output` file
+only when the test needs to verify specific *content* actually printed to stdout (real
+values, not just "did this crash").
 
 Prefer this plain golden-test style over ad-hoc Rust assertions in `tests/system.rs`
 (stderr/exit-code checks, etc.) — even for a bug whose only visible symptom seems to
-need something other than a stdout diff (e.g. an async background thread's error). Two
-techniques cover most such cases:
+need something other than a stdout diff (e.g. an async background thread's error). If
+the error *message* itself matters: `try { <fragile op> } catch { |$e| $msg = $e }`
+captures the error as a plain string, which ordinary `assert`/`:like` calls can then
+check against the exit-status-only approach above.
 
-- If the only symptom is "the script aborts" (no message content to check): a
-  top-level job's error aborts the rest of the script (see `execute.rs`'s `source()`),
-  so performing the fragile operation and then `echo`ing a marker afterward turns "does
-  this error?" into a plain stdout diff — the marker only appears if it didn't.
-- If the error *message* itself matters: `try { <fragile op> } catch { |$e| $msg = $e }`
-  captures the error as a plain string, which ordinary `assert`/`:like` calls can then
-  check.
-
-Only fall back to a Rust assertion in `tests/system.rs` when both are genuinely
+Only fall back to a Rust assertion in `tests/system.rs` when that's genuinely
 impossible — and even then, prefer testing a structural property (e.g. "stderr is
 non-empty") over coupling to exact error-message wording.
 

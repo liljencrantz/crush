@@ -141,4 +141,3 @@ $before := $($complex 1 2 3 4 x=10 y=20)
 $after := $($restored_complex 1 2 3 4 x=10 y=20)
 assert ($before == $after) "a closure re-parsed from its own `definition` text should behave the same as the original"
 
-echo "closure argument tests ok"

@@ -13,9 +13,8 @@
 # stage (here, `where`, whose condition sleeps to make the race reliable) sends afterward fails with
 # a SendError -- benign, not a real failure. Fixed by filtering it the same way at that join too.
 #
-# The marker below is only printed if the script gets past the pipeline, so a regression shows up
-# as a plain output difference (see tests/pipeline_early_exit_halts.crush.output). The exit status
-# is checked too, since the test runner expects 0.
+# No echoed marker needed: the regression this guards against made the script exit 1
+# with nothing printed anywhere (see above), which the test runner already catches by
+# checking the exit status against the implicit expected `0`.
 
 seq 0 100 | where {sleep 100ms; $true} | head 1
-echo "reached"

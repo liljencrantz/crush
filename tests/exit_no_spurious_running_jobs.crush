@@ -31,4 +31,3 @@ while {($i < 300)} {
     $i = ($i + 1)
 }
 assert ($max == $min) $("expected a stable job count across iterations (no job lingering after a plain substitution), but saw it range from {} to {}":format $min $max)
-echo "ok"

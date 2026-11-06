@@ -104,4 +104,3 @@ val $global | pup:to ./.test_file
 $restored_scope := $(pup:from ./.test_file)
 assert ($(typeof $restored_scope) == $scope) "a restored scope should still be a scope"
 
-echo "pup round trip ok"

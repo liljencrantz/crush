@@ -24,4 +24,3 @@ pty_assert_job_status $t 0 "Terminated"
 
 $t:close
 $host_file:remove
-echo "ok"

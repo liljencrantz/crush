@@ -15,4 +15,3 @@
 # reproduce it.
 $d := $(timeit number=1 repeat=2 it={ls})
 assert (($(typeof $d)) == $duration) "timeit should return a duration after running an external command more than once"
-echo "ok"

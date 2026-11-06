@@ -33,4 +33,3 @@ $t:write "echo $(\"BG_SIG_CHECK_{}\":format $status)\n"
 $t:wait_for "BG_SIG_CHECK_Terminated"
 
 $t:close
-echo "ok"

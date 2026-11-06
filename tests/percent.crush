@@ -28,4 +28,3 @@ try {
 } catch {
     |$e| assert ($e:message:starts_with("invalid utf-8")) $("unexpected error: {}":format $e:message)
 }
-echo "reached"

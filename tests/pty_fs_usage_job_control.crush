@@ -25,4 +25,3 @@ $n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 
 $t:close
-echo "ok"

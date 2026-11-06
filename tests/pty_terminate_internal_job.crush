@@ -91,4 +91,3 @@ try {
 assert (!$marker_exists) "terminate must actually stop the backgrounded block's underlying execution, not just flip its status -- the second statement must never run"
 
 $t:close
-echo "ok"

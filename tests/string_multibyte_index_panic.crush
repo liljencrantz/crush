@@ -4,11 +4,13 @@
 # is 6 bytes and 5 chars) panics the worker thread as soon as a computed byte offset
 # lands inside a multi-byte char instead of on its boundary. All four share this one
 # root cause and are exercised here as bare/asserted statements rather than
-# $(...)-substituted, so a panic aborts the whole script and the "reached" marker at
-# the end only prints once every one of the four is fixed.
+# $(...)-substituted. No echoed marker needed to prove all four are fixed: a
+# worker-thread panic surfaces as a disconnected-channel error that aborts the script
+# with a nonzero exit (confirmed directly elsewhere in this suite -- see
+# tests/list_peek.crush), which the test runner already checks against the implicit
+# expected `0`.
 
 assert ($("héllo":lpad 2) == "hé") "lpad should truncate to the first N characters, not bytes"
 assert ($("héllo":rpad 2) == "hé") "rpad should truncate to the first N characters, not bytes"
 assert ($("héllo":substr from=1 to=2) == "é") "substr's from/to should be character offsets, not byte offsets"
 assert ($("héllo"[1]) == "é") "string subscript should index by character, not byte"
-echo "reached"

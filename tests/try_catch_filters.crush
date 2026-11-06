@@ -98,4 +98,3 @@ try {
 }
 assert $bad_keyword_errored "a clause keyword other than `catch` should error clearly"
 
-echo "try/catch filter tests ok"

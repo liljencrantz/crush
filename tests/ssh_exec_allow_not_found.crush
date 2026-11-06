@@ -16,4 +16,3 @@ assert $($pinned:starts_with "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPAB
     ("allow_not_found should have pinned the server's actual key into the known_hosts file, got: {}":format($pinned))
 
 $host_file:remove
-echo "ssh exec allow not found ok"

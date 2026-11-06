@@ -57,4 +57,3 @@ $third_status := ($third_rows[0]):status
 assert ($third_status == "Running") "a job resumed after being marked Terminated should show its current status, Running"
 
 terminate $job_id
-echo "done"

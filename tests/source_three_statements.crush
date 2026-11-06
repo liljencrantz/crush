@@ -16,4 +16,3 @@ cmd rm "-f" $script
 bin:from "echo a\necho b\necho c\n" | bin:to $script
 source $script
 cmd rm "-f" $script
-echo "done"

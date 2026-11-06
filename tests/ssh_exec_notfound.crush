@@ -14,4 +14,3 @@ assert ($($msg:len) > 0) "a missing known_hosts entry should be a caught, non-em
 assert $(like $msg *known*host*) ("expected a missing-from-known-hosts error, got: {}":format($msg))
 
 $host_file:remove
-echo "ssh exec notfound ok"

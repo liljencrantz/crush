@@ -37,4 +37,3 @@ $t:write "echo $(\"FG_SIG_CHECK_{}\":format $n)\n"
 $t:wait_for "FG_SIG_CHECK_0"
 
 $t:close
-echo "ok"

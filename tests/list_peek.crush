@@ -7,9 +7,11 @@
 # it legitimately sends no output at all (same as `pop` on an empty list, a separate,
 # pre-existing, already-consistent characteristic of both -- not something this test is
 # about), and substituting a value that's never sent looks like a generic disconnected-
-# channel error unrelated to whether the underlying panic is fixed. What this test
-# checks is that the script doesn't abort -- if the panic were still there, the
-# "reached" marker below would never print.
+# channel error unrelated to whether the underlying panic is fixed. No echoed marker
+# needed to prove the script doesn't abort: a worker-thread panic here still surfaces
+# as a disconnected-channel error that aborts the script with a nonzero exit (confirmed
+# directly by reintroducing the old bug), which the test runner already checks against
+# the implicit expected `0`.
 
 $l := $(list:of 1)
 assert ($($l:peek) == 1) "peek on a non-empty list should return its last element without removing it"
@@ -17,4 +19,3 @@ assert ($($l:len) == 1) "peek should not remove the element it returns"
 
 $l:clear
 $l:peek
-echo "reached"

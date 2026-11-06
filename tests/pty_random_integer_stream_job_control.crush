@@ -43,4 +43,3 @@ $t:close
 $rows := $(random:integer_stream 100 | head 5 | count)
 assert ($rows == 5) "random:integer_stream must still work normally when never interrupted"
 
-echo "ok"

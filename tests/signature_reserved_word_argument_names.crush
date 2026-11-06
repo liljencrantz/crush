@@ -17,7 +17,6 @@
 # The argument must actually be usable under its real, unescaped name -- this was
 # broken outright, not just a cosmetic help-text issue.
 files type=$false | count
-echo "ok"
 
 $files_doc := $(help topic=$files format="markdown")
 $files_doc_leaks_raw_ident := $(like $files_doc $(glob:new "*r#type*"))

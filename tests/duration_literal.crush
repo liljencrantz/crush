@@ -46,4 +46,3 @@ $src := $("$restored := {}":format $def_text)
 eval $src
 assert ($(definition $restored) == $def_text) "a closure using a duration literal argument should round-trip through definition/eval unchanged"
 
-echo "duration literal tests ok"

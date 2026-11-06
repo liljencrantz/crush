@@ -32,4 +32,3 @@ $n = $(pty_run $t $n "bg 0")
 pty_assert_job_status $t 0 "Running"
 
 $t:close
-echo "ok"

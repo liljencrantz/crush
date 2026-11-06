@@ -41,4 +41,3 @@ $final_count := $($final | count)
 assert ($final_count == 0) "the known_hosts file should now be empty"
 
 $host_file:remove
-echo "host list remove ok"

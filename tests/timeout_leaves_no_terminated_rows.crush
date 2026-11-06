@@ -10,4 +10,4 @@ try {
 } catch {
 }
 $n := $(jobs | where {($status == "Terminated")} | count)
-echo $n
+assert ($n == 0) $("expected no Terminated rows left behind, found {}":format $n)

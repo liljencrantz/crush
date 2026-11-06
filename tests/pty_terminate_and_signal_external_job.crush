@@ -101,4 +101,3 @@ $n = $(pty_run $t $n "echo $(\"SIG_CHECK_{}\":format $status1)")
 $t:wait_for "SIG_CHECK_Terminated"
 
 $t:close
-echo "ok"

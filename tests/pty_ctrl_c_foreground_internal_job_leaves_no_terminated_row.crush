@@ -19,4 +19,3 @@ $t:write "echo $(\"CTRL_C_CHECK_{}\":format $n)\n"
 $t:wait_for "CTRL_C_CHECK_0"
 
 $t:close
-echo "ok"

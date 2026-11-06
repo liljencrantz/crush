@@ -77,4 +77,3 @@ $n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
 assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "remote:host:list did not produce a real result"
 
 $t:close
-echo "ok"

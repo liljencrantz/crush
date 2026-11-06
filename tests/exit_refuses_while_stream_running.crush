@@ -26,5 +26,4 @@ assert $(like $msg *running*jobs*) ("expected a running-jobs error, got: {}":for
 $count := $($a | count)
 assert ($count == 1000000) "the stream should still be fully readable after the earlier refused exit attempt"
 
-echo "ok"
 exit

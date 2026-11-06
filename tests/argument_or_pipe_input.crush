@@ -48,4 +48,3 @@ assert ($overridden == $piped) "help should prefer the piped value over a topic 
 $welcome := $($(help format=markdown))
 assert ($welcome:starts_with("\n# Welcome to Crush!")) "help with neither an argument nor a pipe should show the welcome message"
 
-echo "ok"

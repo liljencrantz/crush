@@ -40,4 +40,3 @@ assert ($j5:x == 5) "a class instance's own local members should be included"
 assert ($j5:y == 6) "a class instance's own local members should be included"
 assert ($j5:z == 7) "members from the other struct should still be included"
 
-echo "struct join tests ok"

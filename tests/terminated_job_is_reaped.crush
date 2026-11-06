@@ -52,4 +52,3 @@ assert ($first_status == "Terminated") "the one-time report of a terminated exte
 $remaining_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | materialize)
 $remaining_count := $($remaining_rows | count)
 assert ($remaining_count == 0) "a terminated external-command job should eventually be reaped from jobs, not linger forever"
-echo "done"

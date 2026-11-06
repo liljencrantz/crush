@@ -14,8 +14,8 @@
 # `echo` prints directly (bypassing the output sender entirely -- see its own doc
 # comment) before ever touching its own return value, so each file's visible output
 # still appears even while hung: a hang here shows up as "a".."e" printed followed by
-# the process simply never reaching "done", caught by tests/system.rs's own 30-second
-# per-test hang-detection timeout.
+# the process simply never exiting, caught by tests/system.rs's own 30-second
+# per-test hang-detection timeout regardless of what output was expected.
 $f1 := $(convert $file $("/tmp/source_multiple_files_repro_a_{}":format $(random:integer 1000000000)))
 $f2 := $(convert $file $("/tmp/source_multiple_files_repro_b_{}":format $(random:integer 1000000000)))
 $f3 := $(convert $file $("/tmp/source_multiple_files_repro_c_{}":format $(random:integer 1000000000)))
@@ -37,4 +37,3 @@ cmd rm "-f" $f2
 cmd rm "-f" $f3
 cmd rm "-f" $f4
 cmd rm "-f" $f5
-echo "done"

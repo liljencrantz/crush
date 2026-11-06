@@ -10,16 +10,15 @@
 # stage's spawned thread, and any error it produced, was simply never joined, so it
 # could never become a catchable/observable CrushResult::Err and the script never
 # aborted either way. Now that Job::eval joins every non-last stage's thread, a genuine
-# error from `schedule` here *does* abort the script before reaching the
-# `echo "reached"` marker below --
-# confirmed by hand by temporarily reintroducing the old bug (raw `.read()` instead of
-# `.next_row()`), which reliably prevented the marker from printing. So this plain
-# stdout diff has a real failure mode again.
+# error from `schedule` here *does* abort the script -- confirmed by hand by
+# temporarily reintroducing the old bug (raw `.read()` instead of `.next_row()`), which
+# reliably prevented the rest of the script from running. An aborted top-level job
+# always exits nonzero (see `execute.rs`'s `source()`), which the test runner's own
+# exit-status check (against the implicit expected `0`) already catches with no
+# echoed marker needed.
 #
 # Captured into a variable (via `count`) rather than left to print to the terminal:
 # printing a streamed table goes through crush's asynchronous background pretty-printer,
 # which isn't ordered against the next top-level statement's own output, so leaving it
-# printing directly here would make the "reached" marker's position in stdout racy
-# against unrelated printer-thread timing, not just against the bug this test guards.
+# printing directly here would race against unrelated printer-thread timing.
 $row_count := $(seq 0 2 | schedule 1ms | count)
-echo "reached"

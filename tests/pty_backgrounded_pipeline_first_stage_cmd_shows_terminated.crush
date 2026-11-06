@@ -25,4 +25,3 @@ $t:write "echo $(\"FIRST_STAGE_CHECK_{}\":format $n)\n"
 $t:wait_for "FIRST_STAGE_CHECK_1"
 
 $t:close
-echo "ok"

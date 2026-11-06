@@ -34,4 +34,3 @@ try {
 }
 assert ($real_error == "invalid digit found in string") "a command that fails on its own should surface its real error, not a timeout"
 
-echo "timeout tests ok"

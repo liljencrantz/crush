@@ -6,4 +6,3 @@ $t := $(pty:create cat)
 $t:write "hello\n"
 $t:wait_for "hello"
 $t:close
-echo "ok"

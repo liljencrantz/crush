@@ -56,4 +56,3 @@ assert ($job_id_status == "Running") "pausing an unrelated job must not pause jo
 
 terminate $job_id
 terminate $colliding_id
-echo "done"

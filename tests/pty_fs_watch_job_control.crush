@@ -21,4 +21,3 @@ pty_assert_no_thread $t 0
 
 $n = $(pty_run $t $n "cmd rm -rf /tmp/pty_fs_watch_job_control_dir")
 $t:close
-echo "ok"

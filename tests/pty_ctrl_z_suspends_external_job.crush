@@ -17,4 +17,3 @@ $t:write "cmd sleep 100\n"
 $n = $(pty_send_control $t $n $pty:control:z)
 pty_assert_job_status $t 0 "Paused"
 $t:close
-echo "ok"

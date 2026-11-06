@@ -45,4 +45,3 @@ $t:write "echo $(\"NESTED_CHECK_{}\":format $status)\n"
 $t:wait_for "NESTED_CHECK_Terminated"
 
 $t:close
-echo "ok"

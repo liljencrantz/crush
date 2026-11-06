@@ -24,4 +24,3 @@ pty_assert_job_status $t 0 "Terminated"
 pty_assert_no_thread $t 0
 
 $t:close
-echo "ok"

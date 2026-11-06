@@ -52,4 +52,3 @@ assert ($first_status == "Terminated") "the one-time report of a paused-then-ter
 $remaining_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 6234"} | materialize)
 $remaining_count := $($remaining_rows | count)
 assert ($remaining_count == 0) "a job that was ever paused should still be reaped from jobs once terminated, not linger forever"
-echo "done"

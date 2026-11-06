@@ -15,8 +15,8 @@
 # instead: bookkeeping only (status + the one-time `jobs` snapshot, see
 # `tests/terminated_job_is_reaped.crush`), with no controller broadcast.
 #
-# A top-level job's error aborts the rest of the script (see `execute.rs`'s `source()`),
-# so performing the fragile operation and then echoing a marker afterward turns "does
-# this abort?" into a plain stdout diff: the marker only appears if it didn't.
+# No echoed marker needed: a top-level job's error already aborts the rest of the
+# script with a nonzero exit (see `execute.rs`'s `source()`), which the test runner
+# already checks against the implicit expected `0` -- if this regressed, the process
+# would exit nonzero on its own, with nothing further to print.
 cmd sh -c "kill -TERM $$"
-echo "after"

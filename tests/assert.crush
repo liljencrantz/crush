@@ -37,5 +37,3 @@ try {
 } catch {
     |$error| echo "fell through to the catch-all clause"
 }
-
-echo "done"

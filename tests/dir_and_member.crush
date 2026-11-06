@@ -47,4 +47,3 @@ $methods := $($(dir $float) | each {|$name| $float | member $name})
 $method_count := $($methods | count)
 assert ($method_count > 0) "dir + member should be able to enumerate a type's methods"
 
-echo "ok"

@@ -12,4 +12,3 @@ while {($tries < 50 and $t:alive())} {
 }
 assert (not ($t:alive()))
 $t:close
-echo "ok"

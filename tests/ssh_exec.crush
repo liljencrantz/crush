@@ -25,4 +25,3 @@ assert ($($results[0]) == 7) "remote:pexec's per-host result should be the closu
 assert ($($results[1]) == 7) "remote:pexec's per-host result should be the closure's return value"
 
 $host_file:remove
-echo "ssh exec ok"

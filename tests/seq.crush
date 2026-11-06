@@ -46,4 +46,3 @@ try {
 } catch { |$e| $too_many_errored = $true }
 assert $too_many_errored "seq should reject more than 3 unnamed arguments"
 
-echo "seq tests ok"

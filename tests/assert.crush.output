@@ -13,4 +13,3 @@ custom message here
 a catch clause filtered on a different type does not catch an AssertionError -- it
 falls through to the next clause
 fell through to the catch-all clause
-done

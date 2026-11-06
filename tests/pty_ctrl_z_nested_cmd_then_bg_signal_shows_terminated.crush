@@ -76,4 +76,3 @@ $t:write "echo $(\"NESTED_Z_CHECK_{}\":format $n)\n"
 $t:wait_for "NESTED_Z_CHECK_1"
 
 $t:close
-echo "ok"

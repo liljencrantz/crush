@@ -81,4 +81,3 @@ $n = $(pty_run $t $n "echo $(convert $string $(fg))")
 $t:wait_for "EXTERNAL_MARKER"
 
 $t:close
-echo "ok"

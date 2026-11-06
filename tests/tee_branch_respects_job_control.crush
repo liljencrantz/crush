@@ -41,4 +41,3 @@
 $job_id := $(seq 1 10000 | tee {while {$true} {}} {count} {materialize} | count &)
 sleep 300ms
 terminate $job_id
-echo "ok"

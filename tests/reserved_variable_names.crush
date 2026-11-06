@@ -42,4 +42,3 @@ assert $true "true should still work as the boolean constant"
 assert $(not $false) "false should still work as the boolean constant"
 assert ($(if $true {"yes"} else {"no"}) == "yes") "if/else should still work as commands"
 
-echo "done"

@@ -27,4 +27,3 @@ $t:write "echo $(\"DEEP_CHECK_{}\":format $n)\n"
 $t:wait_for "DEEP_CHECK_1"
 
 $t:close
-echo "ok"

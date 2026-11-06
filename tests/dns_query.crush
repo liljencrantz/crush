@@ -74,4 +74,3 @@ try {
 assert ($loop_error == "CNAME chain for `loop.test.` is too long (more than 8 hops)") \
     "a self-referencing CNAME should error out once MAX_CNAME_DEPTH is hit"
 
-echo "dns query tests ok"

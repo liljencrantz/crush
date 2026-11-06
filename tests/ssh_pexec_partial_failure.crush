@@ -27,4 +27,3 @@ $messages := $($warnings | select message | list:collect)
 assert ($($($messages[0]):starts_with "Failed to run command on host 127.0.0.1:1.")) "the warning should name the host that failed"
 
 $host_file:remove
-echo "ssh pexec partial failure ok"

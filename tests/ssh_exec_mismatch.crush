@@ -18,4 +18,3 @@ assert ($($msg:len) > 0) "a host-key mismatch should be a caught, non-empty erro
 assert $(like $msg *mismatch*) ("expected a host-key mismatch error, got: {}":format($msg))
 
 $host_file:remove
-echo "ssh exec mismatch ok"
