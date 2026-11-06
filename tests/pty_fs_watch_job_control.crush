@@ -8,16 +8,17 @@
 # repeat.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:run "cmd mkdir -p /tmp/pty_fs_watch_job_control_dir"
-$t:run "fs:watch /tmp/pty_fs_watch_job_control_dir &"
+$n = $(pty_run $t $n "cmd mkdir -p /tmp/pty_fs_watch_job_control_dir")
+$n = $(pty_run $t $n "fs:watch /tmp/pty_fs_watch_job_control_dir &")
 pty_assert_job_status $t 0 "Running"
 
-$t:run "cmd touch /tmp/pty_fs_watch_job_control_dir/created.txt"
-$t:run "terminate 0"
+$n = $(pty_run $t $n "cmd touch /tmp/pty_fs_watch_job_control_dir/created.txt")
+$n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 pty_assert_no_thread $t 0
 
-$t:run "cmd rm -rf /tmp/pty_fs_watch_job_control_dir"
+$n = $(pty_run $t $n "cmd rm -rf /tmp/pty_fs_watch_job_control_dir")
 $t:close
 echo "ok"

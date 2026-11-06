@@ -12,10 +12,9 @@ use signature::signature;
     pty.create,
     can_block = true,
     short = "Spawn a command attached to a fresh virtual terminal, for driving and inspecting a real interactive session from a script.",
-    long = "Returns a struct with one method per operation (`write`, `wait_for`, `wait_quiet`,",
-    long = "`run`, `contents`, `close`, plus `pid`/`alive`) and a `control` struct of named",
-    long = "control-character constants. Always call `close` once done, to release the",
-    long = "underlying process.",
+    long = "Returns a struct with one method per operation (`write`, `wait_for`, `contents`,",
+    long = "`close`, plus `pid`/`alive`) and a `control` struct of named control-character",
+    long = "constants. Always call `close` once done, to release the underlying process.",
     example = "$t := $(pty:create crush)",
     example = "$t:write \"echo hello\\n\"",
     example = "$t:wait_for \"hello\"",
@@ -43,7 +42,7 @@ fn create(mut context: CommandContext) -> CrushResult<()> {
 
     let mut fields = vec![];
     for name in [
-        "write", "wait_for", "wait_quiet", "run", "contents", "pid", "alive", "close",
+        "write", "wait_for", "contents", "pid", "alive", "close",
     ] {
         fields.push((name, method_struct(id, name)?));
     }

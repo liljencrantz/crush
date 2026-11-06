@@ -9,19 +9,17 @@ $host_file := $(convert $file $(".ssh_known_hosts_pexec_job_control_{}":format $
 bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
 
 $t := $(pty_spawn)
-$t:write $("$host_file := {}\n":format $host_file)
-$t:wait_quiet
-$t:write $("$addr := \"127.0.0.1:{}\"\n":format ($(crush:env["SSHD_PORT"])))
-$t:wait_quiet
-$t:write "$user := \"crushtest\"\n"
-$t:wait_quiet
-$t:write "$pass := \"crushtest-password\"\n"
-$t:wait_quiet
+$n := $(pty_enable_counted_prompt $t)
 
-$t:run "remote:pexec {sleep 100s} $addr $addr username=$user password=$pass host_file=$host_file parallel=2 | count &"
+$n = $(pty_run $t $n $("$host_file := {}":format $host_file))
+$n = $(pty_run $t $n $("$addr := \"127.0.0.1:{}\"":format ($(crush:env["SSHD_PORT"]))))
+$n = $(pty_run $t $n "$user := \"crushtest\"")
+$n = $(pty_run $t $n "$pass := \"crushtest-password\"")
+
+$n = $(pty_run $t $n "remote:pexec {sleep 100s} $addr $addr username=$user password=$pass host_file=$host_file parallel=2 | count &")
 pty_assert_job_status $t 0 "Running"
 
-$t:run "terminate 0"
+$n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 
 $t:close

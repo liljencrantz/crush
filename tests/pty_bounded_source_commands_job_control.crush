@@ -26,54 +26,55 @@
 # them doesn't hang or corrupt the session, not that they succeed everywhere.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:run "$r := $(sockets:tcp | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(sockets:tcp | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "sockets:tcp did not produce a real result"
 
-$t:run "$r := $(sockets:udp | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(sockets:udp | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "sockets:udp did not produce a real result"
 
-$t:run "$r := $(host:battery | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(host:battery | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "host:battery did not produce a real result"
 
-$t:run "$r := $(host:procs | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(host:procs | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "host:procs did not produce a real result"
 
-$t:run "$r := $(host:threads | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(host:threads | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "host:threads did not produce a real result"
 
-$t:run "$r := $(groups:list | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(groups:list | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "groups:list did not produce a real result"
 
-$t:run "$r := $(users:list | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(users:list | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "users:list did not produce a real result"
 
-$t:run "$r := $(fs:stat . | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(fs:stat . | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "fs:stat did not produce a real result"
 
-$t:run "$r := $(fs:mounts | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(fs:mounts | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "fs:mounts did not produce a real result"
 
-$t:run "$r := $(crush:history | count &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(crush:history | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "crush:history did not produce a real result"
 
-$t:run "$r := $(try { remote:identity | count } catch {|$e| 0 } &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(try { remote:identity | count } catch {|$e| 0 } &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "remote:identity did not produce a real result"
 
-$t:run "$r := $(try { remote:host:list | count } catch {|$e| 0 } &)"
-$t:run "echo $(\"__RESULT__{}\":format $(fg))"
-$t:wait_for ^(__RESULT__-?[0-9]+)
+$n = $(pty_run $t $n "$r := $(try { remote:host:list | count } catch {|$e| 0 } &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
+assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "remote:host:list did not produce a real result"
 
 $t:close
 echo "ok"

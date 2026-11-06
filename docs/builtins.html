@@ -3003,10 +3003,9 @@ more numerically precise than going through a general-purpose <code>pow</code>.<
 <h3 class="cmd-title"><code>pty:create</code></h3>
 <div class="cmd-doc"><pre><code><a href="#pty-create"><span class="tok-command">pty:create</span></a> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-operator">$(</span><a href="#types-one_of"><span class="tok-command">one_of</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-file"><span class="tok-identifier">$file</span></a><span class="tok-operator">)</span> <span class="tok-operator">[</span><span class="tok-string_literal">arguments</span><span class="tok-operator">=</span><span class="tok-file_literal">string...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">rows</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">cols</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span></code></pre>
 <p>Spawn a command attached to a fresh virtual terminal, for driving and inspecting a real interactive session from a script.</p>
-<p>Returns a struct with one method per operation (<code>write</code>, <code>wait_for</code>, <code>wait_quiet</code>,
-<code>run</code>, <code>contents</code>, <code>close</code>, plus <code>pid</code>/<code>alive</code>) and a <a href="#control"><code>control</code></a> struct of named
-control-character constants. Always call <code>close</code> once done, to release the
-underlying process.</p>
+<p>Returns a struct with one method per operation (<code>write</code>, <code>wait_for</code>, <code>contents</code>,
+<code>close</code>, plus <code>pid</code>/<code>alive</code>) and a <a href="#control"><code>control</code></a> struct of named control-character
+constants. Always call <code>close</code> once done, to release the underlying process.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>

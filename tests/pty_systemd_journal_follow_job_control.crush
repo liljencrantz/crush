@@ -16,9 +16,10 @@ if ($(host:os:name) != "linux") {
 
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
 
-$t:run "systemd:journal follow=$true &"
-$t:run "terminate 0"
+$n = $(pty_run $t $n "systemd:journal follow=$true &")
+$n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 pty_assert_no_thread $t 0
 

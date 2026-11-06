@@ -161,10 +161,6 @@ impl PtySession {
         }
     }
 
-    pub fn write_raw(&self, text: &str) -> CrushResult<()> {
-        self.write_bytes(text.as_bytes())
-    }
-
     pub fn write_bytes(&self, bytes: &[u8]) -> CrushResult<()> {
         let mut master = self.master.lock();
         master.write_all(bytes)?;
@@ -228,37 +224,6 @@ impl PtySession {
             let received = self.rx.lock().recv_timeout(POLL_INTERVAL);
             if let Ok(chunk) = received {
                 self.parser.lock().process(&chunk);
-            }
-        }
-    }
-
-    /// Blocks (processing new output as it arrives) until no new output has arrived for
-    /// `quiet`, or returns an `Err` with the current screen attached once `timeout`
-    /// elapses first. Unlike `wait_for`, there is no pattern to match -- this is for
-    /// synchronizing on "the command has actually run and the terminal has settled",
-    /// which a fixed string can't express for commands that print nothing distinctive
-    /// (e.g. a bare `sleep`).
-    pub fn wait_quiet(&self, quiet: Duration, timeout: Duration) -> CrushResult<()> {
-        let quiet = quiet.to_std().unwrap_or(StdDuration::from_millis(100));
-        let deadline = Instant::now() + timeout.to_std().unwrap_or(StdDuration::from_secs(5));
-        let mut last_activity = Instant::now();
-        loop {
-            let now = Instant::now();
-            if now.duration_since(last_activity) >= quiet {
-                return Ok(());
-            }
-            if now >= deadline {
-                return command_error(format!(
-                    "Timed out waiting for the virtual terminal to go quiet.\n--- rendered screen ---\n{}\n--- end rendered screen ---",
-                    self.contents(),
-                ));
-            }
-            // Lock ordering must match `drain_available` (`parser` before `rx`, never the
-            // reverse) -- see `wait_for`'s identical comment above.
-            let received = self.rx.lock().recv_timeout(POLL_INTERVAL);
-            if let Ok(chunk) = received {
-                self.parser.lock().process(&chunk);
-                last_activity = Instant::now();
             }
         }
     }
