@@ -24,14 +24,19 @@ $b := (5s)
 assert ($b == $(duration:of seconds=5)) "a duration literal should work the same in expression mode"
 
 # A number immediately followed by what would otherwise look like the start of a
-# longer word must not be misparsed as a duration literal glued to a stray remainder --
-# "5seconds" is the integer 5 followed by the separate bareword "seconds", exactly as
-# it was before duration literals existed.
-$count := 0
-for word=$(list:of 5seconds) {
-    $count = ($count + 1)
+# longer word must not be misparsed as a duration literal glued to a stray remainder,
+# and -- unlike before duration literals existed, when this silently lexed as the
+# integer 5 followed by a separate bareword "seconds" -- must not silently lex as two
+# unrelated tokens glued together with nothing between them either: "5seconds" is a
+# single malformed numeric literal, not a number that merely happens to be followed by
+# some other, unrelated word (see LexicalError::InvalidNumericLiteral).
+$msg := ""
+try {
+    eval "5seconds"
+} catch {|$e|
+    $msg = $e:message
 }
-assert ($count == 2) "5seconds should lex as two separate arguments (5 and seconds), not a mis-glued duration literal"
+assert ($(like $msg $(glob:new "*5seconds*"))) $("expected 5seconds to be rejected as a single invalid numeric literal, got: {}":format $msg)
 
 # Plain integer/float literals are unaffected.
 assert ((5 + 3) == 8) "plain integer arithmetic should be unaffected"

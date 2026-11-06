@@ -160,6 +160,29 @@ impl<'input> Lexer<'input> {
                         }
                     }
 
+                    // A letter/digit/underscore glued directly onto the end of a
+                    // number, with no recognized duration suffix to explain it (e.g.
+                    // `123abc`), is one malformed token, not a number immediately
+                    // followed by an unrelated word -- consume the rest of it too, so
+                    // the error names the whole thing rather than just its leading
+                    // digits.
+                    if let Some((_, ch2)) = self.chars.peek() {
+                        if identifier_first_char(*ch2) {
+                            let mut err_end = end_idx;
+                            loop {
+                                match self.chars.peek() {
+                                    Some((_, ch3)) if identifier_char(*ch3) => {
+                                        err_end = self.chars.next().unwrap().0;
+                                    }
+                                    _ => break,
+                                }
+                            }
+                            return Some(Err(LexicalError::InvalidNumericLiteral(
+                                self.full_str[i..err_end + 1].to_string(),
+                            )));
+                        }
+                    }
+
                     let s = &self.full_str[i..end_idx + 1];
                     if had_period {
                         return Some(Token::Float(s, Location::new(i, end_idx + 1)).into());
@@ -575,6 +598,26 @@ impl<'input> Lexer<'input> {
                         }
                     }
 
+                    // See the identical check in `next_command`'s own number arm for
+                    // why this is one malformed token (e.g. `123abc`), not a number
+                    // immediately followed by an unrelated identifier.
+                    if let Some((_, ch2)) = self.chars.peek() {
+                        if identifier_first_char(*ch2) {
+                            let mut err_end = end_idx;
+                            loop {
+                                match self.chars.peek() {
+                                    Some((_, ch3)) if identifier_char(*ch3) => {
+                                        err_end = self.chars.next().unwrap().0;
+                                    }
+                                    _ => break,
+                                }
+                            }
+                            return Some(Err(LexicalError::InvalidNumericLiteral(
+                                self.full_str[i..err_end + 1].to_string(),
+                            )));
+                        }
+                    }
+
                     let s = &self.full_str[i..end_idx + 1];
                     if had_period {
                         return Some(Token::Float(s, Location::new(i, end_idx + 1)).into());
@@ -774,6 +817,13 @@ pub enum LexicalError {
     UnexpectedCharacterWithSuggestion(char, char),
     UnexpectedEOF,
     UnexpectedEOFWithSuggestion(char),
+    /// A numeric literal (integer or float) immediately followed by a letter/digit/
+    /// underscore with no separator, and not a recognized duration suffix (`5s`,
+    /// `3h`, ...) either -- e.g. `123abc`. Previously lexed as two separate tokens (the
+    /// number, then a bareword starting right where it left off), silently accepting
+    /// what's almost always a typo as two unrelated arguments/values glued together
+    /// with nothing between them.
+    InvalidNumericLiteral(String),
 }
 
 impl Display for LexicalError {
@@ -797,6 +847,11 @@ impl Display for LexicalError {
             LexicalError::UnexpectedEOFWithSuggestion(expected) => {
                 f.write_str("Unexpected end of input, expected ")?;
                 f.write_char(*expected)
+            }
+            LexicalError::InvalidNumericLiteral(s) => {
+                f.write_str("Invalid numeric literal `")?;
+                f.write_str(s)?;
+                f.write_str("`")
             }
         }
     }
