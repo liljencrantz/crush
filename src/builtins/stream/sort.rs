@@ -41,22 +41,25 @@ fn check_no_nan(rows: &[Row], indices: &[usize]) -> CrushResult<()> {
 /// (unnamed) sort keys names a column that doesn't exist in the input, in which case this
 /// returns an argument error pointing at that specific key -- the same check `sort`
 /// itself does at runtime via `ColumnVec::find`, just performed before anything runs.
-/// Falls back to `Unknown` if the input's type isn't known yet, and to the input type
-/// unchecked if the input isn't table-shaped (nothing to check sort keys against).
+/// There being no input at all, or a known input that isn't stream-shaped, is also
+/// predictable ahead of time -- `sort` can never work on it -- so both are a command
+/// error rather than being deferred to runtime. Only a genuinely unknown input type
+/// (`Unknown`) falls back to `Passthrough`, since nothing can be ruled out yet.
 fn sort_dynamic_output(
     input: PipeInputType,
     arguments: &[ValidationArgument],
 ) -> CrushResult<OutputType> {
     let t = match input {
         PipeInputType::Known(t) => t,
-        PipeInputType::Unknown | PipeInputType::None => return Ok(OutputType::Unknown),
+        PipeInputType::Unknown => return Ok(OutputType::Passthrough),
+        PipeInputType::None => return command_error("Expected a stream as input."),
     };
 
     let columns: &[crate::lang::data::table::ColumnType] = match &t {
         ValueType::TableInputStream(columns)
         | ValueType::TableOutputStream(columns)
         | ValueType::Table(columns) => columns,
-        _ => return Ok(OutputType::Known(t)),
+        _ => return command_error("Expected a stream as input."),
     };
 
     for arg in arguments {
@@ -251,20 +254,23 @@ mod tests {
     }
 
     #[test]
-    fn unknown_input_type_is_unknown() {
+    fn unknown_input_type_is_passthrough() {
         let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("file")))];
         match sort_dynamic_output(PipeInputType::Unknown, &args).unwrap() {
-            OutputType::Unknown => {}
-            other => panic!("expected Unknown, got {:?}", other),
+            OutputType::Passthrough => {}
+            other => panic!("expected Passthrough, got {:?}", other),
         }
     }
 
     #[test]
-    fn non_table_input_passes_through_unchecked() {
+    fn non_stream_known_input_is_an_error() {
         let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("file")))];
-        match sort_dynamic_output(PipeInputType::Known(ValueType::Integer), &args).unwrap() {
-            OutputType::Known(ValueType::Integer) => {}
-            other => panic!("expected Known(Integer), got {:?}", other),
-        }
+        assert!(sort_dynamic_output(PipeInputType::Known(ValueType::Integer), &args).is_err());
+    }
+
+    #[test]
+    fn no_input_at_all_is_an_error() {
+        let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("file")))];
+        assert!(sort_dynamic_output(PipeInputType::None, &args).is_err());
     }
 }
