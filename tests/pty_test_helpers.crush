@@ -114,7 +114,7 @@
     }
     assert $matched $("expected no thread left running under job {} within the retry budget":format $job_id)
 } {|$t $n $control_char|
-    # Sends a raw control byte (e.g. `$t:control:z`/`$t:control:c`) to the nested
+    # Sends a raw control byte (e.g. `pty:control:z`/`pty:control:c`) to the nested
     # session $t, resending it only if it genuinely doesn't land within a generous
     # per-attempt window, until the job it interrupted (paused or terminated) has
     # actually stopped occupying the foreground -- evidenced by the *next counted

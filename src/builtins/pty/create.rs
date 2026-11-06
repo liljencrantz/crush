@@ -1,4 +1,3 @@
-use crate::builtins::pty::control::control_value;
 use crate::builtins::pty::methods::methods;
 use crate::builtins::pty::session::PtySession;
 use crate::lang::data::r#struct::Struct;
@@ -13,11 +12,13 @@ use signature::signature;
     can_block = true,
     short = "Spawn a command attached to a fresh virtual terminal, for driving and inspecting a real interactive session from a script.",
     long = "Returns a struct with one method per operation (`write`, `wait_for`, `contents`,",
-    long = "`close`, plus `pid`/`alive`) and a `control` struct of named control-character",
-    long = "constants. Always call `close` once done, to release the underlying process.",
+    long = "`close`, plus `pid`/`alive`). Always call `close` once done, to release the",
+    long = "underlying process. For control characters (e.g. Ctrl-Z), use the module-level",
+    long = "`pty:control` constants (see `pty:control`), not a field on this struct.",
     example = "$t := $(pty:create crush)",
     example = "$t:write \"echo hello\\n\"",
     example = "$t:wait_for \"hello\"",
+    example = "$t:write $pty:control:z",
     example = "$t:close",
 )]
 pub struct Create {
@@ -46,7 +47,6 @@ fn create(mut context: CommandContext) -> CrushResult<()> {
     ] {
         fields.push((name, method_struct(id, name)?));
     }
-    fields.push(("control", control_value().clone()));
 
     context.output.send(Value::Struct(Struct::new(fields, None)))
 }

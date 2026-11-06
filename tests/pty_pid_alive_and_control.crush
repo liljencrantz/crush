@@ -4,7 +4,7 @@
 $t := $(pty:create cat)
 assert ($t:alive())
 assert (($t:pid()) > 0)
-$t:write $t:control:d
+$t:write $pty:control:d
 $tries := 0
 while {($tries < 50 and $t:alive())} {
     sleep 100ms

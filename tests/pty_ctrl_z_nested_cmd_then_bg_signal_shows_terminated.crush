@@ -51,7 +51,7 @@ $n := $(pty_enable_counted_prompt $t)
 $t:write "{ { cmd sleep 7432 } }\n"
 $t:wait_for "sleep"
 $pid := $(pty_child_pid $t ^(.*sleep))
-$t:write $t:control:z
+$t:write $pty:control:z
 $t:wait_for "# "
 sleep 500ms
 

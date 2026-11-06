@@ -25,7 +25,7 @@ $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
 $t:write "cmd sleep 100\n"
-$n = $(pty_send_control $t $n $t:control:z)
+$n = $(pty_send_control $t $n $pty:control:z)
 pty_assert_job_status $t 0 "Paused"
 
 $n = $(pty_run $t $n "bg 0")

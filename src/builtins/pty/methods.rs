@@ -34,10 +34,10 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     output = Known(ValueType::Empty),
     short = "Write input to this virtual terminal, as if typed at the keyboard.",
     long = "No newline or key translation is added -- include `\\n` explicitly to submit a",
-    long = "command line, and use `$t:control:<name>` (see `pty:control`) for control",
-    long = "characters such as Ctrl-Z.",
+    long = "command line, and use `$pty:control:<name>` for control characters such as",
+    long = "Ctrl-Z.",
     example = "$t:write \"echo hello\\n\"",
-    example = "$t:write $t:control:z",
+    example = "$t:write $pty:control:z",
 )]
 struct Write {
     #[unnamed()]
