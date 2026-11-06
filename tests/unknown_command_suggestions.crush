@@ -1,0 +1,23 @@
+# Regression test: an unknown command name's error now suggests similarly-spelled
+# commands, drawn from both every builtin/user-defined function visible by a bare word
+# (command_invocation.rs's `suggest_similar_commands`, scoped to the current scope via
+# `Scope::dump`) and every runnable `$PATH` entry. Only the internal half is checked
+# here -- which external binaries happen to be close by edit distance is entirely
+# machine-dependent, so asserting on them would make this test flaky by construction.
+$msg := ""
+try {
+    jobz
+} catch {|$e|
+    $msg = $e:message
+}
+assert ($(like $msg $(glob:new "*jobs*"))) $("expected an unknown-command error for `jobz` to suggest `jobs`, got: {}":format $msg)
+
+# A name with no close match of any kind must still produce a plain, sensible error --
+# not crash, and not claim a suggestion that isn't actually close.
+$msg2 := ""
+try {
+    zzzzzzzzzzzzzzzzzzzzzzzzqqqqqqqqqqqqqqqqqqqqqq
+} catch {|$e|
+    $msg2 = $e:message
+}
+assert ($(like $msg2 $(glob:new "Unknown command name*"))) $("expected a plain unknown-command error, got: {}":format $msg2)

@@ -16,8 +16,10 @@ use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::contexts::{EvalContext, JobContext};
 use crate::lang::value::{ValueDefinition, ValueType};
 use crate::lang::{argument::ArgumentDefinition, argument::ArgumentEvaluator, value::Value};
+use crate::util::directory_lister::{DirectoryLister, directory_lister};
 use crate::util::env;
 use crate::util::repr::Repr;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -354,11 +356,115 @@ fn try_external_command(
     context: JobContext,
 ) -> CrushResult<Option<ThreadHandle>> {
     match resolve_external_command(&cmd.str())? {
-        None => error(format!("Unknown command name `{}`", cmd.str()).as_str()),
+        None => {
+            let name = cmd.str();
+            let suggestions = suggest_similar_commands(&name, &context);
+            let message = if suggestions.is_empty() {
+                format!("Unknown command name `{}`", name)
+            } else {
+                format!(
+                    "Unknown command name `{}`. Did you mean {}?",
+                    name,
+                    suggestions
+                        .iter()
+                        .map(|s| format!("`{}`", s))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            };
+            error(message.as_str())
+        }
         Some(path) => {
             external_command(path, cmd, arguments, context)
         }
     }
+}
+
+/// The plain Levenshtein edit distance between `a` and `b` -- the number of single-
+/// character inserts/deletes/substitutions needed to turn one into the other. Used by
+/// `suggest_similar_commands` to rank candidates for an unknown command's "did you
+/// mean" suggestions; a typo is typically 1-2 edits away from what was meant,
+/// regardless of where in the name it landed, which neither a prefix nor a substring
+/// check would reliably catch (e.g. `fsad` vs `fs`/`sad`/`cd`).
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    let mut curr = vec![0usize; b.len() + 1];
+    for i in 1..=a.len() {
+        curr[0] = i;
+        for j in 1..=b.len() {
+            curr[j] = if a[i - 1] == b[j - 1] {
+                prev[j - 1]
+            } else {
+                1 + prev[j - 1].min(prev[j]).min(curr[j - 1])
+            };
+        }
+        std::mem::swap(&mut prev, &mut curr);
+    }
+    prev[b.len()]
+}
+
+/// Every runnable `$PATH` entry's own name (deduplicated, same "first match on `$PATH`
+/// wins" rule a real lookup would use) -- the external half of `suggest_similar_
+/// commands`'s candidate list. Uses the real `directory_lister()`, not an injectable
+/// one: unlike completion's own `complete_path_entries`, this only ever runs on the
+/// already-failed, real-process error path, with nothing to fake in a test.
+fn external_command_names() -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut names = Vec::new();
+    let Ok(path_env) = env::get("PATH") else {
+        return names;
+    };
+    let lister = directory_lister();
+    for dir in path_env.split(':') {
+        if dir.is_empty() {
+            continue;
+        }
+        let Ok(entries) = lister.list(dir) else {
+            continue;
+        };
+        for entry in entries {
+            let Some(name) = entry.name.to_str() else {
+                continue;
+            };
+            if !is_runnable_as_command(&entry.full_path) || !seen.insert(name.to_string()) {
+                continue;
+            }
+            names.push(name.to_string());
+        }
+    }
+    names
+}
+
+/// Up to 3 command names -- drawn from both everything currently callable by a bare
+/// word (every builtin and user-defined function visible from `context.scope`, the
+/// same set `help`/tab-completion already see) and every runnable `$PATH` entry (the
+/// same set a real external-command lookup checks) -- close enough to `typed` to be
+/// worth suggesting as "did you mean" for an otherwise-unknown command. The distance
+/// cutoff scales with `typed`'s own length: a one-letter name tolerates no typos at
+/// all (anything else is a coincidence, not a typo), while a long name can plausibly
+/// have 2-3 characters wrong and still clearly be "that one, misspelled".
+fn suggest_similar_commands(typed: &str, context: &JobContext) -> Vec<String> {
+    let mut candidates: Vec<String> = Vec::new();
+    if let Ok(dump) = context.scope.dump() {
+        for (name, value_type) in dump.iter() {
+            if matches!(value_type, ValueType::Command) {
+                candidates.push(name.clone());
+            }
+        }
+    }
+    candidates.extend(external_command_names());
+
+    let max_distance = ((typed.chars().count() / 3) + 1).min(3);
+    let mut scored: Vec<(usize, String)> = candidates
+        .into_iter()
+        .map(|c| (edit_distance(typed, &c), c))
+        .filter(|(distance, name)| *distance > 0 && *distance <= max_distance && name != typed)
+        .collect();
+    scored.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    scored.dedup_by(|a, b| a.1 == b.1);
+    scored.into_iter().take(3).map(|(_, name)| name).collect()
 }
 
 fn external_command(
