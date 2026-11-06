@@ -1,16 +1,19 @@
+use crate::lang::argument::{ArgumentValue, SwitchStyle, ValidationArgument};
 use crate::lang::ast::expand_user;
 use crate::lang::ast::lexer::{LanguageMode, Lexer, TokenizerMode};
+use crate::lang::ast::source::{Source, SourceType};
 use crate::lang::ast::token::Token;
-use crate::lang::command::{Command, Parameter};
+use crate::lang::command::{Command, OutputType, Parameter, PipeInputType};
 use crate::lang::command_invocation::{is_runnable_as_command, resolve_external_command};
 use crate::lang::errors::{CrushError, CrushResult};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
-use crate::util::escape::unescape_file;
+use crate::util::escape::{unescape, unescape_file};
 use crate::util::html_escape;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 enum CommandContext {
     Unknown,
@@ -30,6 +33,117 @@ pub fn highlight_colors(scope: &Scope) -> HashMap<String, String> {
             .collect()
     } else {
         HashMap::new()
+    }
+}
+
+/// Classifies a single argument-value token into what a command's `dynamic_output`
+/// function sees for it (see `ArgumentValue`): a literal gives the real `Value`
+/// directly, a `$variable` reference gives whatever it currently holds in scope (or
+/// `Unknown` if unbound), and anything this highlighter doesn't resolve to a concrete
+/// value (a nested `$(...)`/`{...}`, a glob, a regex, ...) falls back to `Unknown` --
+/// never a guess, since an `Unknown` argument is always a safe, non-blocking input for a
+/// `dynamic_output` function to receive.
+fn classify_argument_value(tok: Token, scope: &Option<Scope>) -> ArgumentValue {
+    match tok {
+        Token::String(s, _) => ArgumentValue::Value(Value::from(s)),
+        Token::QuotedString(s, _) => match unescape(s) {
+            Ok(v) => ArgumentValue::Value(Value::from(v)),
+            Err(_) => ArgumentValue::Unknown,
+        },
+        Token::Integer(s, _) => match s.replace('_', "").parse::<i128>() {
+            Ok(i) => ArgumentValue::Value(Value::Integer(i)),
+            Err(_) => ArgumentValue::Unknown,
+        },
+        Token::Float(s, _) => match s.replace('_', "").parse::<f64>() {
+            Ok(f) => ArgumentValue::Value(Value::Float(f)),
+            Err(_) => ArgumentValue::Unknown,
+        },
+        Token::Identifier(name, _) => match scope {
+            Some(s) => match s.get(&name[1..]) {
+                Ok(Some(v)) => ArgumentValue::Value(v),
+                _ => ArgumentValue::Unknown,
+            },
+            None => ArgumentValue::Unknown,
+        },
+        _ => ArgumentValue::Unknown,
+    }
+}
+
+/// Whether `tok` is a token that can stand as one unnamed argument value on its own --
+/// structural tokens (operators, brackets, keywords, `=` itself, ...) never are, so they
+/// never contribute a spurious `Unknown`-valued argument to a command's argument list.
+fn is_argument_value_token(tok: Token) -> bool {
+    matches!(
+        tok,
+        Token::String(_, _)
+            | Token::QuotedString(_, _)
+            | Token::Integer(_, _)
+            | Token::Float(_, _)
+            | Token::Duration(_, _)
+            | Token::Glob(_, _)
+            | Token::Regex(_, _)
+            | Token::File(_, _)
+            | Token::QuotedFile(_, _)
+            | Token::Identifier(_, _)
+    )
+}
+
+/// Resolves a command's declared output (whether it's the static `output = ...` or
+/// whatever a `dynamic_output` function just returned) against the type that was piped
+/// into it, mirroring `OutputType::calculate` -- which isn't reachable from here since
+/// it's private to `crate::lang::command`.
+fn resolve_output(output: &OutputType, input: &PipeInputType) -> PipeInputType {
+    match output {
+        OutputType::Unknown => PipeInputType::Unknown,
+        OutputType::Known(t) => PipeInputType::Known(t.clone()),
+        OutputType::Passthrough => match input {
+            PipeInputType::Known(t) => PipeInputType::Known(t.clone()),
+            _ => PipeInputType::Unknown,
+        },
+    }
+}
+
+/// Evaluates the command that was just scanned (if any) against the arguments collected
+/// for it so far, to find out what flows into the *next* pipeline stage -- using its
+/// `dynamic_output` function when it declared one, falling back to its static output
+/// type (via `output_type`) otherwise. Returns `Some("error")` only when a
+/// `dynamic_output` function actively rejects what's been typed so far; a command with
+/// no `dynamic_output`, or one whose arguments aren't fully resolvable yet, is never
+/// recolored just for that.
+fn finalize_command(
+    command: &Option<Command>,
+    args: &[ValidationArgument],
+    pipe_input: &PipeInputType,
+    literal_job_output: &Option<ValueType>,
+) -> (PipeInputType, Option<&'static str>) {
+    let Some(cmd) = command else {
+        // Not every job starts with a command invocation -- `3 | sort` pipes a bare
+        // literal value into `sort` -- so a literal job head's own type still needs to
+        // flow forward even though there's no `Command` to call `dynamic_output` on.
+        return (
+            match literal_job_output {
+                Some(t) => PipeInputType::Known(t.clone()),
+                None => PipeInputType::Unknown,
+            },
+            None,
+        );
+    };
+    match cmd.dynamic_output() {
+        Some(f) => match f(pipe_input.clone(), args) {
+            Ok(output) => (resolve_output(&output, pipe_input), None),
+            Err(_) => (PipeInputType::Unknown, Some("error")),
+        },
+        None => {
+            let as_output = match pipe_input {
+                PipeInputType::None | PipeInputType::Unknown => OutputType::Unknown,
+                PipeInputType::Known(t) => OutputType::Known(t.clone()),
+            };
+            let next = match cmd.output_type(&as_output) {
+                Some(t) => PipeInputType::Known(t.clone()),
+                None => PipeInputType::Unknown,
+            };
+            (next, None)
+        }
     }
 }
 
@@ -66,7 +180,23 @@ fn classify_tokens<'a>(
         Some(s) => CommandContext::Known(Value::Scope(s.clone())),
     };
 
-    let mut result = Vec::with_capacity(tokens.len());
+    // What's flowing into the command currently being scanned, the arguments collected
+    // for it so far, and the `result` index of its own token (so a `dynamic_output`
+    // rejection can recolor it after the fact, once its whole argument list is known).
+    // Reset at every job boundary (`finalize_command`'s call sites below); like
+    // `command_context` above, a nested `{...}`/`$(...)` used as an argument value is
+    // (im)precisely treated as its own fresh job rather than tracked with real nesting
+    // depth -- the same simplification this whole state machine already makes.
+    let mut pipe_input = PipeInputType::None;
+    let mut current_args: Vec<ValidationArgument> = Vec::new();
+    let mut current_command_result_idx: Option<usize> = None;
+    // A job doesn't have to start with a command invocation -- `3 | sort` pipes the
+    // bare literal `3` into `sort` -- so this tracks a literal job head's own type,
+    // separately from `current_command`, for `finalize_command` to fall back on.
+    let mut literal_job_output: Option<ValueType> = None;
+    let argument_source = Source::new(SourceType::Input, Arc::from(code));
+
+    let mut result: Vec<(Token<'a>, Option<&'static str>)> = Vec::with_capacity(tokens.len());
 
     for idx in 0..tokens.len() {
         let tok = tokens[idx];
@@ -94,6 +224,26 @@ fn classify_tokens<'a>(
                 Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_) | Token::SubStart(_),
                 _,
             ) => {
+                let (next_input, error_category) = finalize_command(
+                    &current_command,
+                    &current_args,
+                    &pipe_input,
+                    &literal_job_output,
+                );
+                if let (Some(cat), Some(i)) = (error_category, current_command_result_idx) {
+                    result[i].1 = Some(cat);
+                }
+                // A pipe carries the previous command's resolved output into this new
+                // one; every other boundary (a fresh statement, block, or substitution)
+                // starts a job with nothing piped in at all.
+                pipe_input = match tok {
+                    Token::Pipe(_) => next_input,
+                    _ => PipeInputType::None,
+                };
+                current_args = Vec::new();
+                current_command_result_idx = None;
+                current_command = None;
+                literal_job_output = None;
                 command_context = match scope {
                     None => CommandContext::Unknown,
                     Some(s) => CommandContext::Known(Value::Scope(s.clone())),
@@ -158,12 +308,93 @@ fn classify_tokens<'a>(
                         None
                     }
                 });
+                current_command_result_idx = Some(idx);
             }
             (false, Token::String(name, _), Some(Token::Equals(_))) => {
                 latest_named_argument_info = Some((idx, name.to_string()));
             }
             _ => {}
         };
+
+        // A job's head doesn't have to be a command invocation -- `3 | sort` pipes the
+        // bare literal `3` into `sort`. `new_command`'s own computation above is tuned
+        // specifically for recognizing a *command name* candidate (String/Identifier/
+        // File/QuotedFile) and doesn't fire for these token kinds at all, so job-start is
+        // detected directly from `prev` here instead: exactly one token ever follows a
+        // boundary token (or starts the whole script).
+        if prev.is_none()
+            || matches!(
+                prev,
+                Some(
+                    Token::BlockStart(_)
+                        | Token::Separator(_, _)
+                        | Token::Pipe(_)
+                        | Token::SubStart(_)
+                )
+            )
+        {
+            literal_job_output = match tok {
+                Token::Integer(s, _) => s
+                    .replace('_', "")
+                    .parse::<i128>()
+                    .ok()
+                    .map(|_| ValueType::Integer),
+                Token::Float(s, _) => s
+                    .replace('_', "")
+                    .parse::<f64>()
+                    .ok()
+                    .map(|_| ValueType::Float),
+                Token::Duration(_, _) => Some(ValueType::Duration),
+                Token::QuotedString(_, _) => Some(ValueType::String),
+                Token::Glob(_, _) => Some(ValueType::Glob),
+                Token::Regex(_, _) => Some(ValueType::Regex),
+                _ => None,
+            };
+        }
+
+        // Collect this token into the current command's argument list, for whatever
+        // `dynamic_output` function it's eventually evaluated against -- skipped
+        // entirely while `tok` is itself the command's own name.
+        if !new_command {
+            let is_named_value_slot = latest_named_argument_info
+                .as_ref()
+                .is_some_and(|(name_idx, _)| idx == name_idx + 2);
+            let is_named_name_slot =
+                matches!(tok, Token::String(_, _)) && matches!(ntok, Some(Token::Equals(_)));
+
+            if is_named_value_slot {
+                if let Some((_, name)) = &latest_named_argument_info {
+                    current_args.push(ValidationArgument {
+                        argument_type: Some(name.clone()),
+                        switch_style: SwitchStyle::None,
+                        value: classify_argument_value(tok, scope),
+                        source: argument_source.clone(),
+                    });
+                }
+            } else if let Token::Flag(name, _) = tok {
+                // A flag can be `--long` or `-x` (see the lexer's `-`-prefixed arm), and
+                // while the user is still mid-keystroke in an interactive session it can
+                // even be a lone `-` with nothing after it -- strip however many leading
+                // dashes are actually there instead of assuming exactly two.
+                let flag_name = name
+                    .strip_prefix("--")
+                    .or_else(|| name.strip_prefix('-'))
+                    .unwrap_or(name);
+                current_args.push(ValidationArgument {
+                    argument_type: Some(flag_name.to_string()),
+                    switch_style: SwitchStyle::None,
+                    value: ArgumentValue::Value(Value::Bool(true)),
+                    source: argument_source.clone(),
+                });
+            } else if !is_named_name_slot && is_argument_value_token(tok) {
+                current_args.push(ValidationArgument {
+                    argument_type: None,
+                    switch_style: SwitchStyle::None,
+                    value: classify_argument_value(tok, scope),
+                    source: argument_source.clone(),
+                });
+            }
+        }
 
         let expected_argument_type = if let Some((name_idx, name)) = &latest_named_argument_info
             && idx == name_idx + 2
@@ -189,6 +420,15 @@ fn classify_tokens<'a>(
 
         prev = Some(tok);
     }
+
+    // The very last command in `code` has no trailing boundary token to trigger its
+    // own `finalize_command` call, so it needs one explicitly here.
+    let (_, error_category) =
+        finalize_command(&current_command, &current_args, &pipe_input, &literal_job_output);
+    if let (Some(cat), Some(i)) = (error_category, current_command_result_idx) {
+        result[i].1 = Some(cat);
+    }
+
     Ok(result)
 }
 
@@ -774,5 +1014,152 @@ mod tests {
         let classified = classify_tokens("my_cmd ./this_file_does_not_exist_anywhere", &Some(root)).unwrap();
         assert_eq!(classified[0].1, Some("command"));
         assert_eq!(classified[1].1, Some("file_literal"));
+    }
+
+    // --- dynamic_output integration ---
+
+    fn sort_like(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    /// Mirrors `stream:sort`'s own `dynamic_output` closely enough for a test: rejects a
+    /// non-stream (here, specifically `Integer`) input outright, and otherwise passes the
+    /// input type through unchanged.
+    fn sort_like_dynamic_output(
+        input: PipeInputType,
+        _arguments: &[ValidationArgument],
+    ) -> CrushResult<OutputType> {
+        match input {
+            PipeInputType::Known(ValueType::Integer) => {
+                crate::lang::errors::command_error("Expected a stream as input.")
+            }
+            _ => Ok(OutputType::Passthrough),
+        }
+    }
+
+    #[signature(sort_like, dynamic_output = sort_like_dynamic_output)]
+    struct SortLikeSignature {
+        #[unnamed()]
+        field: Vec<String>,
+    }
+
+    fn takes_args(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    /// Mirrors `csv:from`'s own `dynamic_output` closely enough for a test: rejects a
+    /// literal unnamed argument whose value is `"bad"`.
+    fn takes_args_dynamic_output(
+        _input: PipeInputType,
+        arguments: &[ValidationArgument],
+    ) -> CrushResult<OutputType> {
+        for arg in arguments {
+            if arg.argument_type.is_none() {
+                if let ArgumentValue::Value(Value::String(s)) = &arg.value {
+                    if s.as_ref() == "bad" {
+                        return arg.error("bad argument value");
+                    }
+                }
+            }
+        }
+        Ok(OutputType::Unknown)
+    }
+
+    #[signature(takes_args, dynamic_output = takes_args_dynamic_output)]
+    struct TakesArgsSignature {
+        #[unnamed()]
+        field: Vec<String>,
+    }
+
+    fn scope_with_dynamic_output_commands() -> Scope {
+        let root = Scope::create_root();
+        root.declare("sort_like", Value::Command(SortLikeSignature::create_command()))
+            .unwrap();
+        root.declare("takes_args", Value::Command(TakesArgsSignature::create_command()))
+            .unwrap();
+        root
+    }
+
+    /// The motivating example: a bare literal integer piped into a command whose
+    /// `dynamic_output` rejects a non-stream input should highlight that command as an
+    /// error -- even though the literal itself was never a `Command` at all.
+    #[test]
+    fn literal_pipe_input_rejected_by_dynamic_output_is_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("3|sort_like", &scope).unwrap();
+        let sort_like_idx = classified
+            .iter()
+            .position(|(tok, _)| matches!(tok, Token::String(s, _) if *s == "sort_like"))
+            .unwrap();
+        assert_eq!(classified[sort_like_idx].1, Some("error"));
+    }
+
+    /// The same command with no pipe input at all (nothing's been ruled out yet) must
+    /// not be flagged -- only an actually-known, actually-bad input type is an error.
+    #[test]
+    fn dynamic_output_with_no_pipe_input_is_not_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("sort_like", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("command"));
+    }
+
+    /// An error from one stage's `dynamic_output` must not cascade into a false-positive
+    /// error on the *next* stage -- the failed stage's output is treated as genuinely
+    /// unknown, not propagated as if it had actually produced the rejected type.
+    #[test]
+    fn error_in_one_stage_does_not_cascade_to_the_next() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("3|sort_like|sort_like", &scope).unwrap();
+        let sort_like_positions: Vec<usize> = classified
+            .iter()
+            .enumerate()
+            .filter(|(_, (tok, _))| matches!(tok, Token::String(s, _) if *s == "sort_like"))
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(sort_like_positions.len(), 2);
+        assert_eq!(classified[sort_like_positions[0]].1, Some("error"));
+        assert_ne!(classified[sort_like_positions[1]].1, Some("error"));
+    }
+
+    /// A `dynamic_output` function also sees the command's own literal arguments, not
+    /// just the pipe's input type -- an argument value it rejects is an error too.
+    #[test]
+    fn literal_argument_rejected_by_dynamic_output_is_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("takes_args bad", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("error"));
+    }
+
+    /// The same command with an argument it accepts must highlight normally.
+    #[test]
+    fn literal_argument_accepted_by_dynamic_output_is_not_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("takes_args good", &scope).unwrap();
+        assert_eq!(classified[0].1, Some("command"));
+    }
+
+    /// Regression test: a single-dash short flag (`sh -c ...`) used to panic
+    /// (`name[2..]` assumed every `Token::Flag` had a two-character `--` prefix, but a
+    /// short flag has only one dash) -- found via a pty test that types a command
+    /// character by character, where highlighting runs on partial input constantly.
+    #[test]
+    fn single_dash_flag_does_not_panic() {
+        let root = Scope::create_root();
+        root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
+            .unwrap();
+        let classified = classify_tokens("my_cmd -c", &Some(root)).unwrap();
+        assert_eq!(classified.len(), 2);
+    }
+
+    /// Regression test, same bug: a lone, still-being-typed `-` (nothing after it yet)
+    /// is itself a valid `Token::Flag` of length 1, which is exactly what triggered the
+    /// out-of-bounds slice this guards against.
+    #[test]
+    fn lone_dash_flag_does_not_panic() {
+        let root = Scope::create_root();
+        root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
+            .unwrap();
+        let classified = classify_tokens("my_cmd -", &Some(root)).unwrap();
+        assert_eq!(classified.len(), 2);
     }
 }
