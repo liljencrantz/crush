@@ -23,6 +23,7 @@ impl JobHandle {
                 next_command_id: CommandId::first(),
                 status: JobStatus::Running,
                 termination_requested: false,
+                commands: HashMap::new(),
             })),
         }
     }
@@ -134,6 +135,31 @@ impl JobHandle {
     pub fn definition(&self) -> String {
         let live_job = self.live_job.lock().unwrap();
         live_job.definition.clone()
+    }
+
+    /// This job's current status (Running/Paused/Terminated) -- see `commands`'s own
+    /// use of this: a command has no independent pause/terminate state of its own, so
+    /// it just reports whatever its owning job's status currently is.
+    pub fn status(&self) -> JobStatus {
+        let live_job = self.live_job.lock().unwrap();
+        live_job.status
+    }
+
+    /// Records `command_id`'s static identity (its own invocation source text and
+    /// kind) for the `commands` builtin -- see `JobControlData::commands`'s own doc
+    /// comment for why this never needs to be removed again.
+    pub fn set_command_info(&self, command_id: CommandId, definition: String, kind: &'static str) {
+        let mut live_job = self.live_job.lock().unwrap();
+        live_job
+            .commands
+            .insert(command_id, CommandInfo { definition, kind });
+    }
+
+    /// `command_id`'s recorded identity, if `set_command_info` has ever been called
+    /// for it on this job.
+    pub fn command_info(&self, command_id: CommandId) -> Option<CommandInfo> {
+        let live_job = self.live_job.lock().unwrap();
+        live_job.commands.get(&command_id).cloned()
     }
 
     /// True if `terminate` has *actually been explicitly requested* on this job --
@@ -277,6 +303,25 @@ pub struct JobControlData {
     termination_requested: bool,
     senders: HashMap<CommandId, Vec<JobController>>,
     next_command_id: CommandId,
+    /// Per-command metadata for the `commands` builtin -- set once, at dispatch time
+    /// (see `command_invocation.rs`'s `eval_command`), for every command actually
+    /// evaluated under this job. Never explicitly removed (mirroring `senders`, which
+    /// has the same lifetime): a finished command's entry just goes unused once
+    /// `commands` stops seeing its `CommandId` in `ThreadStore::current_threads()` --
+    /// that, not this map, is the authority on whether a command is still running. See
+    /// `JobHandle::set_command_info`/`command_info`.
+    commands: HashMap<CommandId, CommandInfo>,
+}
+
+/// A command's static identity, for the `commands` builtin -- see `JobControlData::commands`.
+#[derive(Clone)]
+pub struct CommandInfo {
+    /// The command's own invocation, as source text (`CommandInvocation`'s `Display`) --
+    /// distinct from the owning job's `definition`, which is the whole job's text (every
+    /// pipeline stage, `" | "`-joined) rather than just this one command's.
+    pub definition: String,
+    /// "builtin", "external", or "closure" -- see `CrushCommand::kind`.
+    pub kind: &'static str,
 }
 
 pub struct JobData {

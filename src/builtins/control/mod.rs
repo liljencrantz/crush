@@ -496,6 +496,65 @@ fn jobs(context: CommandContext) -> CrushResult<()> {
     Ok(())
 }
 
+static COMMAND_OUTPUT_TYPE: [ColumnType; 5] = [
+    ColumnType::new("job_id", ValueType::Integer, "the id of the job this command is running as part of."),
+    ColumnType::new("command_id", ValueType::Integer, "the id of this specific command invocation."),
+    ColumnType::new(
+        "definition",
+        ValueType::String,
+        "this command's own invocation, as source text -- distinct from its job's `definition`, which is the whole job's text.",
+    ),
+    ColumnType::new(
+        "type",
+        ValueType::String,
+        "whether this command is a builtin, an external process, or a closure.",
+    ),
+    ColumnType::new(
+        "status",
+        ValueType::String,
+        "whether this command's job is running, paused, or terminated -- a command has no independent status of its own.",
+    ),
+];
+
+#[signature(
+    control.commands,
+    can_block = false,
+    short = "List currently executing commands",
+    output = Known(ValueType::table_input_stream(&COMMAND_OUTPUT_TYPE)),
+    long = "All commands currently executing, one row per command rather than per job --",
+    long = "see `jobs` for the job-level view a pipeline's several commands share.",
+)]
+struct Commands {}
+
+fn commands(context: CommandContext) -> CrushResult<()> {
+    let output = context.initialize_output(&COMMAND_OUTPUT_TYPE)?;
+    // `ThreadStore::current_threads` is the authority on "is this command still
+    // actually running" (its entries are removed as each thread finishes/is joined --
+    // see threads.rs); `JobHandle::command_info` is only ever consulted to look up
+    // the *identity* (definition/kind) of a command this already proves is live, not
+    // to decide whether it's still running. A thread with no recorded info (e.g. an
+    // internal worker a builtin spawned for its own bookkeeping -- `cmd`'s own
+    // `cmd:wait`, say -- rather than a command dispatched through
+    // `command_invocation.rs`'s `eval_command`) is simply not a "command" this table
+    // reports, the same way an internal thread was never a "job" `jobs` reports either.
+    for t in context.global_state.threads().current_threads()? {
+        let Ok(job_handle) = context.global_state.job_handle(t.job_id) else {
+            continue;
+        };
+        let Some(info) = job_handle.command_info(t.command_id) else {
+            continue;
+        };
+        output.send(Row::new(vec![
+            Value::from(t.job_id),
+            Value::from(t.command_id),
+            Value::from(info.definition),
+            Value::from(info.kind),
+            Value::from(job_handle.status().to_string()),
+        ]))?;
+    }
+    Ok(())
+}
+
 #[signature(
     control.terminate,
     output = Known(ValueType::Empty),
@@ -800,6 +859,7 @@ effectively the language's own keywords."
             Bg::declare(env)?;
             Fg::declare(env)?;
             Jobs::declare(env)?;
+            Commands::declare(env)?;
             Terminate::declare(env)?;
             Pause::declare(env)?;
             Resume::declare(env)?;

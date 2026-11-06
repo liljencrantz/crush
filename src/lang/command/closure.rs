@@ -411,6 +411,10 @@ impl CrushCommand for Closure {
     fn jobs(&self) -> Option<&[Job]> {
         Some(&self.jobs)
     }
+
+    fn kind(&self) -> &'static str {
+        "closure"
+    }
 }
 
 fn compile_signature(

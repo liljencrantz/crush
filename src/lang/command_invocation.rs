@@ -109,8 +109,16 @@ impl CommandInvocation {
     }
 
     pub fn eval(&self, context: JobContext) -> CrushResult<Option<ThreadHandle>> {
+        // Captured once, here, while `self` (the whole invocation -- command position
+        // plus every argument, exactly as written) is still available: by the time
+        // dispatch reaches `eval_command` below, only the already-*resolved* `Command`
+        // value is left, which can't reconstruct the original invocation text on its
+        // own (its own `Display` is just its bare name). Threaded down as plain data
+        // instead, for `JobHandle::set_command_info` (see `commands`, the builtin this
+        // exists for) to record once the command's own `CommandId` is minted.
+        let definition = self.to_string();
         if !self.command.can_block(&mut EvalContext::from(&context)) {
-            eval_command_definition(&self.command, &self.arguments, context, &self.source)
+            eval_command_definition(&self.command, &self.arguments, context, &self.source, definition)
         } else {
             let local_command = self.command.clone();
             let local_arguments = self.arguments.clone();
@@ -124,6 +132,7 @@ impl CommandInvocation {
                     &local_arguments,
                     local_context.clone(),
                     &local_source,
+                    definition,
                 ) {
                     Ok(Some(handle)) => local_context.global_state.threads().join_one(handle.id()),
                     Ok(None) => Ok(()),
@@ -139,16 +148,17 @@ pub fn eval_command_definition(
     arguments: &Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
+    definition: String,
 ) -> CrushResult<Option<ThreadHandle>> {
     match command.eval(&mut EvalContext::from(&context)) {
         Ok((this, value)) => {
             let local_arguments = arguments.clone();
             match value {
                 Value::Command(command) => {
-                    eval_command(command, this, local_arguments, context, source)
+                    eval_command(command, this, local_arguments, context, source, definition)
                 }
-                Value::Type(t) => eval_type(t, local_arguments, context, source),
-                Value::Struct(s) => eval_struct(s, local_arguments, context, source),
+                Value::Type(t) => eval_type(t, local_arguments, context, source, definition),
+                Value::Struct(s) => eval_struct(s, local_arguments, context, source, definition),
                 // Only treat a File value as something to cd into or execute when it was
                 // *written* as a bareword/path in command position (Identifier or a literal
                 // Value token) -- this is what makes `./foo` at the head of a job run `foo`.
@@ -196,6 +206,7 @@ fn eval_type(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
+    definition: String,
 ) -> CrushResult<Option<ThreadHandle>> {
     match value_type.fields().get("__call__") {
         None => {
@@ -215,6 +226,7 @@ fn eval_type(
             local_arguments,
             context,
             source,
+            definition,
         ),
     }
 }
@@ -224,6 +236,7 @@ fn eval_struct(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
+    definition: String,
 ) -> CrushResult<Option<ThreadHandle>> {
     match struct_value.get("__call__") {
         Some(Value::Command(call)) => eval_command(
@@ -232,6 +245,7 @@ fn eval_struct(
             local_arguments,
             context,
             source,
+            definition,
         ),
 
         Some(v) => error(
@@ -267,12 +281,22 @@ fn eval_command(
     local_arguments: Vec<ArgumentDefinition>,
     context: JobContext,
     source: &Source,
+    definition: String,
 ) -> CrushResult<Option<ThreadHandle>> {
     if !command.might_block(&local_arguments, &mut EvalContext::from(&context))
         && !arg_can_block(&local_arguments, &mut EvalContext::from(&context))
     {
         let new_context =
             CommandInvocation::command_context(source, local_arguments, this, context.clone())?;
+        // Recorded even for a command that never gets its own thread: `commands`
+        // joins this against `ThreadStore::current_threads()` (see that builtin's own
+        // doc comment), so a short-lived, non-blocking command simply never shows up
+        // there before it finishes -- same as a job finishing before a `jobs` listing
+        // ever sees it.
+        new_context
+            .command_handle()
+            .job_handle
+            .set_command_info(new_context.command_handle().id, definition, command.kind());
         command.eval(new_context)?;
         Ok(None)
     } else {
@@ -285,6 +309,11 @@ fn eval_command(
             this,
             local_context,
         )?;
+        command_context.command_handle().job_handle.set_command_info(
+            command_context.command_handle().id,
+            definition,
+            command.kind(),
+        );
         Ok(Some(context.global_state.threads().spawn(
             &name,
             &command_context.command_handle().clone(),

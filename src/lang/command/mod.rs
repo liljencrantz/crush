@@ -114,6 +114,16 @@ pub trait CrushCommand: Help + Display {
     fn jobs(&self) -> Option<&[Job]> {
         None
     }
+    /// What kind of command this is, for the `commands` builtin's own `type` column --
+    /// "builtin" by default, overridden by `Closure` (a user-defined `{...}` block) and
+    /// by `SimpleCommand` specifically for `control:cmd` (every external process, however
+    /// it was invoked -- a bareword like `ls` is itself rewritten into a `cmd` call, see
+    /// `command_invocation.rs`'s `try_external_command`/`external_command` -- ends up
+    /// running as this exact same builtin, so checking its identity here is enough to
+    /// catch every external invocation without needing a separate code path).
+    fn kind(&self) -> &'static str {
+        "builtin"
+    }
 }
 
 pub trait TypeMap {
@@ -344,6 +354,14 @@ impl CrushCommand for SimpleCommand {
 
     fn definition(&self) -> Option<String> {
         None
+    }
+
+    fn kind(&self) -> &'static str {
+        if self.full_name.iter().map(|s| s.as_str()).eq(["global", "control", "cmd"]) {
+            "external"
+        } else {
+            "builtin"
+        }
     }
 }
 
@@ -634,6 +652,10 @@ impl CrushCommand for BoundCommand {
 
     fn definition(&self) -> Option<String> {
         self.command.definition()
+    }
+
+    fn kind(&self) -> &'static str {
+        self.command.kind()
     }
 }
 
