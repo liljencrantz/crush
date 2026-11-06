@@ -1,10 +1,13 @@
+use crate::lang::argument::{ArgumentValue, ValidationArgument};
 use crate::lang::command::OutputType::Passthrough;
+use crate::lang::command::{OutputType, PipeInputType};
 use crate::lang::data::table::ColumnVec;
 use crate::lang::data::table::Row;
 use crate::lang::errors::CrushResult;
 use crate::lang::errors::command_error;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::value::ComparisonMode::{CaseInsensitive, Regular};
+use crate::lang::value::ValueType;
 use crate::lang::value::{ComparisonMode, Value};
 use signature::signature;
 use std::cmp::Ordering;
@@ -34,6 +37,50 @@ fn check_no_nan(rows: &[Row], indices: &[usize]) -> CrushResult<()> {
     Ok(())
 }
 
+/// Computes `sort`'s real output type: the same type it was given, unless one of the
+/// (unnamed) sort keys names a column that doesn't exist in the input, in which case this
+/// returns an argument error pointing at that specific key -- the same check `sort`
+/// itself does at runtime via `ColumnVec::find`, just performed before anything runs.
+/// Falls back to `Unknown` if the input's type isn't known yet, and to the input type
+/// unchecked if the input isn't table-shaped (nothing to check sort keys against).
+fn sort_dynamic_output(
+    input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let t = match input {
+        PipeInputType::Known(t) => t,
+        PipeInputType::Unknown | PipeInputType::None => return Ok(OutputType::Unknown),
+    };
+
+    let columns: &[crate::lang::data::table::ColumnType] = match &t {
+        ValueType::TableInputStream(columns)
+        | ValueType::TableOutputStream(columns)
+        | ValueType::Table(columns) => columns,
+        _ => return Ok(OutputType::Known(t)),
+    };
+
+    for arg in arguments {
+        if arg.argument_type.is_some() {
+            continue;
+        }
+        if let ArgumentValue::Value(Value::String(name)) = &arg.value {
+            if columns.find(name).is_err() {
+                return arg.error(format!(
+                    "Unknown column `{}`, available columns are {}",
+                    name,
+                    columns
+                        .iter()
+                        .map(|c| c.name().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ));
+            }
+        }
+    }
+
+    Ok(OutputType::Known(t))
+}
+
 #[signature(
     stream.sort,
     can_block = true,
@@ -43,7 +90,8 @@ fn check_no_nan(rows: &[Row], indices: &[usize]) -> CrushResult<()> {
     other floats.",
     example = "# Show the contents of the current directory, sorted first on type and then on filename",
     example = "files | sort type file",
-    output = Passthrough)]
+    output = Passthrough,
+    dynamic_output = sort_dynamic_output)]
 pub struct Sort {
     #[unnamed()]
     #[description("the columns to sort on. Optional if input only has one column.")]
@@ -122,4 +170,101 @@ fn sort(mut context: CommandContext) -> CrushResult<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::SwitchStyle;
+    use crate::lang::ast::source::{Source, SourceType};
+    use crate::lang::data::table::ColumnType;
+    use std::sync::Arc;
+
+    fn columns() -> Vec<ColumnType> {
+        vec![
+            ColumnType::new_from_string("file".to_string(), ValueType::String, "".to_string()),
+            ColumnType::new_from_string("size".to_string(), ValueType::Integer, "".to_string()),
+        ]
+    }
+
+    fn unnamed_arg(value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: None,
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn named_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    #[test]
+    fn passes_through_known_input_when_sort_key_is_valid() {
+        let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("file")))];
+        match sort_dynamic_output(
+            PipeInputType::Known(ValueType::TableInputStream(columns())),
+            &args,
+        )
+        .unwrap()
+        {
+            OutputType::Known(ValueType::TableInputStream(c)) => {
+                assert_eq!(c.len(), 2);
+                assert_eq!(c[0].name(), "file");
+                assert_eq!(c[1].name(), "size");
+            }
+            other => panic!("expected Known(TableInputStream), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn errors_on_unknown_sort_key() {
+        let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("nonexistent")))];
+        assert!(
+            sort_dynamic_output(
+                PipeInputType::Known(ValueType::TableInputStream(columns())),
+                &args,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn ignores_named_arguments_like_reverse() {
+        let args = vec![
+            unnamed_arg(ArgumentValue::Value(Value::from("file"))),
+            named_arg("reverse", ArgumentValue::Value(Value::Bool(true))),
+        ];
+        assert!(
+            sort_dynamic_output(
+                PipeInputType::Known(ValueType::TableInputStream(columns())),
+                &args,
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn unknown_input_type_is_unknown() {
+        let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("file")))];
+        match sort_dynamic_output(PipeInputType::Unknown, &args).unwrap() {
+            OutputType::Unknown => {}
+            other => panic!("expected Unknown, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn non_table_input_passes_through_unchecked() {
+        let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("file")))];
+        match sort_dynamic_output(PipeInputType::Known(ValueType::Integer), &args).unwrap() {
+            OutputType::Known(ValueType::Integer) => {}
+            other => panic!("expected Known(Integer), got {:?}", other),
+        }
+    }
 }
