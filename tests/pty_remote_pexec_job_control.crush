@@ -5,7 +5,7 @@
 # gets caught. Uses the in-process test sshd fixture (same pattern as
 # tests/ssh_pexec_partial_failure.crush), never a real network host.
 source tests/pty_test_helpers.crush
-$host_file := $(convert $file $(".ssh_known_hosts_pexec_job_control_{}":format $(random:integer 1000000000)))
+$host_file := $(convert $file $("/tmp/.ssh_known_hosts_pexec_job_control_{}":format $(random:integer 1000000000)))
 bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
 
 $t := $(pty_spawn)

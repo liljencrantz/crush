@@ -1,7 +1,7 @@
 # A host missing from known_hosts, with allow_not_found left at its default false, must
 # be a hard error rather than silently trusting an unverified host key.
 
-$host_file := $(convert $file $(".ssh_known_hosts_notfound_{}":format $(random:integer 1000000000)))
+$host_file := $(convert $file $("/tmp/.ssh_known_hosts_notfound_{}":format $(random:integer 1000000000)))
 bin:from "" | bin:to $host_file
 
 $msg := ""
