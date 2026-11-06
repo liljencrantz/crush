@@ -84,6 +84,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ),
                     Unknown,
                     [],
+                    None,
                 )),
             )?;
             seq::Seq::declare(env)?;

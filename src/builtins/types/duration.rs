@@ -30,6 +30,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             None,
             Unknown,
             [],
+            None,
         );
         res.declare(
             full("__sub__"),
@@ -40,6 +41,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             None,
             Known(ValueType::Duration),
             [],
+            None,
         );
         res.declare(
             full("__mul__"),
@@ -50,6 +52,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             None,
             Known(ValueType::Duration),
             [],
+            None,
         );
         res.declare(
             full("__div__"),
@@ -60,6 +63,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             None,
             Known(ValueType::Duration),
             [],
+            None,
         );
         Of::declare_method(&mut res);
         Milliseconds::declare_method(&mut res);

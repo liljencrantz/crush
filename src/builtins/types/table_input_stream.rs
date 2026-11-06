@@ -39,6 +39,7 @@ pub fn close_value() -> &'static Value {
             None::<AnyStr>,
             Known(ValueType::Empty),
             [],
+            None,
         ))
     })
 }
@@ -55,6 +56,7 @@ pub fn write_value() -> &'static Value {
             None::<AnyStr>,
             Known(ValueType::Empty),
             [],
+            None,
         ))
     })
 }

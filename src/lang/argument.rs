@@ -7,6 +7,7 @@ use crate::lang::serialization::model;
 use crate::lang::state::contexts::EvalContext;
 use crate::lang::value::Value;
 use crate::lang::value::ValueDefinition;
+use crate::lang::value::ValueType;
 use crate::util::repr::Repr;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
@@ -137,6 +138,23 @@ impl ArgumentDefinition {
         }
     }
 }
+
+/// How much is known about one argument's value when a command's `dynamic_output`
+/// function (see `DynamicOutputFn` in `crate::lang::command`) runs: a literal or an
+/// already-bound variable gives the real `Value`; something that would require running
+/// another command to find out (e.g. `$(cmd pwd)`) only gives that command's own
+/// statically-known `ValueType`; anything else is `Unknown`.
+#[derive(Clone)]
+pub enum ArgumentValue {
+    Unknown,
+    Type(ValueType),
+    Value(Value),
+}
+
+/// One argument as seen by a command's `dynamic_output` function: the same shape as
+/// `Argument`, but carrying an `ArgumentValue` instead of a real `Value`, since not every
+/// argument's actual value is available without running something.
+pub type ValidationArgument = BaseArgument<Option<String>, ArgumentValue>;
 
 pub type Argument = BaseArgument<Option<String>, Value>;
 
@@ -337,6 +355,73 @@ mod tests {
     struct AllowedValuesCharSignature {
         #[values('a', 'b', 'c')]
         char_val: char,
+    }
+
+    fn dynamic_output_probe(
+        input: crate::lang::command::PipeInputType,
+        arguments: &[ValidationArgument],
+    ) -> CrushResult<crate::lang::command::OutputType> {
+        for arg in arguments {
+            if arg.argument_type.as_deref() == Some("foo") {
+                if let ArgumentValue::Value(Value::String(s)) = &arg.value {
+                    return Ok(crate::lang::command::OutputType::Known(
+                        if s.as_ref() == "table" {
+                            ValueType::Table(vec![])
+                        } else {
+                            ValueType::String
+                        },
+                    ));
+                }
+            }
+        }
+        match input {
+            crate::lang::command::PipeInputType::Known(t) => {
+                Ok(crate::lang::command::OutputType::Known(t))
+            }
+            _ => Ok(crate::lang::command::OutputType::Unknown),
+        }
+    }
+
+    #[signature(x, dynamic_output = dynamic_output_probe)]
+    struct DynamicOutputSignature {
+        #[unnamed()]
+        foo: String,
+    }
+
+    #[test]
+    fn dynamic_output_is_stored_and_callable() {
+        let command = DynamicOutputSignature::create_command();
+        let f = command
+            .dynamic_output()
+            .expect("expected a dynamic_output fn to be stored");
+
+        let args = vec![ValidationArgument {
+            argument_type: Some("foo".to_string()),
+            switch_style: SwitchStyle::None,
+            value: ArgumentValue::Value(Value::from("table")),
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }];
+        match f(crate::lang::command::PipeInputType::None, &args).unwrap() {
+            crate::lang::command::OutputType::Known(ValueType::Table(_)) => {}
+            other => panic!("expected Known(Table), got {:?}", other),
+        }
+
+        let no_args: Vec<ValidationArgument> = vec![];
+        match f(
+            crate::lang::command::PipeInputType::Known(ValueType::Integer),
+            &no_args,
+        )
+        .unwrap()
+        {
+            crate::lang::command::OutputType::Known(ValueType::Integer) => {}
+            other => panic!("expected Known(Integer), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn commands_without_dynamic_output_have_none() {
+        let command = AllowedValuesStringSignature::create_command();
+        assert!(command.dynamic_output().is_none());
     }
 
     #[signature(x)]

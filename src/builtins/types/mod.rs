@@ -462,6 +462,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         Some("The `new` method ignores any arguments and returns a new instance of the type. If there parent struct has a `__init__` method, it will be called with all the named and unnnamed arguments passed in."),
                         Known(ValueType::Struct),
                         [],
+                        None,
                     ))),
                 ], None);
 

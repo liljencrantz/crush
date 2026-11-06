@@ -32,6 +32,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
             None,
             Unknown,
             [],
+            None,
         );
         Now::declare_method(&mut res);
         Parse::declare_method(&mut res);

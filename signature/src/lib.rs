@@ -108,6 +108,7 @@ struct Metadata {
     long_description: Vec<String>,
     example: Vec<String>,
     output: Option<TokenStream>,
+    dynamic_output: Option<TokenStream>,
     #[allow(unused)]
     condition: bool,
     path: Vec<String>,
@@ -184,6 +185,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
     let mut short_description = None;
     let mut long_description = Vec::new();
     let mut output: Option<TokenStream> = None;
+    let mut dynamic_output: Option<TokenStream> = None;
     let mut condition = false;
 
     let location = metadata.span().clone();
@@ -211,6 +213,12 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
                     tmp.extend(s.into_token_stream());
                 }
                 output = Some(tmp);
+            } else if name.to_string().as_str() == "dynamic_output" && meta.len() > 2 {
+                let mut tmp = TokenStream::new();
+                for s in &meta[2..] {
+                    tmp.extend(s.into_token_stream());
+                }
+                dynamic_output = Some(tmp);
             } else {
                 if meta.len() != 3 {
                     return fail!(meta[0].span(), "Invalid parameter format");
@@ -258,6 +266,7 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
         long_description,
         example,
         output,
+        dynamic_output,
         condition,
         path,
     })
@@ -390,6 +399,10 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
         .output
         .map(|o| quote! {#o})
         .unwrap_or(quote! {crate::lang::command::OutputType::Unknown});
+    let dynamic_output = metadata
+        .dynamic_output
+        .map(|o| quote! {Some(#o)})
+        .unwrap_or(quote! {None});
 
     match root {
         Item::Struct(mut s) => {
@@ -636,6 +649,7 @@ fn signature_real(metadata: TokenStream, input: TokenStream) -> SignatureResult<
                             #long_description,
                             #output,
                             [#argument_desciptions],
+                            #dynamic_output,
                     )
                 }
 

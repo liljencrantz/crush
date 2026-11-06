@@ -1,7 +1,7 @@
 mod closure;
 
 use crate::lang::any_str::AnyStr;
-use crate::lang::argument::ArgumentDefinition;
+use crate::lang::argument::{ArgumentDefinition, ValidationArgument};
 use crate::lang::ast::source::Source;
 use crate::lang::ast::tracked_string::TrackedString;
 use crate::lang::completion::Completion;
@@ -35,6 +35,27 @@ pub enum OutputType {
     /// a table_input_stream of integers.
     Passthrough,
 }
+
+/// What's flowing into a command via the pipe when its `dynamic_output` function runs.
+/// Distinct from `OutputType`: `OutputType` always describes something being produced,
+/// so it has no way to say "nothing is piped in at all", which is the common case for a
+/// job's first stage.
+#[derive(Clone, Debug)]
+pub enum PipeInputType {
+    /// This command is the first stage of a job; nothing is piped into it.
+    None,
+    /// Something is piped in, but its type isn't known.
+    Unknown,
+    /// Something of this exact type is piped in.
+    Known(ValueType),
+}
+
+/// A function a command can optionally supply (see `CrushCommand::dynamic_output`) that
+/// computes the command's real output type from the pipe's input type and its own
+/// arguments -- for commands whose output signature depends on how they were called
+/// (e.g. which named arguments were given), unlike the static `output = Known(...)`
+/// declared in `#[signature(...)]`, which is always used for documentation/completion.
+pub type DynamicOutputFn = fn(PipeInputType, &[ValidationArgument]) -> CrushResult<OutputType>;
 
 /// A small utility to help bind a command to a value.
 pub trait CommandBinder {
@@ -124,6 +145,13 @@ pub trait CrushCommand: Help + Display {
     fn kind(&self) -> &'static str {
         "builtin"
     }
+    /// A function that computes this command's real output type from the pipe's input
+    /// type and its own arguments, if this command declared one via
+    /// `#[signature(..., dynamic_output = some_fn)]` -- `None` for every command that
+    /// didn't.
+    fn dynamic_output(&self) -> Option<DynamicOutputFn> {
+        None
+    }
 }
 
 pub trait TypeMap {
@@ -137,6 +165,7 @@ pub trait TypeMap {
         long_help: Option<&'static str>,
         output: OutputType,
         completion_data: impl Into<Vec<Parameter>>,
+        dynamic_output: Option<DynamicOutputFn>,
     );
 }
 
@@ -151,6 +180,7 @@ impl TypeMap for OrderedMap<String, Command> {
         long_help: Option<&'static str>,
         output: OutputType,
         completion_data: impl Into<Vec<Parameter>>,
+        dynamic_output: Option<DynamicOutputFn>,
     ) {
         self.insert(
             path[path.len() - 1].to_string(),
@@ -163,6 +193,7 @@ impl TypeMap for OrderedMap<String, Command> {
                 long_help,
                 output,
                 completion_data,
+                dynamic_output,
             ),
         );
     }
@@ -177,6 +208,7 @@ struct SimpleCommand {
     long_help: Option<AnyStr>,
     output: OutputType,
     completion_data: Vec<Parameter>,
+    dynamic_output: Option<DynamicOutputFn>,
 }
 
 /**
@@ -223,6 +255,7 @@ impl dyn CrushCommand {
         long_help: Option<impl Into<AnyStr>>,
         output: OutputType,
         completion_data: impl Into<Vec<Parameter>>,
+        dynamic_output: Option<DynamicOutputFn>,
     ) -> Command {
         Arc::from(SimpleCommand {
             call,
@@ -236,6 +269,7 @@ impl dyn CrushCommand {
             long_help: long_help.map(|h| h.into()),
             output,
             completion_data: completion_data.into(),
+            dynamic_output,
         })
     }
 
@@ -362,6 +396,10 @@ impl CrushCommand for SimpleCommand {
         } else {
             "builtin"
         }
+    }
+
+    fn dynamic_output(&self) -> Option<DynamicOutputFn> {
+        self.dynamic_output
     }
 }
 
@@ -656,6 +694,10 @@ impl CrushCommand for BoundCommand {
 
     fn kind(&self) -> &'static str {
         self.command.kind()
+    }
+
+    fn dynamic_output(&self) -> Option<DynamicOutputFn> {
+        self.command.dynamic_output()
     }
 }
 

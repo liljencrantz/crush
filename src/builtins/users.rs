@@ -90,6 +90,7 @@ pub fn user_struct() -> &'static Struct {
     users[root]:do {(1+1)}"),
             Unknown,
             [],
+            None,
         );
         Struct::new(vec![("do", Value::Command(do_cmd))], None)
     })
