@@ -5,3 +5,11 @@ $d := $(timer {$ran = $true})
 $t := $(typeof $d)
 assert ($t == $duration)
 assert $ran "the timed closure should have run"
+
+# Regression test: the timed closure's own last statement can itself be a
+# stream-producing command (e.g. `files`), not just a plain scalar -- see
+# tests/timeit_stream_closure.crush's own comment for why that's a real risk for
+# anything that hands a command's result off to another thread before fully consuming
+# it.
+$d2 := $(timer {files})
+assert (($(typeof $d2)) == $duration) "timer should return a duration even when its timed closure's own output is a stream"

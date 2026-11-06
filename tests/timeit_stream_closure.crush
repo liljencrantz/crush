@@ -1,0 +1,13 @@
+# Regression test: `timeit`'s timed closure runs on its own spawned thread (see
+# time_run in src/builtins/control/timeit.rs), racing that thread's own completion
+# against this job's control channel so pause/terminate are responsive even mid-run
+# (not just between repeats). The timed closure's own *last statement* can itself be a
+# stream-producing command (e.g. `files`, as opposed to a plain scalar value) --
+# exactly the class of bug that's bitten other commands which hand a value off to
+# another thread before fully consuming it (see tests/echo_background_stream_does_not_
+# block.crush and commit 72cd57c4's own history of stream/thread-ownership races).
+# `number`/`repeat` both > 1 so the timed closure actually runs more than once, the same
+# reasoning tests/timeit_external_command_repeat.crush already documents for why a
+# single run alone wouldn't have caught a repeat-specific regression.
+$d := $(timeit number=2 repeat=2 it={files})
+assert (($(typeof $d)) == $duration) "timeit should return a duration even when its timed closure's own output is a stream"
