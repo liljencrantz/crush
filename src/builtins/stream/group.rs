@@ -1,4 +1,6 @@
+use crate::lang::argument::{ArgumentValue, ValidationArgument};
 use crate::lang::command::Command;
+use crate::lang::command::{OutputType, PipeInputType};
 use crate::lang::data::table::ColumnType;
 use crate::lang::data::table::ColumnVec;
 use crate::lang::errors::{CrushResult, command_error};
@@ -19,6 +21,60 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// Computes `group`'s real output type, mirroring `group()`'s own column-building
+/// exactly: the group-by columns keep their real input types, and every aggregation
+/// column is `Any` -- the real command never attempts to resolve what its own
+/// aggregation closures actually return (an aggregation runs once per *group*, on a
+/// table_input_stream of that group's rows, so there's nothing meaningful to call
+/// `dynamic_output`/`output_type` against ahead of time anyway). Only the (plain,
+/// literal) group-by column names need to resolve for this to work.
+fn group_dynamic_output(
+    input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let input_columns: &[ColumnType] = match &input {
+        PipeInputType::Known(
+            ValueType::TableInputStream(c) | ValueType::TableOutputStream(c) | ValueType::Table(c),
+        ) => c,
+        _ => return Ok(OutputType::Unknown),
+    };
+
+    let mut group_by: Vec<(&ValidationArgument, String)> = Vec::new();
+    let mut aggregate_names: Vec<String> = Vec::new();
+    for arg in arguments {
+        match &arg.argument_type {
+            Some(name) => aggregate_names.push(name.clone()),
+            None => match &arg.value {
+                ArgumentValue::Value(Value::String(s)) => group_by.push((arg, s.to_string())),
+                ArgumentValue::Unknown | ArgumentValue::Type(_) => return Ok(OutputType::Unknown),
+                _ => return arg.error("Invalid argument"),
+            },
+        }
+    }
+
+    if group_by.is_empty() {
+        return command_error("No group-by column specified");
+    }
+
+    let mut output_columns = Vec::new();
+    for (arg, name) in &group_by {
+        match input_columns.find(name) {
+            Ok(idx) => output_columns.push(input_columns[idx].clone()),
+            Err(_) => return arg.error(format!("Unknown column `{}`", name)),
+        }
+    }
+    for name in &aggregate_names {
+        output_columns.push(ColumnType::new_from_string(
+            name.clone(),
+            ValueType::Any,
+            "the result of aggregating this group's rows.".to_string(),
+        ));
+    }
+
+    let output_columns = output_columns.as_slice().deduplicate_names();
+    Ok(OutputType::Known(ValueType::TableInputStream(output_columns)))
+}
+
 #[signature(
     stream.group,
     can_block = true,
@@ -27,6 +83,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
     example = "# the number of files and the sum total file size for each link count. Sort results",
     example = "# by size.",
     example = "files --recurse | group links file_count=$count size={sum size} | sort size",
+    dynamic_output = group_dynamic_output,
 )]
 pub struct Group {
     #[unnamed()]
@@ -264,4 +321,91 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::SwitchStyle;
+    use crate::lang::ast::source::{Source, SourceType};
+    use std::sync::Arc;
+
+    fn columns() -> Vec<ColumnType> {
+        vec![
+            ColumnType::new("links", ValueType::Integer, ""),
+            ColumnType::new("file", ValueType::String, ""),
+        ]
+    }
+
+    fn unnamed_arg(value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: None,
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn named_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn known() -> PipeInputType {
+        PipeInputType::Known(ValueType::TableInputStream(columns()))
+    }
+
+    #[test]
+    fn group_by_column_keeps_its_type() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::from("links")))];
+        match group_dynamic_output(known(), &args).unwrap() {
+            OutputType::Known(ValueType::TableInputStream(c)) => {
+                assert_eq!(c.len(), 1);
+                assert_eq!(c[0].name(), "links");
+                assert_eq!(c[0].cell_type, ValueType::Integer);
+            }
+            other => panic!("expected Known(TableInputStream), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn aggregation_columns_are_any() {
+        let args = [
+            unnamed_arg(ArgumentValue::Value(Value::from("links"))),
+            named_arg("count", ArgumentValue::Unknown),
+        ];
+        match group_dynamic_output(known(), &args).unwrap() {
+            OutputType::Known(ValueType::TableInputStream(c)) => {
+                assert_eq!(c.len(), 2);
+                assert_eq!(c[1].name(), "count");
+                assert_eq!(c[1].cell_type, ValueType::Any);
+            }
+            other => panic!("expected Known(TableInputStream), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn no_group_by_column_is_an_error() {
+        let args = [named_arg("count", ArgumentValue::Unknown)];
+        assert!(group_dynamic_output(known(), &args).is_err());
+    }
+
+    #[test]
+    fn unknown_group_by_column_is_an_error() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::from("nonexistent")))];
+        assert!(group_dynamic_output(known(), &args).is_err());
+    }
+
+    #[test]
+    fn unknown_input_type_is_unknown() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::from("links")))];
+        match group_dynamic_output(PipeInputType::Unknown, &args).unwrap() {
+            OutputType::Unknown => {}
+            other => panic!("expected Unknown, got {:?}", other),
+        }
+    }
 }

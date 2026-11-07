@@ -1,4 +1,6 @@
+use crate::lang::argument::{ArgumentValue, ValidationArgument};
 use crate::lang::command::OutputType::{Known, Unknown};
+use crate::lang::command::{OutputType, PipeInputType};
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::number::Number;
 use crate::lang::state::contexts::CommandContext;
@@ -6,6 +8,40 @@ use crate::lang::state::scope::Scope;
 use crate::lang::value::Value;
 use crate::lang::value::ValueType;
 use signature::signature;
+
+/// Resolves one `Number`-typed argument's real type (`Integer` or `Float`), by name or
+/// by its position among unnamed arguments -- shared by `abs`/`sign`/`clamp`'s own
+/// `dynamic_output`, since all three preserve whichever of those two types they were
+/// actually given rather than always producing one fixed type. `Ok(None)` means the
+/// argument wasn't given at all, or its value isn't resolved yet; only a literal of some
+/// other type entirely is a real error.
+fn number_argument_type(
+    arguments: &[ValidationArgument],
+    field_name: &str,
+    positional_index: usize,
+) -> CrushResult<Option<ValueType>> {
+    let mut seen = 0usize;
+    for arg in arguments {
+        let is_this_one = match &arg.argument_type {
+            Some(name) => name == field_name,
+            None => {
+                let matched = seen == positional_index;
+                seen += 1;
+                matched
+            }
+        };
+        if !is_this_one {
+            continue;
+        }
+        return match &arg.value {
+            ArgumentValue::Value(Value::Integer(_)) => Ok(Some(ValueType::Integer)),
+            ArgumentValue::Value(Value::Float(_)) => Ok(Some(ValueType::Float)),
+            ArgumentValue::Unknown | ArgumentValue::Type(_) => Ok(None),
+            _ => arg.error(format!("`{}` must be given a number", field_name)),
+        };
+    }
+    Ok(None)
+}
 
 fn number_to_value(n: Number) -> Value {
     match n {
@@ -182,9 +218,20 @@ fn pow(mut context: CommandContext) -> CrushResult<()> {
         .send(Value::Float(cfg.base.as_float().powf(cfg.n.as_float())))
 }
 
+fn abs_sign_dynamic_output(
+    _input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    match number_argument_type(arguments, "number", 0)? {
+        Some(t) => Ok(OutputType::Known(t)),
+        None => Ok(OutputType::Unknown),
+    }
+}
+
 #[signature(
     math.abs,
     output = Unknown,
+    dynamic_output = abs_sign_dynamic_output,
     short = "The absolute value of number.",
     example = "math:abs -5",
 )]
@@ -209,6 +256,7 @@ fn abs(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     math.sign,
     output = Unknown,
+    dynamic_output = abs_sign_dynamic_output,
     short = "-1, 0 or 1 depending on the sign of number.",
     example = "math:sign -5",
 )]
@@ -235,9 +283,29 @@ pub struct Round {
 }
 math_fun!(round, Round, |x: f64| x.round());
 
+/// `clamp` always returns one of its three `Number` arguments, but *which* one depends
+/// on comparing their actual values -- something this can do too (every argument here is
+/// a plain literal in the common case), but isn't worth the complexity for: when all
+/// three happen to share the same type, the result is that type regardless of which one
+/// wins, which covers the overwhelmingly common case cheaply. Mixed types fall back to
+/// Unknown rather than evaluating the comparison to find out exactly which one it'd be.
+fn clamp_dynamic_output(
+    _input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let number = number_argument_type(arguments, "number", 0)?;
+    let min = number_argument_type(arguments, "min", 1)?;
+    let max = number_argument_type(arguments, "max", 2)?;
+    match (number, min, max) {
+        (Some(a), Some(b), Some(c)) if a == b && b == c => Ok(OutputType::Known(a)),
+        _ => Ok(OutputType::Unknown),
+    }
+}
+
 #[signature(
     math.clamp,
     output = Unknown,
+    dynamic_output = clamp_dynamic_output,
     short = "Number restricted to the inclusive range [min, max].",
     example = "math:clamp 15 min=0 max=10",
 )]
@@ -291,4 +359,97 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         }),
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::SwitchStyle;
+    use crate::lang::ast::source::{Source, SourceType};
+    use std::sync::Arc;
+
+    fn unnamed_arg(value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: None,
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn named_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    #[test]
+    fn abs_of_integer_literal_is_integer() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::Integer(-5)))];
+        let out = abs_sign_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Integer)));
+    }
+
+    #[test]
+    fn abs_of_float_literal_is_float() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::Float(-5.5)))];
+        let out = abs_sign_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Float)));
+    }
+
+    #[test]
+    fn abs_with_named_argument_is_respected() {
+        let args = [named_arg("number", ArgumentValue::Value(Value::Integer(5)))];
+        let out = abs_sign_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Integer)));
+    }
+
+    #[test]
+    fn abs_of_non_number_literal_is_an_error() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::from("oops")))];
+        assert!(abs_sign_dynamic_output(PipeInputType::None, &args).is_err());
+    }
+
+    #[test]
+    fn abs_of_unresolved_argument_is_unknown() {
+        let args = [unnamed_arg(ArgumentValue::Unknown)];
+        let out = abs_sign_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Unknown));
+    }
+
+    #[test]
+    fn clamp_with_matching_types_is_known() {
+        let args = [
+            unnamed_arg(ArgumentValue::Value(Value::Integer(15))),
+            named_arg("min", ArgumentValue::Value(Value::Integer(0))),
+            named_arg("max", ArgumentValue::Value(Value::Integer(10))),
+        ];
+        let out = clamp_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Integer)));
+    }
+
+    #[test]
+    fn clamp_with_mixed_types_is_unknown() {
+        let args = [
+            unnamed_arg(ArgumentValue::Value(Value::Float(15.0))),
+            named_arg("min", ArgumentValue::Value(Value::Integer(0))),
+            named_arg("max", ArgumentValue::Value(Value::Integer(10))),
+        ];
+        let out = clamp_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Unknown));
+    }
+
+    #[test]
+    fn clamp_with_positional_min_max_is_known() {
+        let args = [
+            unnamed_arg(ArgumentValue::Value(Value::Integer(15))),
+            unnamed_arg(ArgumentValue::Value(Value::Integer(0))),
+            unnamed_arg(ArgumentValue::Value(Value::Integer(10))),
+        ];
+        let out = clamp_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Integer)));
+    }
 }
