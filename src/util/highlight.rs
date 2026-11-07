@@ -1,17 +1,22 @@
-use crate::lang::argument::{ArgumentValue, SwitchStyle, ValidationArgument};
+use crate::lang::argument::{ArgumentDefinition, ArgumentValue, SwitchStyle, ValidationArgument};
 use crate::lang::ast::expand_user;
 use crate::lang::ast::lexer::{LanguageMode, Lexer, TokenizerMode};
 use crate::lang::ast::source::{Source, SourceType};
 use crate::lang::ast::token::Token;
-use crate::lang::command::{Command, OutputType, Parameter, PipeInputType};
+use crate::lang::command::{Command, CrushCommand, OutputType, Parameter, PipeInputType};
 use crate::lang::command_invocation::{is_runnable_as_command, resolve_external_command};
 use crate::lang::errors::{CrushError, CrushResult};
+use crate::lang::help::Help;
+use crate::lang::serialization::SerializationState;
+use crate::lang::serialization::model::Element;
+use crate::lang::state::contexts::{CommandContext as CrushCommandContext, EvalContext};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
 use crate::util::escape::{unescape, unescape_file};
 use crate::util::html_escape;
 use std::cmp::min;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -147,6 +152,119 @@ fn finalize_command(
     }
 }
 
+/// A minimal `Command` that exists only to carry a `{...}` closure literal's own
+/// *predicted* output type (computed by recursively scanning its body as its own job --
+/// see `classify_tokens`'s handling of `BlockEnd`) across into an existing
+/// `dynamic_output` function that expects a real command value and calls
+/// `.output_type()` on it, e.g. `select`'s own named-closure-argument handling. This
+/// value only ever appears inside `ArgumentValue::Value(Value::Command(..))` for static
+/// analysis, so every other `CrushCommand` method is unreachable -- nothing ever calls
+/// `.eval()`/`.serialize()`/etc. on it.
+struct PredictedOutputCommand {
+    output: OutputType,
+}
+
+impl Display for PredictedOutputCommand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("{...}")
+    }
+}
+
+impl Help for PredictedOutputCommand {
+    fn signature(&self) -> String {
+        "{...}".to_string()
+    }
+
+    fn short_help(&self) -> String {
+        "".to_string()
+    }
+
+    fn long_help(&self) -> Option<String> {
+        None
+    }
+}
+
+impl CrushCommand for PredictedOutputCommand {
+    fn eval(&self, _context: CrushCommandContext) -> CrushResult<()> {
+        unreachable!("PredictedOutputCommand is only ever queried for its output type")
+    }
+
+    fn might_block(&self, _arguments: &[ArgumentDefinition], _context: &mut EvalContext) -> bool {
+        false
+    }
+
+    fn name(&self) -> &str {
+        ""
+    }
+
+    fn serialize(
+        &self,
+        _elements: &mut Vec<Element>,
+        _state: &mut SerializationState,
+    ) -> CrushResult<usize> {
+        unreachable!("PredictedOutputCommand is never serialized")
+    }
+
+    fn bind_helper(&self, _wrapped: &Command, _this: Value) -> Command {
+        unreachable!("PredictedOutputCommand is never bound")
+    }
+
+    fn output_type<'a>(&'a self, _input: &'a OutputType) -> Option<&'a ValueType> {
+        match &self.output {
+            OutputType::Known(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    fn completion_data(&self) -> &[Parameter] {
+        &[]
+    }
+
+    fn definition(&self) -> Option<String> {
+        None
+    }
+}
+
+/// Which bracket kind a `BracketFrame` was pushed for -- decides how its computed
+/// result is used on pop, since a `{...}` closure literal and a `$(...)` substitution
+/// behave differently even though both need the exact same save/restore machinery: a
+/// substitution's own value *is* whatever its last job produces, but a closure literal's
+/// own value is always just a `Command` -- what its body predicts is only relevant if
+/// something later calls it.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BracketKind {
+    Sub,
+    Block,
+}
+
+/// Saved outer state for one `{...}`/`$(...)` nesting level, pushed on `BlockStart`/
+/// `SubStart` and popped on the matching `BlockEnd`/`SubEnd`. `classify_tokens` tracks
+/// the command currently being scanned with one flat set of variables; entering a
+/// bracket starts a genuinely fresh, independent job (its contents are scanned exactly
+/// like a top-level script), so that flat state would otherwise be clobbered by whatever
+/// the bracket's own contents resolve to. Saving it here and restoring it on the way out
+/// is what lets type information flow across the boundary -- into `current_args` for a
+/// bracket used as one argument's value, or into `literal_job_output` for a bracket used
+/// as a job's own head -- without losing track of the *outer* job at all.
+struct BracketFrame {
+    kind: BracketKind,
+    /// Whether this bracket is one argument of an already-identified outer command
+    /// (so its result becomes a new entry in the restored `current_args`), as opposed to
+    /// a job head in its own right (a bare statement, or a pipeline's first stage).
+    is_argument: bool,
+    /// The name this argument was given under, if any -- only meaningful when
+    /// `is_argument` is true.
+    push_name: Option<String>,
+    saved_command_context: CommandContext,
+    saved_current_command: Option<Command>,
+    saved_current_reference_exists: bool,
+    saved_current_command_result_idx: Option<usize>,
+    saved_current_args: Vec<ValidationArgument>,
+    saved_pipe_input: PipeInputType,
+    saved_literal_job_output: Option<ValueType>,
+    saved_latest_named_argument_info: Option<(usize, String)>,
+}
+
 /// Every token of `code`, in order, paired with the presentation category
 /// (matching a key of the `crush:highlight` color map, or a `tok-<name>`
 /// CSS class for HTML output) that applies to it, if any. Shared by both
@@ -183,10 +301,10 @@ fn classify_tokens<'a>(
     // What's flowing into the command currently being scanned, the arguments collected
     // for it so far, and the `result` index of its own token (so a `dynamic_output`
     // rejection can recolor it after the fact, once its whole argument list is known).
-    // Reset at every job boundary (`finalize_command`'s call sites below); like
-    // `command_context` above, a nested `{...}`/`$(...)` used as an argument value is
-    // (im)precisely treated as its own fresh job rather than tracked with real nesting
-    // depth -- the same simplification this whole state machine already makes.
+    // Reset at every job boundary (`finalize_command`'s call sites below) -- including
+    // entering a `{...}`/`$(...)`, whose contents are scanned as their own fresh,
+    // independent job; `bracket_stack` below is what makes that a real save/restore
+    // instead of simply losing track of the outer job.
     let mut pipe_input = PipeInputType::None;
     let mut current_args: Vec<ValidationArgument> = Vec::new();
     let mut current_command_result_idx: Option<usize> = None;
@@ -194,6 +312,11 @@ fn classify_tokens<'a>(
     // bare literal `3` into `sort` -- so this tracks a literal job head's own type,
     // separately from `current_command`, for `finalize_command` to fall back on.
     let mut literal_job_output: Option<ValueType> = None;
+    // One frame per currently-open `{...}`/`$(...)`, saving the outer job's state so it
+    // can be restored (with the bracket's own resolved type folded in, as a new argument
+    // or as the outer job's own `literal_job_output`) once the matching close is seen --
+    // see `BracketFrame`'s own doc comment.
+    let mut bracket_stack: Vec<BracketFrame> = Vec::new();
     let argument_source = Source::new(SourceType::Input, Arc::from(code));
 
     let mut result: Vec<(Token<'a>, Option<&'static str>)> = Vec::with_capacity(tokens.len());
@@ -203,27 +326,16 @@ fn classify_tokens<'a>(
         let ntok = tokens.get(idx + 1);
 
         new_command = match (new_command, prev, tok, ntok) {
-            // $(...) always opens a fresh job, exactly like `{` or a `;`/
-            // pipe separator -- the token right after it is a command
-            // start, not a continuation of whatever came before the `$(`.
-            // Without this, something like `$(files --recurse /)` colored
-            // `files` as a plain string, since the state machine only
-            // reset on BlockStart/Separator/Pipe.
-            //
-            // Also resets `command_context` back to the root scope: a `:` earlier in
-            // the previous command (e.g. `host:procs`) narrows it into that namespace
-            // so a chained path like `io:base64:to` resolves each segment correctly,
-            // but a fresh job's own command name must be looked up from the top level
-            // again, not as a member of whatever namespace the last command happened to
-            // live in. Without this, `host:procs|count` colored `count` as an error --
-            // it was looked up as a (nonexistent) member of `host`, not as the
-            // ordinary, top-level command it actually is.
-            (
-                _,
-                _,
-                Token::BlockStart(_) | Token::Separator(_, _) | Token::Pipe(_) | Token::SubStart(_),
-                _,
-            ) => {
+            // A `;`/newline or a pipe always opens a fresh job. Also resets
+            // `command_context` back to the root scope: a `:` earlier in the previous
+            // command (e.g. `host:procs`) narrows it into that namespace so a chained
+            // path like `io:base64:to` resolves each segment correctly, but a fresh
+            // job's own command name must be looked up from the top level again, not as
+            // a member of whatever namespace the last command happened to live in.
+            // Without this, `host:procs|count` colored `count` as an error -- it was
+            // looked up as a (nonexistent) member of `host`, not as the ordinary,
+            // top-level command it actually is.
+            (_, _, Token::Separator(_, _) | Token::Pipe(_), _) => {
                 let (next_input, error_category) = finalize_command(
                     &current_command,
                     &current_args,
@@ -234,8 +346,7 @@ fn classify_tokens<'a>(
                     result[i].1 = Some(cat);
                 }
                 // A pipe carries the previous command's resolved output into this new
-                // one; every other boundary (a fresh statement, block, or substitution)
-                // starts a job with nothing piped in at all.
+                // one; a fresh statement starts a job with nothing piped in at all.
                 pipe_input = match tok {
                     Token::Pipe(_) => next_input,
                     _ => PipeInputType::None,
@@ -248,6 +359,50 @@ fn classify_tokens<'a>(
                     None => CommandContext::Unknown,
                     Some(s) => CommandContext::Known(Value::Scope(s.clone())),
                 };
+                true
+            }
+            // `{...}` and `$(...)` always open a fresh job too -- the token right after
+            // either is a command start, not a continuation of whatever came before the
+            // bracket. Without this, something like `$(files --recurse /)` colored
+            // `files` as a plain string, since the state machine only reset on
+            // Separator/Pipe.
+            //
+            // Unlike Separator/Pipe above, a bracket's own *close* still has to come
+            // (its contents are a real job, finalized and folded back in on
+            // `BlockEnd`/`SubEnd` below) -- so this doesn't reset the outer job's state
+            // in place; it saves it onto `bracket_stack` first, exactly so it can be
+            // restored intact once the bracket closes.
+            (_, _, Token::BlockStart(_) | Token::SubStart(_), _) => {
+                let is_argument = current_command_result_idx.is_some();
+                let push_name = if is_argument {
+                    latest_named_argument_info
+                        .as_ref()
+                        .filter(|(name_idx, _)| idx == name_idx + 2)
+                        .map(|(_, name)| name.clone())
+                } else {
+                    None
+                };
+                let fresh_context = match scope {
+                    None => CommandContext::Unknown,
+                    Some(s) => CommandContext::Known(Value::Scope(s.clone())),
+                };
+                bracket_stack.push(BracketFrame {
+                    kind: match tok {
+                        Token::SubStart(_) => BracketKind::Sub,
+                        _ => BracketKind::Block,
+                    },
+                    is_argument,
+                    push_name,
+                    saved_command_context: std::mem::replace(&mut command_context, fresh_context),
+                    saved_current_command: current_command.take(),
+                    saved_current_reference_exists: current_reference_exists,
+                    saved_current_command_result_idx: current_command_result_idx.take(),
+                    saved_current_args: std::mem::take(&mut current_args),
+                    saved_pipe_input: std::mem::replace(&mut pipe_input, PipeInputType::None),
+                    saved_literal_job_output: literal_job_output.take(),
+                    saved_latest_named_argument_info: latest_named_argument_info.take(),
+                });
+                current_reference_exists = false;
                 true
             }
             (
@@ -293,6 +448,87 @@ fn classify_tokens<'a>(
             }
             _ => false,
         };
+
+        // The matching close of a `{...}`/`$(...)` pushed by the arm above: finalize
+        // whatever job its contents turned out to be, restore the outer job's own state
+        // exactly as it was before the bracket opened, and fold the bracket's resolved
+        // type into that restored state -- as a new argument if it was one argument's
+        // value, or as `literal_job_output` if it was a job head in its own right.
+        // `bracket_stack.pop()` returning `None` (a stray close with no matching open --
+        // only possible on malformed input, e.g. mid-keystroke in an interactive
+        // session) is simply ignored rather than treated as an error.
+        if matches!(tok, Token::BlockEnd(_) | Token::SubEnd(_)) {
+            if let Some(frame) = bracket_stack.pop() {
+                let (next_input, error_category) = finalize_command(
+                    &current_command,
+                    &current_args,
+                    &pipe_input,
+                    &literal_job_output,
+                );
+                if let (Some(cat), Some(i)) = (error_category, current_command_result_idx) {
+                    result[i].1 = Some(cat);
+                }
+
+                command_context = frame.saved_command_context;
+                current_command = frame.saved_current_command;
+                current_reference_exists = frame.saved_current_reference_exists;
+                current_command_result_idx = frame.saved_current_command_result_idx;
+                current_args = frame.saved_current_args;
+                pipe_input = frame.saved_pipe_input;
+                literal_job_output = frame.saved_literal_job_output;
+                latest_named_argument_info = frame.saved_latest_named_argument_info;
+
+                match (frame.kind, frame.is_argument) {
+                    (BracketKind::Sub, true) => {
+                        // A substitution's own value *is* whatever its last job
+                        // produced.
+                        let value = match next_input {
+                            PipeInputType::Known(t) => ArgumentValue::Type(t),
+                            PipeInputType::None | PipeInputType::Unknown => {
+                                ArgumentValue::Unknown
+                            }
+                        };
+                        current_args.push(ValidationArgument {
+                            argument_type: frame.push_name,
+                            switch_style: SwitchStyle::None,
+                            value,
+                            source: argument_source.clone(),
+                        });
+                    }
+                    (BracketKind::Sub, false) => {
+                        literal_job_output = match next_input {
+                            PipeInputType::Known(t) => Some(t),
+                            PipeInputType::None | PipeInputType::Unknown => None,
+                        };
+                    }
+                    (BracketKind::Block, true) => {
+                        // A closure literal's own value is always a `Command`; what its
+                        // body predicts only matters to something that goes on to call
+                        // it, like `select`'s own named-closure-argument handling --
+                        // hence the `PredictedOutputCommand` wrapper, instead of
+                        // `ArgumentValue::Type` (which would wrongly claim the
+                        // argument's own value already *is* that type).
+                        let predicted = Arc::new(PredictedOutputCommand {
+                            output: match next_input {
+                                PipeInputType::Known(t) => OutputType::Known(t),
+                                PipeInputType::None | PipeInputType::Unknown => {
+                                    OutputType::Unknown
+                                }
+                            },
+                        });
+                        current_args.push(ValidationArgument {
+                            argument_type: frame.push_name,
+                            switch_style: SwitchStyle::None,
+                            value: ArgumentValue::Value(Value::Command(predicted)),
+                            source: argument_source.clone(),
+                        });
+                    }
+                    (BracketKind::Block, false) => {
+                        literal_job_output = Some(ValueType::Command);
+                    }
+                }
+            }
+        }
 
         match (new_command, tok, ntok) {
             (true, Token::String(name, _), _) => {
@@ -1071,12 +1307,153 @@ mod tests {
         field: Vec<String>,
     }
 
+    // --- {}/$() boundary-crossing fixtures ---
+
+    fn produces_integer(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    #[signature(produces_integer, output = OutputType::Known(ValueType::Integer))]
+    struct ProducesIntegerSignature {}
+
+    fn produces_string(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    #[signature(produces_string, output = OutputType::Known(ValueType::String))]
+    struct ProducesStringSignature {}
+
+    fn checks_arg_type(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    /// Rejects its `x` argument unless its (resolved, not necessarily literal) type is
+    /// `Integer` -- used to prove that a `$(...)` substitution's own computed type
+    /// reaches here as `ArgumentValue::Type`, not just `Unknown`.
+    fn checks_arg_type_dynamic_output(
+        _input: PipeInputType,
+        arguments: &[ValidationArgument],
+    ) -> CrushResult<OutputType> {
+        for arg in arguments {
+            if arg.argument_type.as_deref() == Some("x") {
+                return match &arg.value {
+                    ArgumentValue::Type(ValueType::Integer) => {
+                        Ok(OutputType::Known(ValueType::Integer))
+                    }
+                    ArgumentValue::Type(_) => {
+                        crate::lang::errors::command_error("expected an integer")
+                    }
+                    _ => Ok(OutputType::Unknown),
+                };
+            }
+        }
+        Ok(OutputType::Unknown)
+    }
+
+    #[signature(checks_arg_type, dynamic_output = checks_arg_type_dynamic_output)]
+    struct ChecksArgTypeSignature {
+        x: Option<Value>,
+    }
+
+    fn closure_arg_like(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    /// Mirrors `select`'s own named-closure-argument handling: calls `.output_type()`
+    /// on its `x` argument's `Command` value, rejecting anything that doesn't predict
+    /// `Integer` -- used to prove that a `{...}` closure literal's own predicted return
+    /// type (computed recursively from its body) reaches here as a real `Command`, not
+    /// just `Unknown`.
+    fn closure_arg_like_dynamic_output(
+        _input: PipeInputType,
+        arguments: &[ValidationArgument],
+    ) -> CrushResult<OutputType> {
+        for arg in arguments {
+            if arg.argument_type.as_deref() == Some("x") {
+                if let ArgumentValue::Value(Value::Command(cmd)) = &arg.value {
+                    return match cmd.output_type(&OutputType::Unknown) {
+                        Some(ValueType::Integer) => Ok(OutputType::Known(ValueType::Integer)),
+                        Some(_) => crate::lang::errors::command_error(
+                            "expected a closure returning an integer",
+                        ),
+                        None => Ok(OutputType::Unknown),
+                    };
+                }
+            }
+        }
+        Ok(OutputType::Unknown)
+    }
+
+    #[signature(closure_arg_like, dynamic_output = closure_arg_like_dynamic_output)]
+    struct ClosureArgLikeSignature {
+        x: Option<Command>,
+    }
+
+    fn two_args_like(_context: CommandContext) -> CrushResult<()> {
+        Ok(())
+    }
+
+    /// Only accepts being called with *both* `x` and `y` given -- used to prove that an
+    /// argument following a `{...}`/`$(...)` bracket is still collected into the same
+    /// command's argument list, i.e. that entering/leaving the bracket didn't corrupt or
+    /// lose track of the outer command at all.
+    fn two_args_like_dynamic_output(
+        _input: PipeInputType,
+        arguments: &[ValidationArgument],
+    ) -> CrushResult<OutputType> {
+        let mut saw_x = false;
+        let mut saw_y = false;
+        for arg in arguments {
+            match arg.argument_type.as_deref() {
+                Some("x") => saw_x = true,
+                Some("y") => saw_y = true,
+                _ => {}
+            }
+        }
+        if saw_x && saw_y {
+            Ok(OutputType::Known(ValueType::Bool))
+        } else {
+            crate::lang::errors::command_error("expected both x and y")
+        }
+    }
+
+    #[signature(two_args_like, dynamic_output = two_args_like_dynamic_output)]
+    struct TwoArgsLikeSignature {
+        x: Option<Value>,
+        y: Option<Value>,
+    }
+
     fn scope_with_dynamic_output_commands() -> Scope {
         let root = Scope::create_root();
         root.declare("sort_like", Value::Command(SortLikeSignature::create_command()))
             .unwrap();
         root.declare("takes_args", Value::Command(TakesArgsSignature::create_command()))
             .unwrap();
+        root.declare(
+            "produces_integer",
+            Value::Command(ProducesIntegerSignature::create_command()),
+        )
+        .unwrap();
+        root.declare(
+            "produces_string",
+            Value::Command(ProducesStringSignature::create_command()),
+        )
+        .unwrap();
+        root.declare(
+            "checks_arg_type",
+            Value::Command(ChecksArgTypeSignature::create_command()),
+        )
+        .unwrap();
+        root.declare(
+            "closure_arg_like",
+            Value::Command(ClosureArgLikeSignature::create_command()),
+        )
+        .unwrap();
+        root.declare(
+            "two_args_like",
+            Value::Command(TwoArgsLikeSignature::create_command()),
+        )
+        .unwrap();
         root
     }
 
@@ -1161,5 +1538,188 @@ mod tests {
             .unwrap();
         let classified = classify_tokens("my_cmd -", &Some(root)).unwrap();
         assert_eq!(classified.len(), 2);
+    }
+
+    // --- {}/$() boundary-crossing ---
+
+    fn find_command_token<'a>(
+        classified: &'a [(Token<'a>, Option<&'static str>)],
+        name: &str,
+    ) -> (usize, Option<&'static str>) {
+        classified
+            .iter()
+            .enumerate()
+            .find(|(_, (tok, _))| matches!(tok, Token::String(s, _) if *s == name))
+            .map(|(i, (_, cat))| (i, *cat))
+            .unwrap_or_else(|| panic!("no `{}` token found in {:?}", name, classified))
+    }
+
+    /// A substitution used as a *named argument's* value should give the outer
+    /// command's `dynamic_output` the substitution's own resolved type, not nothing.
+    #[test]
+    fn substitution_argument_type_crosses_the_boundary() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("checks_arg_type x=$(produces_integer)", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "checks_arg_type");
+        assert_ne!(cat, Some("error"), "an integer substitution should be accepted");
+    }
+
+    /// Same, but the substitution's type is the wrong one -- the outer command must
+    /// actually see *that* type (not just "something"), and reject it.
+    #[test]
+    fn substitution_argument_of_the_wrong_type_is_rejected() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("checks_arg_type x=$(produces_string)", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "checks_arg_type");
+        assert_eq!(cat, Some("error"), "a string substitution should be rejected");
+    }
+
+    /// A substitution used as a whole pipeline stage's own job head must feed its
+    /// resolved type into the *next* stage across the pipe, exactly like a bare literal
+    /// already does -- the exact motivating `3|sort` case, just with `3` itself computed
+    /// from a nested job instead of typed directly.
+    #[test]
+    fn substitution_as_job_head_feeds_the_next_pipe_stage() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("$(produces_integer)|sort_like", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "sort_like");
+        assert_eq!(
+            cat,
+            Some("error"),
+            "sort_like should see Known(Integer) through the substitution and reject it"
+        );
+    }
+
+    /// A `{...}` closure literal used as a named argument should give the outer
+    /// command's `dynamic_output` a real `Command` whose `.output_type()` reports the
+    /// closure body's own predicted type -- not just an opaque, uninspectable value.
+    #[test]
+    fn closure_argument_predicted_type_crosses_the_boundary() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("closure_arg_like x={produces_integer}", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "closure_arg_like");
+        assert_ne!(
+            cat,
+            Some("error"),
+            "a closure predicted to return an integer should be accepted"
+        );
+    }
+
+    /// Same, but the closure's own body predicts the wrong type.
+    #[test]
+    fn closure_argument_of_the_wrong_predicted_type_is_rejected() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("closure_arg_like x={produces_string}", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "closure_arg_like");
+        assert_eq!(
+            cat,
+            Some("error"),
+            "a closure predicted to return a string should be rejected"
+        );
+    }
+
+    /// An error inside a bracket's own contents must still recolor *that* inner
+    /// command's token red, exactly as it would at the top level -- nesting inside an
+    /// argument doesn't exempt it from the same check.
+    #[test]
+    fn error_inside_a_bracket_still_marks_the_inner_command() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("checks_arg_type x=$(3|sort_like)", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "sort_like");
+        assert_eq!(cat, Some("error"), "sort_like given Known(Integer) should still be flagged, even nested inside a substitution");
+    }
+
+    /// An argument that follows a bracket must still be collected into the *same*
+    /// outer command's argument list -- proving the save/restore around the bracket
+    /// didn't lose track of (or corrupt) the outer command at all.
+    #[test]
+    fn argument_after_a_bracket_is_still_collected() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified =
+            classify_tokens("two_args_like x=$(produces_integer) y=5", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "two_args_like");
+        assert_ne!(cat, Some("error"), "both x and y were given, just with x's value nested in a substitution");
+    }
+
+    /// Sanity check for the test above: with only `x` given (no `y`), the same command
+    /// really is rejected -- confirming the dynamic_output function does real work and
+    /// the previous test wasn't vacuously passing.
+    #[test]
+    fn missing_argument_after_a_bracket_is_still_rejected() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("two_args_like x=$(produces_integer)", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "two_args_like");
+        assert_eq!(cat, Some("error"), "y was never given");
+    }
+
+    /// A bare `{...}` used as a job's own head (not an argument) is a closure value in
+    /// its own right -- its type is `Command`, regardless of what its body predicts.
+    #[test]
+    fn bare_closure_as_job_head_is_command_typed() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        // sort_like only rejects a *Known(Integer)* input; a bare closure statement's
+        // own type (Command) should pass through untouched -- same as any other
+        // non-Integer input.
+        let classified = classify_tokens("{produces_integer}|sort_like", &scope).unwrap();
+        let (_, cat) = find_command_token(&classified, "sort_like");
+        assert_ne!(
+            cat,
+            Some("error"),
+            "a closure literal's own type is Command, not whatever it predicts"
+        );
+    }
+
+    /// Regression guard: malformed/partial bracket input -- exactly what a live,
+    /// character-by-character interactive session constantly produces mid-keystroke --
+    /// must never panic, even though it's never valid syntax. Some of these are rejected
+    /// by the lexer itself (an unclosed bracket, or a stray close with no matching open
+    /// at all, are both genuine lexical errors -- `Err` is an expected, ordinary outcome
+    /// for those); what this guards is the handful that *do* lex successfully but still
+    /// exercise `bracket_stack` unusually (an extra stray close *after* a balanced
+    /// pair, an empty bracket, ...), where only a panic would be a bug.
+    #[test]
+    fn malformed_bracket_input_does_not_panic() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        for code in [
+            "checks_arg_type x=$(",
+            "checks_arg_type x=$(produces_integer",
+            "closure_arg_like x={",
+            "closure_arg_like x={produces_integer",
+            ")",
+            "}",
+            "$(",
+            "{",
+            "checks_arg_type x=$(produces_integer))",
+            "closure_arg_like x={produces_integer}}",
+            "$()",
+            "{}",
+            "two_args_like x=$(produces_integer) y=$(",
+        ] {
+            // Only a panic is a failure here -- a lexical Err is a fine, expected
+            // outcome for several of these.
+            let _ = classify_tokens(code, &scope);
+        }
+    }
+
+    /// Deep nesting (a substitution inside a closure inside a substitution, ...) must
+    /// not panic or lose track -- `bracket_stack` has to actually behave like a stack
+    /// (LIFO) rather than, say, a single saved frame that a second nesting level would
+    /// silently clobber.
+    #[test]
+    fn deeply_nested_brackets_resolve_correctly() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens(
+            "checks_arg_type x=$(closure_arg_like x={$(produces_integer)})",
+            &scope,
+        )
+        .unwrap();
+        let (_, cat) = find_command_token(&classified, "checks_arg_type");
+        // closure_arg_like's own x is a closure {$(produces_integer)}, whose predicted
+        // return type is Integer (from the innermost substitution) -- so closure_arg_like
+        // itself resolves to Known(Integer), and checks_arg_type's own x (the whole
+        // $(closure_arg_like ...) substitution) sees that same Integer type.
+        assert_ne!(cat, Some("error"));
+        let (_, inner_cat) = find_command_token(&classified, "closure_arg_like");
+        assert_ne!(inner_cat, Some("error"));
     }
 }
