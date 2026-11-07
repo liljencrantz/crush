@@ -1,6 +1,7 @@
 use crate::lang::any_sequence::AnySequence;
+use crate::lang::argument::{ArgumentValue, ValidationArgument};
 use crate::lang::command::OutputType::Known;
-use crate::lang::command::{Command, CrushCommand};
+use crate::lang::command::{Command, CrushCommand, OutputType, PipeInputType};
 use crate::lang::data::list::List;
 use crate::lang::data::table::{ColumnType, Row};
 use crate::lang::errors::{CrushResult, command_error};
@@ -32,6 +33,19 @@ pub mod table_output_stream;
 pub mod time;
 pub mod r#type;
 
+/// Computes `materialize`'s real output type by delegating straight to
+/// `ValueType::materialize` -- the exact same conversion the real command applies to the
+/// actual value, just performed on its type alone.
+fn materialize_dynamic_output(
+    input: PipeInputType,
+    _arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    match input {
+        PipeInputType::Known(t) => Ok(OutputType::Known(t.materialize()?)),
+        PipeInputType::None | PipeInputType::Unknown => Ok(OutputType::Unknown),
+    }
+}
+
 #[signature(
     types.materialize,
     can_block = true,
@@ -40,6 +54,7 @@ pub mod r#type;
     example = "$f := $(files | materialize)",
     example = "# Because we materialized the table stream into a table, counting the elements is not a destructive operation.",
     example = "$f | count",
+    dynamic_output = materialize_dynamic_output,
 )]
 struct Materialize {}
 
@@ -154,6 +169,7 @@ pub fn column_types(columns: &OrderedStringMap<ValueType>) -> Vec<ColumnType> {
 #[signature(
     types.convert,
     can_block = false,
+    dynamic_output = convert_dynamic_output,
     short = "Convert the value to the specified type",
     long = "Converting a value to the type it already holds always works and returns the original value. Most other conversions take the input value, convert it to a string and then attempt to parse that string as the desired type.",
     long = "",
@@ -171,6 +187,35 @@ struct Convert {
     target_type: ValueType,
     #[description("the value to convert.")]
     value: Option<Value>,
+}
+
+/// `convert`'s output is always exactly `target_type` -- the one thing it can't predict
+/// is whether the actual conversion will succeed at runtime, which doesn't change the
+/// *type* either way.
+fn convert_dynamic_output(
+    _input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let mut seen = 0usize;
+    for arg in arguments {
+        let is_target_type = match &arg.argument_type {
+            Some(name) => name == "target_type",
+            None => {
+                let matched = seen == 0;
+                seen += 1;
+                matched
+            }
+        };
+        if !is_target_type {
+            continue;
+        }
+        return match &arg.value {
+            ArgumentValue::Value(Value::Type(t)) => Ok(OutputType::Known(t.clone())),
+            ArgumentValue::Unknown | ArgumentValue::Type(_) => Ok(OutputType::Unknown),
+            _ => arg.error("`target_type` must be given a type"),
+        };
+    }
+    Ok(OutputType::Unknown)
 }
 
 pub fn convert(mut context: CommandContext) -> CrushResult<()> {
@@ -508,4 +553,78 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         }))?;
     root.r#use(&e);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::SwitchStyle;
+    use crate::lang::ast::source::{Source, SourceType};
+    use std::sync::Arc;
+
+    fn unnamed_arg(value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: None,
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn named_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    #[test]
+    fn convert_with_positional_target_type_is_known() {
+        let args = [
+            unnamed_arg(ArgumentValue::Value(Value::Type(ValueType::Integer))),
+            unnamed_arg(ArgumentValue::Value(Value::from("1.8"))),
+        ];
+        let out = convert_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Integer)));
+    }
+
+    #[test]
+    fn convert_with_named_target_type_is_known() {
+        let args = [named_arg(
+            "target_type",
+            ArgumentValue::Value(Value::Type(ValueType::String)),
+        )];
+        let out = convert_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::String)));
+    }
+
+    #[test]
+    fn convert_with_non_type_target_is_an_error() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::from("oops")))];
+        assert!(convert_dynamic_output(PipeInputType::None, &args).is_err());
+    }
+
+    #[test]
+    fn convert_with_no_target_type_is_unknown() {
+        let out = convert_dynamic_output(PipeInputType::None, &[]).unwrap();
+        assert!(matches!(out, OutputType::Unknown));
+    }
+
+    #[test]
+    fn materialize_resolves_table_input_stream_to_table() {
+        let out = materialize_dynamic_output(
+            PipeInputType::Known(ValueType::TableInputStream(vec![])),
+            &[],
+        )
+        .unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Table(_))));
+    }
+
+    #[test]
+    fn materialize_of_unknown_input_is_unknown() {
+        let out = materialize_dynamic_output(PipeInputType::Unknown, &[]).unwrap();
+        assert!(matches!(out, OutputType::Unknown));
+    }
 }
