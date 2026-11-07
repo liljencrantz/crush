@@ -9,9 +9,7 @@
 * fix dynamic loading deadlocks
 * tab completions for external commands
 * Make IFS configurable for cmd command
-* Dict literals in expression mode ([key: value])
 * Better syntax highlighting for expression mode
-* Move yaml builtin to use saphyr
 * Figure out what to do about users/groups __getitem__
 * Fix help messages in dbus connections
 * Completion descriptions
@@ -25,3 +23,5 @@
 * syntax highlighting does not understand closure parameters
 * Regular file completion of strings
 * Reserve `$global`. Possibly also `$true`, `$false` and a few more?
+* Drop chmod/chown/touch and more emthods from file. Make commands where appropriate.
+* 

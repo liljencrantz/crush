@@ -126,7 +126,7 @@ pub fn writer(
 /// resolved to anything yet. `file` must be each such command's first declared field (as
 /// it is for every one of them today) for this to find it correctly by position when
 /// it's given unnamed; a later, unrelated field that can also be given positionally
-/// (e.g. `json:to`'s `compact`) is never mistaken for it.
+/// (e.g. `$json.to`'s `compact`) is never mistaken for it.
 pub fn writer_dynamic_output(
     _input: PipeInputType,
     arguments: &[ValidationArgument],
@@ -216,7 +216,7 @@ mod tests {
         assert!(matches!(out, OutputType::Known(ValueType::Empty)));
     }
 
-    /// A second, unrelated unnamed argument (like json:to's `compact`, given
+    /// A second, unrelated unnamed argument (like $json.to's `compact`, given
     /// positionally) must never cause this to look past it and reconsider -- only the
     /// *first* unnamed argument is ever treated as `file`.
     #[test]

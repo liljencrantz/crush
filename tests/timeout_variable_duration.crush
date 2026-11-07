@@ -22,6 +22,6 @@ $msg := ""
 try {
     timeout $d {sleep 30s}
 } catch {
-    |$e| $msg = $e:message
+    |$e| $msg = $e.message
 }
 assert ($msg == "Command timed out") "timeout should report a timeout, not a leaked disconnected-channel error, regardless of whether its duration argument is a variable or an inline substitution"

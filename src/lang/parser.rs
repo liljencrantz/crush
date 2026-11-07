@@ -145,7 +145,8 @@ impl Parser {
                 | Token::Named(_)
                 | Token::Unnamed(_)
                 | Token::Pipe(_)
-                | Token::MemberOperator(_) => needs_trailing_arg = true,
+                | Token::MemberOperator(_)
+                | Token::TypeAnnotationColon(_) => needs_trailing_arg = true,
                 Token::SubStart(_) => {
                     stack.push(")");
                 }

@@ -290,7 +290,7 @@ fn run_remote(
 /// Report a single host's `run_remote` failure into the warning log rather than
 /// aborting `pexec`. `err`'s own message usually says nothing about which host it came
 /// from (e.g. a raw `TcpStream::connect` I/O error), so the host is folded into the
-/// message text explicitly, the same way `fs:files`' own per-entry warnings do.
+/// message text explicitly, the same way `$fs.files`' own per-entry warnings do.
 fn warn_connect_failure(global_state: &GlobalState, host: &str, err: CrushError) {
     global_state.warn(
         &error::<()>(format!(
@@ -353,7 +353,7 @@ fn ssh_host_complete(
     long = "different host answering at that address); `allow_not_found` instead trusts an",
     long = "unrecognized host's key on first use and saves it, rather than erroring -- both",
     long = "weaken protection against a machine-in-the-middle impersonating the remote host.",
-    example = "remote:exec {host:name} \"my-server.example.com\" username=\"alice\"",
+    example = "$remote.exec {$host.name} \"my-server.example.com\" username=\"alice\"",
 )]
 struct Exec {
     #[description("the command to execute.")]
@@ -410,13 +410,13 @@ fn exec(mut context: CommandContext) -> CrushResult<()> {
     long = "just because some, or even all, of the hosts couldn't be reached.",
     long = "A host that succeeds contributes one row (`host`/`result` columns) to the output;",
     long = "a host that fails contributes no row at all. Instead, the failure is logged as a",
-    long = "warning (see `crush:warn:list`) naming the host and the underlying error. pexec's",
+    long = "warning (see `$crush.warn.list`) naming the host and the underlying error. pexec's",
     long = "own exit status stays 0 either way, so the only way to tell whether every host",
     long = "succeeded is to compare the length of the output to the length of the `host` list",
     long = "you passed in -- fewer output rows than hosts means some connections failed.",
     long = "The same host-key verification applies independently to each host -- see `exec`",
     long = "for what `ignore_host_file`/`allow_not_found` mean for security.",
-    example = "remote:pexec {host:name} \"web1.example.com\" \"web2.example.com\" username=\"alice\"",
+    example = "$remote.pexec {$host.name} \"web1.example.com\" \"web2.example.com\" username=\"alice\"",
     output = Known(ValueType::table_input_stream(&PEXEC_OUTPUT_TYPE)),
 )]
 struct Pexec {
@@ -633,9 +633,9 @@ pub fn declare(scope: &Scope) -> CrushResult<()> {
         "remote",
         "Remote code execution",
         Some(
-            "Commands for running code on other machines over SSH: `remote:exec` runs a \
-             closure on one host, `remote:pexec` runs it across several in parallel, and \
-             `remote:identity` lists the identities your ssh-agent has loaded. `remote:host` \
+            "Commands for running code on other machines over SSH: `$remote.exec` runs a \
+             closure on one host, `$remote.pexec` runs it across several in parallel, and \
+             `$remote.identity` lists the identities your ssh-agent has loaded. `$remote.host` \
              tracks known-hosts entries, the same trust store `ssh` itself uses."
                 .to_string(),
         ),

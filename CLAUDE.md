@@ -52,7 +52,7 @@ Prefer this plain golden-test style over ad-hoc Rust assertions in `tests/system
 (stderr/exit-code checks, etc.) — even for a bug whose only visible symptom seems to
 need something other than a stdout diff (e.g. an async background thread's error). If
 the error *message* itself matters: `try { <fragile op> } catch { |$e| $msg = $e }`
-captures the error as a plain string, which ordinary `assert`/`:like` calls can then
+captures the error as a plain string, which ordinary `assert`/`.like` calls can then
 check against the exit-status-only approach above.
 
 Only fall back to a Rust assertion in `tests/system.rs` when that's genuinely
@@ -69,16 +69,26 @@ A few non-obvious behaviors worth knowing before writing `.crush` test scripts o
 tooling (e.g. `generate_docs.crush`) — the full semantics belong in
 `docs/language_reference.md`, this is just the pitfalls that have cost real time:
 
-- `:like`/`:not_like` do exact string match by design, not substring or wildcard
+- `.like`/`.not_like` do exact string match by design, not substring or wildcard
   matching — wildcarding is a property of a `glob` *value* passed as the pattern, not
   something the method name implies.
-- Every codec's `:to` command (`json:to`, `yaml:to`, `pup:to`, ...) intentionally
+- Every codec's `.to` command (`$json.to`, `$yaml.to`, `$pup.to`, ...) intentionally
   produces a `binary_stream`, not a plain string — this is deliberate ("bytes ready to
   write to disk or pipe onward"), not a quirk of any one codec. Use
   `convert $string $(...)` when a plain string is actually needed.
-- String concatenation is not `+` (that's numeric/duration addition) — use `:format`.
+- String concatenation is not `+` (that's numeric/duration addition) — use `.format`.
 - A regex literal's outer `^(...)` is Crush's own delimiter syntax, not itself capture
   group 1 — `^((.*)-(.*))` numbers its groups 1 and 2, not 2 and 3.
+- `.` is the only member-access operator (`:` was removed; it survives only as the
+  unrelated closure parameter type-annotation syntax, `|x: integer|`). A *bareword*
+  (no `$`) namespaced command, like `struct.of` or `fs.watch`, does **not** resolve —
+  it must be written `$struct.of`/`$fs.watch`. This is deliberate, not a gap: the `$`
+  sigil is otherwise optional for a bare command name, but extending that to dotted
+  bare words would make a real external command with a dot in its name — `backup.sh`,
+  found via `PATH` with no leading `./` — ambiguous with "the `sh` command in a
+  `backup` namespace". A bareword `.` is always a bareword/file/glob literal, never a
+  chain, unless it immediately follows something a member can already be accessed on
+  (`$var`, a closing `)`/`]`/`}`, a quoted literal, a number, a regex literal).
 
 ## Workspace layout
 
@@ -124,7 +134,7 @@ Cargo workspace with the main `crush` crate plus four local crates:
 - `signature/` — argument *types* usable in `#[signature]` structs beyond plain Rust
   primitives (`Files`, `Patterns`, `BinaryInput`, `Number`, `Text`, ...).
 - `serialization/` — the "pup" binary serialization format used to pass values between
-  Crush processes (see `--pup` mode in `main.rs`, used e.g. by `sudo` and `remote:exec`
+  Crush processes (see `--pup` mode in `main.rs`, used e.g. by `sudo` and `$remote.exec`
   to run closures in a child process).
 - `completion/` — tab completion.
 - `interactive/` — the rustyline-based REPL (`rustyline_helper.rs` wires completion/

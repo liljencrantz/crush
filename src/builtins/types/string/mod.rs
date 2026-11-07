@@ -55,9 +55,9 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     short = "Returns the length (in number of unicode characters) of the string.",
     long = "Note that a unicode character is not always what a human would consider a character, and there are often different ways to generate identical looking strings with different numbers of characters, as in the example below.",
     example = "# Returns 1",
-    example = "\"é\":len",
+    example = "\"é\".len",
     example = "# Returns 2",
-    example = "\"é\":len",
+    example = "\"é\".len",
 )]
 struct Len {}
 
@@ -75,9 +75,9 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     short = "Returns the length (in number of bytes) of the string, as encoded using UTF-8",
     long = "Note that there are often different ways to generate identical looking strings of different lengths, as in the example below.",
     example = "# Returns 2",
-    example = "\"é\":bytes",
+    example = "\"é\".bytes",
     example = "# Returns 3",
-    example = "\"é\":bytes",
+    example = "\"é\".bytes",
 )]
 struct Bytes {}
 
@@ -118,7 +118,7 @@ fn lower(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::List(Box::from(ValueType::String))),
     short = "Splits a string using the specified separator",
     example = "# Returns [\"Hello\", \"World\"]",
-    example = "\"Hello World\":split \" \"",
+    example = "\"Hello World\".split \" \"",
 )]
 struct Split {
     #[description("the separator to split on.")]
@@ -160,7 +160,7 @@ fn trim(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::String),
     short = "Join all arguments by the specified string",
     example = "# Returns \"1, 2, 3, 4\"",
-    example = "\", \":join 1 2 3 4",
+    example = "\", \".join 1 2 3 4",
 )]
 struct Join {
     #[unnamed()]
@@ -192,9 +192,9 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::String),
     short = "Returns a string truncated or left-padded to be the exact specified length",
     example = "# Returns \"     Hello\"",
-    example = "\"Hello\":lpad 10",
+    example = "\"Hello\".lpad 10",
     example = "# Returns \"He\"",
-    example = "\"Hello\":lpad 2",
+    example = "\"Hello\".lpad 2",
 )]
 struct LPad {
     #[description("the length to pad to.")]
@@ -230,9 +230,9 @@ fn lpad(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::String),
     short = "Returns a string truncated or right-padded to be the exact specified length",
     example = "# Returns \"Helloooooo\"",
-    example = "\"Hello\":rpad length=10 padding=o",
+    example = "\"Hello\".rpad length=10 padding=o",
     example = "# Returns \"He\"",
-    example = "\"Hello\":rpad 2",
+    example = "\"Hello\".rpad 2",
 )]
 struct RPad {
     #[description("the length to pad to.")]
@@ -267,7 +267,7 @@ fn rpad(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::String),
     short = "Returns this string repeated times times",
-    example = "\"Around the world\\n\":repeat 8",
+    example = "\"Around the world\\n\".repeat 8",
 )]
 struct Repeat {
     #[description("the number of times to repeat the string.")]
@@ -397,7 +397,7 @@ per_char_method!(is_control, |ch| ch.is_control());
     can_block = false,
     output = Known(ValueType::Bool),
     short = "True if every character of this string is a digit in the specified radix",
-    long = "\"123\":is_digit # true"
+    long = "\"123\".is_digit # true"
 )]
 struct IsDigit {
     #[description("radix to use")]

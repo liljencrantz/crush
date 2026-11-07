@@ -167,7 +167,7 @@ fn sum_dynamic_output(
     long = "The column contents must be exactly one of the types `$integer`, `$float`, or `$duration`.",
     long = "",
     long = "Normally, `sum` expects the type of the column to be the type to sum over, but `sum` can also sum over a column of type `any`, so long as there is at least one row in the table, and all the rows are actually of the same type.",
-    example = "host:procs | sum cpu",
+    example = "$host.procs | sum cpu",
     dynamic_output = sum_dynamic_output)]
 pub struct Sum {
     #[description("The name of the column to find the sum of")]
@@ -264,7 +264,7 @@ fn avg_dynamic_output(
     short = "Calculate the average for the specific column across all rows.",
     long = "If the input only has one column, the column name is optional.",
     long = "The column type must be numeric or a duration.",
-    example = "host:procs | avg cpu",
+    example = "$host.procs | avg cpu",
     dynamic_output = avg_dynamic_output)]
 pub struct Avg {
     #[description("The name of the column to find the average of")]
@@ -365,7 +365,7 @@ fn median_dynamic_output(
     long = "The column type must be numeric or a duration.",
     long = "If the column contains a NaN float value, `median` fails with an error rather \
     than silently including it in (or excluding it from) the calculation.",
-    example = "host:procs | median cpu",
+    example = "$host.procs | median cpu",
     dynamic_output = median_dynamic_output)]
 pub struct Median {
     #[description("The name of the column to find the median of")]
@@ -484,7 +484,7 @@ fn min_max_dynamic_output(
     short = "Calculate the minimum for the specific column across all rows.",
     long = "If the input only has one column, the column name is optional.",
     long = "The column can be numeric, temporal, a string or a file.",
-    example = "host:procs | min cpu",
+    example = "$host.procs | min cpu",
     dynamic_output = min_max_dynamic_output)]
 pub struct Min {
     #[description("The name of the column to find the minimum of")]
@@ -511,7 +511,7 @@ fn min(mut context: CommandContext) -> CrushResult<()> {
     short = "Calculate the maximum for the specific column across all rows.",
     long = "If the input only has one column, the column name is optional.",
     long = "The column can be numeric, temporal, a string or a file.",
-    example = "host:procs | max cpu",
+    example = "$host.procs | max cpu",
     dynamic_output = min_max_dynamic_output)]
 pub struct Max {
     #[description("The name of the column to find the maximum of")]
@@ -615,7 +615,7 @@ fn concat_dynamic_output(
     short = "Concatenate all values of the specified column across all rows",
     long = "If the input only has one column, the column name is optional.",
     long = "The column can be numeric, or textual.",
-    example = "host:procs | concat name \":\"",
+    example = "$host.procs | concat name \":\"",
     dynamic_output = concat_dynamic_output,
 )]
 pub struct Concat {

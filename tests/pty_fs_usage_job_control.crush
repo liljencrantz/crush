@@ -1,4 +1,4 @@
-# Lightweight pty/job-control integration coverage for `fs:usage`: confirms
+# Lightweight pty/job-control integration coverage for `$fs.usage`: confirms
 # backgrounding and `terminate` both work through a real interactive session
 # without hanging or corrupting it. The actual claim this plan cares about -- that
 # `terminate`/`pause` now stop the recursive walk promptly instead of only being
@@ -11,17 +11,17 @@
 # in this test harness's own 30-second per-test hang-detection budget (confirmed
 # directly: a 500,000-file version of this test reliably exceeded it).
 #
-# A plain `fs:usage .` on this repo's own small tree finishes in well under the time
+# A plain `$fs.usage .` on this repo's own small tree finishes in well under the time
 # it takes to check its status, so the job backgrounded here also runs a `sleep`
 # after it, purely to keep the *job* alive long enough to check/terminate it --
-# `fs:usage` itself still runs for real as the first statement.
+# `$fs.usage` itself still runs for real as the first statement.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$n = $(pty_run $t $n "{fs:usage . ; sleep 100s} &")
+$n = $(pty_run $t $n "{$fs.usage . ; sleep 100s} &")
 pty_assert_job_status $t 0 "Running"
 $n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 
-$t:close
+$t.close

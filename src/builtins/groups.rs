@@ -73,7 +73,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "groups",
         "User group commands",
         Some(
-            "Commands for querying user groups on this system -- `groups:list` for every \
+            "Commands for querying user groups on this system -- `$groups.list` for every \
              group and its gid, and lookup by name via `groups[name]`. Sibling to `users`, \
              but for groups rather than individual accounts."
                 .to_string(),

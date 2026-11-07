@@ -16,10 +16,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "term",
         "Constants useful for manipulating the terminal, such as changing text color and text weight.",
         Some(
-            "ANSI escape code constants for styling terminal output -- colors (`term:red`, \
-             `term:green`, ...), `term:bold`, `term:underline`, and `term:normal` to reset. \
+            "ANSI escape code constants for styling terminal output -- colors (`$term.red`, \
+             `$term.green`, ...), `$term.bold`, `$term.underline`, and `$term.normal` to reset. \
              These are plain string values, not commands -- interpolate them directly into a \
-             string, e.g. via `:format`, most often to build a colorful `crush:prompt`."
+             string, e.g. via `:format`, most often to build a colorful `$crush.prompt`."
                 .to_string(),
         ),
         Box::new(move |fd| {

@@ -1,30 +1,30 @@
 # A simple test to make sure that multiple commands
 # can use a single pipe both for input and output.
-crush:locale:set "en_US.UTF-8"
+$crush.locale.set "en_US.UTF-8"
 
 # Create the pipe
-$pipe := $($(table_input_stream value=$integer):pipe)
+$pipe := $($(table_input_stream value=$integer).pipe)
 
 # Attach the input end to a bunch of seq commands
-$input1 := $(seq 0 100_000 | pipe:write &)
-$input2 := $(seq 0 100_000 | pipe:write &)
-$input3 := $(seq 0 100_000 | pipe:write &)
-$input4 := $(seq 0 100_000 | pipe:write &)
+$input1 := $(seq 0 100_000 | $pipe.write &)
+$input2 := $(seq 0 100_000 | $pipe.write &)
+$input3 := $(seq 0 100_000 | $pipe.write &)
+$input4 := $(seq 0 100_000 | $pipe.write &)
 
 # Attach the output end to the sum command and
-$sum_job_id1 := $(pipe:read | sum &)
-$sum_job_id2 := $(pipe:read | sum &)
-$sum_job_id3 := $(pipe:read | sum &)
-$sum_job_id4 := $(pipe:read | sum &)
+$sum_job_id1 := $($pipe.read | sum &)
+$sum_job_id2 := $($pipe.read | sum &)
+$sum_job_id3 := $($pipe.read | sum &)
+$sum_job_id4 := $($pipe.read | sum &)
 
 # Wait for every writer job to fully finish writing before closing the pipe. This
-# isn't just tidy -- it's required: pipe:write's own implementation reads $pipe's
+# isn't just tidy -- it's required: $pipe.write's own implementation reads $pipe's
 # "output" field on its own worker thread whenever the OS happens to schedule it,
-# with no synchronization against pipe:close clearing that same field. Racing
-# pipe:close against a writer job that hasn't gotten a chance to run yet has been
+# with no synchronization against $pipe.close clearing that same field. Racing
+# $pipe.close against a writer job that hasn't gotten a chance to run yet has been
 # observed to silently drop that writer's entire contribution. fg-ing each writer
 # first guarantees it has completely finished -- including reading $pipe's fields --
-# before pipe:close can run.
+# before $pipe.close can run.
 fg $input1
 fg $input2
 fg $input3
@@ -32,7 +32,7 @@ fg $input4
 
 # Close the output and input, so that the input can actually
 # reach EOF once the above invocations exit
-$pipe:close
+$pipe.close
 
 # Wait for the sum commands to finish
 assert (($(fg $sum_job_id1) + $(fg $sum_job_id2) + $(fg $sum_job_id3) + $(fg $sum_job_id4)) == 19_999_800_000)

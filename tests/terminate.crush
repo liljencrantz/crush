@@ -8,21 +8,21 @@
 # (with a generous margin below the sleep's own duration) since sleep's internal
 # state isn't otherwise observable from a script.
 
-$start := $(time:now)
+$start := $($time.now)
 $job_id := $(sleep 5s &)
 terminate $job_id
 try {
     $(fg $job_id)
 } catch {|$e|
 }
-$end := $(time:now)
+$end := $($time.now)
 assert (($end - $start) < 2s) "terminate should interrupt a running sleep almost immediately, not wait out its full duration"
 
 # pause should actually stop a running sleep's countdown, not just fail to error.
-$start2 := $(time:now)
+$start2 := $($time.now)
 $job_id2 := $(sleep 5s &)
 pause $job_id2
-$mid := $(time:now)
+$mid := $($time.now)
 assert (($mid - $start2) < 2s) "pause should stop a running sleep from completing at its original deadline"
 
 # Resuming a paused sleep continues counting down its remaining duration, rather than
@@ -32,6 +32,6 @@ assert (($mid - $start2) < 2s) "pause should stop a running sleep from completin
 # not working at all (waiting out the rest forever).
 resume $job_id2
 $(fg $job_id2)
-$end2 := $(time:now)
+$end2 := $($time.now)
 assert (($end2 - $mid) > 1s) "resume should let a paused sleep continue counting down its remaining duration, not finish immediately"
 assert (($end2 - $mid) < 6s) "resume should not wait any longer than the sleep's original total duration"

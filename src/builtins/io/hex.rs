@@ -16,7 +16,7 @@ use std::io::{BufReader, Read, Write};
     output = Known(ValueType::BinaryInputStream),
     short = "Read a hexadecimal value and decode it.",
     long = "If no file is specified, use the input, which must be a binary or a string.",
-    example = "\"68656c6c6f2c20776f726c6421\" | hex:from",
+    example = "\"68656c6c6f2c20776f726c6421\" | $hex.from",
 )]
 struct FromSignature {
     #[unnamed()]
@@ -51,7 +51,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::BinaryInputStream),
     short = "Write specified binary or string as hexadecimal",
     long = "If no file is specified, produce a binary stream as output.",
-    example = "\"hello, world!\" | hex:to",
+    example = "\"hello, world!\" | $hex.to",
 )]
 struct To {
     #[unnamed()]

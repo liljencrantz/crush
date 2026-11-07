@@ -611,7 +611,7 @@ impl Scope {
                                             path.iter()
                                                 .map(|k| k.to_string())
                                                 .collect::<Vec<_>>()
-                                                .join(":"),
+                                                .join("."),
                                             //path[1],
                                             data.name.clone().unwrap(),
                                             self.id(),
@@ -706,7 +706,7 @@ impl Scope {
             ))
         } else if data.mapping[name].value_type() != value.value_type() {
             error(format!(
-                "Type mismatch when reassigning variable {}. Use `var:unset \"{}\"` to remove the old variable if you want to reassign it.",
+                "Type mismatch when reassigning variable {}. Use `$var.unset \"{}\"` to remove the old variable if you want to reassign it.",
                 name,
                 name).as_str())
         } else {
@@ -921,7 +921,7 @@ impl Identity for Scope {
 impl Help for Scope {
     fn signature(&self) -> String {
         self.full_path()
-            .map(|p| p.join(":"))
+            .map(|p| p.join("."))
             .unwrap_or_else(|_| "<Anonymous scope>".to_string())
     }
 

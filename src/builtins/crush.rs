@@ -64,7 +64,7 @@ mod env {
     unset,
     output = Known(ValueType::Empty),
     short = "Removes the environment variables with the given names",
-    example = "crush:env:unset \"FOO\" \"BAR\"",
+    example = "$crush.env.unset \"FOO\" \"BAR\"",
     )]
     pub(crate) struct Unset {
         #[description("the names of the environment variables to remove")]
@@ -303,9 +303,9 @@ mod warn {
         output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
         long = "Commands that continue past a partial failure (e.g. one bad row out of a",
         long = "stream) report it as a warning rather than aborting. A bounded number of the",
-        long = "most recent warnings are kept here (see `crush:warn:limit`); in interactive",
+        long = "most recent warnings are kept here (see `$crush.warn.limit`); in interactive",
         long = "mode, they are also printed as soon as they happen, unless disabled (see",
-        long = "`crush:warn:print`).",
+        long = "`$crush.warn.print`).",
     )]
     pub struct List {}
 
@@ -336,12 +336,12 @@ mod warn {
         crush.warn.new,
         can_block = false,
         output = Known(ValueType::Empty),
-        short = "Report a warning to the bounded log crush:warn:list keeps.",
+        short = "Report a warning to the bounded log $crush.warn.list keeps.",
         long = "Every builtin that presses on past a partial failure (each/where/group/files,",
         long = "and others) reports it through this exact same mechanism instead of aborting;",
         long = "this is that mechanism made directly callable, for a script or closure that",
         long = "wants to flag something without stopping.",
-        example = "crush:warn:new \"something looked off, continuing anyway\"",
+        example = "$crush.warn.new \"something looked off, continuing anyway\"",
     )]
     pub struct New {
         #[description("the warning message to report.")]
@@ -362,7 +362,7 @@ mod warn {
         #[signature(
             crush.warn.limit.set,
             output = Known(ValueType::Empty),
-            short = "Set how many warnings crush:warn:list keeps before evicting the oldest."
+            short = "Set how many warnings $crush.warn.list keeps before evicting the oldest."
         )]
         pub struct Set {
             #[description("the new warning limit.")]
@@ -382,7 +382,7 @@ mod warn {
         #[signature(
             crush.warn.limit.get,
             output = Known(ValueType::Integer),
-            short = "Get how many warnings crush:warn:list keeps before evicting the oldest."
+            short = "Get how many warnings $crush.warn.list keeps before evicting the oldest."
         )]
         pub struct Get {}
 
@@ -401,9 +401,9 @@ mod warn {
             output = Known(ValueType::Empty),
             short = "Set whether warnings are printed to the screen as they happen.",
             long = "Only takes effect in interactive mode -- a warning is always recorded in",
-            long = "`crush:warn:list` either way, this only controls whether it's also printed",
+            long = "`$crush.warn.list` either way, this only controls whether it's also printed",
             long = "immediately. Defaults to `true`.",
-            example = "crush:warn:print:set $false",
+            example = "$crush.warn.print.set $false",
         )]
         pub struct Set {
             #[description("whether to print warnings to the screen as they happen.")]
@@ -636,7 +636,7 @@ configurable here."
                     warn::List::declare(env)?;
                     env.create_namespace(
                         "limit",
-                        "How many warnings crush:warn:list keeps before evicting the oldest",
+                        "How many warnings $crush.warn.list keeps before evicting the oldest",
                         None,
                         Box::new(move |env| {
                             warn::limit::Get::declare(env)?;

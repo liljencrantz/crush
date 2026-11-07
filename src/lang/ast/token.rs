@@ -28,6 +28,10 @@ pub enum Token<'input> {
     Float(&'input str, Location),
     Duration(&'input str, Location),
     MemberOperator(Location),
+    /// `:` used for a closure parameter's type annotation (`|x: integer|`) -- kept as
+    /// its own token, distinct from `MemberOperator`, so `.` can be the sole member-
+    /// access operator without taking this unrelated use of `:` away too.
+    TypeAnnotationColon(Location),
     Equals(Location),
     Declare(Location),
     Separator(&'input str, Location),
@@ -75,6 +79,7 @@ impl Token<'_> {
             | Token::Float(_, l)
             | Token::Duration(_, l)
             | Token::MemberOperator(l)
+            | Token::TypeAnnotationColon(l)
             | Token::Equals(l)
             | Token::Declare(l)
             | Token::Separator(_, l)
@@ -129,7 +134,8 @@ impl Token<'_> {
             | Token::Separator(s, _)
             | Token::Duration(s, _)
             | Token::Float(s, _) => s,
-            Token::MemberOperator(_) => ":",
+            Token::MemberOperator(_) => ".",
+            Token::TypeAnnotationColon(_) => ":",
             Token::Equals(_) => "=",
             Token::Declare(_) => ":=",
             Token::SubStart(_) => "(",
@@ -221,7 +227,12 @@ mod tests {
             ("5", Command, Token::Integer("", loc)),
             ("5.0", Command, Token::Float("", loc)),
             ("5s", Command, Token::Duration("", loc)),
-            (":", Command, Token::MemberOperator(loc)),
+            // `.` is only a `MemberOperator` in Command mode when adjacent to
+            // something a member can be accessed on (`$x.y`, not a bare `.` on its
+            // own, which is an ordinary file-literal character) -- Expression mode
+            // has no such restriction, so it's the simpler reliable recipe here.
+            (".", Expression, Token::MemberOperator(loc)),
+            (":", Command, Token::TypeAnnotationColon(loc)),
             ("=", Command, Token::Equals(loc)),
             (":=", Command, Token::Declare(loc)),
             (";", Command, Token::Separator("", loc)),
@@ -296,6 +307,7 @@ mod tests {
                 | Token::Float(..)
                 | Token::Duration(..)
                 | Token::MemberOperator(..)
+                | Token::TypeAnnotationColon(..)
                 | Token::Equals(..)
                 | Token::Declare(..)
                 | Token::Separator(..)
@@ -350,6 +362,7 @@ impl<'a> Into<Spanned<'a>> for Token<'a> {
             | Token::Float(_, l)
             | Token::Duration(_, l)
             | Token::MemberOperator(l)
+            | Token::TypeAnnotationColon(l)
             | Token::Equals(l)
             | Token::Declare(l)
             | Token::Separator(_, l)

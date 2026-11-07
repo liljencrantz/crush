@@ -1,0 +1,46 @@
+# `{"foo": "bar"}` is a dict literal in expression mode, desugaring into
+# `$dict.of <k1> <v1> <k2> <v2> ...` the same way a list literal (`[1, 2, 3]`)
+# desugars into `$list.of 1 2 3`. `{...}` is otherwise always a closure, so this
+# relies on a one-token-lookahead decision at the grammar level: a key (an `ExprItem`
+# -- no operators) followed by `:` commits to a dict entry, anything else continues
+# as an ordinary closure job.
+
+# A basic string-keyed dict with multiple entries and mixed value types.
+$d := ({"foo": "bar", "count": 3})
+assert ($d["foo"] == "bar") "a quoted-string key should look up its value"
+assert ($d["count"] == 3) "mixed value types across entries should both be readable"
+assert (($d.len()) == 2) "the dict should have exactly as many entries as were written"
+
+# A bareword (unquoted) key is also a valid dict key -- evaluates to the same string
+# value a quoted key with the same spelling would.
+$d2 := ({foo: "bar"})
+assert ($d2["foo"] == "bar") "a bareword key should resolve to the same string as a quoted one"
+
+# A key can be any ExprItem, not just a literal -- a $variable or a parenthesized
+# sub-expression works too, since the key is computed, not restricted to a fixed
+# shape.
+$name := "computed"
+$d3 := ({$name: "value"})
+assert ($d3["computed"] == "value") "a $variable key should be evaluated, not used literally"
+
+$d4 := ({(1 + 1): "two"})
+assert ($d4[2] == "two") "a parenthesized sub-expression key should be evaluated"
+
+# Numeric (non-string) keys work too, since `$dict.of`'s alternating-arguments form
+# accepts any key type.
+$d5 := ({1: "one", 2: "two"})
+assert ($d5[1] == "one") "an integer key should work like any other key"
+assert (($d5.len()) == 2) "an integer-keyed dict should still have the right entry count"
+
+# An empty `{}` has nothing to signal dict-ness with, so it's still an empty closure,
+# exactly as before this feature existed -- not an empty dict.
+assert (($(typeof {})) == $command) "an empty {} should still be a closure, not a dict"
+
+# Ordinary closures -- with or without a signature, with or without a body, and used
+# as control-flow bodies -- are all unaffected by the grammar restructuring this
+# feature needed (see Node::DictLiteral's doc comment for why a single rule using
+# ExprSignature/ExprJobListWithoutSeparator couldn't be kept).
+assert (($({|| 5})) == 5) "a zero-parameter closure should still work"
+assert (($({|$x| ($x + 1)} 5)) == 6) "a closure with a parameter should still work"
+assert (($({5; 6; 7})) == 7) "a multi-job closure body should still evaluate to its last job"
+assert ((if (1 == 1) {"yes"} else {"no"}) == "yes") "if/else closure bodies should still work"

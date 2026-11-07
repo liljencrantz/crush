@@ -13,7 +13,7 @@
 $job_id := $(cmd sleep 2 &)
 pause $job_id
 
-$status := $($(jobs | where {($id == $job_id)} | select status | list:collect)[0])
+$status := $($(jobs | where {($id == $job_id)} | select status | $list.collect)[0])
 assert ($status == "Paused") "job should be Paused after pause"
 
 fg $job_id

@@ -181,8 +181,56 @@ ExprItem: Box<Node> = {
 // ExprItem, which can be extended further via `.x`/`[...]`/`(...)`) can require this
 // exactly, with no ambiguity about how far the extension should reach. Used both as
 // ExprItem's own closure-literal alternative and by `try`'s body/catch (see below).
+// Split into four alternatives (rather than the more natural-looking single rule
+// using `ExprSignature`/`ExprJobListWithoutSeparator`, both of which can reduce to
+// empty) specifically so the dict-literal alternative added below doesn't create a
+// genuine LALR(1) conflict: a shared, empty-reducible production (`ExprJobList
+// WithoutSeparator`'s own epsilon case, needed for a bare `{}`) has a lookahead set
+// spanning nearly every token in the grammar -- because it's reused everywhere a
+// `{...}` body can appear, including every if/while/for/match -- so adding any new
+// sibling alternative to the same rule collides with it for some token (observed:
+// `While`) regardless of how narrow that sibling's own grammar is. Restructuring so
+// the empty case is its own explicit alternative (no epsilon reachable from this
+// rule's other branches) avoids that; each of the three closure branches below is
+// exactly the case the single-rule version used to produce, just spelled out.
 ExprClosureLiteral: Box<Node> = {
-    <l: @L> BlockStart Separators? <signature: ExprSignature> <jobs: ExprJobListWithoutSeparator> BlockEnd <r: @R> => Box::from(Node::Closure(signature, jobs, Location::new(l, r))),
+    // `{}` -- no signature, no jobs.
+    <l: @L> BlockStart Separators? BlockEnd <r: @R> => Box::from(Node::Closure(
+        None,
+        JobListNode { jobs: vec![], location: Location::new(l, r) },
+        Location::new(l, r),
+    )),
+    // `{|sig|}` / `{|sig| jobs...}` -- an explicit signature, with or without jobs.
+    <l: @L> BlockStart Separators? <signature: ExprNonEmptySignature> <jobs: ExprJobListWithoutSeparator> BlockEnd <r: @R> =>
+        Box::from(Node::Closure(Some(signature), jobs, Location::new(l, r))),
+    // `{jobs...}` -- no signature, non-empty jobs.
+    <l: @L> BlockStart Separators? <jobs: ExprNonEmptyJobList> Separators? BlockEnd <r: @R> =>
+        Box::from(Node::Closure(None, jobs, Location::new(l, r))),
+    // A dict literal (`{"foo": "bar"}`) shares `{...}` with an ordinary closure body;
+    // see `Node::DictLiteral`'s doc comment for how the one-token-lookahead decision
+    // works (an empty `{}` is consequently never a dict -- nothing to signal it with
+    // -- and keeps meaning an empty closure, same as today).
+    <l: @L> BlockStart Separators? <entries: DictEntryList> Separators? BlockEnd <r: @R> => Node::dict_literal(entries, Location::new(l, r)),
+}
+
+// `ExprSignature` minus its own empty alternative -- see `ExprClosureLiteral`'s doc
+// comment for why the empty case needs to be split out into its own, separate rule
+// alternative instead.
+ExprNonEmptySignature: Vec<ParameterNode> = {
+    Pipe Separators? Pipe Separators? => vec![],
+    Pipe Separators? <s: ExprParameterList> Pipe Separators? => s,
+}
+
+DictEntry: (Box<Node>, Box<Node>) = {
+    <k: ExprItem> TypeAnnotationColon <v: Expr> => (k, v),
+}
+
+DictEntryList: Vec<(Box<Node>, Box<Node>)> = {
+    <e: DictEntry> => vec![e],
+    <mut l: DictEntryList> Separators <e: DictEntry> => {
+        l.push(e);
+        l
+    },
 }
 
 MatchArmList: Vec<MatchArmNode> = {
@@ -275,7 +323,7 @@ ExprParameter: ParameterNode = {
 
     <start: @L> <l: Identifier> <end: @R> <d: ExprDefault>  <doc: QuotedString?> => ParameterNode::parameter(l, None, d, doc),
 
-    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: ExprItem> <d: Default>  <doc: QuotedString?> =>
+    <start: @L> <l: Identifier> <end: @R> TypeAnnotationColon <t: ExprItem> <d: Default>  <doc: QuotedString?> =>
         ParameterNode::parameter(l, Some(t), d, doc),
 
     Unnamed <start: @L> <l: Identifier> <end: @R> <doc: QuotedString?> => ParameterNode::unnamed(l, doc),
@@ -347,7 +395,7 @@ Parameter: ParameterNode = {
 
     <start: @L> <l: Identifier> <end: @R> <d: Default> <doc: QuotedString?> => ParameterNode::parameter(l, None, d, doc),
 
-    <start: @L> <l: Identifier> <end: @R> MemberOperator <t: Item> <d: Default> <doc: QuotedString?> =>
+    <start: @L> <l: Identifier> <end: @R> TypeAnnotationColon <t: Item> <d: Default> <doc: QuotedString?> =>
         ParameterNode::parameter(l, Some(t), d, doc),
 
     Unnamed <start: @L> <l: Identifier> <doc: QuotedString?> <end: @R> => ParameterNode::unnamed(l, doc),
@@ -415,6 +463,7 @@ extern {
         LogicalOperator=> Token::LogicalOperator(<&'input str>, <Location>),
         UnaryOperator=> Token::UnaryOperator(<&'input str>, <Location>),
         MemberOperator => Token::MemberOperator(<Location>),
+        TypeAnnotationColon => Token::TypeAnnotationColon(<Location>),
         Equals=> Token::Equals(<Location>),
         Bang=> Token::Bang(<Location>),
         Declare=> Token::Declare(<Location>),

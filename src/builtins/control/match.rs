@@ -91,7 +91,7 @@ fn r#match(mut context: CommandContext) -> CrushResult<()> {
         // real variable or command and fail, the same way a real `case` command would if
         // one didn't exist.
         let keyword = match invocation.command() {
-            ValueDefinition::Identifier(source) => source.string(),
+            ValueDefinition::Identifier(source, _) => source.string(),
             v => {
                 return command_error(format!(
                     "Each match arm must start with a bareword `case`, `any`, `is` or `default`, found `{}`.",

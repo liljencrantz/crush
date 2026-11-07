@@ -165,7 +165,7 @@ pub fn eval_command_definition(
                 // *written* as a bareword/path in command position (Identifier or a literal
                 // Value token) -- this is what makes `./foo` at the head of a job run `foo`.
                 // A File that merely *results* from evaluating some other expression here
-                // (e.g. `GetAttr`, member access like `$s:x`) must not trigger execution,
+                // (e.g. `GetAttr`, member access like `$s.x`) must not trigger execution,
                 // or any struct/dict/row field holding a File would get silently run as a
                 // subprocess the moment it's read. This list is deliberately an allow-list,
                 // not a `!matches!(.., GetAttr(..))` deny-list: execution is the dangerous
@@ -174,7 +174,7 @@ pub fn eval_command_definition(
                 Value::File(s)
                     if matches!(
                         command,
-                        ValueDefinition::Identifier(_) | ValueDefinition::Value(_, _)
+                        ValueDefinition::Identifier(_, _) | ValueDefinition::Value(_, _)
                     ) =>
                 {
                     if s.is_dir() && arguments.len() == 0 {
@@ -194,7 +194,16 @@ pub fn eval_command_definition(
             }
         }
         Err(err) => {
-            if let ValueDefinition::Identifier(str) = command {
+            // Only a *bare* command name (`pwd`, promoted to a command lookup by
+            // command-position syntax -- see `Node::compile`'s `Node::String` branch)
+            // falls back to an external process when scope lookup fails, matching a
+            // plain shell's own willingness to run anything found on `$PATH`. An
+            // explicit `$` sigil (`$pwd`) is a deliberate, unambiguous request for a
+            // real binding -- falling back silently to some same-named external
+            // program would be surprising and could even be a security concern (e.g.
+            // a typo'd or shadowed builtin silently running an attacker-controlled
+            // binary off `$PATH` instead of erroring).
+            if let ValueDefinition::Identifier(str, false) = command {
                 try_external_command(str, arguments.clone(), context)
             } else {
                 Err(err)

@@ -1,27 +1,27 @@
 # Duration literals: a bare number immediately followed by one of the unit suffixes
 # ns/ms/m/h/s (no whitespace) is a duration literal, equal to the matching
-# duration:of call -- not just numerically equal, but constructed through the exact
-# same chrono::Duration::<unit>() call duration:of itself uses (see
+# $duration.of call -- not just numerically equal, but constructed through the exact
+# same chrono::Duration::<unit>() call $duration.of itself uses (see
 # Node::parse_duration_literal in src/lang/ast/node.rs), so there's no risk of a
 # unit-conversion rounding mismatch between the two spellings.
 
-assert (5s == $(duration:of seconds=5)) "5s should equal duration:of seconds=5"
-assert (100ms == $(duration:of milliseconds=100)) "100ms should equal duration:of milliseconds=100"
-assert (3h == $(duration:of hours=3)) "3h should equal duration:of hours=3"
-assert (10m == $(duration:of minutes=10)) "10m should equal duration:of minutes=10"
-assert (250ns == $(duration:of nanoseconds=250)) "250ns should equal duration:of nanoseconds=250"
+assert (5s == $($duration.of seconds=5)) "5s should equal $duration.of seconds=5"
+assert (100ms == $($duration.of milliseconds=100)) "100ms should equal $duration.of milliseconds=100"
+assert (3h == $($duration.of hours=3)) "3h should equal $duration.of hours=3"
+assert (10m == $($duration.of minutes=10)) "10m should equal $duration.of minutes=10"
+assert (250ns == $($duration.of nanoseconds=250)) "250ns should equal $duration.of nanoseconds=250"
 
 # Underscores as digit separators work the same as in plain integer literals.
-assert (1_000s == $(duration:of seconds=1000)) "underscores should work like other numeric literals"
+assert (1_000s == $($duration.of seconds=1000)) "underscores should work like other numeric literals"
 
 # Works the same in command mode...
 $a := 5s
-assert ($a == $(duration:of seconds=5)) "a duration literal should work as a command-mode assignment's value"
+assert ($a == $($duration.of seconds=5)) "a duration literal should work as a command-mode assignment's value"
 assert ($(typeof $a) == $duration) "a duration literal should produce a value of type duration"
 
 # ...and in expression mode.
 $b := (5s)
-assert ($b == $(duration:of seconds=5)) "a duration literal should work the same in expression mode"
+assert ($b == $($duration.of seconds=5)) "a duration literal should work the same in expression mode"
 
 # A number immediately followed by what would otherwise look like the start of a
 # longer word must not be misparsed as a duration literal glued to a stray remainder,
@@ -34,9 +34,9 @@ $msg := ""
 try {
     eval "5seconds"
 } catch {|$e|
-    $msg = $e:message
+    $msg = $e.message
 }
-assert ($(like $msg $(glob:new "*5seconds*"))) $("expected 5seconds to be rejected as a single invalid numeric literal, got: {}":format $msg)
+assert ($(like $msg $($glob.new "*5seconds*"))) $("expected 5seconds to be rejected as a single invalid numeric literal, got: {}".format $msg)
 
 # Plain integer/float literals are unaffected.
 assert ((5 + 3) == 8) "plain integer arithmetic should be unaffected"
@@ -47,7 +47,7 @@ assert ((5.5 + 1) == 6.5) "plain float arithmetic should be unaffected"
 # same literal text and, more importantly, behave identically once re-parsed.
 $c := {sleep 5s}
 $def_text := $(definition $c)
-$src := $("$restored := {}":format $def_text)
+$src := $("$restored := {}".format $def_text)
 eval $src
 assert ($(definition $restored) == $def_text) "a closure using a duration literal argument should round-trip through definition/eval unchanged"
 

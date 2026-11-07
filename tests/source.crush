@@ -1,9 +1,9 @@
 # source runs the sourced file in the calling scope, so it can mutate an outer
 # variable. (source only ever takes files now -- a glob, regex, or $file/string path
 # to one; see tests/eval.crush for running an inline string/binary/stream instead.)
-$script := $(convert $file $("/tmp/source_repro_{}":format $(random:integer 1000000000)))
+$script := $(convert $file $("/tmp/source_repro_{}".format $($random.integer 1000000000)))
 cmd rm "-f" $script
-bin:from "$ran = $true\n" | bin:to $script
+$bin.from "$ran = $true\n" | $bin.to $script
 $ran := $false
 source $script
 cmd rm "-f" $script

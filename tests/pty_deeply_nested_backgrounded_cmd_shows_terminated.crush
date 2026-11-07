@@ -1,6 +1,6 @@
 # A `cmd` nested three blocks deep inside a trailing-`&` job (`{ { { cmd sleep N } } } &`)
 # must still show up as `Terminated` after its process is killed by a real signal sent
-# straight to it with `host:signal` -- the deeper sibling of
+# straight to it with `$host.signal` -- the deeper sibling of
 # `cmd_nested_in_backgrounded_block_shows_terminated.crush`. Every intermediate block job
 # finishes and is reaped long before the `sleep` dies, severing the `parent` links in
 # between, so this only works because "not holding the foreground" is inherited by each
@@ -12,7 +12,7 @@
 # pty_test_helpers.crush) instead of a bare `wait_for "# "` plus a settle delay -- see
 # that file for why a bare `wait_for "# "` proves nothing about whether a just-written
 # command has actually finished. `pty_child_pid` (also counted-retry, not a fixed delay)
-# finds the backgrounded `sleep`'s pid without round-tripping a `host:procs` query
+# finds the backgrounded `sleep`'s pid without round-tripping a `$host.procs` query
 # through the nested session's own screen.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
@@ -20,10 +20,10 @@ $n := $(pty_enable_counted_prompt $t)
 
 $n = $(pty_run $t $n "{ { { cmd sleep 7431 } } } &")
 $pid := $(pty_child_pid $t ^(.*sleep))
-host:signal $pid signal=SIGKILL
+$host.signal $pid signal=SIGKILL
 
 $n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
-$t:write "echo $(\"DEEP_CHECK_{}\":format $n)\n"
-$t:wait_for "DEEP_CHECK_1"
+$t.write "echo $(\"DEEP_CHECK_{}\".format $n)\n"
+$t.wait_for "DEEP_CHECK_1"
 
-$t:close
+$t.close

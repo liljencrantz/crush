@@ -101,6 +101,7 @@ impl From<Token<'_>> for TrackedString {
             | Token::Float(_, l)
             | Token::Duration(_, l)
             | Token::MemberOperator(l)
+            | Token::TypeAnnotationColon(l)
             | Token::Equals(l)
             | Token::Declare(l)
             | Token::Separator(_, l)

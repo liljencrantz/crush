@@ -10,14 +10,14 @@ try {
     assert (1 + 1 == 3)
     echo "should not run"
 } catch {
-    |$error| echo "caught:" $error:message
+    |$error| echo "caught:" $error.message
 }
 
 echo "a custom message can be given"
 try {
     assert (1 > 2) "custom message here"
 } catch {
-    |$error| echo "caught:" $error:message
+    |$error| echo "caught:" $error.message
 }
 
 echo "a catch clause can filter specifically on AssertionError, since that's a failed"
@@ -25,7 +25,7 @@ echo "assertion's error type"
 try {
     assert (1 > 2) "custom message here"
 } catch AssertionError {
-    |$error| echo "caught by type filter:" $error:message
+    |$error| echo "caught by type filter:" $error.message
 }
 
 echo "a catch clause filtered on a different type does not catch an AssertionError -- it"

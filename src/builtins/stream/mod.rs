@@ -36,7 +36,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
              SQL-like operations on those streams live: filtering (`where`), sorting, \
              grouping, aggregating, joining two streams, deduplicating, and more. This \
              namespace is imported into the global scope, so every command here works equally \
-             well as `stream:sort` or the bare word `sort` -- most Crush pipelines are built \
+             well as `$stream.sort` or the bare word `sort` -- most Crush pipelines are built \
              by chaining these together with `|`."
                 .to_string(),
         ),
@@ -71,7 +71,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     select::select,
                     true,
                     ["stream", "select"],
-                    "stream:select [copy_fields:string...] [*] [new_field=command]",
+                    "$stream.select [copy_fields:string...] [*] [new_field=command]",
                     "Pass on some old fields and calculate new ones for each line of input",
                     Some(
                         r#"# Examples

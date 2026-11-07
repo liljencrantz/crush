@@ -61,6 +61,24 @@ pub enum Node {
     /// consumed by `compile_standalone_assignment` -- never compiled as an ordinary
     /// value.
     Destructure(Vec<Node>, Location),
+    /// A `{"foo": "bar", "baz": 42}` dict literal in expression mode. Each key is an
+    /// `ExprItem` (no operators), each value a full `Expr`; the decision between a
+    /// dict entry and an ordinary closure job (both start by parsing an `ExprItem` as
+    /// part of a `Expr`) is deferred until the token right after the key is seen --
+    /// `TypeAnnotationColon` commits to a dict entry, anything else continues as a
+    /// closure job. That alone isn't enough to keep LALRPOP happy, though:
+    /// `ExprClosureLiteral` (see its own doc comment) has to be split into four
+    /// explicit alternatives, rather than the more natural single rule built on
+    /// `ExprSignature`/`ExprJobListWithoutSeparator`, because *that* rule's own
+    /// empty-reducible production has a lookahead set spanning nearly every token in
+    /// the grammar (it's reused everywhere a `{...}` body can appear, including every
+    /// if/while/for/match) -- a conflict that showed up regardless of how narrow this
+    /// dict-entry grammar was kept, until the empty case became its own alternative
+    /// with no epsilon production reachable from a sibling.
+    /// Desugars into `$dict.of <k1> <v1> <k2> <v2> ...` the same way `Destructure`
+    /// desugars into `$list.of`, so an empty `{}` -- with nothing to signal dict-ness
+    /// at all -- is never reachable here and keeps meaning an empty closure.
+    DictLiteral(Vec<(Box<Node>, Box<Node>)>, Location),
 }
 
 impl Node {
@@ -71,7 +89,7 @@ impl Node {
         )
     }
 
-    /// True for the synthetic `global:types:val` reference that `Node::val` builds --
+    /// True for the synthetic `$global.types.val` reference that `Node::val` builds --
     /// see `unwrap_val` below.
     fn is_val_ref(node: &Node) -> bool {
         match node {
@@ -87,7 +105,7 @@ impl Node {
 
     /// Expression mode desugars a bare value used as one "job" in a list (e.g. `$a` in
     /// `[$a, $b]`) into a synthetic two-expression command invoking the hidden
-    /// `global:types:val` builtin on it (see `Node::val`), so that e.g. `(1 + 1)` evaluates
+    /// `$global.types.val` builtin on it (see `Node::val`), so that e.g. `(1 + 1)` evaluates
     /// the expression and returns its value. That's invisible for an ordinary list
     /// literal, but it means a simple identifier list element normalizes to a
     /// `Node::Substitution` instead of a bare `Node::Identifier` -- which matters for
@@ -106,11 +124,11 @@ impl Node {
     }
 
     /// A `[a, b, c]` literal in expression mode. Deliberately deferred rather than
-    /// compiled to a `list:of` call right away: the exact same bracketed-and-separated
+    /// compiled to a `$list.of` call right away: the exact same bracketed-and-separated
     /// shape is also how a destructuring assignment target looks (`[$a, $b] := ...`),
     /// and `compile_standalone_assignment` needs to see the raw identifiers to build
     /// that, not an already-compiled call. `compile()`'s own `Node::Destructure` arm is
-    /// what turns this into the `list:of` invocation when it's used as an ordinary
+    /// what turns this into the `$list.of` invocation when it's used as an ordinary
     /// value instead.
     pub fn list_literal(node: JobListNode) -> Box<Node> {
         let items = node
@@ -119,6 +137,12 @@ impl Node {
             .map(|j| Self::unwrap_val(*Box::<Node>::from(j)))
             .collect();
         Box::from(Node::Destructure(items, node.location))
+    }
+
+    /// A `{"foo": "bar"}` dict literal in expression mode -- see `Node::DictLiteral`'s
+    /// own doc comment for why keys are restricted to a single `ExprItem` apiece.
+    pub fn dict_literal(entries: Vec<(Box<Node>, Box<Node>)>, location: Location) -> Box<Node> {
+        Box::from(Node::DictLiteral(entries, location))
     }
 
     fn id(s: &str, l: Location) -> Box<Node> {
@@ -161,6 +185,7 @@ impl Node {
                 *l
             }
             Destructure(_, l) => *l,
+            DictLiteral(_, l) => *l,
         }
     }
 
@@ -189,6 +214,7 @@ impl Node {
             Node::Substitution(_) => "command substitution",
             Node::Closure(_, _, _) => "closure",
             Node::Destructure(_, _) => "destructuring pattern",
+            Node::DictLiteral(_, _) => "dict literal",
         }
     }
 
@@ -253,7 +279,9 @@ impl Node {
                     );
                 }
             },
-            Node::Identifier(l) => ValueDefinition::Identifier(ctx.source.subtrackedstring(l)),
+            Node::Identifier(l) => {
+                ValueDefinition::Identifier(ctx.source.subtrackedstring(l), true)
+            }
             Node::Regex(l) => ValueDefinition::Value(
                 Value::Regex(l.string.clone(), Regex::new(&l.string.clone())?),
                 ctx.source.subtrackedstring(l),
@@ -264,7 +292,7 @@ impl Node {
             ),
             Node::String(f, TextLiteralStyle::Unquoted) => {
                 if is_command {
-                    ValueDefinition::Identifier(ctx.source.subtrackedstring(f))
+                    ValueDefinition::Identifier(ctx.source.subtrackedstring(f), false)
                 } else {
                     ValueDefinition::Value(Value::from(f), ctx.source.subtrackedstring(f))
                 }
@@ -330,6 +358,28 @@ impl Node {
             Node::Destructure(items, location) => {
                 let mut cmd = vec![Self::get_attr(&["global", "types", "list", "of"], *location)];
                 cmd.extend(items.iter().cloned());
+                let job_list = JobListNode {
+                    jobs: vec![JobNode {
+                        commands: vec![CommandNode {
+                            expressions: cmd,
+                            location: *location,
+                        }],
+                        location: *location,
+                        is_background: false,
+                    }],
+                    location: *location,
+                };
+                ValueDefinition::JobListDefinition(
+                    job_list.compile(ctx)?,
+                    ctx.source.substring(*location),
+                )
+            }
+            Node::DictLiteral(entries, location) => {
+                let mut cmd = vec![Self::get_attr(&["global", "types", "dict", "of"], *location)];
+                for (key, value) in entries.iter() {
+                    cmd.push((**key).clone());
+                    cmd.push((**value).clone());
+                }
                 let job_list = JobListNode {
                     jobs: vec![JobNode {
                         commands: vec![CommandNode {
@@ -436,7 +486,7 @@ impl Node {
     }
 
     /// Compiles `[a, b, ...] := value` / `[a, b, ...] = value` into a call to
-    /// `var:let_destructure`/`var:set_destructure`: each target name becomes an unnamed
+    /// `$var.let_destructure`/`$var.set_destructure`: each target name becomes an unnamed
     /// string argument, and the compiled right-hand side becomes the `value` named
     /// argument. The builtin itself is what actually splits `value` (a list, struct, or
     /// dict) into one value per name at runtime -- the number of elements can't be
@@ -522,6 +572,7 @@ impl Node {
             | Node::Substitution(_)
             | Node::Closure(_, _, _)
             | Node::Destructure(_, _)
+            | Node::DictLiteral(_, _)
             | Node::File(_, _) => Ok(None),
         }
     }
@@ -726,7 +777,7 @@ impl Node {
     }
 
     /// Expression mode's `match $subject { case $v {...} ... }` sugar. Desugars into a
-    /// call to the same `global:control:match` builtin command mode's `match` already
+    /// call to the same `$global.control.match` builtin command mode's `match` already
     /// uses -- match.rs reads each arm's keyword (`case`/`any`/`is`/`default`) directly
     /// off its body closure's raw, uncompiled AST as a bare command name, so each arm
     /// here is built as a synthetic command invocation shaped exactly like command
@@ -784,7 +835,7 @@ impl Node {
     }
 
     /// Expression mode's `try {...} catch {...}` sugar. Desugars into a call to the
-    /// same `global:control:try` builtin command mode's `try` already uses. try.rs
+    /// same `$global.control.try` builtin command mode's `try` already uses. try.rs
     /// reads its second, literal argument as a plain bareword string and validates it
     /// equals "catch" (see Try's `r#catch` field in src/builtins/control/mod.rs) --
     /// that's how command mode's own `try {...} catch {...}` avoids needing any
@@ -871,9 +922,9 @@ impl Node {
 
     /// Parses a duration literal's raw text (e.g. `"5s"`, `"1_500ms"`) into a
     /// `chrono::Duration`. The lexer (`src/lang/ast/lexer.rs`) only ever produces this
-    /// text with one of these five suffixes, so this mirrors `duration:of`
+    /// text with one of these five suffixes, so this mirrors `$duration.of`
     /// (`src/builtins/types/duration.rs`) exactly -- `5s` and
-    /// `$(duration:of seconds=5)` construct via the same `Duration::seconds` call and
+    /// `$($duration.of seconds=5)` construct via the same `Duration::seconds` call and
     /// are guaranteed equal, not just numerically close. Checked longest-suffix-first
     /// (`ms`/`ns` before `m`/`s`) so e.g. `5ms` isn't misparsed as `5m` plus a stray `s`.
     pub fn parse_duration_literal(text: &str) -> CrushResult<ChronoDuration> {

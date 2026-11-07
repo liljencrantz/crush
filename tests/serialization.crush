@@ -1,22 +1,22 @@
 rm ./.test_file
 # Pipe output of find into a file
-files ./example_data/tree|select file type | sort file | pup:to ./.test_file
+files ./example_data/tree|select file type | sort file | $pup.to ./.test_file
 # And read it back out again
-$(pup:from ./.test_file)[0] | member file | echo
+$($pup.from ./.test_file)[0] | member file | echo
 
 # Create a closure that close on outside variables
 $a := 4
 $b := 7.5
 $fff := {|$c:$integer=1 $d| echo ($a * $b * $c); for i=$(seq 0 3) $d }
 # Serialize the closure
-val $fff | pup:to ./.test_file
+val $fff | $pup.to ./.test_file
 # Unset the variables used by the closure
-var:unset a b fff
+$var.unset a b fff
 # Deserialize the closure and check that the variables still exists.
-$(pup:from ./.test_file) c=3 {echo 1}
+$($pup.from ./.test_file) c=3 {echo 1}
 
 # The closure above only exercises a plain defaulted parameter and an unnamed one --
-# pup:to's own ClosureDefinition serializer (src/lang/command/closure.rs) has separate
+# $pup.to's own ClosureDefinition serializer (src/lang/command/closure.rs) has separate
 # match arms for every ParameterDefinition variant (Normal/Named/Unnamed/Meta), for a
 # parameter's optional doc string, and for a default value that is itself a job
 # substitution rather than a literal, none of which the closure above ever reaches. This
@@ -31,11 +31,11 @@ $rich := {
     long_help="A closure exercising every corner of the pup wire format for a closure's own definition: parameter defaults (including one computed via a job substitution), per-parameter docs, named/unnamed collectors, and key=\"value\" meta annotations like this one."
     example="rich 5 6 7 z=9"
     |
-    struct:of x=$x y=$y z=$z rest=$rest extra=$extra
+    $struct.of x=$x y=$y z=$z rest=$rest extra=$extra
 }
 $rich_before := $($rich 5 z=9 6 7 w=10)
-val $rich | pup:to ./.test_file
-$restored_rich := $(pup:from ./.test_file)
+val $rich | $pup.to ./.test_file
+$restored_rich := $($pup.from ./.test_file)
 $rich_after := $($restored_rich 5 z=9 6 7 w=10)
 assert ($rich_before == $rich_after) \
     "a closure with a full signature (defaults incl. a job-substitution default, per-parameter docs, named/unnamed collectors, and meta annotations) should behave identically after a pup round trip"
@@ -46,23 +46,23 @@ assert ($rich_before == $rich_after) \
 # match with no wildcard over Value that will fail to *compile* if a new variant is
 # ever added without a matching case added here too.
 $check := {|$name $v|
-    val $v | pup:to ./.test_file
-    $restored := $(pup:from ./.test_file)
-    assert ($restored == $v) ("{} should round-trip through pup unchanged":format($name))
+    val $v | $pup.to ./.test_file
+    $restored := $($pup.from ./.test_file)
+    assert ($restored == $v) ("{} should round-trip through pup unchanged".format($name))
 }
 
 $check "empty" $(echo "x")
 $check "string" "hello"
 $check "integer" 42
-$check "time" $(time:now)
+$check "time" $($time.now)
 $check "duration" 10s
 $check "glob" *.txt
 $check "regex" ^(a+)
 $check "file" './Cargo.toml'
-$check "table" $(csv:from "a,1\nb,2\n" key=$string val=$integer | materialize)
-$check "struct" $(struct:of x=1 y=2)
-$check "list" $(list:of 1 2 3)
-$check "dict" $(dict:of a=1 b=2)
+$check "table" $($csv.from "a,1\nb,2\n" key=$string val=$integer | materialize)
+$check "struct" $($struct.of x=1 y=2)
+$check "list" $($list.of 1 2 3)
+$check "dict" $($dict.of a=1 b=2)
 $check "bool" $true
 $check "float" 5.5
 $check "binary" $(convert $binary "hi")
@@ -76,9 +76,9 @@ $check "type" $string
 # value_type_variants_are_all_accounted_for_in_serialization_crush in
 # src/lang/value/mod.rs for the matching exhaustiveness tripwire.
 $check_type := {|$name $t|
-    val $t | pup:to ./.test_file
-    $restored := $(pup:from ./.test_file)
-    assert ($restored == $t) ("{} type should round-trip through pup unchanged":format($name))
+    val $t | $pup.to ./.test_file
+    $restored := $($pup.from ./.test_file)
+    assert ($restored == $t) ("{} type should round-trip through pup unchanged".format($name))
 }
 
 $check_type "list of string" $(list $string)
@@ -96,11 +96,11 @@ $check_type "one_of, with a nested list and dict" $(one_of $string $(list $integ
 # of command/closure equality, and falls through to false; Scope compares by id, which a
 # freshly deserialized scope won't share). Verify behavior instead of identity.
 $add_one := {|$x| ($x + 1)}
-val $add_one | pup:to ./.test_file
-$restored_add_one := $(pup:from ./.test_file)
+val $add_one | $pup.to ./.test_file
+$restored_add_one := $($pup.from ./.test_file)
 assert ($($restored_add_one 5) == 6) "a restored closure should still behave the same way"
 
-val $global | pup:to ./.test_file
-$restored_scope := $(pup:from ./.test_file)
+val $global | $pup.to ./.test_file
+$restored_scope := $($pup.from ./.test_file)
 assert ($(typeof $restored_scope) == $scope) "a restored scope should still be a scope"
 

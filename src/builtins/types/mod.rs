@@ -114,33 +114,33 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     short = "Create an empty new class",
     example = "# Create a class that represents a point in 2D space",
     example = "$Point := $(class)",
-    example = "$Point:__short_help__ = \"A point in 2D space\"",
-    example = "$Point:__signature__ = \"class Point\"",
-    example = "$Point:__long_help__ = \"Uses floating point numbers to represent the x and y coordinates\"",
-    example = "$Point:__example__ = \"$p := ($Point.new(1.0, 2.0))\"",
+    example = "$Point.__short_help__ = \"A point in 2D space\"",
+    example = "$Point.__signature__ = \"class Point\"",
+    example = "$Point.__long_help__ = \"Uses floating point numbers to represent the x and y coordinates\"",
+    example = "$Point.__example__ = \"$p := ($Point.new(1.0, 2.0))\"",
     example = "# Constructor takes two arguments, x and y",
-    example = "Point:__init__ = {",
+    example = "$Point.__init__ = {",
     example = "  |$x:$float $y:$float|",
-    example = "  $this:x = $x",
-    example = "  $this:y = $y",
+    example = "  $this.x = $x",
+    example = "  $this.y = $y",
     example = "}",
     example = "",
-    example = "Point:len = {",
+    example = "$Point.len = {",
     example = "  |",
     example = "  short_help = \"Returns the distance from the origin\"",
     example = "  |",
     example = "  ($math.sqrt($this.x*$this.x + $this.y*$this.y))",
     example = "}",
     example = "# Overload the `+` operator to add two points. (Only available in expression mode)",
-    example = "Point:__add__ = {",
+    example = "$Point.__add__ = {",
     example = "  |",
     example = "  short_help = \"Add two points together\"",
     example = "  $other : $struct \"the other point.\"",
     example = "  |",
     example = "  ($Point.new(x=($this.x+$other.x), y=($this.y+$other.y)))",
     example = "}",
-    example = "$p := $($Point:new x=1.0 y=2.0)",
-    example = "$p:len",
+    example = "$p := $($Point.new x=1.0 y=2.0)",
+    example = "$p.len",
     example = "$p2 := ($Point.new(x=-1.0, y=2.0))",
     example = "$p3 := ($p + $p2)",
 )]
@@ -421,7 +421,7 @@ pub fn dir(mut context: CommandContext) -> CrushResult<()> {
     long = "provided as an argument, and extracts the named member from that value",
     long = "instead.",
     example = "$uri := \"https://raw.githubusercontent.com/liljencrantz/crush/refs/heads/master/example_data/dinosaurs.json\"",
-    example = "http $uri | member body | json:from",
+    example = "http $uri | member body | $json.from",
     example = "# member also takes its value as an argument instead of a pipe",
     example = "member __neg__ 5",
     example = "# dir lists a value's member names; member fetches one by name -- together",
@@ -486,10 +486,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
             "Every value type Crush knows about, and the methods you can call on instances of \
              it -- `string`, `integer`, `list`, `dict`, `time`, `duration`, `table`, `re`, \
              `glob`, and the rest, each its own sub-namespace of methods (e.g. \
-             `\"hello\":upper`, `$my_list:push value`). Also home to the type system's own \
+             `\"hello\".upper`, `$my_list.push value`). Also home to the type system's own \
              cross-cutting machinery: `class` (defining new types), `convert`, `typeof`, \
              `like` (pattern matching), `materialize`, and `dir`/`member`/`members` (generic \
-             value introspection). Imported into the global scope, so both `types:string` and \
+             value introspection). Imported into the global scope, so both `$types.string` and \
              bare `string` refer to the same type."
                 .to_string(),
         ),
@@ -502,7 +502,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     ("new", Value::Command(<dyn CrushCommand>::command(
                         new, true,
                         &["global", "types", "root", "new"],
-                        "root:new @unnamed @@named",
+                        "root.new @unnamed @@named",
                         "Create a new instance of the specified type",
                         Some("The `new` method ignores any arguments and returns a new instance of the type. If there parent struct has a `__init__` method, it will be called with all the named and unnnamed arguments passed in."),
                         Known(ValueType::Struct),

@@ -29,8 +29,8 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     short = "Construct a struct with the specified members",
     long = "Unnamed arguments will be given the names _1, _2, _3, and so on.",
     long = "",
-    long = "Unlike a struct created via the `class` command, a struct created via `struct:of` does not have a parent or a `__setattr__` method. The lack of a `__setattr__` method means that a \"data struct\" is immutable, though its members may potentially be modified, depending on their type.",
-    example = "struct:of foo=5 bar=\"baz\" false",
+    long = "Unlike a struct created via the `class` command, a struct created via `$struct.of` does not have a parent or a `__setattr__` method. The lack of a `__setattr__` method means that a \"data struct\" is immutable, though its members may potentially be modified, depending on their type.",
+    example = "$struct.of foo=5 bar=\"baz\" false",
 )]
 #[allow(unused)]
 struct Of {
@@ -63,8 +63,8 @@ fn of(context: CommandContext) -> CrushResult<()> {
     long = "columns from more than one source, applied here to struct members instead.",
     long = "",
     long = "Only each struct's own local members are used, not any inherited from a parent",
-    long = "(e.g. via `class`) -- the same \"data struct\" semantics `struct:of` itself uses.",
-    example = "struct:join (struct:of a=1 b=2) (struct:of b=3 c=4)",
+    long = "(e.g. via `class`) -- the same \"data struct\" semantics `$struct.of` itself uses.",
+    example = "$struct.join ($struct.of a=1 b=2) ($struct.of b=3 c=4)",
 )]
 #[allow(unused)]
 struct Join {

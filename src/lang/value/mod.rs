@@ -426,7 +426,7 @@ impl Value {
                     .map(|m| Value::Command(m.clone()))
             }),
             // Check ValueType::Type's own methods (e.g. `__is__`, a type-level operation)
-            // before falling back to the wrapped type's own instance methods (e.g. `$list:of`,
+            // before falling back to the wrapped type's own instance methods (e.g. `$list.of`,
             // a constructor) -- otherwise a name both define, like `__is__`, would silently
             // resolve to the wrong one (an instance method expecting a real instance as
             // `this`, not a bare type value).

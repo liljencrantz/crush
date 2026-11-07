@@ -1,4 +1,4 @@
-# stream:sample reservoir-samples `rows` rows from the input, giving every row an
+# $stream.sample reservoir-samples `rows` rows from the input, giving every row an
 # equal chance of ending up in the output without materializing the whole stream.
 
 # Sampling fewer rows than available returns exactly `rows` rows.

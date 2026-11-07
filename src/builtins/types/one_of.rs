@@ -22,7 +22,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     can_block = false,
     output = Known(ValueType::Type),
     short = "Construct a one_of value type with the specified allowed types",
-    example = "one_of:of $file $string $regex",
+    example = "$one_of.of $file $string $regex",
 )]
 #[allow(unused)]
 struct Call {

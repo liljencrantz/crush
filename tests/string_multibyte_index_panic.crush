@@ -1,4 +1,4 @@
-# string:lpad/rpad/substr/__getitem__ (src/builtins/types/string/mod.rs) index into
+# $string.lpad/rpad/substr/__getitem__ (src/builtins/types/string/mod.rs) index into
 # the string by raw byte offset with no UTF-8 char-boundary check, so any string
 # containing a multi-byte character (e.g. "hello" is 5 bytes and 5 chars, but "héllo"
 # is 6 bytes and 5 chars) panics the worker thread as soon as a computed byte offset
@@ -10,7 +10,7 @@
 # tests/list_peek.crush), which the test runner already checks against the implicit
 # expected `0`.
 
-assert ($("héllo":lpad 2) == "hé") "lpad should truncate to the first N characters, not bytes"
-assert ($("héllo":rpad 2) == "hé") "rpad should truncate to the first N characters, not bytes"
-assert ($("héllo":substr from=1 to=2) == "é") "substr's from/to should be character offsets, not byte offsets"
+assert ($("héllo".lpad 2) == "hé") "lpad should truncate to the first N characters, not bytes"
+assert ($("héllo".rpad 2) == "hé") "rpad should truncate to the first N characters, not bytes"
+assert ($("héllo".substr from=1 to=2) == "é") "substr's from/to should be character offsets, not byte offsets"
 assert ($("héllo"[1]) == "é") "string subscript should index by character, not byte"

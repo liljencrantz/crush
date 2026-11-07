@@ -1,6 +1,6 @@
 # Regression test: a `cmd` running inside a backgrounded *block* (`{ cmd sleep N } &`,
 # as opposed to a bare `cmd sleep N &`) must still show up as `Terminated` after being
-# killed by a real signal (`host:signal`), the same as a bare backgrounded `cmd` does.
+# killed by a real signal (`$host.signal`), the same as a bare backgrounded `cmd` does.
 #
 # Root cause: `cmd.rs`'s signal-death bookkeeping only ran for a background job
 # (gating added to avoid a misleading "Terminated" row for an ordinary *foreground*
@@ -31,17 +31,17 @@
 # bare `wait_for "# "` can be satisfied by a prompt already on screen *before* the
 # write, so under load it proved nothing about whether the command just written had
 # actually finished). `pty_child_pid` finds the backgrounded `sleep`'s pid directly via
-# `host:procs`, without needing to capture the session's own pid from inside it first.
+# `$host.procs`, without needing to capture the session's own pid from inside it first.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
 $n = $(pty_run $t $n "{cmd sleep 7413} &")
 $pid := $(pty_child_pid $t ^(.*sleep))
-host:signal $pid signal=SIGKILL
+$host.signal $pid signal=SIGKILL
 
-$n = $(pty_run $t $n "$status := ($(jobs | where {$definition:starts_with \"\\$cmd \\\"sleep\\\" 7413\"} | select status))[0]:status")
-$t:write "echo $(\"NESTED_CHECK_{}\":format $status)\n"
-$t:wait_for "NESTED_CHECK_Terminated"
+$n = $(pty_run $t $n "$status := ($(jobs | where {$definition.starts_with \"\\$cmd \\\"sleep\\\" 7413\"} | select status))[0].status")
+$t.write "echo $(\"NESTED_CHECK_{}\".format $status)\n"
+$t.wait_for "NESTED_CHECK_Terminated"
 
-$t:close
+$t.close

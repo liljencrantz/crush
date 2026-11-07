@@ -8,7 +8,7 @@ $plain := "unset"
 try {
     convert $integer "notanumber"
 } catch {
-    |$e| $plain = $e:message
+    |$e| $plain = $e.message
 }
 assert ($plain == "invalid digit found in string") "a catch with no filter should still catch everything, as before"
 
@@ -69,7 +69,7 @@ try {
         |$e| "wrong"
     }
 } catch {
-    |$e| $propagated = ($e:message == "boom")
+    |$e| $propagated = ($e.message == "boom")
 }
 assert $propagated "an error matching no catch clause's filter should propagate past try, not be silently swallowed"
 

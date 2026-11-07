@@ -41,17 +41,17 @@
 # caught, not to pin down its exact odds.
 #
 # Job id `0` for the backgrounded block: confirmed directly against the debug binary
-# (dumping `$t:contents` after the first `jobs` call) -- in a freshly created pty
+# (dumping `$t.contents` after the first `jobs` call) -- in a freshly created pty
 # session, the first job ever typed gets id 0, same precedent as the sibling pty
 # job-control tests (e.g. `pty_bg_resumes_without_foregrounding.crush`).
 #
 # The marker path is unique per run (suffixed with this *outer* script's own pid, via
-# `crush:pid`, not the nested session's) so concurrent test runs can never collide on
+# `$crush.pid`, not the nested session's) so concurrent test runs can never collide on
 # the same file. A best-effort delete of any stale marker from an earlier run happens
 # before the check below for the same reason pids get reused at all: a *previous* run
 # of this exact test, under a pid that's since been recycled, could have left this
 # same path behind (e.g. if that earlier run's own assertion below had failed, since a
-# failed `assert` ends the script before `$t:close` -- there's nothing to a "finally"
+# failed `assert` ends the script before `$t.close` -- there's nothing to a "finally"
 # here) -- and an already-existing file would wrongly read back as "the second
 # statement ran" on *this* run before it ever got a chance to actually create it.
 #
@@ -67,13 +67,13 @@
 # load) or always pays for the worst case even when the job finished almost instantly.
 source tests/pty_test_helpers.crush
 
-$my_pid := $(crush:pid)
-$marker := $("/tmp/vt_terminate_internal_job_marker_{}":format $my_pid)
+$my_pid := $($crush.pid)
+$marker := $("/tmp/vt_terminate_internal_job_marker_{}".format $my_pid)
 try {
     cmd rm "-f" $marker
 } catch {
 }
-$cmd_line := $("{{sleep 100s; cmd touch \"{}\"}} &":format $marker)
+$cmd_line := $("{{sleep 100s; cmd touch \"{}\"}} &".format $marker)
 
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
@@ -84,10 +84,10 @@ pty_assert_no_thread $t 0
 
 $marker_exists := $true
 try {
-    fs:stat $marker
+    $fs.stat $marker
 } catch {
     $marker_exists = $false
 }
 assert (!$marker_exists) "terminate must actually stop the backgrounded block's underlying execution, not just flip its status -- the second statement must never run"
 
-$t:close
+$t.close

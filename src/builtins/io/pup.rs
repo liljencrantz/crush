@@ -17,7 +17,7 @@ use signature::signature;
     short = "Serialize to pup format",
     long = "Pup is the native crush serialization format. All Crush types, including",
     long = "lambdas can be serialized to this format.",
-    example = "files | pup:to")]
+    example = "files | $pup.to")]
 struct To {
     #[unnamed()]
     #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
@@ -37,7 +37,7 @@ fn to(mut context: CommandContext) -> CrushResult<()> {
     can_block = true,
     output = Unknown,
     short = "Parse pup format",
-    example = "pup:from serialized.pup")]
+    example = "$pup.from serialized.pup")]
 struct From {
     #[unnamed()]
     #[description("source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`.")]

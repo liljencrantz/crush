@@ -13,9 +13,9 @@
 # directly by reintroducing the old bug), which the test runner already checks against
 # the implicit expected `0`.
 
-$l := $(list:of 1)
-assert ($($l:peek) == 1) "peek on a non-empty list should return its last element without removing it"
-assert ($($l:len) == 1) "peek should not remove the element it returns"
+$l := $($list.of 1)
+assert ($($l.peek) == 1) "peek on a non-empty list should return its last element without removing it"
+assert ($($l.len) == 1) "peek should not remove the element it returns"
 
-$l:clear
-$l:peek
+$l.clear
+$l.peek

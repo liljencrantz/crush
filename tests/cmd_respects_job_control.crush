@@ -1,4 +1,4 @@
-# Regression test: control:cmd (cmd.rs) spawns a real external OS process and used to
+# Regression test: $control.cmd (cmd.rs) spawns a real external OS process and used to
 # simply block its worker thread on `child.wait()`, with no control channel registered
 # at all -- pause/terminate on this job had nothing to reach: the external
 # process itself kept running (or, for pause, kept executing instead of actually

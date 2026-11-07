@@ -133,8 +133,8 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     long = "becomes the list's elements, so it works directly on a multi-column table with no",
     long = "need to `select` the column out first. If `column` is omitted, the input must",
     long = "have exactly one column, which is then used.",
-    example = "seq 1 4 | select id={$value} name={\"item-{}\":format ($value)} | list:collect column=name",
-    example = "seq 1 4 | select name={\"item-{}\":format ($value)} | list:collect",
+    example = "seq 1 4 | select id={$value} name={\"item-{}\".format ($value)} | $list.collect column=name",
+    example = "seq 1 4 | select name={\"item-{}\".format ($value)} | $list.collect",
 )]
 struct Collect {
     #[description("the name of the column to read from the input; required unless the input has exactly one column.")]
@@ -183,7 +183,7 @@ fn collect(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::Any))),
     short = "Create a new list with the specified element type.",
-    example = "l := ((list string):new)",
+    example = "l := ((list string).new)",
 )]
 struct New {}
 

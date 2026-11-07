@@ -39,7 +39,7 @@ which is why `$echo` and `echo` refer to the same value.
 
 A whole number immediately followed (no space) by one of `ns`, `ms`, `m`, `h`, or `s` is
 a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
-respectively -- e.g. `5s` is exactly `duration:of seconds=5`. There's no literal syntax
+respectively -- e.g. `5s` is exactly `$duration.of seconds=5`. There's no literal syntax
 for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
 duration values instead, e.g. `1h + 30m`.
 
@@ -78,7 +78,7 @@ Example:
 The `cd` builtin command changes the current working directory of the crush process 
 to the specified directory. The signature of the `cd` builtin is:
 
-    fs:cd destination=one_of $string $file $glob $re
+    $fs.cd destination=one_of $string $file $glob $re
 
 This signature means that the only argument`cd` acceots is `destination`, and the type of
 `destination` must be one of four different types: `string`, `file`, `glob` and `re`.
@@ -101,8 +101,8 @@ instead of being written out individually, and combine freely with ordinary argu
 in the same call:
 
 ```shell script
-$paths := $(list:of "src" "docs")
-$flags := $(dict:of recurse=$true inode=$true)
+$paths := $($list.of "src" "docs")
+$flags := $($dict.of recurse=$true inode=$true)
 files @ $paths @@ $flags permissions=$false
 ```
 
@@ -122,16 +122,16 @@ whichever one comes *last* in the written call is the one that takes effect.
 ```shell script
 # recurse ends up $false: the @@ spread comes after the literal recurse=$true, so
 # it's the one that wins.
-files . recurse=$true @@ $(dict:of recurse=$false)
+files . recurse=$true @@ $($dict.of recurse=$false)
 ```
 
-`csv:from`'s `columns` argument -- one named argument per column, mapping its name to
+`$csv.from`'s `columns` argument -- one named argument per column, mapping its name to
 its type -- is a good example of arguments that are naturally built up as a dict rather
 than known in advance, e.g. when the columns themselves come from another data source:
 
 ```shell script
-$column_types := $(dict:of id=$integer name=$string age=$integer)
-csv:from "1,Alice,30\n2,Bob,25\n" @@ $column_types
+$column_types := $($dict.of id=$integer name=$string age=$integer)
+$csv.from "1,Alice,30\n2,Bob,25\n" @@ $column_types
 ```
 
 ### Jobs and pipelines
@@ -144,7 +144,7 @@ for the next command in a pipeline:
 ```shell script
 # This pipeline has three steps, first, list all processes, then sort the list by CPU usage,
 # finally truncate the list to ten elements.
-host:procs | sort cpu | head
+$host.procs | sort cpu | head
 ```
 
 Many commands consume and produce table streams as input and output. Table streams are
@@ -177,7 +177,7 @@ the rest. Defaults to showing ten rows.
 
 ```
 # Show the first ten lines of README.md
-lines:from README.md | head
+$lines.from README.md | head
 ```
 
 #### `tail`
@@ -187,7 +187,7 @@ Defaults to showing ten rows.
 
 ```
 # Show the last ten lines of README.md
-lines:from README.md | tail
+$lines.from README.md | tail
 ```
 
 #### `sort`
@@ -249,8 +249,8 @@ matching pair.
 
 ```
 # Join two small tables together on their shared id column
-$fruit := $(csv:from "1,apple\n2,pear\n" id=$integer name=$string)
-$stock := $(csv:from "1,5\n2,3\n" id=$integer count=$integer)
+$fruit := $($csv.from "1,apple\n2,pear\n" id=$integer name=$string)
+$stock := $($csv.from "1,5\n2,3\n" id=$integer count=$integer)
 join id=$fruit id=$stock
 ```
 
@@ -280,19 +280,19 @@ files | count
 files | sum size
 
 # Find the CPU usage of the process that has used the most CPU
-host:procs | max cpu
+$host.procs | max cpu
 
 ```
 
-Another type of aggregation are the `list:collect` and `dict:collect` commands, that
+Another type of aggregation are the `$list.collect` and `$dict.collect` commands, that
 collect all the values of a stream into either a list or a dict:
 
 ```shell
 # Collect all the names of all the files in the current directory into a list
-files | list:collect
+files | $list.collect
 
 # Create a dict mapping from process id to command name for all currently running processes
-host:procs | dict:collect pid name
+$host.procs | $dict.collect pid name
 ```
 
 Aggregation commands are often used together with the `group` command. When you create a new
@@ -300,10 +300,10 @@ column using a command in `group`, you often use this to aggregate values:
 
 ```shell
 # Calculate accumulated CPU usage per-user
-host:procs | group user total_cpu_usage={sum cpu}
+$host.procs | group user total_cpu_usage={sum cpu}
 
 # Calculate median memory usage (resident set size) per-user
-host:procs |group user total_cpu_usage={median rss}
+$host.procs |group user total_cpu_usage={median rss}
 ```
 
 ### Lazy stream evaluation
@@ -353,7 +353,7 @@ To use the output of one command as an *argument* to another (rather than as its
 put the command inside dollar-parentheses (`$()`):
 
 ```shell script
-"Hello, {name}":format name=$(users:me:name)
+"Hello, {name}".format name=$($users.me.name)
 ```
 
 If the substituted command produces a stream, the outer command runs concurrently with
@@ -413,7 +413,7 @@ effectively happens at the end of each lap instead of the start:
 $i := 0
 while {
     $i = ($i + 1)
-    echo $("lap {}":format $i)
+    echo $("lap {}".format $i)
     ($i <= 3)
 }
 ```
@@ -433,8 +433,8 @@ When the stream has more than one column, each row is bound as a struct instead 
 bare value, so its columns are reachable by name:
 
 ```shell script
-for row=$(csv:from "1,apple\n2,pear\n" id=$integer name=$string) {
-    echo ("{}: {}":format($row:id, $row:name))
+for row=$($csv.from "1,apple\n2,pear\n" id=$integer name=$string) {
+    echo ("{}: {}".format($row.id, $row.name))
 }
 ```
 
@@ -448,7 +448,7 @@ loop {
     if ($n >= 3) {
         break
     }
-    echo ("lap {}":format($n))
+    echo ("lap {}".format($n))
     $n = ($n + 1)
 }
 ```
@@ -509,9 +509,9 @@ it produces:
 
 ```shell script
 try {
-    risky:command
+    $risky.command
 } catch {
-    |$error| echo ("Recovered: {}":format($error:message))
+    |$error| echo ("Recovered: {}".format($error.message))
 }
 ```
 
@@ -531,13 +531,13 @@ to handle different errors differently. Each `catch` after the first takes an op
 
 ```shell script
 try {
-    risky:command
+    $risky.command
 } catch ^(Serde.*) {
-    |$e| echo ("Serialization error: {}":format($e:message))
+    |$e| echo ("Serialization error: {}".format($e.message))
 } catch Dns* {
-    |$e| echo ("DNS error: {}":format($e:message))
+    |$e| echo ("DNS error: {}".format($e.message))
 } catch {
-    |$e| echo ("Something else went wrong: {}":format($e:message))
+    |$e| echo ("Something else went wrong: {}".format($e.message))
 }
 ```
 
@@ -584,7 +584,7 @@ triggers them:
 | `MountpointsError` | Reading the system's mount table failed. |
 | `BatteryError` | Reading battery information failed. |
 | `NixError` | A POSIX system call failed (permissions, no such process, etc.). |
-| `NotifyError` | Setting up or reading from a filesystem watch (`fs:watch`) failed. |
+| `NotifyError` | Setting up or reading from a filesystem watch (`$fs.watch`) failed. |
 | `ReadlineError` | The interactive line editor reported an error. |
 
 **Serialization**
@@ -617,7 +617,7 @@ triggers them:
 | `SendError`, `RecvError`, `RecvTimeoutError`, `SelectTimeoutError`, `PoisonError` | Crush's own internal plumbing between pipeline stages broke down -- almost always because something downstream (e.g. `head`) stopped reading early, not a real failure. |
 
 When in doubt about which type an error actually has, catch it without a filter and
-print `$e:type` -- it's always the authoritative name to match against.
+print `$e.type` -- it's always the authoritative name to match against.
 
 #### Custom errors with `throw`
 
@@ -630,7 +630,7 @@ failed internally, but `throw` lets a script raise its own error with a custom
 try {
     throw "NotFound" "no such user"
 } catch NotFound {
-    |$e| echo ("custom: {}":format($e:message))
+    |$e| echo ("custom: {}".format($e.message))
 }
 ```
 
@@ -678,11 +678,11 @@ mutability, and related types in more depth than fits here.
 
 ### Creating custom types
 
-Use `struct:of` for a simple, immutable, ad-hoc mapping of names to values:
+Use `$struct.of` for a simple, immutable, ad-hoc mapping of names to values:
 
 ```shell script
-crush# $p := $(struct:of x=1 y=2)
-crush# $p:x
+crush# $p := $($struct.of x=1 y=2)
+crush# $p.x
 1
 ```
 
@@ -691,24 +691,24 @@ Use `class` to define a real type with methods and (optionally) inheritance:
 ```shell script
 $Point := $(class)
 
-$Point:__init__ = {
+$Point.__init__ = {
     |$x:$float $y:$float|
-    $this:x = $x
-    $this:y = $y
+    $this.x = $x
+    $this.y = $y
 }
 
-$Point:len = {
+$Point.len = {
     ||
-    math:sqrt (($this:x * $this:x) + ($this:y * $this:y))
+    $math.sqrt (($this.x * $this.x) + ($this.y * $this.y))
 }
 
-$Point:__add__ = {
+$Point.__add__ = {
     |$other|
-    Point:new x=($this:x + $other:x) y=($this:y + $other:y)
+    $Point.new x=($this.x + $other.x) y=($this.y + $other.y)
 }
 
-$p := $(Point:new x=1.0 y=2.0)
-$p:len
+$p := $($Point.new x=1.0 y=2.0)
+$p.len
 ```
 
 `class` creates a struct with a `new` method; calling `new` creates an instance and
@@ -764,7 +764,7 @@ the command name, unlike in command mode's space-separated form:
 (files() | sort("file", reverse=true) | where({size < 1000}))
 
 # A method call's argument needs its own parens too
-("Hello, {}":format($name))
+("Hello, {}".format($name))
 ```
 
 Every call needs its `()`, even one that takes no arguments at all -- expression mode is
@@ -772,17 +772,17 @@ modeled on C-style languages, where a bare name is a reference to a value, not a
 invocation of it:
 
 ```shell script
-crush# $items := $(list:of 1 2 3)
-crush# ($items:len() > 0)
+crush# $items := $($list.of 1 2 3)
+crush# ($items.len() > 0)
 $true
-crush# (($items:len) > 0)
+crush# (($items.len) > 0)
 Error: The two provided values of types command and integer could not be compared
 ```
 
-Without `()`, `$items:len` is the method itself (a `command` value) rather than the
+Without `()`, `$items.len` is the method itself (a `command` value) rather than the
 result of calling it -- the same distinction
 [Assignment takes exactly one value](#assignment-takes-exactly-one-value) shows further
-down for `$string:upper`.
+down for `$string.upper`.
 
 ### Syntactic sugar in expression mode
 
@@ -856,16 +856,16 @@ struct and insertion order for a dict -- key order is never involved. The number
 names must exactly match the number of elements, or the assignment errors:
 
 ```shell script
-crush# [$a $b] := $(list:of 1 2)
+crush# [$a $b] := $($list.of 1 2)
 crush# $a
 1
-crush# $point := $(struct:of x=10 y=20)
+crush# $point := $($struct.of x=10 y=20)
 crush# [$x $y] := $point
 crush# $y
 20
 
 # = destructures into already-declared variables, exactly like plain = does for one
-[$a $b] = $(list:of 3 4)
+[$a $b] = $($list.of 3 4)
 ```
 
 `:=` still requires that none of the names already exist in the local scope, and `=`
@@ -922,7 +922,7 @@ Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any ty
 be used as a pattern by implementing it:
 
 ```shell script
-$even := $(struct:of __is__={|$needle| ($needle mod 2 == 0)})
+$even := $($struct.of __is__={|$needle| ($needle mod 2 == 0)})
 
 like 4 $even   # true
 like 5 $even   # false
@@ -973,25 +973,25 @@ mode's arms already have.
 ## Assignment takes exactly one value
 
 `:=` and `=` each take exactly one value on the right-hand side. A single token -- a
-literal, a `$variable`, or a bare `$value:member` reference with no arguments of its
+literal, a `$variable`, or a bare `$value.member` reference with no arguments of its
 own -- is used directly, without being called:
 
 ```shell script
 crush# $x := "hello"
 crush# $y := $x
-crush# $upper := $string:upper   # the method itself, as a value -- not called
+crush# $upper := $string.upper   # the method itself, as a value -- not called
 crush# typeof $upper
 command
 ```
 
 A right-hand side that's itself a job -- anything with its own argument list, like a
-`:format` call, or a control-flow construct such as `if`/`else` used as an expression --
+`.format` call, or a control-flow construct such as `if`/`else` used as an expression --
 is *not* automatically run and reduced to a single result first. Command mode just sees
 a flat sequence of tokens, and `:=`/`=` only expect a name and one value, so the extra
 tokens are rejected:
 
 ```shell script
-crush# $x := "{}":format "hi"
+crush# $x := "{}".format "hi"
 Error: Stray arguments
 ```
 
@@ -999,7 +999,7 @@ Wrap the right-hand side in `$(...)` to run it as its own job and substitute the
 result:
 
 ```shell script
-crush# $x := $("{}":format "hi")
+crush# $x := $("{}".format "hi")
 crush# $x
 hi
 
@@ -1020,13 +1020,13 @@ A few of the built-in namespaces:
 
 * `crush`, runtime information about the current shell and how to reconfigure it,
 * `users`, information about the users of this system,
-* `fs`, the file system (`fs:files`, `fs:cwd`, `fs:watch`, ...),
+* `fs`, the file system (`$fs.files`, `$fs.cwd`, `$fs.watch`, ...),
 * `host`, information about the current host: hostname, CPU, memory, OS.
 
 Most types have useful methods too. Files, for instance, have `exists`:
 
 ```shell script
-crush# .:exists
+crush# '.'.exists
 true
 ```
 
@@ -1034,19 +1034,19 @@ Filesystem metadata itself comes from the `fs` namespace rather than a file meth
 since it takes a real syscall to answer:
 
 ```shell script
-crush# fs:stat . | select is_dir file
+crush# $fs.stat . | select is_dir file
 is_dir file
 true   .
 ```
 
-**`var:use`** widens unqualified name resolution to also search a namespace directly,
-so its members no longer need the `namespace:` prefix -- **`var:unuse`** reverses it:
+**`$var.use`** widens unqualified name resolution to also search a namespace directly,
+so its members no longer need the `namespace:` prefix -- **`$var.unuse`** reverses it:
 
 ```shell script
-crush# var:use $math
+crush# $var.use $math
 crush# sqrt 2
 1.4142135623730951
-crush# var:unuse $math
+crush# $var.unuse $math
 crush# sqrt 2
 Error: Unknown command name `sqrt`
 ```
@@ -1059,7 +1059,7 @@ A variable name starting with `__` is reserved for Crush's own internal use.
 ## Blocks and closures
 
 By wrapping a set of commands within braces (`{}`), you create a block of code. Many commands,
-such as `if`, `where` and `remote:exec` take a block of code as an argument:
+such as `if`, `where` and `$remote.exec` take a block of code as an argument:
 
 ```shell
 if $true {echo "Yes!"}
@@ -1091,7 +1091,7 @@ of the entire block.
 ```shell script
 files | where {
   $full_user_info := $(users[$user])
-  lte $($full_user_info:uid) 500
+  lte $($full_user_info.uid) 500
 }
 ```
 
@@ -1149,7 +1149,7 @@ The default value of an argument is evaluated once, at the construction of the c
 every call to the closure adds a new element to the list `$l`.
 
 ```shell script
-$push := {|$list = $(list:of 1)| $list:push 1; return $list}
+$push := {|$list = $($list.of 1)| $list.push 1; return $list}
 # Returns a list with two elements
 push 
 # Returns a list with three elements
@@ -1185,7 +1185,7 @@ $greet := {
      long_help="Consecutive long_help=\"...\" entries are joined into one flowing,"
      long_help="word-wrapped paragraph -- an empty long_help=\"\" starts a new one,"
      long_help="exactly like a built-in command's own repeated long = \"...\"."|
-    echo ("{}, {}!":format($greeting, $name))
+    echo ("{}, {}!".format($greeting, $name))
 }
 help $greet
 ```
@@ -1214,7 +1214,7 @@ This command accepts the following arguments:
 `@ $extra` is documented the same way a plain parameter is -- it has one fixed name of
 its own, so showing it plainly isn't misleading. `@@ $options` instead renders as
 `` `<any>=$any` ``, the same placeholder a built-in command's own dynamically-named
-argument (e.g. `csv:from`'s `columns`) uses -- `options=...` isn't how you'd actually
+argument (e.g. `$csv.from`'s `columns`) uses -- `options=...` isn't how you'd actually
 set it; any key not otherwise bound by another parameter is.
 
 One or more `example="..."` entries add a syntax-highlighted "Examples" section after
@@ -1224,7 +1224,7 @@ the argument list, the same as a built-in command's own repeated `example = "...
 $greet := {
     |$name: $string "the name to greet"
      example="greet \"World\""|
-    echo ("Hello, {}!":format($name))
+    echo ("Hello, {}!".format($name))
 }
 help $greet
 ```
@@ -1281,7 +1281,7 @@ needing to be found on `$PATH` first, e.g. `./configure` or `~/bin/some-script`.
 the path is a directory and no arguments are given, Crush will `cd` into it. This only
 happens when the path is written literally in command position (or referenced through
 a plain variable, e.g. `$f` where`$f := ./configure`) a file path that merely *results*
-from evaluating something else in that position (member access like `$s:script`,
+from evaluating something else in that position (member access like `$s.script`,
 a dict/struct field read some other way) is never executed, so reading a value that
 happens to hold a path can't accidentally run it as a subprocess.
 
@@ -1309,25 +1309,25 @@ part of a larger job), with `id`/`parent`/`definition`/`type`/`status` columns.
 to `&`, which starts a job in the background from the moment it's created).
 
 For two jobs that need to communicate directly -- one producing data the other consumes,
-both running concurrently -- create a **pipe** by calling `:pipe` on a
+both running concurrently -- create a **pipe** by calling `.pipe` on a
 `table_input_stream` type:
 
 ```shell script
 # Create a pipe
-$pipe := $($(table_input_stream value=$integer):pipe)
+$pipe := $($(table_input_stream value=$integer).pipe)
 # Create a job that writes integers 1 through 999 to the pipe, backgrounded
-$write_job_handle := $(seq 1 1000 | pipe:write &)
+$write_job_handle := $(seq 1 1000 | $pipe.write &)
 # Create a second job that reads from the pipe and sums the integers, backgrounded
-$sum_job_handle := $(pipe:read | sum &)
+$sum_job_handle := $($pipe.read | sum &)
 # Put the writer job in the foreground so it fully finishes before the pipe is closed
 fg $write_job_handle
 # Close the pipe so the reader can finish
-pipe:close
+$pipe.close
 # Put the sum job in the foreground to get its result
 fg $sum_job_handle
 ```
 
-Always `fg` every writer job before calling `pipe:close` -- a writer's own worker thread
+Always `fg` every writer job before calling `$pipe.close` -- a writer's own worker thread
 isn't synchronized with `close`, so closing the pipe before a writer has actually run can
 silently drop that writer's contribution.
 
@@ -1400,17 +1400,17 @@ Rather than just printing and moving on, they record the failure in a bounded wa
 log:
 
 ```shell script
-crush# list:of 1 2 3 | each {assert ($value != 2) "value was 2"}
-crush# crush:warn:list
+crush# $list.of 1 2 3 | each {assert ($value != 2) "value was 2"}
+crush# $crush.warn.list
 timestamp                 command message     file  location
 2024-01-01 00:00:00 +0000 <block> value was 2 ...    ...
 ```
 
-`each`, `where`, `group`, `files`, a class's `__init__`, and `remote:pexec` (a failed
+`each`, `where`, `group`, `files`, a class's `__init__`, and `$remote.pexec` (a failed
 host produces no row, not an error) all report into this log instead of failing
-outright. `crush:warn:list` lists the most recent entries; `crush:warn:limit:get`/
-`:set` control how many are kept (100 by default) before the oldest is evicted. In
+outright. `$crush.warn.list` lists the most recent entries; `$crush.warn.limit.get`/
+`.set` control how many are kept (100 by default) before the oldest is evicted. In
 interactive mode, a warning is also printed immediately as it happens; in a script, the
-only way to notice one happened is to check `crush:warn:list` (or, for commands that
+only way to notice one happened is to check `$crush.warn.list` (or, for commands that
 report per-item this way, to compare how much output you got against how much you
-expected. See e.g. `remote:pexec`'s own documentation).
+expected. See e.g. `$remote.pexec`'s own documentation).

@@ -16,21 +16,21 @@
 # still appears even while hung: a hang here shows up as "a".."e" printed followed by
 # the process simply never exiting, caught by tests/system.rs's own 30-second
 # per-test hang-detection timeout regardless of what output was expected.
-$f1 := $(convert $file $("/tmp/source_multiple_files_repro_a_{}":format $(random:integer 1000000000)))
-$f2 := $(convert $file $("/tmp/source_multiple_files_repro_b_{}":format $(random:integer 1000000000)))
-$f3 := $(convert $file $("/tmp/source_multiple_files_repro_c_{}":format $(random:integer 1000000000)))
-$f4 := $(convert $file $("/tmp/source_multiple_files_repro_d_{}":format $(random:integer 1000000000)))
-$f5 := $(convert $file $("/tmp/source_multiple_files_repro_e_{}":format $(random:integer 1000000000)))
+$f1 := $(convert $file $("/tmp/source_multiple_files_repro_a_{}".format $($random.integer 1000000000)))
+$f2 := $(convert $file $("/tmp/source_multiple_files_repro_b_{}".format $($random.integer 1000000000)))
+$f3 := $(convert $file $("/tmp/source_multiple_files_repro_c_{}".format $($random.integer 1000000000)))
+$f4 := $(convert $file $("/tmp/source_multiple_files_repro_d_{}".format $($random.integer 1000000000)))
+$f5 := $(convert $file $("/tmp/source_multiple_files_repro_e_{}".format $($random.integer 1000000000)))
 cmd rm "-f" $f1
 cmd rm "-f" $f2
 cmd rm "-f" $f3
 cmd rm "-f" $f4
 cmd rm "-f" $f5
-bin:from "echo a\n" | bin:to $f1
-bin:from "echo b\n" | bin:to $f2
-bin:from "echo c\n" | bin:to $f3
-bin:from "echo d\n" | bin:to $f4
-bin:from "echo e\n" | bin:to $f5
+$bin.from "echo a\n" | $bin.to $f1
+$bin.from "echo b\n" | $bin.to $f2
+$bin.from "echo c\n" | $bin.to $f3
+$bin.from "echo d\n" | $bin.to $f4
+$bin.from "echo e\n" | $bin.to $f5
 source $f1 $f2 $f3 $f4 $f5
 cmd rm "-f" $f1
 cmd rm "-f" $f2

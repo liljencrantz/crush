@@ -87,8 +87,8 @@ fn from_toml(toml_value: &toml::Value) -> CrushResult<Value> {
     short = "Parse toml format",
     long = "Input can either be a binary stream or a file. All Toml types except datetime are supported. Datetime is not supported because the rust toml library currently doesn't support accessing the internal state of a datetime.",
     long = "",
-    long = "When deserializing a list, `toml:from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
-    example = "toml:from Cargo.toml")]
+    long = "When deserializing a list, `$toml.from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
+    example = "$toml.from Cargo.toml")]
 struct FromSignature {
     #[unnamed()]
     #[description("source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`.")]
@@ -174,7 +174,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     long = "When serializing a list, some types have to be squashed, because toml does not have all the same types that Crush does:",
     long = "* `time` values are turned into strings in the RFC 3339 format.",
     long = "* `duration` values are turned into the integer number of seconds in the duration.",
-    example = "$(files)[0] | toml:to")]
+    example = "$(files)[0] | $toml.to")]
 struct To {
     #[unnamed()]
     #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]

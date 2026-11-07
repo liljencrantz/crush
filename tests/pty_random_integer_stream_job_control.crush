@@ -1,4 +1,4 @@
-# `random:integer_stream`'s loop is just `loop { output.send(...)?; }`, with no
+# `$random.integer_stream`'s loop is just `loop { output.send(...)?; }`, with no
 # separate, hand-rolled job-control controller of its own -- which the design's
 # command inventory read, from the code shape alone, as "doesn't cooperate at all".
 # That reading was wrong: `output` comes from `context.initialize_output(...)`,
@@ -7,39 +7,39 @@
 # against that controller's channel on every single call (src/lang/pipe.rs) --
 # Terminate/Pause are handled right there, every iteration, with no extra code
 # needed. Corrected after Task 4 found the same `initialize_output`/`poll_control`
-# mechanism while fixing `fs:usage` and `types.file.remove`'s *different* gap (those
+# mechanism while fixing `$fs.usage` and `types.file.remove`'s *different* gap (those
 # two don't call `send` for every entry, so they needed an explicit extra check
 # between entries -- this command calls `send` every iteration already).
 #
 # Confirmed directly across several real scenarios: backgrounded with no consumer,
 # backgrounded piped into `count` (an active, indefinite drain) then `pause`d, and
-# foregrounded then Ctrl-Z'd. In every case, `host:procs`' own `cpu` column (total
+# foregrounded then Ctrl-Z'd. In every case, `$host.procs`' own `cpu` column (total
 # CPU time used) was measured flat across a 1-second window once paused/terminated,
-# and `crush:threads` showed no thread left tracked under the job after `terminate`.
+# and `$crush.threads` showed no thread left tracked under the job after `terminate`.
 # There was no failing test to drive a Rust change here (the TDD Iron Law: no
 # production code without a failing test first) -- this is a regression guard, not
-# a bug fix, same treatment as fs:watch/remote:pexec get in this plan.
+# a bug fix, same treatment as $fs.watch/$remote.pexec get in this plan.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$n = $(pty_run $t $n "random:integer_stream | count &")
-$cpu_running := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+$n = $(pty_run $t $n "$random.integer_stream | count &")
+$cpu_running := $($host.procs | where {($pid == ($t.pid()))} | select cpu)[0].cpu
 
 $n = $(pty_run $t $n "pause 0")
-$cpu_a := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+$cpu_a := $($host.procs | where {($pid == ($t.pid()))} | select cpu)[0].cpu
 sleep 500ms
-$cpu_b := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
-assert ($cpu_b <= ($cpu_a + 50ms)) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)":format $cpu_a $cpu_b $cpu_running)
+$cpu_b := $($host.procs | where {($pid == ($t.pid()))} | select cpu)[0].cpu
+assert ($cpu_b <= ($cpu_a + 50ms)) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)".format $cpu_a $cpu_b $cpu_running)
 
 $n = $(pty_run $t $n "resume 0")
 $n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 pty_assert_no_thread $t 0
 
-$t:close
+$t.close
 
 # Uninterrupted case must keep working identically to before this plan.
-$rows := $(random:integer_stream 100 | head 5 | count)
-assert ($rows == 5) "random:integer_stream must still work normally when never interrupted"
+$rows := $($random.integer_stream 100 | head 5 | count)
+assert ($rows == 5) "$random.integer_stream must still work normally when never interrupted"
 

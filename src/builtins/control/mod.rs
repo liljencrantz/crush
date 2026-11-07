@@ -99,12 +99,12 @@ fn r#continue(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     long = "Unlike assertions in some other languages, crush assert simply stops execution through",
     long = "by erroring out. This can be caught using a `try`-command; the error's `type` (as",
-    long = "seen via `catch {|$e| ...}`'s `$e:type`) is always `AssertionError`, so a `catch`",
+    long = "seen via `catch {|$e| ...}`'s `$e.type`) is always `AssertionError`, so a `catch`",
     long = "clause can filter on it specifically with `catch AssertionError {...}` (see `try`'s",
     long = "own help for more on catch filters).",
     example = "assert (1 + 1 == 2)",
     example = "assert ($x > 0) \"x must be positive\"",
-    example = "try { assert ($x > 0) } catch AssertionError {|$e| echo (\"not positive: {}\":format($e:message))}",
+    example = "try { assert ($x > 0) } catch AssertionError {|$e| echo (\"not positive: {}\".format($e.message))}",
 )]
 struct Assert {
     #[description("the condition to check.")]
@@ -128,16 +128,16 @@ fn assert(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     short = "Raise a custom error, catchable and discriminable by its own error type.",
     long = "Unlike every other error in Crush, a thrown error's `type` (as seen via",
-    long = "`catch {|$e| ...}`'s `$e:type`) is `error_type` itself, not a fixed name tied",
+    long = "`catch {|$e| ...}`'s `$e.type`) is `error_type` itself, not a fixed name tied",
     long = "to whatever went wrong internally -- so a script or library can define and",
     long = "catch its own error categories.",
     output = Known(ValueType::Empty),
-    example = "try { throw \"NotFound\" \"no such user\" } catch {|$e| assert ($e:type == \"NotFound\")}",
+    example = "try { throw \"NotFound\" \"no such user\" } catch {|$e| assert ($e.type == \"NotFound\")}",
 )]
 struct Throw {
-    #[description("the error's type, e.g. \"NotFound\". Visible to a catch block as `$e:type`.")]
+    #[description("the error's type, e.g. \"NotFound\". Visible to a catch block as `$e.type`.")]
     error_type: String,
-    #[description("the error's message. Visible to a catch block as `$e:message`.")]
+    #[description("the error's message. Visible to a catch block as `$e.message`.")]
     message: String,
 }
 
@@ -347,13 +347,13 @@ fn bg(mut context: CommandContext) -> CrushResult<()> {
     long = "A job started with a trailing `&` runs in the background and registers its",
     long = "eventual result for later retrieval; `fg` waits for and returns that result.",
     example = "# Create a pipe",
-    example = "$pipe := $($(table_input_stream value=$integer):pipe)",
+    example = "$pipe := $($(table_input_stream value=$integer).pipe)",
     example = "# Create a job that writes 100_000 integers to the pipe and put this job in the background",
-    example = "seq 100_000 | pipe:write &",
+    example = "seq 100_000 | $pipe.write &",
     example = "# Create a second job that reads from the pipe and sums all the integers and put this job in the background",
-    example = "$sum_job_handle := $(pipe:read | sum &)",
+    example = "$sum_job_handle := $($pipe.read | sum &)",
     example = "# Close the pipe so that the second job can finish",
-    example = "pipe:close",
+    example = "$pipe.close",
     example = "# Put the sum job in the foreground",
     example = "fg $sum_job_handle",
 )]
@@ -804,7 +804,7 @@ fn eval(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.which,
     short = "Find the path of an executable",
-    long = "`which` searches the directories of the `$crush:end[PATH]` enivornment variable list for the specified command and returns the path to the first match.",
+    long = "`which` searches the directories of the `$crush.end[PATH]` enivornment variable list for the specified command and returns the path to the first match.",
     output = Known(ValueType::File),
     example = "# Returns '/bin/ps'",
     example = "which ps",

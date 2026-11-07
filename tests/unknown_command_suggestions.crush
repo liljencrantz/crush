@@ -8,9 +8,9 @@ $msg := ""
 try {
     jobz
 } catch {|$e|
-    $msg = $e:message
+    $msg = $e.message
 }
-assert ($(like $msg $(glob:new "*jobs*"))) $("expected an unknown-command error for `jobz` to suggest `jobs`, got: {}":format $msg)
+assert ($(like $msg $($glob.new "*jobs*"))) $("expected an unknown-command error for `jobz` to suggest `jobs`, got: {}".format $msg)
 
 # A name with no close match of any kind must still produce a plain, sensible error --
 # not crash, and not claim a suggestion that isn't actually close.
@@ -18,6 +18,6 @@ $msg2 := ""
 try {
     zzzzzzzzzzzzzzzzzzzzzzzzqqqqqqqqqqqqqqqqqqqqqq
 } catch {|$e|
-    $msg2 = $e:message
+    $msg2 = $e.message
 }
-assert ($(like $msg2 $(glob:new "Unknown command name*"))) $("expected a plain unknown-command error, got: {}":format $msg2)
+assert ($(like $msg2 $($glob.new "Unknown command name*"))) $("expected a plain unknown-command error, got: {}".format $msg2)

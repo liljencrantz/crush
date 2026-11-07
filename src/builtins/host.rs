@@ -216,7 +216,7 @@ static PROCS_OUTPUT_TYPE: [ColumnType; 8] = [
     can_block = true,
     short = "Return a table stream containing information on all running processes on this host",
     output = Known(ValueType::table_input_stream(& PROCS_OUTPUT_TYPE)),
-    long = "host:procs accepts no arguments.")]
+    long = "$host.procs accepts no arguments.")]
 pub struct Procs {}
 
 fn procs(context: CommandContext) -> CrushResult<()> {
@@ -273,7 +273,7 @@ mod macos {
         can_block = true,
         short = "Return a table stream containing information on all running threads on this host",
         output = Known(ValueType::table_input_stream(& THREADS_OUTPUT_TYPE)),
-        long = "host:threads accepts no arguments.")]
+        long = "$host.threads accepts no arguments.")]
     pub struct Threads {}
 
     fn threads(context: CommandContext) -> CrushResult<()> {
@@ -353,7 +353,7 @@ mod linux {
         can_block = true,
         short = "Return a table stream containing information on all running threads on this host",
         output = Known(ValueType::table_input_stream(& THREADS_OUTPUT_TYPE)),
-        long = "host:threads accepts no arguments.")]
+        long = "$host.threads accepts no arguments.")]
     pub struct Threads {}
 
     fn threads(mut context: CommandContext) -> CrushResult<()> {
@@ -393,7 +393,7 @@ mod linux {
     SIGCONT and SIGWINCH.",
     example = "# Create a `killall` command that kills any process whose name matches the specified pattern",
     example = "# The pattern can be a an exact string, a wildcard, or a regex",
-    example = "$killall := { |$victim| host:signal @$(host:procs|where {$name =~ $victim}|select pid | list:collect) signal=SIGKILL}",
+    example = "$killall := { |$victim| $host.signal @$($host.procs|where {$name =~ $victim}|select pid | $list.collect) signal=SIGKILL}",
     example = "# Kill all crush commands",
     example = "killall ^(crush)",
 )]
@@ -423,8 +423,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "Information about the host this crush session is running on",
         Some(
             "Information about the machine this Crush session is running on: memory, \
-             battery, uptime, process and thread tables, and (nested further) `host:os` and \
-             `host:cpu` for operating-system and CPU-specific metadata. Contrast with \
+             battery, uptime, process and thread tables, and (nested further) `$host.os` and \
+             `$host.cpu` for operating-system and CPU-specific metadata. Contrast with \
              `crush`, which is about the Crush process itself, not the machine underneath it."
                 .to_string(),
         ),

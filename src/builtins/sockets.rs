@@ -94,7 +94,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Some(
             "Lists the TCP and UDP sockets currently open on this machine -- the same \
              information tools like `netstat` or `ss` report. Read-only: this namespace can \
-             tell you what's listening or connected, but (unlike `grpc:connect` or `io:http`) \
+             tell you what's listening or connected, but (unlike `$grpc.connect` or `$io.http`) \
              has no way to open a connection of its own."
                 .to_string(),
         ),

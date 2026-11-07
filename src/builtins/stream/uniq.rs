@@ -14,7 +14,7 @@ use std::collections::HashSet;
     long = "If no column is given, the entire rows are compared.",
     long = "",
     long = "This command does not just remove consecutive repeated column values, any repeated column values over the entire stream are removed.",
-    example = "host:procs | uniq user")]
+    example = "$host.procs | uniq user")]
 pub struct Uniq {
     #[description("The field to compare.")]
     field: Option<String>,

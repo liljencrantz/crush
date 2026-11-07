@@ -1,11 +1,11 @@
 /*!
 D-Bus support.
 
-The system and session busses are exposed as lazily loaded namespaces, `dbus:system` and
-`dbus:session`. Each bus mirrors the names of the services on it, split on `.`, so the service
-`org.freedesktop.login1` is `dbus:system:org:freedesktop:login1`. A service namespace in turn
+The system and session busses are exposed as lazily loaded namespaces, `$dbus.system` and
+`$dbus.session`. Each bus mirrors the names of the services on it, split on `.`, so the service
+`org.freedesktop.login1` is `$dbus.system.org.freedesktop.login1`. A service namespace in turn
 contains the service's object tree, split on `/`, so the object `/org/freedesktop/login1` of that
-service is `dbus:system:org:freedesktop:login1:org:freedesktop:login1`. An object contains one
+service is `$dbus.system.org.freedesktop.login1.org.freedesktop.login1`. An object contains one
 callable member per method and per property.
 
 Everything is loaded one level at a time, the first time it is used, which is what makes tab
@@ -46,7 +46,7 @@ const SIGNAL_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 thread_local! {
     /// One connection per bus, per thread. Opening a connection is a round trip of its own, and
-    /// following a path like `dbus:system:org:freedesktop:login1:org:freedesktop:login1` makes one
+    /// following a path like `$dbus.system.org.freedesktop.login1.org.freedesktop.login1` makes one
     /// call per level.
     static CONNECTIONS: RefCell<HashMap<Bus, Connection>> = RefCell::new(HashMap::new());
 }
@@ -63,13 +63,13 @@ const HIDDEN_INTERFACES: [&str; 3] = [
 /// The long help of the dbus namespace.
 const DBUS_LONG_HELP: &str = r##"D-Bus is the message bus that Linux system services and desktop applications use to talk to each other. A program that offers functionality on the bus is a service, identified by a name like `org.freedesktop.login1`. A service has objects, identified by paths like `/org/freedesktop/login1`. Each object implements one or more interfaces, made up of methods that can be called, properties that can be read and sometimes written, and signals that are sent when something happens.
 
-There are two busses. The system bus, `dbus:system`, is shared by the whole machine and hosts services like systemd, logind and NetworkManager. The session bus, `dbus:session`, belongs to a single login session and hosts desktop services like notifications and media players. Much of what `systemctl`, `loginctl`, `hostnamectl` and `timedatectl` do, they do by calling these services, and all of it is available directly from crush.
+There are two busses. The system bus, `$dbus.system`, is shared by the whole machine and hosts services like systemd, logind and NetworkManager. The session bus, `$dbus.session`, belongs to a single login session and hosts desktop services like notifications and media players. Much of what `systemctl`, `loginctl`, `hostnamectl` and `timedatectl` do, they do by calling these services, and all of it is available directly from crush.
 
 # Finding your way around
 
-A service name is split on periods, so the service `org.freedesktop.login1` is `dbus:system:org:freedesktop:login1`. A service contains its objects, with paths split on slashes, so the object `/org/freedesktop/login1` of that service is `dbus:system:org:freedesktop:login1:org:freedesktop:login1`. An object contains one member per method, property and signal. Some services, like the bus itself, answer on the root object, in which case the methods are members of the service directly, e.g. `dbus:system:org:freedesktop:DBus:GetId`.
+A service name is split on periods, so the service `org.freedesktop.login1` is `$dbus.system.org.freedesktop.login1`. A service contains its objects, with paths split on slashes, so the object `/org/freedesktop/login1` of that service is `$dbus.system.org.freedesktop.login1.org.freedesktop.login1`. An object contains one member per method, property and signal. Some services, like the bus itself, answer on the root object, in which case the methods are members of the service directly, e.g. `$dbus.system.org.freedesktop.DBus.GetId`.
 
-Every level can be tab completed. Levels are loaded the first time they are used, one D-Bus call per level. Services that are started on demand are listed even when they are not running, and using one starts it. Use `dir` to list the members of a level and `help` on a method to see its arguments and their types. Run `dbus:refresh` to see services and objects that appeared after a bus was first used.
+Every level can be tab completed. Levels are loaded the first time they are used, one D-Bus call per level. Services that are started on demand are listed even when they are not running, and using one starts it. Use `dir` to list the members of a level and `help` on a method to see its arguments and their types. Run `$dbus.refresh` to see services and objects that appeared after a bus was first used.
 
 Object paths can only contain letters, digits and underscores, so services escape other characters. systemd, for example, names the object for `dbus.service` `dbus_2eservice`.
 
@@ -93,7 +93,7 @@ D-Bus types map to crush types as follows:
 
 # Properties
 
-A property is read by calling it without arguments, and written by calling it with the new value as the only argument, e.g. `$player:Volume 0.5`.
+A property is read by calling it without arguments, and written by calling it with the new value as the only argument, e.g. `$player.Volume 0.5`.
 
 # Signals
 
@@ -139,111 +139,111 @@ These are found on most graphical desktops. Desktop environments add their own a
 The bus itself:
 
 ```
-$bus := $dbus:system:org:freedesktop:DBus
+$bus := $dbus.system.org.freedesktop.DBus
 # The unique id of this machine's bus
-$bus:GetId
+$bus.GetId
 # Is a service running?
-$bus:NameHasOwner org.freedesktop.login1
+$bus.NameHasOwner org.freedesktop.login1
 # The process id of a service
-$bus:GetConnectionUnixProcessID org.freedesktop.login1
+$bus.GetConnectionUnixProcessID org.freedesktop.login1
 # Wait for the next time a service or connection appears or disappears
-$bus:NameOwnerChanged | head 1
+$bus.NameOwnerChanged | head 1
 ```
 
 systemd, the service manager:
 
 ```
-$systemd := $dbus:system:org:freedesktop:systemd1:org:freedesktop:systemd1
-$systemd:Version
+$systemd := $dbus.system.org.freedesktop.systemd1.org.freedesktop.systemd1
+$systemd.Version
 
 # All active socket units. Each unit is a list of its name, description, load
 # state, active state, sub state, following unit, object path, job id, job type
 # and job object path.
-$systemd:ListUnitsByPatterns states=$(list:of active) patterns=$(list:of "*.socket")
+$systemd.ListUnitsByPatterns states=$($list.of active) patterns=$($list.of "*.socket")
 
 # The names of all running services
-for unit=$($systemd:ListUnitsByPatterns $(list:of running) $(list:of "*.service")) {
+for unit=$($systemd.ListUnitsByPatterns $($list.of running) $($list.of "*.service")) {
     echo $unit[0]
 }
 
 # The object path of a unit
-$systemd:GetUnit dbus.service
+$systemd.GetUnit dbus.service
 
 # Properties of a unit
-$unit := $dbus:system:org:freedesktop:systemd1:org:freedesktop:systemd1:unit:dbus_2eservice
-$unit:ActiveState
-$unit:MainPID
-$unit:MemoryCurrent
-$unit:Description
+$unit := $dbus.system.org.freedesktop.systemd1.org.freedesktop.systemd1.unit.dbus_2eservice
+$unit.ActiveState
+$unit.MainPID
+$unit.MemoryCurrent
+$unit.Description
 
 # Restart and stop units. Requires root.
-$systemd:RestartUnit name=ssh.service mode=replace
-$systemd:StopUnit name=ssh.service mode=replace
+$systemd.RestartUnit name=ssh.service mode=replace
+$systemd.StopUnit name=ssh.service mode=replace
 ```
 
 logind, users, sessions and power:
 
 ```
-$login := $dbus:system:org:freedesktop:login1:org:freedesktop:login1
+$login := $dbus.system.org.freedesktop.login1.org.freedesktop.login1
 
 # Logged in users, each a list of user id, name and object path
-$login:ListUsers
-for user=$($login:ListUsers) {
+$login.ListUsers
+for user=$($login.ListUsers) {
     echo $user[1]
 }
 
 # The session this shell runs in
-$login:session:self:Name
-$login:session:self:Type
-$login:user:self:Name
+$login.session.self.Name
+$login.session.self.Type
+$login.user.self.Name
 
 # Is the machine idle?
-$login:IdleHint
+$login.IdleHint
 
 # Suspend or power off the machine
-$login:Suspend interactive=$false
-$login:PowerOff interactive=$false
+$login.Suspend interactive=$false
+$login.PowerOff interactive=$false
 
 # Delay suspending while a backup runs. The lock is a file descriptor, and is
 # held until the value is gone.
-$lock := $($login:Inhibit what=sleep who=crush why="Backup in progress" mode=delay)
-$login:ListInhibitors
-var:unset lock
+$lock := $($login.Inhibit what=sleep who=crush why="Backup in progress" mode=delay)
+$login.ListInhibitors
+$var.unset lock
 
 # Show sessions as they are opened, and wait for the machine to suspend
-$login:SessionNew
-$login:PrepareForSleep | head 1
+$login.SessionNew
+$login.PrepareForSleep | head 1
 ```
 
 The host name, time and locale:
 
 ```
-$host := $dbus:system:org:freedesktop:hostname1:org:freedesktop:hostname1
-$host:Hostname
-$host:OperatingSystemPrettyName
-$host:KernelRelease
-$host:Chassis
-$host:SetStaticHostname hostname=build-server interactive=$false
+$host := $dbus.system.org.freedesktop.hostname1.org.freedesktop.hostname1
+$host.Hostname
+$host.OperatingSystemPrettyName
+$host.KernelRelease
+$host.Chassis
+$host.SetStaticHostname hostname=build-server interactive=$false
 
-$time := $dbus:system:org:freedesktop:timedate1:org:freedesktop:timedate1
-$time:Timezone
-$time:NTP
-$time:SetTimezone timezone=Europe/Stockholm interactive=$false
+$time := $dbus.system.org.freedesktop.timedate1.org.freedesktop.timedate1
+$time.Timezone
+$time.NTP
+$time.SetTimezone timezone=Europe/Stockholm interactive=$false
 
-$dbus:system:org:freedesktop:locale1:org:freedesktop:locale1:Locale
+$dbus.system.org.freedesktop.locale1.org.freedesktop.locale1.Locale
 ```
 
 Networking and name resolution:
 
 ```
-$network := $dbus:system:org:freedesktop:network1:org:freedesktop:network1
+$network := $dbus.system.org.freedesktop.network1.org.freedesktop.network1
 # Each link is a list of its index, name and object path
-$network:ListLinks
-$network:OperationalState
+$network.ListLinks
+$network.OperationalState
 
 # Resolve a host name on any interface (0), for any address family (0), with no
 # flags (0)
-$dbus:system:org:freedesktop:resolve1:org:freedesktop:resolve1:ResolveHostname 0 example.com 0 0
+$dbus.system.org.freedesktop.resolve1.org.freedesktop.resolve1.ResolveHostname 0 example.com 0 0
 ```
 
 The session bus, on a desktop:
@@ -252,16 +252,16 @@ The session bus, on a desktop:
 # Show a notification. The arguments are the application name, the id of a
 # notification to replace (0 for none), an icon, the summary, the body, a list of
 # actions, a dict of hints, and a timeout in milliseconds (-1 for the default).
-$notifications := $dbus:session:org:freedesktop:Notifications:org:freedesktop:Notifications
-$notifications:Notify crush 0 "" "Build finished" "All tests passed" $($(list $string):new) $(struct:of) (-1)
+$notifications := $dbus.session.org.freedesktop.Notifications.org.freedesktop.Notifications
+$notifications.Notify crush 0 "" "Build finished" "All tests passed" $($(list $string).new) $($struct.of) (-1)
 
 # Control a media player
-$player := $dbus:session:org:mpris:MediaPlayer2:spotify:org:mpris:MediaPlayer2
-$player:PlayPause
-$player:Next
-$player:PlaybackStatus
-$player:Metadata
-$player:Volume 0.5
+$player := $dbus.session.org.mpris.MediaPlayer2.spotify.org.mpris.MediaPlayer2
+$player.PlayPause
+$player.Next
+$player.PlaybackStatus
+$player.Metadata
+$player.Volume 0.5
 ```
 "##;
 
@@ -733,7 +733,7 @@ fn encode(iter: &mut IterAppend, signature: &str, value: Value) -> CrushResult<(
             };
             let entries = match value {
                 Value::Dict(d) => d.elements(),
-                // Allow e.g. `struct:of foo=1` for the common `a{sv}` options argument.
+                // Allow e.g. `$struct.of foo=1` for the common `a{sv}` options argument.
                 Value::Struct(s) => s
                     .local_elements()
                     .into_iter()
@@ -1519,7 +1519,7 @@ fn declare_bus(dbus: &mut ScopeLoader, bus: Bus) -> CrushResult<()> {
         format!("The services on the D-Bus {} bus", bus.name()),
         Some(format!(
             "Every service on the {bus} bus, with its name split on periods, e.g. \
-             `dbus:{bus}:org:freedesktop:DBus`. See `help $dbus` for how to find and call services, \
+             `$dbus.{bus}.org.freedesktop.DBus`. See `help $dbus` for how to find and call services, \
              the services commonly found on each bus, and examples.",
             bus = bus.name()
         )),
@@ -1533,8 +1533,8 @@ fn declare_bus(dbus: &mut ScopeLoader, bus: Bus) -> CrushResult<()> {
     can_block = true,
     output = Known(ValueType::Empty),
     short = "Reload the list of D-Bus services and objects",
-    long = "The contents of `dbus:system` and `dbus:session` are loaded the first time they are used. Call this to pick up services and objects that have appeared or disappeared since. Values already stored in variables are not affected.",
-    example = "dbus:refresh",
+    long = "The contents of `$dbus.system` and `$dbus.session` are loaded the first time they are used. Call this to pick up services and objects that have appeared or disappeared since. Values already stored in variables are not affected.",
+    example = "$dbus.refresh",
 )]
 struct Refresh {}
 
@@ -1574,7 +1574,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     "Call a D-Bus method",
                     Some(
                         "The command behind the methods of D-Bus objects, e.g. \
-                         `dbus:system:org:freedesktop:DBus:GetId`, which call it with themselves as \
+                         `$dbus.system.org.freedesktop.DBus.GetId`, which call it with themselves as \
                          `this`.",
                     ),
                     Unknown,
@@ -1591,7 +1591,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     "Read or write a D-Bus property",
                     Some(
                         "The command behind the properties of D-Bus objects, e.g. \
-                         `dbus:system:org:freedesktop:systemd1:org:freedesktop:systemd1:Version`, \
+                         `$dbus.system.org.freedesktop.systemd1.org.freedesktop.systemd1.Version`, \
                          which call it with themselves as `this`.",
                     ),
                     Unknown,
@@ -1608,7 +1608,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                     "Subscribe to a D-Bus signal",
                     Some(
                         "The command behind the signals of D-Bus objects, e.g. \
-                         `dbus:system:org:freedesktop:DBus:NameOwnerChanged`, which call it with \
+                         `$dbus.system.org.freedesktop.DBus.NameOwnerChanged`, which call it with \
                          themselves as `this`.",
                     ),
                     Unknown,

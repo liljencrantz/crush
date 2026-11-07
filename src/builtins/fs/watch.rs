@@ -29,7 +29,7 @@ static WATCH_OUTPUT_TYPE: [ColumnType; 3] = [
     long = "change and how quickly it is reported is a best-effort property of the host OS,",
     long = "not a cross-platform guarantee -- rapid changes may be coalesced, and exact",
     long = "granularity differs by platform.",
-    example = "fs:watch . --recurse | where {kind == \"Create(File)\"}",
+    example = "$fs.watch . --recurse | where {kind == \"Create(File)\"}",
 )]
 pub struct Watch {
     #[description("the path to watch.")]

@@ -123,7 +123,7 @@ fn insert_entity(
 /// (Closure::eval()'s with_command()/with_source_fallback() calls), which these
 /// internal per-entry errors never go through, since they're reported directly instead
 /// of propagated. Attach them explicitly so a warning built from this is actually
-/// useful: the reporting command's name and the fs:files invocation's own location.
+/// useful: the reporting command's name and the $fs.files invocation's own location.
 fn warn_data_error(global_state: &GlobalState, source: &Source, message: String) {
     global_state.warn(
         &data_error::<()>(message)

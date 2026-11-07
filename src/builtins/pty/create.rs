@@ -16,12 +16,12 @@ use signature::signature;
     long = "Returns a struct with one method per operation (`write`, `wait_for`, `contents`,",
     long = "`close`, plus `pid`/`alive`). Always call `close` once done, to release the",
     long = "underlying process. For control characters (e.g. Ctrl-Z), use the module-level",
-    long = "`pty:control` constants (see `pty:control`), not a field on this struct.",
-    example = "$t := $(pty:create crush)",
-    example = "$t:write \"echo hello\\n\"",
-    example = "$t:wait_for \"hello\"",
-    example = "$t:write $pty:control:z",
-    example = "$t:close",
+    long = "`$pty.control` constants (see `$pty.control`), not a field on this struct.",
+    example = "$t := $($pty.create crush)",
+    example = "$t.write \"echo hello\\n\"",
+    example = "$t.wait_for \"hello\"",
+    example = "$t.write $pty.control.z",
+    example = "$t.close",
 )]
 pub struct Create {
     #[description("the program to run, e.g. `crush`.")]

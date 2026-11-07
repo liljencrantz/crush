@@ -37,7 +37,7 @@ terminate $job_id
 $first_rows := $(jobs | where {($id == $job_id)} | materialize)
 $first_count := $($first_rows | count)
 assert ($first_count == 1) "a terminated job should be reported once on the first jobs listing after terminate"
-$first_status := ($first_rows[0]):status
+$first_status := ($first_rows[0]).status
 assert ($first_status == "Terminated") "the one-time report should have status Terminated"
 
 # Second listing: already reported once, and still Terminated (the loop ignores the
@@ -53,7 +53,7 @@ resume $job_id
 $third_rows := $(jobs | where {($id == $job_id)} | materialize)
 $third_count := $($third_rows | count)
 assert ($third_count == 1) "a job resumed after being marked Terminated (but never actually stopped) must show up again"
-$third_status := ($third_rows[0]):status
+$third_status := ($third_rows[0]).status
 assert ($third_status == "Running") "a job resumed after being marked Terminated should show its current status, Running"
 
 terminate $job_id

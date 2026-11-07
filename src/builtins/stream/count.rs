@@ -13,7 +13,7 @@ use signature::signature;
     long = "If the input type is not a materialized type, such as a `$table_input_stream`, the whole stream will be consumed by this operation.",
     long = "Materialized types, i.e. `$table`, `$list` and `$dict`, have a know size, and `count` will not need to iterate over them to find it.",
     example = "# Returns the number of processes on the system",
-    example = "host:procs | count")]
+    example = "$host.procs | count")]
 pub struct Count {}
 
 pub fn count(context: CommandContext) -> CrushResult<()> {

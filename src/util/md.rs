@@ -235,9 +235,9 @@ fn syntax_highlight_code(code: &String, state: &mut State) -> CrushResult<()> {
 /// following arguments" list the signature macro generates backtick-wraps
 /// each one (e.g. `` `files` ``) purely for visual styling, not as a
 /// cross-reference, but a plain InlineCode node carries no way to tell
-/// that apart from a real ``` `dns:query` ``` reference written by hand.
+/// that apart from a real ``` `$dns.query` ``` reference written by hand.
 /// An argument happening to be named the same as some unrelated real
-/// command (`files`, matching `fs:files`) would otherwise turn into a
+/// command (`files`, matching `$fs.files`) would otherwise turn into a
 /// wrong link.
 pub fn render_html(s: &str, own_names: &HashSet<String>) -> CrushResult<String> {
     let tree = to_mdast(s, &ParseOptions::default())?;

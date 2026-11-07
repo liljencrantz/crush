@@ -31,10 +31,10 @@ $job_id := $(cmd sleep 8171 &)
 terminate $job_id
 
 $tries := 0
-while {(($tries < 20) and (($(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | count)) > 0))} {
+while {(($tries < 20) and (($(jobs | where {$definition.starts_with "\$cmd \"sleep\" 8171"} | count)) > 0))} {
     sleep 50ms
     $tries = ($tries + 1)
 }
-assert (($(jobs | where {$definition:starts_with "\$cmd \"sleep\" 8171"} | count)) == 0) "expected the terminated sleep job to be fully reaped within the retry budget"
+assert (($(jobs | where {$definition.starts_with "\$cmd \"sleep\" 8171"} | count)) == 0) "expected the terminated sleep job to be fully reaped within the retry budget"
 
 exit

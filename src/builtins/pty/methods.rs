@@ -34,10 +34,10 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     output = Known(ValueType::Empty),
     short = "Write input to this virtual terminal, as if typed at the keyboard.",
     long = "No newline or key translation is added -- include `\\n` explicitly to submit a",
-    long = "command line, and use `$pty:control:<name>` for control characters such as",
+    long = "command line, and use `$pty.control:<name>` for control characters such as",
     long = "Ctrl-Z.",
-    example = "$t:write \"echo hello\\n\"",
-    example = "$t:write $pty:control:z",
+    example = "$t.write \"echo hello\\n\"",
+    example = "$t.write $pty.control.z",
 )]
 struct Write {
     #[unnamed()]
@@ -69,8 +69,8 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     long = "the prompt's current directory), so a glob like `*hello*` will usually never match.",
     long = "Use a plain string, or a regular expression such as `^(hel+o)`, for anything that",
     long = "may need to match across `/` or arbitrary screen content.",
-    example = "$t:wait_for \"# \"",
-    example = "$t:wait_for ^(hel+o)",
+    example = "$t.wait_for \"# \"",
+    example = "$t.wait_for ^(hel+o)",
 )]
 struct WaitFor {
     #[description("the text (string, glob, or regular expression) to wait for. A glob's `*` does not match `/`; prefer a regular expression.")]

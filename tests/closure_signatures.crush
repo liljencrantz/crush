@@ -1,5 +1,5 @@
 $ggg := {|$a : $(dict $integer $integer)| $a[3]}
-$hhh := $($(dict $integer $integer):new)
+$hhh := $($(dict $integer $integer).new)
 $hhh[3] = 7
 $r := $(ggg a=$hhh)
 assert ($r == 7)

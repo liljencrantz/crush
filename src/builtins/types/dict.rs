@@ -91,7 +91,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Dict(Box::from(ValueType::Any), Box::from(ValueType::Any))),
     short = "Create an empty new dict.",
     long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string)",
-    example = "$my_dict := $($(dict $string $integer):new)",
+    example = "$my_dict := $($(dict $string $integer).new)",
 )]
 struct New {}
 
@@ -123,9 +123,9 @@ fn new(mut context: CommandContext) -> CrushResult<()> {
     long = "",
     long = "You must not mix named and unnamed arguments.",
     example = "# Create a dict with the keys 1, 2, and 3, and the corresponding values a, b, and c.",
-    example = "$my_dict := $(dict:of 1 a 2 b 3 c)",
+    example = "$my_dict := $($dict.of 1 a 2 b 3 c)",
     example = "# Create a dict with the keys a, b, and c, and the corresponding values 1, 2, and 3.",
-    example = "$my_dict := $(dict:of a=1 b=2 c=3)",
+    example = "$my_dict := $($dict.of a=1 b=2 c=3)",
 )]
 struct Of {
     #[unnamed()]
@@ -204,7 +204,7 @@ fn of(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Create a new mapping or replace an existing one.",
     example = "# Create a new dict",
-    example = "$d := $(dict:of a=1 b=2)",
+    example = "$d := $($dict.of a=1 b=2)",
     example = "# Insert a new mapping",
     example = "$d[c]=3",
     example = "# Replace an existing mapping",
@@ -230,7 +230,7 @@ fn __setitem__(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Any),
     short = "Return the value mapped to the specified key of the dict.",
     example = "# Create a new dict",
-    example = "$d := $(dict:of a=1 b=2)",
+    example = "$d := $($dict.of a=1 b=2)",
     example = "# Return the value mapped to the key 2, which is 2",
     example = "$d[b]",
 )]
@@ -384,7 +384,7 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
     long = "columns. Every row becomes one key/value pair: `key_column`'s value in that row",
     long = "becomes the dict key, `value_column`'s value becomes the value mapped to it. If",
     long = "the same key appears in more than one row, the last row wins.",
-    example = "seq 1 4 | select id={$value} name={\"item-{}\":format ($value)} | dict:collect key_column=id value_column=name",
+    example = "seq 1 4 | select id={$value} name={\"item-{}\".format ($value)} | $dict.collect key_column=id value_column=name",
 )]
 struct Collect {
     #[description("the name of the column to use as key")]

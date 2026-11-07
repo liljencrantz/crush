@@ -230,7 +230,7 @@ impl TableOutputStream {
     /// This stream's own control channel, if any -- a clone of the `Receiver` half, not
     /// a new subscription. A plain `TableOutputStream::clone()` (as when fanning a
     /// single interruptible stream out across several worker threads, the way
-    /// `stream:group` does) clones this along with everything else, and a crossbeam
+    /// `$stream.group` does) clones this along with everything else, and a crossbeam
     /// `Receiver` clone is another handle onto the *same* queue, not a broadcast
     /// subscription -- a control message sent once is only ever delivered to whichever
     /// one clone's `select!`/`try_recv()` claims it first, never to every clone. A
@@ -625,7 +625,7 @@ mod tests {
     // *same* queue, not a broadcast subscription: a message sent once through the one
     // registered JobController is only ever delivered to whichever one clone's
     // `try_recv()`/`select!` claims it, never to every clone. This is why
-    // stream:group's worker pool (16 threads, all needing to react to the same job's
+    // $stream.group's worker pool (16 threads, all needing to react to the same job's
     // pause/terminate, all originally sharing a plain clone of one interruptible
     // TableOutputStream) could only ever pause/terminate one of its sixteen workers.
     //

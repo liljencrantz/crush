@@ -75,7 +75,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Struct),
     short = "Returns the specified row of the table as a struct.",
-    example = "$(bin:from Cargo.toml|materialize)[4]",
+    example = "$($bin.from Cargo.toml|materialize)[4]",
 )]
 struct GetItem {
     #[description("the row index to return.")]

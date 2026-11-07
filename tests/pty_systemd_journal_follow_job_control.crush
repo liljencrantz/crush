@@ -1,7 +1,7 @@
-# `systemd:journal --follow`'s inner loop called `journal.await_next_entry(None)`,
+# `$systemd.journal --follow`'s inner loop called `journal.await_next_entry(None)`,
 # blocking indefinitely once the end of the journal was reached, with no way to
 # notice `terminate`/`pause` while waiting for an entry that may never come -- the
-# exact same gap `fs:usage` had (see that fix's own commit), fixed the same way:
+# exact same gap `$fs.usage` had (see that fix's own commit), fixed the same way:
 # poll with a short timeout instead of blocking forever, and check `output`'s
 # already-interruptible control channel (via `poll_control()`) between polls.
 #
@@ -10,7 +10,7 @@
 # built or run on this Darwin dev machine -- the Rust change is self-reviewed but
 # UNVERIFIED locally; this file's own first line makes it a clean no-op skip here,
 # and a real check on Linux CI. Same precedent as tests/dbus.crush.
-if ($(host:os:name) != "linux") {
+if ($($host.os.name) != "linux") {
     exit
 }
 
@@ -18,9 +18,9 @@ source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$n = $(pty_run $t $n "systemd:journal follow=$true &")
+$n = $(pty_run $t $n "$systemd.journal follow=$true &")
 $n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 pty_assert_no_thread $t 0
 
-$t:close
+$t.close

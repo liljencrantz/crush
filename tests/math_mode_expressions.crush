@@ -1,6 +1,6 @@
 # `(expr)` and `[...]` are both syntactic sugar over ordinary command invocations
-# (src/lang/ast/node.rs): `(expr)` desugars to `global:types:val expr`, and `[a; b; c]`
-# desugars to `global:types:list:of a b c`. This is the exact mechanism that caused the
+# (src/lang/ast/node.rs): `(expr)` desugars to `$global.types.val expr`, and `[a; b; c]`
+# desugars to `$global.types.list.of a b c`. This is the exact mechanism that caused the
 # real completion bug fixed earlier this session, and had no test coverage of its own.
 #
 # List literal syntax notes: elements are semicolon- (or newline-) separated, not
@@ -33,8 +33,8 @@ echo "a list literal element can be a full command substitution, not just a lite
 $withcmd := ([$(seq 0 3 | count); 99])
 echo $withcmd
 
-# `[]` is not simply an empty list -- it desugars to `list:of` with zero arguments, and
-# list:of needs at least one argument to infer the list's element type from, so it
+# `[]` is not simply an empty list -- it desugars to `$list.of` with zero arguments, and
+# $list.of needs at least one argument to infer the list's element type from, so it
 # errors. This must be the last thing in the script: like the NaN-ordering-comparison
 # case in tests/comparisons.crush, this is a single job's argument-evaluation error
 # (evaluating `[]` as the value to assign), which aborts the rest of the script, unlike

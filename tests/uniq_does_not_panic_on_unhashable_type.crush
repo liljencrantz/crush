@@ -14,11 +14,11 @@
 # $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
 # hands back a struct describing the error (message/type/command) and `=` reassignment
 # requires the new value to be the same type as the variable's first value.
-$msg := $(struct:of message="")
+$msg := $($struct.of message="")
 $got := $false
 try {
-    $t := $(csv:from "a,1\nb,2\n" key=$string val=$integer)
-    $t | select s={struct:of val=$val} | uniq
+    $t := $($csv.from "a,1\nb,2\n" key=$string val=$integer)
+    $t | select s={$struct.of val=$val} | uniq
 } catch { |$e|
     $got = $true
     $msg = $e
@@ -26,8 +26,8 @@ try {
 
 assert $got "expected the unhashable-type error to be caught, not silently swallowed"
 
-$panicked := $(like $msg:message *panicked*)
+$panicked := $(like $msg.message *panicked*)
 assert ($panicked == $false) "expected a graceful error message, not a Rust panic"
 
-$len := $($msg:message:len)
+$len := $($msg.message.len)
 assert ($len > 0) "expected a non-empty caught error message"

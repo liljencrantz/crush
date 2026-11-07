@@ -35,8 +35,8 @@
 # For the internal job, a bare `{...} &` block's own result is simply the value its
 # last statement evaluates to -- no piping needed.
 #
-# Both markers are built from two separate pieces joined via `:format`/`printf`
-# (`"{}_{}":format "INTERNAL" "MARKER"`, `printf '%s_%s' EXTERNAL MARKER`) rather than
+# Both markers are built from two separate pieces joined via `.format`/`printf`
+# (`"{}_{}".format "INTERNAL" "MARKER"`, `printf '%s_%s' EXTERNAL MARKER`) rather than
 # written as one contiguous literal (`"INTERNAL_MARKER"`) -- `pty`'s pty is a real
 # terminal, and the command *line* that starts each background job is itself echoed
 # onto the rendered screen by the pty's own line discipline the instant it's typed,
@@ -72,12 +72,12 @@ $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
 $n = $(pty_run $t $n "cmd sh -c 'sleep 1; printf \"%s_%s\" EXTERNAL MARKER' | convert $string &")
-$n = $(pty_run $t $n "{sleep 1s; \"{}_{}\":format \"INTERNAL\" \"MARKER\"} &")
+$n = $(pty_run $t $n "{sleep 1s; \"{}_{}\".format \"INTERNAL\" \"MARKER\"} &")
 
 $n = $(pty_run $t $n "echo $(convert $string $(fg))")
-$t:wait_for "INTERNAL_MARKER"
+$t.wait_for "INTERNAL_MARKER"
 
 $n = $(pty_run $t $n "echo $(convert $string $(fg))")
-$t:wait_for "EXTERNAL_MARKER"
+$t.wait_for "EXTERNAL_MARKER"
 
-$t:close
+$t.close

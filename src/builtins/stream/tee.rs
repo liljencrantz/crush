@@ -19,9 +19,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
     long = "is discarded, so a branch is only useful for its side effects (writing to a",
     long = "file, counting, etc). `tee`'s own output is the untouched original stream, so",
     long = "it composes directly into a larger pipeline. If a branch fails, the failure is",
-    long = "reported via `crush:warn:list` rather than aborting `tee` or the other branches.",
+    long = "reported via `$crush.warn.list` rather than aborting `tee` or the other branches.",
     example = "# Write a snapshot to disk while continuing to filter the live stream",
-    example = "host:procs | tee {json:to snapshot.json} | where {($cpu > 50)}",
+    example = "$host.procs | tee {$json.to snapshot.json} | where {($cpu > 50)}",
 )]
 pub struct Tee {
     #[description("one or more pipelines to send an independent copy of the stream through.")]
@@ -61,7 +61,7 @@ fn tee(mut context: CommandContext) -> CrushResult<()> {
     ) = match output.control() {
         Some(control) => {
             let (receivers, shutdown) =
-                spawn_control_fanout(&context, "tee:control-fanout", control, branches.len())?;
+                spawn_control_fanout(&context, "$tee.control-fanout", control, branches.len())?;
             (receivers.into_iter().map(Some).collect(), Some(shutdown))
         }
         None => ((0..branches.len()).map(|_| None).collect(), None),

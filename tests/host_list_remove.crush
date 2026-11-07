@@ -1,43 +1,43 @@
-# remote:host:list/remote:host:remove operate purely on a known_hosts FILE
+# $remote.host.list/remote:$host.remove operate purely on a known_hosts FILE
 # (Session::new() with no connect/handshake involved) -- no live server needed, unlike
 # ssh_exec*.crush. Three throwaway public keys, generated once with `ssh-keygen -t
 # ed25519`/`-t rsa` and never used to authenticate anywhere; public keys carry no secret
 # material. Written fresh at the start of this script rather than checked in as a
-# static fixture, since host:remove mutates the file.
+# static fixture, since $host.remove mutates the file.
 
 $host_file := $(convert $file "./.host_list_remove_known_hosts")
-bin:from "host-a.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHFWjNefhOjX7XiOQ7/66ALKB6ru8AaaMJCxQlpp9KuQ
+$bin.from "host-a.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHFWjNefhOjX7XiOQ7/66ALKB6ru8AaaMJCxQlpp9KuQ
 host-b.example.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDrlzEyFYijCFoXNf3SLmwDUT8DQwxEVtdb6dQ/ajL89
 host-c.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDRSEVxK2sm2QXPbIzufX9EvwiQWZeduizmKDayFO2d02L7H5iKbcO8TjKz5zCoNfcdp1weEGdm0YQ+L85vTGjpv3CYbA8YtbLoFXslxi4TcCWBZ1qZHCeDsSY4jWmdXQMRlOwrtK19qLoCnDgqvtLQMU+/YWZpAWFVm3crWiRLgFCIet+MpDggmujlWMAeZ1HnmcI7suGQeYx7ufiuKsWsST4ks+O/n3dKzpi4WEK7Z/Bd3ZA8UpBWvmiezllKooA82QqzEb1VYCTkmnaHgaIsigHnQKVTUtiN196ot3n0waHGNrGYmka8/ukbtv9emAD2A5+pceWEt2/s36x9FrCr
-" | bin:to $host_file
+" | $bin.to $host_file
 
-$before := $(remote:host:list host_file=$host_file | materialize)
+$before := $($remote.host.list host_file=$host_file | materialize)
 $before_count := $($before | count)
 assert ($before_count == 3) "the fixture should have three known_hosts entries"
 
-$hosts := $($before | select host | list:collect)
-assert ($($hosts[0]) == "host-a.example.com") "host:list should report entries in file order"
-assert ($($hosts[1]) == "host-b.example.com") "host:list should report entries in file order"
-assert ($($hosts[2]) == "host-c.example.com") "host:list should report entries in file order"
+$hosts := $($before | select host | $list.collect)
+assert ($($hosts[0]) == "host-a.example.com") "$host.list should report entries in file order"
+assert ($($hosts[1]) == "host-b.example.com") "$host.list should report entries in file order"
+assert ($($hosts[2]) == "host-c.example.com") "$host.list should report entries in file order"
 
 # remote.host.remove's `key` filter matches against just the base64 key blob (not an
-# "algo base64" pair) -- confirmed via remote:host:list's own `public_key` column above.
+# "algo base64" pair) -- confirmed via $remote.host.list's own `public_key` column above.
 # `**` (not `*`) is needed to match it, since the blob routinely contains `/`.
 
 # Remove one entry by exact host name, regardless of its key.
-$removed_one := $(remote:host:remove host_file=$host_file host="host-c.example.com" key=**)
+$removed_one := $($remote.host.remove host_file=$host_file host="host-c.example.com" key=**)
 assert ($removed_one == 1) "removing by exact host name should remove exactly that one entry"
 
-$after_one := $(remote:host:list host_file=$host_file | materialize)
+$after_one := $($remote.host.list host_file=$host_file | materialize)
 $after_one_count := $($after_one | count)
 assert ($after_one_count == 2) "the other two entries should be untouched"
 
 # Remove everything else by a host glob.
-$removed_rest := $(remote:host:remove host_file=$host_file host=host-* key=**)
+$removed_rest := $($remote.host.remove host_file=$host_file host=host-* key=**)
 assert ($removed_rest == 2) "removing by host glob should match and remove both remaining entries"
 
-$final := $(remote:host:list host_file=$host_file | materialize)
+$final := $($remote.host.list host_file=$host_file | materialize)
 $final_count := $($final | count)
 assert ($final_count == 0) "the known_hosts file should now be empty"
 
-$host_file:remove
+$host_file.remove

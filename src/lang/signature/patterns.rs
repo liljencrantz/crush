@@ -45,7 +45,7 @@ impl Patterns {
     }
 
     /// Like `test()`, but a plain string pattern means "appears somewhere in `haystack`"
-    /// rather than "equals `haystack` exactly" -- the semantics `pty:wait_for` needs (did
+    /// rather than "equals `haystack` exactly" -- the semantics `$pty.wait_for` needs (did
     /// this text ever get printed on a screen that also has lots of *other* text on it),
     /// as opposed to `test()`'s exact-match semantics (e.g. "is this one service name").
     /// A glob or regex pattern already supports "appears somewhere" on its own (an

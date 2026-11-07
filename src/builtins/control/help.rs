@@ -62,7 +62,7 @@ pub fn help(mut context: CommandContext) -> CrushResult<()> {
     // type's own member list (ValueType::long_help_methods, e.g. float's
     // `min`/`max`/`is_nan`) is generated the same way and has the exact
     // same problem -- "min" could just as easily name a real, unrelated
-    // command (stream:min).
+    // command ($stream.min).
     let own_names: HashSet<String> = match &topic {
         Some(Value::Command(cmd)) => cmd
             .completion_data()
@@ -95,7 +95,7 @@ Call the help command with the name of any value, including a command or a
 type in order to get help about it. For example, you might want to run the
 commands `help $help`, `help $string`, `help $if` or `help $where`.
 
-To get a list of everything in your namespace, write `var:list`. To list the
+To get a list of everything in your namespace, write `$var.list`. To list the
 members of a value, write `dir <value>`.
 "#
         }

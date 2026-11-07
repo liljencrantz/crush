@@ -4,14 +4,14 @@
 # $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
 # hands back a struct describing the error (message/type/command) and `=` reassignment
 # requires the new value to be the same type as the variable's first value.
-$msg := $(struct:of message="")
+$msg := $($struct.of message="")
 try {
-    list:of 3.0 $(float:nan) 1.0 | sort | echo
+    $list.of 3.0 $($float.nan) 1.0 | sort | echo
 } catch { |$e| $msg = $e }
-echo $msg:message
+echo $msg.message
 
 # -infinity and +infinity are ordinary, well-ordered values (not NaN), so they still sort at
 # the extremes as expected. +0.0 and -0.0 compare as equal (per param_partial_cmp, which just
 # delegates to f64's own partial_cmp), so sort (a stable sort) leaves them in their original
 # relative order rather than erroring or crashing.
-list:of 3.0 1.0 (0.0 - $(float:infinity)) $(float:infinity) 0.0 (-0.0) | sort | echo
+$list.of 3.0 1.0 (0.0 - $($float.infinity)) $($float.infinity) 0.0 (-0.0) | sort | echo

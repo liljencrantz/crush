@@ -51,7 +51,7 @@ fn drop_dynamic_output(
     short = "Drop specified columns from input stream, copy content of remaining columns into output",
     long = "This command is does the opposite of the select command. It copies all columns except the ones specified from input to output.",
     example = "# Drop memory usage columns from output of ps",
-    example = "host:procs | drop vms rss",
+    example = "$host.procs | drop vms rss",
     output = Unknown,
     dynamic_output = drop_dynamic_output,
 )]

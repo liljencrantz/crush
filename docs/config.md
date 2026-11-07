@@ -22,11 +22,11 @@ can be configured.
 
 ### Configuring the Crush prompt
 
-To configure the Crush prompt, call the `crush:prompt:set` command, and pass in a closure that
+To configure the Crush prompt, call the `$crush.prompt.set` command, and pass in a closure that
 returns a string, for example:
 
 ```shell script
-crush:prompt:set {"{user}@{host} {wd}# ":format wd=(pwd) user=(user:me:name) host=(host:name) }
+$crush.prompt.set {"{user}@{host} {wd}# ".format wd=(pwd) user=($user.me.name) host=($host.name) }
 ```
 
 If you want your Crush prompt to be colorful, the `term` namespace contains useful
@@ -34,27 +34,27 @@ constants containing ANSI color codes for altering the look of your prompt.
 A slightly more colorful version of the above prompt would be:
 
 ```shell script
-crush:prompt:set {
-    "{green}{user}{normal}@{host} {green}{wd}{normal}# ":format wd=$(pwd) \
-        user=$(user:me:name) host=$(host:name) \
-        green=$(term:green) normal=$(term:normal)
+$crush.prompt.set {
+    "{green}{user}{normal}@{host} {green}{wd}{normal}# ".format wd=$(pwd) \
+        user=$($user.me.name) host=$($host.name) \
+        green=$($term.green) normal=$($term.normal)
 }
 ```
 
 ### Configuring the Crush title message
 
-To configure the Crush prompt, call the `crush:title:set` command, and pass in a closure that
+To configure the Crush prompt, call the `$crush.title.set` command, and pass in a closure that
 returns a string, for example:
 
 ```shell script
-crush:title:set {
-      "{user}@{host} {wd}":format wd=(pwd) user=(user:me:name) host=(host:name) 
+$crush.title.set {
+      "{user}@{host} {wd}".format wd=(pwd) user=($user.me.name) host=($host.name) 
 }
 ```
 
 ### Configuring syntax highlighting
 
-The dict `crush:highlight` allows you to customize the syntax highlighting of
+The dict `$crush.highlight` allows you to customize the syntax highlighting of
 Crush code in the interactive Crush prompt. Assign ANSI color codes
 to the various token types of Crush to make your terminal more closely
 resemble a Christmas tree:
@@ -78,18 +78,18 @@ The `term` namespace contains useful constants containing ANSI color codes.
 A configuration example:
 
 ```shell script
-crush:highlight[file_literal] = $(term:cyan)
-crush:highlight[string_literal] = $(term:yellow)
-crush:highlight[numeric_literal] = $(term:magenta)
+$crush.highlight[file_literal] = $($term.cyan)
+$crush.highlight[string_literal] = $($term.yellow)
+$crush.highlight[numeric_literal] = $($term.magenta)
 ```
 
 ### Locale
 
-The `crush:locale` namespace contains three methods:
+The `$crush.locale` namespace contains three methods:
 
-- `crush:locale:list` lists all locales supported by your operating system,
-- `crush:locale:set` updates the current locale, and
-- `crush:locale:get` returns the current locale.
+- `$crush.locale.list` lists all locales supported by your operating system,
+- `$crush.locale.set` updates the current locale, and
+- `$crush.locale.get` returns the current locale.
 
 The locale currently affects Crush in two ways:
 
@@ -105,53 +105,53 @@ The locale currently affects Crush in two ways:
 
 ### Byte unit formatting
 
-The `crush:byte_unit` namespace controls how table columns containing byte sizes
+The `$crush.byte_unit` namespace controls how table columns containing byte sizes
 (e.g. file sizes) are displayed:
 
-- `crush:byte_unit:list` lists the available units: `binary` (powers of 1024, e.g.
+- `$crush.byte_unit.list` lists the available units: `binary` (powers of 1024, e.g.
   `KiB`/`MiB`), `decimal` (powers of 1000, e.g. `kB`/`MB`), and `raw` (a plain
   grouped integer, with no unit suffix).
-- `crush:byte_unit:set` changes the current unit. The default is `binary`.
-- `crush:byte_unit:get` returns the current unit.
+- `$crush.byte_unit.set` changes the current unit. The default is `binary`.
+- `$crush.byte_unit.get` returns the current unit.
 
 ```shell script
-crush:byte_unit:set decimal
+$crush.byte_unit.set decimal
 ```
 
 ### Warnings
 
 Commands that continue past a partial failure instead of aborting (e.g. one bad row
 out of a stream — see `each`/`where`/`group`/`files`) report it as a warning via
-`crush:warn:new`; `crush:warn:list` lists the most recent ones.
+`$crush.warn.new`; `$crush.warn.list` lists the most recent ones.
 
-`crush:warn:limit` controls how many are kept before the oldest is evicted:
+`$crush.warn.limit` controls how many are kept before the oldest is evicted:
 
-- `crush:warn:limit:set` changes the limit. The default is 100.
-- `crush:warn:limit:get` returns the current limit.
+- `$crush.warn.limit.set` changes the limit. The default is 100.
+- `$crush.warn.limit.get` returns the current limit.
 
-`crush:warn:print` controls whether a warning is also printed to the screen
+`$crush.warn.print` controls whether a warning is also printed to the screen
 immediately as it happens, in interactive mode (it's always recorded in
-`crush:warn:list` either way):
+`$crush.warn.list` either way):
 
-- `crush:warn:print:set` changes it. The default is `true`.
-- `crush:warn:print:get` returns the current setting.
+- `$crush.warn.print.set` changes it. The default is `true`.
+- `$crush.warn.print.get` returns the current setting.
 
 ```shell script
 # Keep recording warnings, but stop printing them as they happen.
-crush:warn:print:set $false
+$crush.warn.print.set $false
 ```
 
 ### Environment variables
 
-The `crush:env` namespace reads and writes the process's own OS environment
+The `$crush.env` namespace reads and writes the process's own OS environment
 variables — the same environment external commands (and Crush itself, e.g. for
 `PATH` lookups) see:
 
 ```shell script
-crush:env["MY_VAR"] = "some value"
-echo $(crush:env["MY_VAR"])
-crush:env:unset "MY_VAR"
-crush:env:list
+$crush.env["MY_VAR"] = "some value"
+echo $($crush.env["MY_VAR"])
+$crush.env.unset "MY_VAR"
+$crush.env.list
 ```
 
 ### Not yet configurable

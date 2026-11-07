@@ -1,5 +1,5 @@
 # Ctrl-Z on a *foreground* block containing a `cmd` (`{ { cmd sleep N } }`), then `bg`,
-# then killing the process with `host:signal`, must leave the `cmd` job reported as
+# then killing the process with `$host.signal`, must leave the `cmd` job reported as
 # `Terminated` -- same as `pty_ctrl_z_bg_then_signal_shows_terminated.crush`, but nested.
 #
 # This shape pauses only the innermost statement's job (the one `current_job()` finds),
@@ -12,7 +12,7 @@
 # it depends on how many intermediate block jobs exist. `pty_child_pid` finds the real
 # external `sleep`'s pid once, before Ctrl-Z -- `bg` only sends SIGCONT to the same
 # process (no new fork), so that pid is still valid after Ctrl-Z/`bg` and is reused
-# directly for `host:signal`, rather than re-deriving it a second time.
+# directly for `$host.signal`, rather than re-deriving it a second time.
 #
 # KNOWN GAP: sending Ctrl-Z itself is NOT converted to the counted-prompt/
 # `pty_send_control` approach the other 7 Ctrl-Z/Ctrl-C pty tests now use (see
@@ -37,42 +37,42 @@
 # returns immediately, well before `cmd.rs`'s worker thread actually gets around to
 # delivering the real `SIGSTOP` to the external process (see `wait_for_child_inner`'s
 # `Pause` arm in control/cmd.rs). So the external process's own OS-level state
-# (exposed by `host:procs`'s `status` column, backed by `sysinfo::Process::status`)
+# (exposed by `$host.procs`'s `status` column, backed by `sysinfo::Process::status`)
 # only ever flips to "Stopped" *after* `GlobalState::pause`'s synchronous status flip
 # has already happened -- waiting for it, directly from out here with no round trip
 # through the nested session's own `jobs` table at all, is a strictly later but
 # sufficient, OS-observable proxy for "this pause has genuinely landed," confirmed
-# directly: `kill -STOP`/`kill -CONT` on a plain background process flip `host:procs`'s
+# directly: `kill -STOP`/`kill -CONT` on a plain background process flip `$host.procs`'s
 # `status` between "Runnable" and "Stopped" exactly as expected.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$t:write "{ { cmd sleep 7432 } }\n"
-$t:wait_for "sleep"
+$t.write "{ { cmd sleep 7432 } }\n"
+$t.wait_for "sleep"
 $pid := $(pty_child_pid $t ^(.*sleep))
-$t:write $pty:control:z
-$t:wait_for "# "
+$t.write $pty.control.z
+$t.wait_for "# "
 sleep 500ms
 
 $target_pid := $pid
 $os_status := ""
 $tries := 0
 while {(($tries < 20) and ($os_status != "Stopped"))} {
-    $os_status = ($(host:procs | where {($pid == $target_pid)} | select status | list:collect status))[0]
+    $os_status = ($($host.procs | where {($pid == $target_pid)} | select status | $list.collect status))[0]
     if (($os_status) != "Stopped") {
         sleep 50ms
         $tries = ($tries + 1)
     }
 }
-assert (($os_status) == "Stopped") $("expected pid {} to reach OS status Stopped within the retry budget, found {}":format $target_pid $os_status)
+assert (($os_status) == "Stopped") $("expected pid {} to reach OS status Stopped within the retry budget, found {}".format $target_pid $os_status)
 
-$n = $(pty_run $t $n "$bgid := ($(jobs | where {($status == \"Paused\")} | select id | sort id reverse=$true))[0]:id")
+$n = $(pty_run $t $n "$bgid := ($(jobs | where {($status == \"Paused\")} | select id | sort id reverse=$true))[0].id")
 $n = $(pty_run $t $n "bg $bgid")
 
-host:signal $pid signal=SIGKILL
+$host.signal $pid signal=SIGKILL
 $n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
-$t:write "echo $(\"NESTED_Z_CHECK_{}\":format $n)\n"
-$t:wait_for "NESTED_Z_CHECK_1"
+$t.write "echo $(\"NESTED_Z_CHECK_{}\".format $n)\n"
+$t.wait_for "NESTED_Z_CHECK_1"
 
-$t:close
+$t.close

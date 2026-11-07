@@ -8,13 +8,13 @@
 ## Named and unnamed collectors, regular call syntax
 
 $collect := {|$a $b @ $rest @@ $extra|
-    struct:of a=$a b=$b rest=$rest extra=$extra
+    $struct.of a=$a b=$b rest=$rest extra=$extra
 }
 $r1 := $($collect 1 2 3 4 5 x=10 y=20)
-assert ($r1:a == 1) "positional params before the collectors should still bind normally"
-assert ($r1:b == 2) "positional params before the collectors should still bind normally"
-assert ($r1:rest == $(list:of 3 4 5)) "the unnamed collector should gather every leftover unnamed argument, in order"
-assert ($r1:extra == $(dict:of x=10 y=20)) "the named collector should gather every unmatched named argument"
+assert ($r1.a == 1) "positional params before the collectors should still bind normally"
+assert ($r1.b == 2) "positional params before the collectors should still bind normally"
+assert ($r1.rest == $($list.of 3 4 5)) "the unnamed collector should gather every leftover unnamed argument, in order"
+assert ($r1.extra == $($dict.of x=10 y=20)) "the named collector should gather every unmatched named argument"
 
 # A closure with only an unnamed collector doesn't declare a named one, so it must
 # error on any named argument instead of silently discarding it.
@@ -23,7 +23,7 @@ $stray_named := ""
 try {
     $unnamed_only 1 2 x=3
 } catch {
-    |$e| $stray_named = $e:message
+    |$e| $stray_named = $e.message
 }
 assert ($stray_named == "`unnamed_only`: Unknown named argument `x`.") \
     "a closure with no named collector should reject any named argument"
@@ -31,8 +31,8 @@ assert ($stray_named == "`unnamed_only`: Unknown named argument `x`.") \
 ## @ / @@ spreading a list/dict back into a call should be equivalent to passing the
 ## same arguments directly
 
-$args_list := $(list:of 3 4 5)
-$kwargs_dict := $(dict:of x=10 y=20)
+$args_list := $($list.of 3 4 5)
+$kwargs_dict := $($dict.of x=10 y=20)
 $r2 := $($collect 1 2 @ $args_list @@ $kwargs_dict)
 assert ($r1 == $r2) "spreading a list/dict at the call site should produce the same result as passing the arguments directly"
 
@@ -49,7 +49,7 @@ $stray_after_default := ""
 try {
     $def 1 99
 } catch {
-    |$e| $stray_after_default = $e:message
+    |$e| $stray_after_default = $e.message
 }
 assert ($stray_after_default == "`def`: Stray unnamed argument.") \
     "a positional argument must never silently fill a defaulted parameter"
@@ -59,17 +59,17 @@ assert ($stray_after_default == "`def`: Stray unnamed argument.") \
 $f := {|$a $b| ($a + $b)}
 
 $missing := ""
-try { $f 1 } catch { |$e| $missing = $e:message }
+try { $f 1 } catch { |$e| $missing = $e.message }
 assert ($missing == "`f`: No argument supplied for parameter `b`.") \
     "calling with too few arguments and no default should name the missing parameter"
 
 $stray := ""
-try { $f 1 2 3 } catch { |$e| $stray = $e:message }
+try { $f 1 2 3 } catch { |$e| $stray = $e.message }
 assert ($stray == "`f`: Stray unnamed argument.") \
     "calling with too many positional arguments and no unnamed collector should error"
 
 $unknown_named := ""
-try { $f 1 2 z=9 } catch { |$e| $unknown_named = $e:message }
+try { $f 1 2 z=9 } catch { |$e| $unknown_named = $e.message }
 assert ($unknown_named == "`f`: Unknown named argument `z`.") \
     "an unrecognized named argument with no named collector should error"
 
@@ -78,9 +78,9 @@ assert ($unknown_named == "`f`: Unknown named argument `z`.") \
 ## a list value appends its elements rather than nesting it as a single element.
 
 $lf := {|$xs: $(list $integer)| $xs}
-assert ($($lf xs=1 xs=2 xs=3) == $(list:of 1 2 3)) \
+assert ($($lf xs=1 xs=2 xs=3) == $($list.of 1 2 3)) \
     "repeating a list-typed named argument should accumulate values, not overwrite them"
-assert ($($lf xs=$(list:of 5 6) xs=7) == $(list:of 5 6 7)) \
+assert ($($lf xs=$($list.of 5 6) xs=7) == $($list.of 5 6 7)) \
     "passing a list value to a list-typed named argument should append its elements, not nest the list itself"
 
 ## Wrong-type errors. A missing/stray/unknown *count* mismatch is covered above; these
@@ -92,17 +92,17 @@ assert ($($lf xs=$(list:of 5 6) xs=7) == $(list:of 5 6 7)) \
 
 $typed := {|$n: $integer| $n}
 $wrong_positional := ""
-try { $typed "not an integer" } catch { |$e| $wrong_positional = $e:message }
+try { $typed "not an integer" } catch { |$e| $wrong_positional = $e.message }
 assert ($wrong_positional == "`typed`: Wrong type `string` for argument `n`, expected `integer`.") \
     "a positional argument of the wrong type should name both the expected and actual type"
 
 $wrong_named_scalar := ""
-try { $lf xs="not an integer" } catch { |$e| $wrong_named_scalar = $e:message }
+try { $lf xs="not an integer" } catch { |$e| $wrong_named_scalar = $e.message }
 assert ($wrong_named_scalar == "`lf`: Wrong type for argument `xs`, expected `integer`, got `string`.") \
     "a single value of the wrong type passed to a list-typed named argument should error, not silently coerce or nest"
 
 $wrong_named_list := ""
-try { $lf xs=$(list:of "a" "b") } catch { |$e| $wrong_named_list = $e:message }
+try { $lf xs=$($list.of "a" "b") } catch { |$e| $wrong_named_list = $e.message }
 assert ($wrong_named_list == "`lf`: List of elements of type `string` can't be inserted into list of type `integer`.") \
     "a whole list of the wrong element type passed to a list-typed named argument should error the same way a single wrong-typed value does"
 
@@ -111,13 +111,13 @@ assert ($wrong_named_list == "`lf`: List of elements of type `string` can't be i
 ## compare behavior instead of identity, same as the plain-closure check in
 ## tests/serialization.crush.
 
-val $collect | pup:to ./.closure_test_file
-$restored_collect := $(pup:from ./.closure_test_file)
+val $collect | $pup.to ./.closure_test_file
+$restored_collect := $($pup.from ./.closure_test_file)
 $restored_r1 := $($restored_collect 1 2 3 4 5 x=10 y=20)
 assert ($restored_r1 == $r1) "a closure with named/unnamed collectors should behave identically after a pup round trip"
 
-val $def | pup:to ./.closure_test_file
-$restored_def := $(pup:from ./.closure_test_file)
+val $def | $pup.to ./.closure_test_file
+$restored_def := $($pup.from ./.closure_test_file)
 assert ($($restored_def 1) == 43) "a closure's default value should still apply after a pup round trip"
 rm ./.closure_test_file
 
@@ -131,10 +131,10 @@ rm ./.closure_test_file
 ## own definition. Fixed to render `@ $rest`/`@@ $extra`.
 
 $complex := {|$a $b: $integer = 7 @ $rest @@ $extra|
-    struct:of a=$a b=$b rest=$rest extra=$extra sum=($a + $b)
+    $struct.of a=$a b=$b rest=$rest extra=$extra sum=($a + $b)
 }
 $def_text := $(definition $complex)
-$src := $("$restored_complex := {}":format $def_text)
+$src := $("$restored_complex := {}".format $def_text)
 eval $src
 
 $before := $($complex 1 2 3 4 x=10 y=20)

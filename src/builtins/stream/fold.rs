@@ -22,7 +22,7 @@ use signature::signature;
     example = "# Sum 1 through 5 by hand",
     example = "seq 1 6 | fold {($acc + $value)} initial=0",
     example = "# Build a comma separated string from a column",
-    example = "files | fold {(\"{}, {}\":format($acc, $file))} initial=\"\"",
+    example = "files | fold {(\"{}, {}\".format($acc, $file))} initial=\"\"",
 )]
 pub struct Fold {
     #[description("the accumulator's value before the first row is processed.")]

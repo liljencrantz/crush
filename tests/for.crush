@@ -6,7 +6,7 @@ $d := (dict($string, $integer).new())
 $d[fooo] = 3
 
 for i=$d {
-    echo $i:key $i:value
+    echo $i.key $i.value
 }
 
 $table := $(seq 0 3 | materialize)

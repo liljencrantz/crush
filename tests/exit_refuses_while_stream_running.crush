@@ -15,10 +15,10 @@ try {
     exit
 } catch {|$e|
     $refused = $true
-    $msg = $e:message
+    $msg = $e.message
 }
 assert $refused "exit should refuse while a captured stream's producer is still running"
-assert $(like $msg *running*jobs*) ("expected a running-jobs error, got: {}":format($msg))
+assert $(like $msg *running*jobs*) ("expected a running-jobs error, got: {}".format($msg))
 
 # Draining the stream lets its producer finish and be properly joined (see
 # TableInputStream::recv's own doc comment on resolving a producer's real error/status at

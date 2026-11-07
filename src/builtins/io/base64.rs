@@ -21,7 +21,7 @@ use std::io::{BufReader, Read, Write};
     long = "",
     long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",
     example = "# Will output hello, world!",
-    example = "\"aGVsbG8sIHdvcmxkIQ==\" | base64:from",
+    example = "\"aGVsbG8sIHdvcmxkIQ==\" | $base64.from",
 )]
 struct FromSignature {
     #[unnamed()]
@@ -79,7 +79,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     long = "",
     long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",
     example = "# Will output aGVsbG8sIHdvcmxkIQ==",
-    example = "\"hello, world!\" | base64:to",
+    example = "\"hello, world!\" | $base64.to",
 )]
 struct To {
     #[description("the file to write to. Write to output if no file is specified.")]

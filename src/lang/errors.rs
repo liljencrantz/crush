@@ -20,7 +20,7 @@ pub enum CrushErrorType {
     GenericError(String),
     /// Raised by the `assert` builtin when its condition is false. A dedicated variant
     /// (rather than reusing `InvalidArgument`/`GenericError`) so a `catch` block can
-    /// discriminate a failed assertion from any other kind of error by `$e:type ==
+    /// discriminate a failed assertion from any other kind of error by `$e.type ==
     /// "AssertionError"`, without depending on message wording.
     AssertionError(String),
     /// A user-raised error from the `throw` builtin: `(error_type, message)`. Unlike
@@ -643,7 +643,7 @@ pub fn data_error<T>(message: impl Into<String>) -> CrushResult<T> {
 }
 
 /// Backs the `assert` builtin: raised when its condition is false. Catchable and
-/// discriminable by `$e:type == "AssertionError"` (see `CrushErrorType::AssertionError`).
+/// discriminable by `$e.type == "AssertionError"` (see `CrushErrorType::AssertionError`).
 pub fn assertion_error<T>(message: impl Into<String>) -> CrushResult<T> {
     Err(AssertionError(message.into()).into())
 }

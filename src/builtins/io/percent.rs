@@ -37,7 +37,7 @@ fn read_string(context: &mut CommandContext) -> CrushResult<String> {
     long = "and `&`, so don't apply it to an already-assembled path or query string, only",
     long = "to one component of one.",
     example = "# Returns \"a%20b%2Fc\"",
-    example = "percent:to \"a b/c\"",
+    example = "$percent.to \"a b/c\"",
 )]
 struct To {
     #[unnamed()]
@@ -63,7 +63,7 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
     long = "Replaces every `%XX` escape with the byte it represents. Errors if the",
     long = "decoded bytes aren't valid UTF-8.",
     example = "# Returns \"a b/c\"",
-    example = "percent:from \"a%20b%2Fc\"",
+    example = "$percent.from \"a%20b%2Fc\"",
 )]
 struct From {
     #[unnamed()]

@@ -17,7 +17,7 @@ use std::sync::Arc;
 pub struct Job {
     commands: Vec<CommandInvocation>,
     source: Source,
-    /// True only for a job written with a trailing `&` (e.g. `seq 100 | pipe:write &`).
+    /// True only for a job written with a trailing `&` (e.g. `seq 100 | $pipe.write &`).
     /// A background job is its own independent execution context: `eval()` dispatches
     /// its real last stage same as any other job, but returns immediately rather than
     /// waiting on it (or any earlier stage) to finish, registering its eventual result

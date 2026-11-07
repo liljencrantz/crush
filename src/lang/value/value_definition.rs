@@ -23,7 +23,15 @@ pub enum ValueDefinition {
     },
     JobDefinition(Job),
     JobListDefinition(Vec<Job>, Source),
-    Identifier(Source),
+    /// A name resolved by scope lookup. The `bool` is whether it was written with an
+    /// explicit `$` sigil (`$pwd`) as opposed to a bare word promoted to a command
+    /// name by command-position syntax (`pwd`) -- see `Node::compile`'s
+    /// `Node::Identifier`/`Node::String` branches, the only two places this is
+    /// constructed. Consulted by `command_invocation.rs` to decide whether a failed
+    /// lookup may fall back to an external process: only the bare case may (matching
+    /// a plain shell's own `$VAR` vs bare-word distinction), since an explicit `$`
+    /// sigil is a deliberate, unambiguous request for a real binding.
+    Identifier(Source, bool),
     GetAttr(Box<ValueDefinition>, Source),
 }
 
@@ -33,7 +41,7 @@ impl ValueDefinition {
             ValueDefinition::Value(_, source) => source.location(),
             ValueDefinition::ClosureDefinition { source, .. } => source.location(),
             ValueDefinition::JobDefinition(j) => j.location(),
-            ValueDefinition::Identifier(l) => l.location(),
+            ValueDefinition::Identifier(l, _) => l.location(),
             ValueDefinition::GetAttr(p, a) => p.location().union(a.location()),
             ValueDefinition::JobListDefinition(_, source) => source.location(),
         }
@@ -41,7 +49,7 @@ impl ValueDefinition {
 
     pub fn source(&self) -> &Source {
         match self {
-            ValueDefinition::Identifier(source)
+            ValueDefinition::Identifier(source, _)
             | ValueDefinition::GetAttr(_, source)
             | ValueDefinition::Value(_, source)
             | ValueDefinition::ClosureDefinition { source, .. } => source,
@@ -116,7 +124,7 @@ impl ValueDefinition {
                     )?,
                 }),
             ),
-            ValueDefinition::Identifier(s) => (
+            ValueDefinition::Identifier(s, _) => (
                 None,
                 context
                     .env
@@ -141,7 +149,7 @@ impl ValueDefinition {
                 // Note: parent_cmd.eval() above returns CrushResult<()>, not a thread
                 // handle -- it always runs the command synchronously in this thread, so
                 // there is no join gap here. The gap that matters is in the *caller*: a
-                // GetAttr used as a job's command (e.g. `5:no_such_method`) goes through
+                // GetAttr used as a job's command (e.g. `5.no_such_method`) goes through
                 // CommandInvocation::eval() instead of this method, and that's where the
                 // actual bug lives (see the CommandInvocation::eval fix below).
                 let val = parent.field(&entry.string())?.ok_or(&format!(
@@ -159,7 +167,7 @@ impl Display for ValueDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             ValueDefinition::Value(v, _location) => v.fmt(f),
-            ValueDefinition::Identifier(v) => v.fmt(f),
+            ValueDefinition::Identifier(v, _) => v.fmt(f),
             ValueDefinition::ClosureDefinition {
                 signature, jobs, ..
             } => {
@@ -182,7 +190,7 @@ impl Display for ValueDefinition {
             ValueDefinition::JobDefinition(j) => j.fmt(f),
             ValueDefinition::GetAttr(v, l) => {
                 std::fmt::Display::fmt(&v, f)?;
-                f.write_str(":")?;
+                f.write_str(".")?;
                 l.fmt(f)
             }
             ValueDefinition::JobListDefinition(jl, _) => jl.fmt(f),
@@ -194,7 +202,7 @@ impl Repr for ValueDefinition {
     fn repr(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
             ValueDefinition::Value(v, _location) => v.repr(f),
-            ValueDefinition::Identifier(v) => {
+            ValueDefinition::Identifier(v, _) => {
                 f.write_str("$")?;
                 f.write_str(v.str())
             }
@@ -224,7 +232,7 @@ impl Repr for ValueDefinition {
             }
             ValueDefinition::GetAttr(v, l) => {
                 v.repr(f)?;
-                f.write_str(":")?;
+                f.write_str(".")?;
                 l.str().fmt(f)
             }
             ValueDefinition::JobListDefinition(jl, _) => {

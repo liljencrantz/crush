@@ -20,23 +20,23 @@ assert ($r4 == 30)
 # repeating a named argument collects it into a list-typed parameter
 $h := {|$items: $(list $integer)| $items}
 $r5 := $(h items=1 items=2 items=3)
-$expected5 := $(list:of 1 2 3)
+$expected5 := $($list.of 1 2 3)
 assert ($r5 == $expected5)
 
 # @$rest collects leftover unnamed arguments into a list
 $any_list_type := $(list $any)
 $first_out := 0
-$rest_out := $($any_list_type:new)
+$rest_out := $($any_list_type.new)
 $i := {|$first @$rest| $first_out = $first; $rest_out = $rest}
 i 1 2 3
 assert ($first_out == 1)
-$expected_rest := $(list:of 2 3)
+$expected_rest := $($list.of 2 3)
 assert ($rest_out == $expected_rest)
 
 # @@$rest collects leftover named arguments into a dict
 $string_any_dict_type := $(dict $string $any)
 $first2_out := 0
-$rest2_out := $($string_any_dict_type:new)
+$rest2_out := $($string_any_dict_type.new)
 $j := {|$first @@$rest| $first2_out = $first; $rest2_out = $rest}
 j first=1 a=2 b=3
 assert ($first2_out == 1)
@@ -44,7 +44,7 @@ $a_val := $($rest2_out["a"])
 $b_val := $($rest2_out["b"])
 assert ($a_val == 2)
 assert ($b_val == 3)
-$rest2_len := $($rest2_out:len)
+$rest2_len := $($rest2_out.len)
 assert ($rest2_len == 2)
 
 # `return` can only be used inside a closure *command* (one with a `{|...| ...}`

@@ -1,4 +1,4 @@
-# Both `terminate <job id>` and `host:signal <pid>` must be able to kill a running
+# Both `terminate <job id>` and `$host.signal <pid>` must be able to kill a running
 # *external* job -- the former through crush's own job-control plumbing, the latter by
 # sending a real OS signal directly to the process, bypassing that plumbing entirely.
 #
@@ -10,8 +10,8 @@
 # legitimately appeared once on the growing screen from the first check -- `wait_for`'s
 # plain-string match is "does this text appear *anywhere* on the screen", so a second
 # bare `wait_for "Terminated"` would trivially re-match that earlier occurrence and pass
-# even if the second mechanism (`host:signal`) never worked at all. Confirmed directly:
-# temporarily disabling just the `host:signal`-path fix (`spawn_child_wait`'s `Signaled`
+# even if the second mechanism (`$host.signal`) never worked at all. Confirmed directly:
+# temporarily disabling just the `$host.signal`-path fix (`spawn_child_wait`'s `Signaled`
 # arm in `src/builtins/control/cmd.rs`) while leaving `terminate`'s own fix intact still
 # made this test pass, for exactly that reason, when the second check used a bare
 # `wait_for "Terminated"`.
@@ -30,11 +30,11 @@
 # that follow are themselves short-lived jobs that finish and get reaped well within the
 # counted prompts below -- so the *second* `cmd sleep 101 &` also lands back on id 0.
 #
-# `host:procs`'s `name` column is the process's own *executable path* (e.g. `/bin/sleep`,
+# `$host.procs`'s `name` column is the process's own *executable path* (e.g. `/bin/sleep`,
 # not the bare string `"sleep"` the plan's original brief guessed), and on a machine
 # running other tests concurrently there can be more than one `/bin/sleep` process alive
 # at once (including a stray already-dead one sysinfo can still briefly report) -- so the
-# filter also requires `$ppid == ($t:pid())` (this nested session's own pid, queryable
+# filter also requires `$ppid == ($t.pid())` (this nested session's own pid, queryable
 # directly from the outer script -- no round trip through the nested session's own
 # screen needed) to uniquely identify *this* script's own backgrounded `sleep`, not some
 # unrelated one. Confirmed directly: without the `ppid` half of the filter, the lookup
@@ -47,10 +47,10 @@
 # shared `pty_child_pid` helper (which asserts exactly one match, fine everywhere else
 # this plan uses it, but wrong here) -- it's inlined below instead, with the same
 # bounded-retry rationale as `pty_child_pid` itself: the real external process a
-# backgrounded `cmd ... &` starts isn't necessarily visible in a fresh `host:procs` scan
+# backgrounded `cmd ... &` starts isn't necessarily visible in a fresh `$host.procs` scan
 # at the exact instant this runs.
 #
-# `host:signal` takes the pid as a plain unnamed argument, not via a piped value -- `pid`
+# `$host.signal` takes the pid as a plain unnamed argument, not via a piped value -- `pid`
 # is an unnamed argument slot the `#[signature]` parser fills positionally, but `host:
 # signal`'s own handler never reads from `context.input`, so piping a pid into it (as the
 # plan's original brief guessed) is silently accepted but never actually signals
@@ -74,16 +74,16 @@ $n := $(pty_enable_counted_prompt $t)
 
 $n = $(pty_run $t $n "cmd sleep 100 &")
 $n = $(pty_run $t $n "terminate 0")
-$n = $(pty_run $t $n "$status0 := ($(jobs | where {($id == 0)} | select status))[0]:status")
-$n = $(pty_run $t $n "echo $(\"TERM_CHECK_{}\":format $status0)")
-$t:wait_for "TERM_CHECK_Terminated"
+$n = $(pty_run $t $n "$status0 := ($(jobs | where {($id == 0)} | select status))[0].status")
+$n = $(pty_run $t $n "echo $(\"TERM_CHECK_{}\".format $status0)")
+$t.wait_for "TERM_CHECK_Terminated"
 
 $n = $(pty_run $t $n "cmd sleep 101 &")
-$pids := $(list:of 0)
+$pids := $($list.of 0)
 $pid_count := 0
 $tries := 0
 while {(($tries < 20) and ($pid_count == 0))} {
-    $pids = $(host:procs | where {(($ppid == ($t:pid())) and ($name =~ ^(.*sleep)))} | select pid | sort pid reverse=$true | list:collect pid)
+    $pids = $($host.procs | where {(($ppid == ($t.pid())) and ($name =~ ^(.*sleep)))} | select pid | sort pid reverse=$true | $list.collect pid)
     $pid_count = $($pids | count)
     if ($pid_count == 0) {
         sleep 50ms
@@ -95,9 +95,9 @@ assert ($pid_count > 0) "expected at least one sleep process within the retry bu
 # Terminated `sleep 100` -- see the header comment above for why both can transiently
 # appear together.
 $pid := $pids[0]
-host:signal $pid signal=SIGKILL
-$n = $(pty_run $t $n "$status1 := ($(jobs | where {($id == 0)} | select status))[0]:status")
-$n = $(pty_run $t $n "echo $(\"SIG_CHECK_{}\":format $status1)")
-$t:wait_for "SIG_CHECK_Terminated"
+$host.signal $pid signal=SIGKILL
+$n = $(pty_run $t $n "$status1 := ($(jobs | where {($id == 0)} | select status))[0].status")
+$n = $(pty_run $t $n "echo $(\"SIG_CHECK_{}\".format $status1)")
+$t.wait_for "SIG_CHECK_Terminated"
 
-$t:close
+$t.close

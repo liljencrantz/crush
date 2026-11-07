@@ -1,7 +1,7 @@
 # match branches on a value against a sequence of arms in a block body:
 #   case <value> {...}    -- matches on exact equality
 #   any <stream> {...}    -- matches if the subject equals any value the stream produces
-#   is <pattern> {...}    -- matches if <pattern>:__is__ subject is true; a type checks
+#   is <pattern> {...}    -- matches if <pattern>.__is__ subject is true; a type checks
 #                            the subject's type, but a glob/regex/string/any other value
 #                            implementing __is__ works too (the same mechanism as `like`
 #                            and the `=~`/`!~` operators)
@@ -66,7 +66,7 @@ assert ($r_regex == "regex match")
 $is_no_method_errored := $false
 try {
     match 5 {
-        is $(list:of 1 2 3) {"wrong"}
+        is $($list.of 1 2 3) {"wrong"}
     }
 } catch { |$e| $is_no_method_errored = $true }
 assert $is_no_method_errored "an `is` pattern with no __is__ method should error"
@@ -74,15 +74,15 @@ assert $is_no_method_errored "an `is` pattern with no __is__ method should error
 # a case pattern is always compared by whole-value equality, never treated as a
 # membership set, even when the subject is itself a list -- that ambiguity is why
 # `any` exists as a separate, explicit arm kind instead of being inferred.
-$subject := $(list:of 1 2 3)
+$subject := $($list.of 1 2 3)
 $r6 := $(match $subject {
-    case $(list:of 1 2 3) {"whole-list equality"}
+    case $($list.of 1 2 3) {"whole-list equality"}
     default {"wrong"}
 })
 assert ($r6 == "whole-list equality")
 
 $r7 := $(match $subject {
-    any $(list:of 1 2 3) {"wrong: subject should not match itself as a member"}
+    any $($list.of 1 2 3) {"wrong: subject should not match itself as a member"}
     default {"correct: [1,2,3] is not a member of [1,2,3]'s own elements"}
 })
 assert ($r7 == "correct: [1,2,3] is not a member of [1,2,3]'s own elements")

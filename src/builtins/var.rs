@@ -17,7 +17,7 @@ use signature::signature;
     long = "The let builtin is not normally called directly, but via the syntactic sugar of the := operator.",
     example = "# These two lines are equivalent",
     example = "$x := 2",
-    example = "var:let x=2",
+    example = "$var.let x=2",
 )]
 struct Let {
     #[description(
@@ -47,7 +47,7 @@ pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
     operator.",
     example = "# These two lines are equivalent",
     example = "$x = 2",
-    example = "var:set x=2",
+    example = "$var.set x=2",
 )]
 struct Set {
     #[description(
@@ -114,7 +114,7 @@ fn destructure(value: Value, expected: usize) -> CrushResult<Vec<Value>> {
     long = "number of names, or an error results.",
     example = "# These two lines are equivalent",
     example = "[$a, $b] := [1, 2]",
-    example = "var:let_destructure a b value=[1, 2]",
+    example = "$var.let_destructure a b value=[1, 2]",
 )]
 struct LetDestructure {
     #[description("the names of the variables to declare, in order.")]
@@ -146,7 +146,7 @@ pub fn let_destructure(mut context: CommandContext) -> CrushResult<()> {
     long = "or an error results.",
     example = "# These two lines are equivalent",
     example = "[$a, $b] = [1, 2]",
-    example = "var:set_destructure a b value=[1, 2]",
+    example = "$var.set_destructure a b value=[1, 2]",
 )]
 struct SetDestructure {
     #[description("the names of the variables to reassign, in order.")]
@@ -177,7 +177,7 @@ pub fn set_destructure(mut context: CommandContext) -> CrushResult<()> {
     name of the variable you want to get.",
     example = "# These two lines are equivalent",
     example = "$x",
-    example = "var:get x",
+    example = "$var.get x",
 )]
 struct Get {
     #[description("the name of the variable to return the value of.")]
@@ -198,7 +198,7 @@ pub fn get(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Removes variables from the namespace",
     example = "# Remove the variable x",
-    example = "var:unset x",
+    example = "$var.unset x",
 )]
 struct Unset {
     #[description("the name of the variables to unset.")]
@@ -224,7 +224,7 @@ pub fn unset(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Empty),
     short = "Make specified scopes searched by default during scope resolution.",
     example = "# Import the math scope",
-    example = "var:use $math",
+    example = "$var.use $math",
     example = "sqrt 2",
 )]
 struct Use {
@@ -249,7 +249,7 @@ pub fn r#use(mut context: CommandContext) -> CrushResult<()> {
     long = "The unuse builtin will recursively go through all parent scopes and remove all uses of 
     the provided scopes through the entire chain.",
     example = "# Stop using the stream scope",
-    example = "var:unuse $stream",
+    example = "$var.unuse $stream",
     example = "# This command will now fail, because stream::select is not in scope",
     example = "select",
 )]
@@ -316,9 +316,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         Some(
             "Commands for working with variables and scopes directly, as values rather than \
              through `$name`/`:=`/`=` syntax: declaring, setting, unsetting, reading, and \
-             destructuring, plus `var:use`/`var:unuse` for importing a scope's contents into \
-             the current one and `var:list`/`var:local` for introspecting what's currently in \
-             scope. This namespace is imported into the global scope, so e.g. `var:let` and \
+             destructuring, plus `$var.use`/`$var.unuse` for importing a scope's contents into \
+             the current one and `$var.list`/`$var.local` for introspecting what's currently in \
+             scope. This namespace is imported into the global scope, so e.g. `$var.let` and \
              bare `let` are the same command."
                 .to_string(),
         ),

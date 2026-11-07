@@ -59,10 +59,10 @@ static TXT_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
 /// causing unbounded recursion with a fresh network round trip at every hop.
 const MAX_CNAME_DEPTH: u32 = 8;
 
-/// Computes `dns:query`'s real output type: it depends entirely on `record_type`,
+/// Computes `$dns.query`'s real output type: it depends entirely on `record_type`,
 /// mirroring `query_internal`'s own match on it exactly (see that function's doc for
 /// each type's columns). `record_type` can be given either by name or positionally (the
-/// `example`s show `dns:query NAME RECORD_TYPE`), so both are checked here -- the
+/// `example`s show `$dns.query NAME RECORD_TYPE`), so both are checked here -- the
 /// second unnamed argument is `record_type` the same way the real parser would bind it,
 /// since `name` is the first positional field.
 ///
@@ -70,7 +70,7 @@ const MAX_CNAME_DEPTH: u32 = 8;
 /// and `no_follow_cname` is set (or `record_type` is already `CNAME`), `perform_query`
 /// emits `A_STREAM_OUTPUT_TYPE` regardless of `record_type` -- that depends on the
 /// actual DNS response, which doesn't exist yet at this point. This reports the type
-/// `dns:query` produces in the ordinary case.
+/// `$dns.query` produces in the ordinary case.
 fn query_dynamic_output(
     _input: PipeInputType,
     arguments: &[ValidationArgument],
@@ -151,14 +151,14 @@ fn query_dynamic_output(
     long = "directly, to see the alias itself instead of following it.",
     long = "",
     long = "If `nameserver` isn't given, the first nameserver listed in",
-    long = "`/etc/resolv.conf` is used (see `dns:nameserver`). `name` is always looked up",
+    long = "`/etc/resolv.conf` is used (see `$dns.nameserver`). `name` is always looked up",
     long = "exactly as given -- unlike most system resolvers, this does not consult",
-    long = "`/etc/resolv.conf`'s search domains (see `dns:search_paths`) to expand an",
+    long = "`/etc/resolv.conf`'s search domains (see `$dns.search_paths`) to expand an",
     long = "unqualified name.",
-    example = "dns:query \"www.google.com\" AAAA",
-    example = "dns:query \"example.com\" MX",
+    example = "$dns.query \"www.google.com\" AAAA",
+    example = "$dns.query \"example.com\" MX",
     example = "# See the alias itself instead of transparently following it",
-    example = "dns:query \"www.example.com\" CNAME",
+    example = "$dns.query \"www.example.com\" CNAME",
     dynamic_output = query_dynamic_output,
 )]
 struct Query {
@@ -467,9 +467,9 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
     long = "`in-addr.arpa` for IPv4, `ip6.arpa` for IPv6) -- `address` should be given as",
     long = "a plain, forward IP address, not already reversed. Returns the hostname as a",
     long = "plain string, or nothing if no `PTR` record exists for that address. Unlike",
-    long = "`dns:query`, this never follows a `CNAME`; a reverse zone is not expected to",
+    long = "`$dns.query`, this never follows a `CNAME`; a reverse zone is not expected to",
     long = "contain one.",
-    example = "dns:query_reverse \"127.0.0.1\"",
+    example = "$dns.query_reverse \"127.0.0.1\"",
 )]
 struct QueryReverse {
     #[description("IP address to look up. Can be either IPv4 or IPv6.")]
@@ -544,7 +544,7 @@ fn query_reverse_internal(
     output = Known(ValueType::List(Box::new(ValueType::String))),
     short = "List of default nameservers",
     long = "Reads the nameservers configured in `/etc/resolv.conf` -- no network query",
-    long = "is made. This is exactly what `dns:query`/`dns:query_reverse` themselves fall",
+    long = "is made. This is exactly what `$dns.query`/`$dns.query_reverse` themselves fall",
     long = "back to when their own `nameserver` argument is left unset (specifically, the",
     long = "first one listed).",
 )]
@@ -572,7 +572,7 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
     long = "Reads the DNS search domains configured in `/etc/resolv.conf` -- no network",
     long = "query is made. A system resolver normally appends these, in order, to an",
     long = "unqualified hostname before giving up (e.g. trying `host.example.com` when",
-    long = "asked to resolve plain `host`); `dns:query` does not apply this itself --",
+    long = "asked to resolve plain `host`); `$dns.query` does not apply this itself --",
     long = "`name` is always looked up exactly as given.",
 )]
 struct SearchPaths {}
@@ -623,7 +623,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
              server holds every record. A name is resolved by delegating from root servers \
              down through top-level-domain servers to the domain's own authoritative servers, \
              though in practice a query is usually answered by a caching resolver (see \
-             `dns:nameserver`) long before it needs to walk that whole chain."
+             `$dns.nameserver`) long before it needs to walk that whole chain."
                 .to_string(),
         ),
         Box::new(move |dns| {

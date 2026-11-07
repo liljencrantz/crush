@@ -9,27 +9,27 @@
 
 $values := {
     |$s|
-    $($s | select value | list:collect)
+    $($s | select value | $list.collect)
 }
 
 # One unnamed argument: 0 up to (but not including) it.
-assert ($($values $(seq 3)) == $(list:of 0 1 2)) "seq 3 should be 0, 1, 2"
+assert ($($values $(seq 3)) == $($list.of 0 1 2)) "seq 3 should be 0, 1, 2"
 
 # Two unnamed arguments: from, to (exclusive).
-assert ($($values $(seq 2 5)) == $(list:of 2 3 4)) "seq 2 5 should be 2, 3, 4"
+assert ($($values $(seq 2 5)) == $($list.of 2 3 4)) "seq 2 5 should be 2, 3, 4"
 
 # Three unnamed arguments: from, to, step.
-assert ($($values $(seq 0 10 2)) == $(list:of 0 2 4 6 8)) "seq 0 10 2 should step by 2"
+assert ($($values $(seq 0 10 2)) == $($list.of 0 2 4 6 8)) "seq 0 10 2 should step by 2"
 
 # The named arguments produce the exact same results as their unnamed equivalents.
-assert ($($values $(seq to=3)) == $(list:of 0 1 2)) "seq to=3 should equal seq 3"
-assert ($($values $(seq from=2 to=5)) == $(list:of 2 3 4)) "seq from=2 to=5 should equal seq 2 5"
-assert ($($values $(seq from=0 to=10 step=2)) == $(list:of 0 2 4 6 8)) "seq from=0 to=10 step=2 should equal seq 0 10 2"
+assert ($($values $(seq to=3)) == $($list.of 0 1 2)) "seq to=3 should equal seq 3"
+assert ($($values $(seq from=2 to=5)) == $($list.of 2 3 4)) "seq from=2 to=5 should equal seq 2 5"
+assert ($($values $(seq from=0 to=10 step=2)) == $($list.of 0 2 4 6 8)) "seq from=0 to=10 step=2 should equal seq 0 10 2"
 
 # With no arguments at all, seq still counts forever starting at 0 -- unaffected by any
 # of the above, since the unnamed collector is simply empty in that case.
-assert ($($values $(seq | head 5)) == $(list:of 0 1 2 3 4)) "seq with no arguments should still count forever from 0"
-assert ($($values $(seq from=5 | head 3)) == $(list:of 5 6 7)) "seq from=5 with no to should still count forever from 5"
+assert ($($values $(seq | head 5)) == $($list.of 0 1 2 3 4)) "seq with no arguments should still count forever from 0"
+assert ($($values $(seq from=5 | head 3)) == $($list.of 5 6 7)) "seq from=5 with no to should still count forever from 5"
 
 # Mixing the unnamed form with any of from/to/step is rejected rather than silently
 # picking one.

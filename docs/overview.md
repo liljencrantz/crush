@@ -61,8 +61,8 @@ process list, a JSON file, an HTTP response, and so on.
 ## Reading and writing files
 
 Traditional shell I/O is a stream of bytes. Since Crush streams are typed, Crush instead
-has command pairs for serializing and deserializing file formats -- e.g. `json:from`/
-`json:to` for JSON, `toml:from`/`toml:to` for TOML:
+has command pairs for serializing and deserializing file formats -- e.g. `$json.from`/
+`$json.to` for JSON, `$toml.from`/`$toml.to` for TOML:
 
 | Namespace | Description                                       |
 |-----------|----------------------------------------------------|
@@ -76,10 +76,10 @@ has command pairs for serializing and deserializing file formats -- e.g. `json:f
 
 ```shell script
 # Dump the output of files to listing.json
-crush# files | json:to ./listing.json
+crush# files | $json.to ./listing.json
 
 # Read Cargo.toml and extract its dependencies field
-crush# toml:from Cargo.toml | member dependencies
+crush# $toml.from Cargo.toml | member dependencies
 ```
 
 If a deserializer isn't given an input file, it reads from its input instead (which must
@@ -87,7 +87,7 @@ be `binary`/`binary_stream`); if a serializer isn't given an output file, it wri
 binary stream to its output instead of a file:
 
 ```shell script
-crush# list:of "carrot" "carrot" "acorn" | json:to
+crush# $list.of "carrot" "carrot" "acorn" | $json.to
 [
   "carrot",
   "carrot",
@@ -160,7 +160,7 @@ Crush relies on namespaces to organize commands and avoid clashes, and uses `:` 
 
 ```shell script
 crush# help $sort
-stream:sort [field=string...] [--reverse] [--case_insensitive]
+$stream.sort [field=string...] [--reverse] [--case_insensitive]
 
     Sort input stream based on one or more of it's columns
     ...
@@ -195,27 +195,27 @@ result back:
 
 ```shell script
 # Run a closure as another user
-crush# users[root]:do {./carrot:chown group="rabbit"}
+crush# users[root].do {'./carrot'.chown group="rabbit"}
 
 # Run a closure on a remote host
-crush# remote:exec {uptime} "popplar.meadow"
+crush# $remote.exec {uptime} "popplar.meadow"
 
 # Run a closure on several remote hosts at once
-crush# remote:pexec {uptime} "popplar.meadow" "elm.meadow"
+crush# $remote.pexec {uptime} "popplar.meadow" "elm.meadow"
 ```
 
 ## Creating custom types
 
-Use `struct:of` for a simple, immutable, ad-hoc value, or `class` for a real type with
+Use `$struct.of` for a simple, immutable, ad-hoc value, or `class` for a real type with
 methods and (optional) inheritance:
 
 ```shell script
 $Point := $(class)
-$Point:__init__ = {|$x:$float $y:$float| $this:x = $x; $this:y = $y}
-$Point:len = {|| math:sqrt (($this:x * $this:x) + ($this:y * $this:y))}
+$Point.__init__ = {|$x:$float $y:$float| $this.x = $x; $this.y = $y}
+$Point.len = {|| $math.sqrt (($this.x * $this.x) + ($this.y * $this.y))}
 
-$p := $(Point:new x=1.0 y=2.0)
-$p:len
+$p := $($Point.new x=1.0 y=2.0)
+$p.len
 ```
 
 See [Creating custom types](language_reference.md#creating-custom-types) for the full

@@ -4,7 +4,7 @@
 # bookkeeping. Anything that immediately checked "is anything else still running" right
 # after such a substitution (most visibly `exit`, which refuses while jobs are
 # running) could see that spurious, already-finished job and refuse incorrectly.
-# Reproduced directly as `$x := $(host:os:name); exit`, which failed roughly 1 in
+# Reproduced directly as `$x := $($host.os.name); exit`, which failed roughly 1 in
 # 150-200 runs before the fix. See GlobalState::recv_job_result's doc comment
 # (src/lang/state/global_state.rs) for the fix itself: a plain-valued substitution's job
 # is now joined synchronously (blocking, but provably fast -- see that comment for why
@@ -20,7 +20,7 @@ $max := 0
 $min := 999999
 $i := 0
 while {($i < 300)} {
-    $x := $(host:os:name)
+    $x := $($host.os.name)
     $count := $(jobs | count)
     if ($count > $max) {
         $max = $count
@@ -30,4 +30,4 @@ while {($i < 300)} {
     }
     $i = ($i + 1)
 }
-assert ($max == $min) $("expected a stable job count across iterations (no job lingering after a plain substitution), but saw it range from {} to {}":format $min $max)
+assert ($max == $min) $("expected a stable job count across iterations (no job lingering after a plain substitution), but saw it range from {} to {}".format $min $max)

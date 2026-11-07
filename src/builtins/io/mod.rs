@@ -80,7 +80,7 @@ fn history_file(name: &str) -> CrushResult<PathBuf> {
     example = "# Ask the user for their name",
     example = "echo \"What is your name?\"",
     example = "$name := $(readline prompt=\"name: \")",
-    example = "echo $(\"Hello, {}!\":format $name)",
+    example = "echo $(\"Hello, {}!\".format $name)",
     output = Known(ValueType::String),
 )]
 struct Readline {
@@ -126,8 +126,8 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
              `toml`, `csv`, `hex`, `base64`, and `percent` encoding, and Crush's own native \
              `pup` format, each its own `to`/`from` pair. Also home to a few general-purpose \
              I/O commands that don't belong to any one format: `http`, `echo`, and \
-             `readline`. Imported into the global scope, so e.g. `io:json:from` and bare \
-             `json:from` are the same command."
+             `readline`. Imported into the global scope, so e.g. `$io.json.from` and bare \
+             `$json.from` are the same command."
                 .to_string(),
         ),
         Box::new(move |env| {

@@ -37,7 +37,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     short = "Filter input stream based on this glob.",
     long = "Search all textual (string and file) columns for matches of the glob, and output the rows that match.",
     example = "# Recursively search current directory for all files containing four `a` characters in a row",
-    example = "files --recurse | *aaaa*:filter",
+    example = "files --recurse | $(*aaaa*).filter",
 )]
 struct Filter {
     #[unnamed()]

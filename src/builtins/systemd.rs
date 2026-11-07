@@ -23,7 +23,7 @@ static JOURNAL_OUTPUT_TYPE: [ColumnType; 2] = [
     output = Known(ValueType::table_input_stream(&JOURNAL_OUTPUT_TYPE)),
     short = "Show the systemd journal",
     example = "# Show last 10 entries for pid 123",
-    example = "systemd:journal _PID=\"123\" | tail"
+    example = "$systemd.journal _PID=\"123\" | tail"
 )]
 struct JournalSignature {
     #[description("wait indefinitely for more data once the end of the journal is reached.")]
@@ -104,7 +104,7 @@ fn journal(mut context: CommandContext) -> CrushResult<()> {
             // already interruptible (`CommandContext::initialize_output` wires its
             // controller up) and `send()` below already checks it, but nothing ever
             // reaches `send()` while this call is still blocked waiting for the next
-            // entry that may never come -- same gap `fs:usage` had, see that fix's
+            // entry that may never come -- same gap `$fs.usage` had, see that fix's
             // commit. 200ms is short enough that `terminate`/Ctrl-Z feel responsive,
             // long enough not to busy-poll the journal.
             journal.await_next_entry(Some(std::time::Duration::from_millis(200)))

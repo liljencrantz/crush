@@ -22,7 +22,7 @@ use signature::signature;
 /// the `From` struct below).
 const NON_COLUMN_ARGUMENTS: [&str; 3] = ["separator", "head", "trim"];
 
-/// Computes `csv:from`'s real output type: a `table_input_stream` whose columns are
+/// Computes `$csv.from`'s real output type: a `table_input_stream` whose columns are
 /// exactly the caller's `name=type` arguments (e.g. `name=$string age=$integer`), in the
 /// order given -- the static `output` a `#[signature(...)]` command would otherwise
 /// declare can't express this, since the columns depend entirely on how the command was
@@ -69,7 +69,7 @@ fn from_dynamic_output(
 
 #[signature(
     io.csv.from,
-    example = "csv:from separator=\",\" head=1 name=$string age=$integer nick=$string",
+    example = "$csv.from separator=\",\" head=1 name=$string age=$integer nick=$string",
     short = "Parse specified files as CSV files",
     dynamic_output = from_dynamic_output,
 )]

@@ -266,7 +266,7 @@ struct BracketFrame {
 }
 
 /// Every token of `code`, in order, paired with the presentation category
-/// (matching a key of the `crush:highlight` color map, or a `tok-<name>`
+/// (matching a key of the `$crush.highlight` color map, or a `tok-<name>`
 /// CSS class for HTML output) that applies to it, if any -- plus whether the lexer
 /// itself failed partway through (e.g. `ls <`, where `<` isn't a valid token start in
 /// command mode). The lexer can't recover from an error and resume, so there's no way to
@@ -341,11 +341,11 @@ fn classify_tokens<'a>(
         new_command = match (new_command, prev, tok, ntok) {
             // A `;`/newline or a pipe always opens a fresh job. Also resets
             // `command_context` back to the root scope: a `:` earlier in the previous
-            // command (e.g. `host:procs`) narrows it into that namespace so a chained
-            // path like `io:base64:to` resolves each segment correctly, but a fresh
+            // command (e.g. `$host.procs`) narrows it into that namespace so a chained
+            // path like `$io.base64.to` resolves each segment correctly, but a fresh
             // job's own command name must be looked up from the top level again, not as
             // a member of whatever namespace the last command happened to live in.
-            // Without this, `host:procs|count` colored `count` as an error -- it was
+            // Without this, `$host.procs|count` colored `count` as an error -- it was
             // looked up as a (nonexistent) member of `host`, not as the ordinary,
             // top-level command it actually is.
             (_, _, Token::Separator(_, _) | Token::Pipe(_), _) => {
@@ -753,10 +753,10 @@ pub fn syntax_highlight_html(code: &str) -> CrushResult<String> {
         ));
 
         if category == Some("command") {
-            // A multi-segment command path (dns:query_reverse, io:base64:to)
+            // A multi-segment command path ($dns.query_reverse, $io.base64.to)
             // lexes as separate String/MemberOperator/String/... tokens --
             // there's nothing at the lexer level distinguishing it from a
-            // $value:method access. Stitch a whole chain of them back into
+            // $value.method access. Stitch a whole chain of them back into
             // one link candidate, since that's the one thing a reader (or
             // the downstream doc-path lookup in generate_docs.crush) can
             // actually resolve; a bare "dns" or "query_reverse" half isn't
@@ -913,10 +913,20 @@ fn get_category(
         | Mod(_)
         | Rem(_)
         | MemberOperator(_)
+        | TypeAnnotationColon(_)
         | ExprModeStart(_)
         | SubStart(_)
         | BlockEnd(_)
         | BlockStart(_) => Some("operator"),
+        // In command position, a `$identifier` immediately followed by a
+        // `MemberOperator` is the root of a namespaced-command chain (`$struct.of`,
+        // `$fs.watch`) -- exactly the role a bareword root plays for `String` above,
+        // just sigilled. Color it as part of that chain rather than as a plain
+        // variable reference, regardless of whether the name happens to also resolve
+        // as an ordinary value in scope.
+        Identifier(_, _) if new_command && matches!(next_token_type, Some(MemberOperator(_))) => {
+            Some("command")
+        }
         Identifier(name, _) => match scope {
             None => Some("identifier"),
             Some(s) => match (s.get(&name[1..]).unwrap_or(None), next_token_type) {
@@ -986,6 +996,7 @@ fn token_type(token: Token, scope: &Option<Scope>) -> Option<ValueType> {
         Token::Float(_, _) => Some(ValueType::Float),
         Token::Duration(_, _) => Some(ValueType::Duration),
         Token::MemberOperator(_) => None,
+        Token::TypeAnnotationColon(_) => None,
         Token::Equals(_) => None,
         Token::Declare(_) => None,
         Token::Separator(_, _) => None,
@@ -1090,7 +1101,7 @@ mod tests {
     }
 
     /// A root scope with a `fs` namespace holding one command -- mirrors the shape of
-    /// the real, builtin `fs` namespace (`fs:files`, `fs:mounts`, ...) closely enough to
+    /// the real, builtin `fs` namespace (`$fs.files`, `$fs.mounts`, ...) closely enough to
     /// reproduce the bug without pulling in the whole builtins tree.
     fn scope_with_fs_namespace() -> Scope {
         let root = Scope::create_root();
@@ -1123,21 +1134,21 @@ mod tests {
         );
     }
 
-    /// Same namespace, referenced the ordinary way (`fs:my_cmd`) -- this already worked
+    /// Same namespace, referenced the ordinary way (`$fs.my_cmd`) -- this already worked
     /// before the fix and must keep working after it.
     #[test]
     fn namespace_member_access_is_still_a_command() {
         let scope = Some(scope_with_fs_namespace());
-        let classified = classify_tokens("fs:my_cmd", &scope).0;
+        let classified = classify_tokens("$fs.my_cmd", &scope).0;
         assert_eq!(classified[0].1, Some("command"));
         assert_eq!(classified[2].1, Some("command"));
     }
 
-    /// A plain, top-level command piped after a namespaced one (`fs:my_cmd|count`, e.g.
-    /// the reported `host:procs|count`) used to be highlighted as an error. Resolving
+    /// A plain, top-level command piped after a namespaced one (`$fs.my_cmd|count`, e.g.
+    /// the reported `$host.procs|count`) used to be highlighted as an error. Resolving
     /// `my_cmd` as a member of `fs` narrows the lookup context used for the *next*
     /// command-position name into the `fs` namespace too (so a chain like
-    /// `io:base64:to` resolves each segment correctly) -- but nothing ever reset that
+    /// `$io.base64.to` resolves each segment correctly) -- but nothing ever reset that
     /// context back to the root scope for the job that starts after the `|`, so `count`
     /// was looked up as a member of `fs` instead of the top-level scope, found nothing,
     /// and was colored as an error even though it's an ordinary, valid command.
@@ -1148,7 +1159,7 @@ mod tests {
             .unwrap();
         let scope = Some(root);
 
-        let classified = classify_tokens("fs:my_cmd|count", &scope).0;
+        let classified = classify_tokens("$fs.my_cmd|count", &scope).0;
         assert_eq!(classified[0].1, Some("command"), "fs");
         assert_eq!(classified[2].1, Some("command"), "my_cmd");
         assert_eq!(
@@ -1306,7 +1317,7 @@ mod tests {
         Ok(())
     }
 
-    /// Mirrors `stream:sort`'s own `dynamic_output` closely enough for a test: rejects a
+    /// Mirrors `$stream.sort`'s own `dynamic_output` closely enough for a test: rejects a
     /// non-stream (here, specifically `Integer`) input outright, and otherwise passes the
     /// input type through unchanged.
     fn sort_like_dynamic_output(
@@ -1331,7 +1342,7 @@ mod tests {
         Ok(())
     }
 
-    /// Mirrors `csv:from`'s own `dynamic_output` closely enough for a test: rejects a
+    /// Mirrors `$csv.from`'s own `dynamic_output` closely enough for a test: rejects a
     /// literal unnamed argument whose value is `"bad"`.
     fn takes_args_dynamic_output(
         _input: PipeInputType,

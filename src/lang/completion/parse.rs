@@ -211,7 +211,7 @@ fn find_command_in_job(job: JobNode, cursor: usize) -> CrushResult<CommandNode> 
 }
 
 /// A bare `(expr)` used as a command argument is desugared by the parser into a synthetic
-/// two-expression command invoking the hidden `global:types:val` builtin on `expr` (see
+/// two-expression command invoking the hidden `$global.types.val` builtin on `expr` (see
 /// `Node::val`), so that e.g. `(1 + 1)` evaluates the expression and returns its value. That
 /// desugaring reuses `expr`'s own source location for the synthetic `val` reference, which a
 /// user-typed identifier never does, so it doubles as a reliable marker for detecting it here.
@@ -547,9 +547,9 @@ mod tests {
 
     #[test]
     fn find_command_in_complicated_mess_test() {
-        let ast = ast("a | b {c:d $(e $f=g) h=$(i j)}").unwrap();
-        let cmd = find_command_in_job_list(ast, 28).unwrap();
-        assert_eq!(cmd.location, Location::new(25, 28))
+        let ast = ast("a | b {$c.d $(e $f=g) h=$(i j)}").unwrap();
+        let cmd = find_command_in_job_list(ast, 29).unwrap();
+        assert_eq!(cmd.location, Location::new(26, 29))
     }
 
     #[test]

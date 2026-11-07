@@ -106,7 +106,7 @@ pub fn init(scope: Option<Scope>) -> (Printer, JoinHandle<()>) {
                                 None => "warning".to_string(),
                             };
                             // No fallback color here on purpose: the default lives
-                            // solely in the `global:crush:highlight` dict's own
+                            // solely in the `$global.crush.highlight` dict's own
                             // "warning" entry (see crush.rs's declare()). If a user
                             // removes that entry (or no scope is available at all,
                             // e.g. printer::init(None) in unit tests), warnings print
@@ -154,7 +154,7 @@ pub fn noop() -> (Printer, JoinHandle<()>) {
             pong_receiver,
         },
         thread::Builder::new()
-            .name("printer:noop".to_string())
+            .name("$printer.noop".to_string())
             .spawn(move || {
                 while let Ok(message) = receiver.recv() {
                     match message {

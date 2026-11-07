@@ -135,8 +135,8 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml_ng::Value> {
     can_block = true,
     output = Unknown,
     short = "Parse yaml format",
-    long = "When deserializing a list, `yaml:from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
-    example = "(http \"https://jsonplaceholder.typicode.com/todos/3\"):body | yaml:from")]
+    long = "When deserializing a list, `$yaml.from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
+    example = "(http \"https://jsonplaceholder.typicode.com/todos/3\").body | $yaml.from")]
 struct FromSignature {
     #[unnamed()]
     #[description("source to read from. If unspecified, will read from input, which must be a `string`, `binary` or `binary_stream`.")]
@@ -162,7 +162,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     long = "When serializing a list, some types have to be squashed, because yaml does not have all the same types that Crush does:",
     long = "* `time` values are turned into strings in the RFC 3339 format.",
     long = "* `duration` values are turned into the integer number of seconds in the duration.",
-    example = "files | yaml:to")]
+    example = "files | $yaml.to")]
 struct To {
     #[unnamed()]
     #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]

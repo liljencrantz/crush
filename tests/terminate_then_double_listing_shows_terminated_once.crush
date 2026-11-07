@@ -46,12 +46,12 @@ terminate $job_id
 $first_all := $(jobs | materialize)
 $second_all := $(jobs | materialize)
 
-$first_rows := $($first_all | where {$definition:starts_with "\$cmd \"sleep\" 8172"} | materialize)
-$second_rows := $($second_all | where {$definition:starts_with "\$cmd \"sleep\" 8172"} | materialize)
+$first_rows := $($first_all | where {$definition.starts_with "\$cmd \"sleep\" 8172"} | materialize)
+$second_rows := $($second_all | where {$definition.starts_with "\$cmd \"sleep\" 8172"} | materialize)
 
 $first_count := $($first_rows | count)
 $second_count := $($second_rows | count)
 assert ($first_count == 1) "a terminated job should be reported once on the first jobs listing after terminate"
-$first_status := ($first_rows[0]):status
+$first_status := ($first_rows[0]).status
 assert ($first_status == "Terminated") "the one-time report of a terminated job should have status Terminated"
 assert ($second_count == 0) "an immediate second jobs listing, with no settle delay, must not report the same terminated job again"

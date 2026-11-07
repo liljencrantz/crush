@@ -4,10 +4,10 @@
 # has no equivalent Unnamed/Named-spread alternative, so the same spread fails to even
 # parse when written at an expression-mode call site.
 
-$args := $(list:of 1 2 3)
+$args := $($list.of 1 2 3)
 $add3 := ({|$a $b $c| $a + $b + $c})
 assert (($add3(@$args)) == 6) "@ should spread a list into an expression-mode call's positional arguments"
 
-$named_args := $(dict:of x=1 y=2)
+$named_args := $($dict.of x=1 y=2)
 $add_named := ({|$x $y| $x + $y})
 assert (($add_named(@@$named_args)) == 3) "@@ should spread a dict into an expression-mode call's named arguments"

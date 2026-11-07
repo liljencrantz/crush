@@ -137,7 +137,7 @@ pub trait CrushCommand: Help + Display {
     }
     /// What kind of command this is, for the `commands` builtin's own `type` column --
     /// "builtin" by default, overridden by `Closure` (a user-defined `{...}` block) and
-    /// by `SimpleCommand` specifically for `control:cmd` (every external process, however
+    /// by `SimpleCommand` specifically for `$control.cmd` (every external process, however
     /// it was invoked -- a bareword like `ls` is itself rewritten into a `cmd` call, see
     /// `command_invocation.rs`'s `try_external_command`/`external_command` -- ends up
     /// running as this exact same builtin, so checking its identity here is enough to
@@ -335,7 +335,7 @@ struct Foo<'a> {
 
 impl Into<String> for Foo<'_> {
     fn into(self) -> String {
-        self.path.join(":")
+        self.path.join(".")
     }
 }
 

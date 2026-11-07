@@ -1,4 +1,4 @@
-# Regression test: control:schedule's `command=` invocation (schedule.rs) runs
+# Regression test: $control.schedule's `command=` invocation (schedule.rs) runs
 # `cmd.eval(...)` directly, synchronously, on schedule's own loop thread -- the same
 # thread that otherwise checks its own control channel between heartbeats via
 # interruptible_sleep. Once a heartbeat fires and the command starts running, that

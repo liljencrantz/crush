@@ -3,30 +3,30 @@
 # `output` already has a registered controller via `context.initialize_output`, and
 # `TableOutputStream::send` already checks it on every call -- that, not generic
 # backpressure, is why this command already cooperates with no extra code).
-# `random:float_stream` has the identical loop shape and the same empirical result:
+# `$random.float_stream` has the identical loop shape and the same empirical result:
 # terminate/pause already stop it promptly in every real scenario tested. No failing
 # test to drive a Rust change -- regression guard only.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$n = $(pty_run $t $n "random:float_stream | count &")
-$cpu_running := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+$n = $(pty_run $t $n "$random.float_stream | count &")
+$cpu_running := $($host.procs | where {($pid == ($t.pid()))} | select cpu)[0].cpu
 
 $n = $(pty_run $t $n "pause 0")
-$cpu_a := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
+$cpu_a := $($host.procs | where {($pid == ($t.pid()))} | select cpu)[0].cpu
 sleep 500ms
-$cpu_b := $(host:procs | where {($pid == ($t:pid()))} | select cpu)[0]:cpu
-assert ($cpu_b <= ($cpu_a + 50ms)) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)":format $cpu_a $cpu_b $cpu_running)
+$cpu_b := $($host.procs | where {($pid == ($t.pid()))} | select cpu)[0].cpu
+assert ($cpu_b <= ($cpu_a + 50ms)) $("expected no measurable CPU growth while paused, got {} -> {} (was {} while running)".format $cpu_a $cpu_b $cpu_running)
 
 $n = $(pty_run $t $n "resume 0")
 $n = $(pty_run $t $n "terminate 0")
 pty_assert_job_status $t 0 "Terminated"
 pty_assert_no_thread $t 0
 
-$t:close
+$t.close
 
 # Uninterrupted case must keep working identically to before this plan.
-$rows := $(random:float_stream 100 | head 5 | count)
-assert ($rows == 5) "random:float_stream must still work normally when never interrupted"
+$rows := $($random.float_stream 100 | head 5 | count)
+assert ($rows == 5) "$random.float_stream must still work normally when never interrupted"
 

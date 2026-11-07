@@ -1,7 +1,7 @@
-# Regression test: stream:tee gives each branch its own output stream via
+# Regression test: $stream.tee gives each branch its own output stream via
 # `branch_sender.initialize(&types)?` (a plain pipe(), not `context.initialize_output`),
 # so unlike tee's own passthrough output, a branch's stream never got a control receiver
-# wired up (see TableOutputStream::control's and stream:group's own broadcast_control's
+# wired up (see TableOutputStream::control's and $stream.group's own broadcast_control's
 # doc comments for why a plain, uncontrolled TableOutputStream can't respond to
 # pause/terminate at all). A branch that never reads its own input (here, an
 # unconditional `while` loop) fills that stream's bounded row buffer, and tee's own
@@ -23,7 +23,7 @@
 # channel's buffer, so the `while` branch is provably still being fed (and tee's own loop
 # provably still blocked on it) once the background dispatch above returns. The other two
 # branches (`count`, `materialize`) exercise the same fan-out across multiple branches at
-# once, the same class of bug stream:group had before its own fix (only one of several
+# once, the same class of bug $stream.group had before its own fix (only one of several
 # workers ever actually seeing a pause/terminate).
 
 # `tee` dispatches each branch closure's body by spawning a fresh OS thread per branch

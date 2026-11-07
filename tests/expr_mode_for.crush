@@ -1,5 +1,5 @@
 # `for` in expression mode desugars (see Node::for_expr in src/lang/ast/node.rs) into a
-# call to global:control:for with a named argument binding the loop variable -- the
+# call to $global.control.for with a named argument binding the loop variable -- the
 # expression-mode equivalent of command mode's `for i=$(seq 1 5) {...}`. The loop
 # variable is written with a `$` sigil (the grammar requires an Identifier token
 # there), which for_expr strips before building the named argument's target, mirroring

@@ -13,7 +13,7 @@
 #
 # This never showed up before because everything in the existing test suite streams far
 # fewer than 128 rows at a time. It was found via `language_reference.md`'s own `join`
-# example, which joined `files` (usually well under 128 entries) against `users:list`
+# example, which joined `files` (usually well under 128 entries) against `$users.list`
 # (which enumerates every system account -- 300+ on a real machine).
 #
 # Run the same shape twice, with different (but equally oversized) data each time, so a

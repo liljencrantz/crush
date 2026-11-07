@@ -21,6 +21,24 @@ pub struct Lexer<'input> {
     tokenizer_mode: TokenizerMode,
     full_str: &'input str,
     chars: Peekable<CharIndices<'input>>,
+    /// Byte offset right after the end of the last token returned. Used, together with
+    /// `prev_item_end`, to decide whether a bare `.` encountered in command mode is
+    /// immediately adjacent to something a member can be accessed on (e.g. `$foo.bar`)
+    /// rather than the start of an unrelated bareword/file literal (e.g. `.crush`,
+    /// `cat.txt`) -- those already consume any embedded `.` themselves before control
+    /// ever returns here, so this only matters for a `.` encountered as the very first
+    /// character of a fresh token.
+    prev_end: usize,
+    /// Whether the last token returned is something a member can be accessed on
+    /// (a `$variable`, a closing `)`/`]`/`}`, a quoted literal, or a number) -- see
+    /// `prev_end`.
+    prev_item_end: bool,
+    /// Whether the last token returned was a `MemberOperator`. The token immediately
+    /// following it is the member name, and must be scanned with a narrower,
+    /// identifier-style charset that excludes `.` -- otherwise `$foo.bar.baz` would
+    /// swallow `bar.baz` as a single member name instead of stopping at the second
+    /// `.` so it can chain.
+    prev_was_member_operator: bool,
 }
 
 pub type Spanned<'input> = Result<(usize, Token<'input>, usize), LexicalError>;
@@ -36,6 +54,9 @@ impl<'input> Lexer<'input> {
             tokenizer_mode,
             full_str: input,
             chars: input.char_indices().peekable(),
+            prev_end: 0,
+            prev_item_end: false,
+            prev_was_member_operator: false,
         }
     }
 
@@ -52,7 +73,11 @@ impl<'input> Lexer<'input> {
                             self.chars.next();
                             return Some(Token::Declare(Location::new(i, i + 2)).into());
                         }
-                        _ => return Some(Token::MemberOperator(Location::from(i)).into()),
+                        // `:` is no longer the member-access operator (`.` is) -- its
+                        // only remaining job is a closure parameter's type annotation
+                        // (`|x: integer|`), a distinct token so removing `.`'s dual
+                        // role here doesn't take that unrelated use of `:` away too.
+                        _ => return Some(Token::TypeAnnotationColon(Location::from(i)).into()),
                     }
                 }
 
@@ -132,16 +157,26 @@ impl<'input> Lexer<'input> {
                     let mut end_idx = i;
                     let mut had_period = false;
                     loop {
-                        let cc2 = self.chars.peek();
+                        let cc2 = self.chars.peek().copied();
                         match cc2 {
-                            Some((_, '.')) => {
-                                if had_period {
-                                    break;
-                                }
+                            // Only consume the `.` as the start of a fractional part
+                            // if a digit actually follows -- `5.3` is a real float,
+                            // but `5.__neg__`/`5.len` is a number followed by member
+                            // access, not a malformed float glued onto an identifier.
+                            // `Peekable` only looks one character ahead directly, so
+                            // check the one after that via a cloned iterator instead
+                            // of consuming the `.` before knowing which case this is.
+                            Some((_, '.'))
+                                if !had_period && {
+                                    let mut lookahead = self.chars.clone();
+                                    lookahead.next();
+                                    matches!(lookahead.peek(), Some((_, ch3)) if number_char(*ch3))
+                                } =>
+                            {
                                 had_period = true;
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            Some((_, ch2)) if number_or_underscore_char(*ch2) => {
+                            Some((_, ch2)) if number_or_underscore_char(ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => break,
@@ -289,6 +324,41 @@ impl<'input> Lexer<'input> {
                     );
                 }
 
+                // A `.` immediately following something a member can be accessed on
+                // (no whitespace gap -- `prev_end` is exactly `i`) is member access, e.g.
+                // `$foo.bar`. Checked before the generic bareword arm below, which would
+                // otherwise swallow it as the start of a file literal like `.crush`; if
+                // the guard fails, match falls through to that arm as usual, so `.crush`
+                // and `cat.txt` are completely unaffected -- this only ever fires for a
+                // `.` encountered as the very first character of a fresh token.
+                Some((i, '.')) if i == self.prev_end && self.prev_item_end => {
+                    return Some(Token::MemberOperator(Location::from(i)).into());
+                }
+
+                // The member name right after a `MemberOperator` (see
+                // `prev_was_member_operator`'s doc comment): a narrower, identifier-style
+                // scan so a second `.` isn't swallowed into the same token, letting
+                // `$foo.bar.baz` chain instead of reading `bar.baz` as one member name.
+                Some((i, ch)) if self.prev_was_member_operator && identifier_first_char(ch) => {
+                    let mut end_idx = i;
+                    loop {
+                        let cc2 = self.chars.peek();
+                        match cc2 {
+                            Some((_, ch2)) if identifier_char(*ch2) => {
+                                end_idx = self.chars.next().unwrap().0;
+                            }
+                            _ => break,
+                        }
+                    }
+                    return Some(
+                        Token::String(
+                            &self.full_str[i..end_idx + 1],
+                            Location::new(i, end_idx + 1),
+                        )
+                        .into(),
+                    );
+                }
+
                 Some((i, ch)) if string_or_file_or_glob_first_char(ch) => {
                     let mut end_idx = i;
                     loop {
@@ -381,7 +451,11 @@ impl<'input> Lexer<'input> {
                             self.chars.next();
                             return Some(Token::Declare(Location::new(i, i + 2)).into());
                         }
-                        _ => return Some(Token::MemberOperator(Location::from(i)).into()),
+                        // `:` is no longer the member-access operator (`.` is) -- its
+                        // only remaining job is a closure parameter's type annotation
+                        // (`|x: integer|`), a distinct token so removing `.`'s dual
+                        // role here doesn't take that unrelated use of `:` away too.
+                        _ => return Some(Token::TypeAnnotationColon(Location::from(i)).into()),
                     }
                 }
 
@@ -570,16 +644,26 @@ impl<'input> Lexer<'input> {
                     let mut end_idx = i;
                     let mut had_period = false;
                     loop {
-                        let cc2 = self.chars.peek();
+                        let cc2 = self.chars.peek().copied();
                         match cc2 {
-                            Some((_, '.')) => {
-                                if had_period {
-                                    break;
-                                }
+                            // Only consume the `.` as the start of a fractional part
+                            // if a digit actually follows -- `5.3` is a real float,
+                            // but `5.__neg__`/`5.len` is a number followed by member
+                            // access, not a malformed float glued onto an identifier.
+                            // `Peekable` only looks one character ahead directly, so
+                            // check the one after that via a cloned iterator instead
+                            // of consuming the `.` before knowing which case this is.
+                            Some((_, '.'))
+                                if !had_period && {
+                                    let mut lookahead = self.chars.clone();
+                                    lookahead.next();
+                                    matches!(lookahead.peek(), Some((_, ch3)) if number_char(*ch3))
+                                } =>
+                            {
                                 had_period = true;
                                 end_idx = self.chars.next().unwrap().0;
                             }
-                            Some((_, ch2)) if number_or_underscore_char(*ch2) => {
+                            Some((_, ch2)) if number_or_underscore_char(ch2) => {
                                 end_idx = self.chars.next().unwrap().0;
                             }
                             _ => break,
@@ -799,12 +883,46 @@ impl<'input> Iterator for Lexer<'input> {
     type Item = Spanned<'input>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.mode.last() {
+        let was_after_member_operator = self.prev_was_member_operator;
+        let result = match self.mode.last() {
             Some(LanguageMode::Expression) => self.next_expr(),
             Some(LanguageMode::Command) => self.next_command(),
             None => Some(Err(LexicalError::MismatchedSubEnd)),
+        };
+        if let Some(Ok((_, ref token, end))) = result {
+            self.prev_end = end;
+            self.prev_was_member_operator = matches!(token, Token::MemberOperator(..));
+            // A member name scanned right after a `MemberOperator` is itself eligible
+            // to have a further `.member` chained onto it (see
+            // `prev_was_member_operator`'s doc comment) -- but only when it's actually
+            // that scan's output (a `String`), not some unrelated token that happens
+            // to follow a dangling `.` for other reasons (e.g. a lexical error).
+            self.prev_item_end = if was_after_member_operator && matches!(token, Token::String(..)) {
+                true
+            } else {
+                is_item_end_token(token)
+            };
         }
+        result
     }
+}
+
+/// Token kinds a member can be accessed on with an adjacent `.` -- see
+/// `Lexer::prev_item_end`.
+fn is_item_end_token(token: &Token) -> bool {
+    matches!(
+        token,
+        Token::Identifier(..)
+            | Token::SubEnd(..)
+            | Token::GetItemEnd(..)
+            | Token::BlockEnd(..)
+            | Token::QuotedString(..)
+            | Token::QuotedFile(..)
+            | Token::Integer(..)
+            | Token::Float(..)
+            | Token::Duration(..)
+            | Token::Regex(..)
+    )
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]

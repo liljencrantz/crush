@@ -86,8 +86,17 @@ fn has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
 
 fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> &str {
     match t {
+        // A completed name that itself resolves to a namespace (`Value::Scope`) used
+        // to suggest appending `:` to invite completing straight into a member of
+        // it. `.` can't play the same role unconditionally: a bare (no `$`) namespace
+        // name can't be dot-chained into a command the way it could be `:`-chained
+        // (see the dot_member_operator.crush test for why -- it'd be ambiguous with a
+        // real external command like `backup.sh`). A bare namespace name is still a
+        // complete, valid reference on its own (running it just lists its members),
+        // so a plain space is the suggestion that's never wrong -- at the cost of no
+        // longer inviting the chain for the `$namespace.` case where it would work.
         ValueType::Any => match maybe_scope {
-            Ok(Some(Value::Scope(_))) => ":",
+            Ok(Some(Value::Scope(_))) => " ",
             Ok(Some(Value::Empty))
             | Ok(Some(Value::Bool(_)))
             | Ok(Some(Value::String(_)))
@@ -107,7 +116,12 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
                         " "
                     }
                 } else {
-                    ":"
+                    // Same reasoning as the `Value::Scope` case above: this name
+                    // doesn't directly have the target type, but a bare (no `$`)
+                    // reference to it can't be dot-chained into a member that might,
+                    // so a plain space -- a complete, valid reference either way --
+                    // is the suggestion that's never wrong.
+                    " "
                 }
             }
             _ => "",
@@ -703,7 +717,7 @@ mod tests {
 
     #[test]
     fn check_namespaced_argument_completion() {
-        let line = "namespace:my_cmd super_";
+        let line = "$namespace.my_cmd super_";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -711,7 +725,7 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "namespace:my_cmd super_fancy_argument="
+            "$namespace.my_cmd super_fancy_argument="
         );
     }
 
@@ -742,35 +756,40 @@ mod tests {
 
     #[test]
     fn test_that_attribute_component_can_be_completed() {
-        let line = "namespace:my";
+        let line = "$namespace.my";
         let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
+        assert_eq!(&completions[0].complete(line), "$namespace.my_cmd ");
     }
 
     #[test]
     fn test_that_empty_attribute_component_can_be_completed() {
-        let line = "namespace:";
+        let line = "$namespace.";
         let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "namespace:my_cmd ");
+        assert_eq!(&completions[0].complete(line), "$namespace.my_cmd ");
     }
 
+    /// A bare (no `$`) namespace completion can't suggest chaining straight into a
+    /// member the way `$namespace.` can (a bare `namespace.command` never resolves,
+    /// only `$namespace.command` does -- see dot_member_operator.crush), so it's
+    /// offered as a complete, standalone reference instead, exactly like completing
+    /// an ordinary command name.
     #[test]
-    fn test_that_scope_completion_appens_colon() {
+    fn test_that_bare_scope_completion_appends_a_space() {
         let line = "namespac";
         let cursor = line.len();
 
         let s = scope_with_function();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "namespace:");
+        assert_eq!(&completions[0].complete(line), "namespace ");
     }
 
     #[test]
@@ -949,7 +968,7 @@ mod tests {
         // (carrot, lettuce, and subdirectory table) -- that test shows all 3 get
         // offered normally; #[directories_only] on this fixture command's own
         // parameter should narrow that down to just table.
-        let line = "other_namespace:dirs_only_cmd destination=./burrow/";
+        let line = "$other_namespace.dirs_only_cmd destination=./burrow/";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -957,35 +976,13 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:dirs_only_cmd destination=./burrow/table/"
+            "$other_namespace.dirs_only_cmd destination=./burrow/table/"
         );
     }
 
     #[test]
     fn complete_namespaced_command() {
-        let line = "abcd:bc";
-        let cursor = 7;
-
-        let s = Scope::create_root();
-        s.create_namespace(
-            "abcd",
-            "bla",
-            None,
-            Box::new(|env| {
-                env.declare("bcde", Value::Empty).unwrap();
-                Ok(())
-            }),
-        )
-        .unwrap();
-
-        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
-        assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "abcd:bcde ");
-    }
-
-    #[test]
-    fn complete_namespaced_argument() {
-        let line = "xxx $abcd:bc";
+        let line = "$abcd.bc";
         let cursor = line.len();
 
         let s = Scope::create_root();
@@ -1002,7 +999,29 @@ mod tests {
 
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "xxx $abcd:bcde ");
+        assert_eq!(&completions[0].complete(line), "$abcd.bcde ");
+    }
+
+    #[test]
+    fn complete_namespaced_argument() {
+        let line = "xxx $abcd.bc";
+        let cursor = line.len();
+
+        let s = Scope::create_root();
+        s.create_namespace(
+            "abcd",
+            "bla",
+            None,
+            Box::new(|env| {
+                env.declare("bcde", Value::Empty).unwrap();
+                Ok(())
+            }),
+        )
+        .unwrap();
+
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "xxx $abcd.bcde ");
     }
 
     #[test]
@@ -1083,7 +1102,7 @@ mod tests {
 
     #[test]
     fn check_allowed_value_completion() {
-        let line = "other_namespace:allowed_cmd argument=\"f";
+        let line = "$other_namespace.allowed_cmd argument=\"f";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -1091,13 +1110,13 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:allowed_cmd argument=\"foo\" "
+            "$other_namespace.allowed_cmd argument=\"foo\" "
         );
     }
 
     #[test]
     fn check_simple_argument_description_tracking() {
-        let line = "other_namespace:allowed_cmd \"f";
+        let line = "$other_namespace.allowed_cmd \"f";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -1105,13 +1124,13 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:allowed_cmd \"foo\" "
+            "$other_namespace.allowed_cmd \"foo\" "
         );
     }
 
     #[test]
     fn check_unnamed_argument_description_tracking() {
-        let line = "other_namespace:multi_argument_cmd \"foo\" \"";
+        let line = "$other_namespace.multi_argument_cmd \"foo\" \"";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -1119,13 +1138,13 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:multi_argument_cmd \"foo\" \"bar\" "
+            "$other_namespace.multi_argument_cmd \"foo\" \"bar\" "
         );
     }
 
     #[test]
     fn check_many_unnamed_argument_description_tracking() {
-        let line = "other_namespace:multi_argument_cmd \"foo\" \"bar\" \"";
+        let line = "$other_namespace.multi_argument_cmd \"foo\" \"bar\" \"";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -1133,13 +1152,13 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:multi_argument_cmd \"foo\" \"bar\" \"baz\" "
+            "$other_namespace.multi_argument_cmd \"foo\" \"bar\" \"baz\" "
         );
     }
 
     #[test]
     fn check_named_argument_description_tracking() {
-        let line = "other_namespace:multi_argument_cmd \"foo\" argument3=\"baz\" \"";
+        let line = "$other_namespace.multi_argument_cmd \"foo\" argument3=\"baz\" \"";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -1147,13 +1166,13 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:multi_argument_cmd \"foo\" argument3=\"baz\" \"bar\" "
+            "$other_namespace.multi_argument_cmd \"foo\" argument3=\"baz\" \"bar\" "
         );
     }
 
     #[test]
     fn check_named_and_unnamed_argument_description_tracking() {
-        let line = "other_namespace:multi_argument_cmd argument2=\"bar\" \"foo\" \"";
+        let line = "$other_namespace.multi_argument_cmd argument2=\"bar\" \"foo\" \"";
         let cursor = line.len();
 
         let s = scope_with_function();
@@ -1161,19 +1180,19 @@ mod tests {
         assert_eq!(completions.len(), 1);
         assert_eq!(
             &completions[0].complete(line),
-            "other_namespace:multi_argument_cmd argument2=\"bar\" \"foo\" \"baz\" "
+            "$other_namespace.multi_argument_cmd argument2=\"bar\" \"foo\" \"baz\" "
         );
     }
 
     #[test]
     fn check_method_completion() {
-        let line = "\"\":f";
+        let line = "\"\".f";
         let cursor = line.len();
 
         let s = Scope::create_root();
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
-        assert_eq!(&completions[0].complete(line), "\"\":format ");
+        assert_eq!(&completions[0].complete(line), "\"\".format ");
     }
 
     // The interactive REPL never completes directly against the scope commands are

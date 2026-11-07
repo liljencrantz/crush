@@ -275,7 +275,7 @@ impl ArgumentEvaluator for Vec<ArgumentDefinition> {
 impl Display for ArgumentDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match (&self.argument_type, &self.value) {
-            (ArgumentType::Named(name), ValueDefinition::Identifier(ts))
+            (ArgumentType::Named(name), ValueDefinition::Identifier(ts, _))
                 if ts.string().eq("true") =>
             {
                 f.write_str("--")?;

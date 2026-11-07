@@ -1,4 +1,4 @@
-# Happy-path remote:exec/remote:pexec against the local ssh-service test server (see
+# Happy-path $remote.exec/$remote.pexec against the local ssh-service test server (see
 # ssh-service/), started once for the whole test binary via tests/system.rs's ctor-based
 # setup (on an OS-assigned port passed on as SSHD_PORT) and always using a fixed,
 # committed host key (see ssh-service/src/main.rs) -- so the known_hosts line below
@@ -6,22 +6,22 @@
 # binary for every exec channel, so this exercises a genuine pup wire round trip, not a
 # reimplementation of it.
 
-$host_file := $(convert $file $("/tmp/.ssh_known_hosts_exec_{}":format $(random:integer 1000000000)))
-bin:from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | bin:to $host_file
+$host_file := $(convert $file $("/tmp/.ssh_known_hosts_exec_{}".format $($random.integer 1000000000)))
+$bin.from "127.0.0.1 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPABgyOJckbS7f/mCs1K+zm7WApZ5fxPvES1xyrKWqef\n" | $bin.to $host_file
 
-$addr := $("127.0.0.1:{}":format $(crush:env["SSHD_PORT"]))
+$addr := $("127.0.0.1:{}".format $($crush.env["SSHD_PORT"]))
 $user := "crushtest"
 $pass := "crushtest-password"
 
-$r := $(remote:exec {(1 + 1)} $addr username=$user password=$pass host_file=$host_file)
-assert ($r == 2) "remote:exec should run the closure on the remote crush process and return its result"
+$r := $($remote.exec {(1 + 1)} $addr username=$user password=$pass host_file=$host_file)
+assert ($r == 2) "$remote.exec should run the closure on the remote crush process and return its result"
 
-$rows := $(remote:pexec {(3 + 4)} $addr $addr username=$user password=$pass host_file=$host_file | materialize)
+$rows := $($remote.pexec {(3 + 4)} $addr $addr username=$user password=$pass host_file=$host_file | materialize)
 $row_count := $($rows | count)
-assert ($row_count == 2) "remote:pexec should produce one result row per host given"
+assert ($row_count == 2) "$remote.pexec should produce one result row per host given"
 
-$results := $($rows | select result | list:collect)
-assert ($($results[0]) == 7) "remote:pexec's per-host result should be the closure's return value"
-assert ($($results[1]) == 7) "remote:pexec's per-host result should be the closure's return value"
+$results := $($rows | select result | $list.collect)
+assert ($($results[0]) == 7) "$remote.pexec's per-host result should be the closure's return value"
+assert ($($results[1]) == 7) "$remote.pexec's per-host result should be the closure's return value"
 
-$host_file:remove
+$host_file.remove

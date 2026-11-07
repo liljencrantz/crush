@@ -93,7 +93,7 @@ pub fn chown(mut context: CommandContext) -> CrushResult<()> {
     long = "* A class is one of u, g, o, a, signifying file owner, file group, other users and all users, respectively.",
     long = "* The adjustment must be one of +, -, and =, signifying added permissions, removed permissions and set permissions, respectively.",
     long = "* A mode is one of r w, x, signifying read, write and execute permissions.",
-    example = "./foo:chmod \"a=\" \"u+r\" # First strip all rights for all users, then re-add read rights for the owner",
+    example = "'./foo'.chmod \"a=\" \"u+r\" # First strip all rights for all users, then re-add read rights for the owner",
 )]
 struct Chmod {
     #[description("the set of permissions to add.")]

@@ -24,7 +24,7 @@ use std::sync::OnceLock;
     output = Known(ValueType::Struct),
     short = "current user",
     example = "# Show my own uid",
-    example = "users:me:uid",
+    example = "$users.me.uid",
 )]
 struct Me {}
 
@@ -48,7 +48,7 @@ static CURRENT_OUTPUT_TYPE: [ColumnType; 5] = [
     output = Known(ValueType::TableInputStream(CURRENT_OUTPUT_TYPE.to_vec())),
     short = "List all currently logged in users with their tty, login time, etc.",
     example = "# Find the username of the latest user to login in to this system",
-    example = "$(users:current | sort time --reverse)[0] | member name",
+    example = "$($users.current | sort time --reverse)[0] | member name",
 )]
 struct Current {}
 
@@ -217,7 +217,7 @@ fn list(context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Struct),
     short = "find a user by name",
     example = "# Remove the file foo.txt as root",
-    example = "users[root]:do {rm foo.txt}",
+    example = "users[root].do {rm foo.txt}",
 )]
 struct GetItem {
     #[description("the name of the user to find.")]
@@ -253,10 +253,10 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         "User commands",
         Some(
             "Commands for querying user accounts and login sessions on this system: \
-             `users:me` for the current user, `users:current` for everyone currently logged \
-             in (tty, login time, ...), `users:list` for every account that exists, and \
+             `$users.me` for the current user, `$users.current` for everyone currently logged \
+             in (tty, login time, ...), `$users.list` for every account that exists, and \
              `users[username]` to look one up by name -- the resulting struct has a `do` \
-             method to run a closure as that user, e.g. `users[root]:do {rm foo.txt}`. This \
+             method to run a closure as that user, e.g. `users[root].do {rm foo.txt}`. This \
              reads local system account data, not any particular authentication or identity \
              provider."
                 .to_string(),

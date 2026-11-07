@@ -11,8 +11,8 @@
 # statement now gets `black_hole()`, which `Job::eval` joins and discards on its own.
 # tests/pty_test_helpers.crush works around this same bug (now moot) via a single
 # destructuring assignment instead of three separate statements.
-$script := $(convert $file $("/tmp/source_three_statements_repro_{}":format $(random:integer 1000000000)))
+$script := $(convert $file $("/tmp/source_three_statements_repro_{}".format $($random.integer 1000000000)))
 cmd rm "-f" $script
-bin:from "echo a\necho b\necho c\n" | bin:to $script
+$bin.from "echo a\necho b\necho c\n" | $bin.to $script
 source $script
 cmd rm "-f" $script

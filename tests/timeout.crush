@@ -10,16 +10,16 @@ assert ($r == 2) "a command that finishes in time should return its result norma
 # A command that runs past the duration, but cooperates with termination (sleep does,
 # since terminate/pause fixed it this session), should be interrupted
 # almost immediately rather than running out its full duration.
-$start := $(time:now)
+$start := $($time.now)
 $timed_out := $false
 $msg := ""
 try {
     timeout 200ms {sleep 30s}
 } catch {
     |$e| $timed_out = $true
-    $msg = $e:message
+    $msg = $e.message
 }
-$elapsed := $(($(time:now) - $start))
+$elapsed := $(($($time.now) - $start))
 assert $timed_out "a command exceeding the duration should be caught as an error, not silently succeed"
 assert ($msg == "Command timed out") "the error should say the command timed out"
 assert ($elapsed < 5s) "the cooperating command should be interrupted almost immediately, not wait out its own full duration"
@@ -30,7 +30,7 @@ $real_error := ""
 try {
     timeout 5s {convert $integer "notanumber"}
 } catch {
-    |$e| $real_error = $e:message
+    |$e| $real_error = $e.message
 }
 assert ($real_error == "invalid digit found in string") "a command that fails on its own should surface its real error, not a timeout"
 

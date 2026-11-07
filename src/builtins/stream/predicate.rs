@@ -51,7 +51,7 @@ fn evaluate(
     long = "consuming the whole stream. The columns of the row are exported to `condition`",
     long = "by name, exactly like `where`.",
     example = "# Is there any process using more than 50% of a CPU core?",
-    example = "host:procs | any_match {($cpu > 50)}",
+    example = "$host.procs | any_match {($cpu > 50)}",
 )]
 pub struct AnyMatch {
     #[description("the condition to check for each row.")]
@@ -83,7 +83,7 @@ fn any_match(mut context: CommandContext) -> CrushResult<()> {
     long = "`and` chain would be. The columns of the row are exported to `condition` by",
     long = "name, exactly like `where`.",
     example = "# Are all processes owned by root?",
-    example = "host:procs | all_match {($user == \"root\")}",
+    example = "$host.procs | all_match {($user == \"root\")}",
 )]
 pub struct AllMatch {
     #[description("the condition to check for each row.")]

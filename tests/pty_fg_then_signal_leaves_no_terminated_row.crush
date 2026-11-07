@@ -26,14 +26,14 @@ $n := $(pty_enable_counted_prompt $t)
 
 $n = $(pty_run $t $n "cmd sleep 7434 &")
 $pid := $(pty_child_pid $t ^(.*sleep))
-$t:write "fg 0\n"
+$t.write "fg 0\n"
 sleep 800ms
-host:signal $pid signal=SIGKILL
+$host.signal $pid signal=SIGKILL
 $n = ($n + 1)
-$t:wait_for $("PROMPT {}#":format $n)
+$t.wait_for $("PROMPT {}#".format $n)
 
 $n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
-$t:write "echo $(\"FG_SIG_CHECK_{}\":format $n)\n"
-$t:wait_for "FG_SIG_CHECK_0"
+$t.write "echo $(\"FG_SIG_CHECK_{}\".format $n)\n"
+$t.wait_for "FG_SIG_CHECK_0"
 
-$t:close
+$t.close

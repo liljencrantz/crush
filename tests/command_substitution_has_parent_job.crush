@@ -23,27 +23,27 @@
 # The property this test actually needs -- a substitution genuinely nested inside
 # another job that's still running -- has to be observed while the parent job provably
 # hasn't returned yet, not via any job created strictly *after* it returns. Argument
-# evaluation gives exactly that: `list:of` can't start running until its own argument,
+# evaluation gives exactly that: `$list.of` can't start running until its own argument,
 # the inner `$(jobs | materialize)` substitution, finishes evaluating -- so while
-# that substitution is busy capturing its snapshot, the `list:of` job is unquestionably
+# that substitution is busy capturing its snapshot, the `$list.of` job is unquestionably
 # still alive (its own Job::eval is on the stack, blocked evaluating that very
-# argument). No race, no reliance on reaping timing. (`list:of` specifically, rather
+# argument). No race, no reliance on reaping timing. (`$list.of` specifically, rather
 # than e.g. `echo`, because it passes its argument through unchanged with no stdout side
 # effect, so the snapshot table itself -- not some derived/printed value -- is what ends
 # up captured in $snapshot.)
-$snapshot := $($(list:of $(jobs | materialize))[0])
+$snapshot := $($($list.of $(jobs | materialize))[0])
 
 # The snapshot-taking job itself should show up with a real parent job id recorded (not
 # empty/none) -- matched by definition prefix, the same technique used elsewhere in this
 # suite, since `like`/`=~` only do exact equality against a string pattern despite the
 # name.
-$snapshot_rows := $($snapshot | where {$definition:starts_with "\$jobs "} | materialize)
+$snapshot_rows := $($snapshot | where {$definition.starts_with "\$jobs "} | materialize)
 $snapshot_row_count := $($snapshot_rows | count)
 assert ($snapshot_row_count == 1) "the jobs substitution itself should be visible in its own snapshot"
-$snapshot_parent_id := $($($snapshot_rows | select parent | list:collect)[0])
+$snapshot_parent_id := $($($snapshot_rows | select parent | $list.collect)[0])
 
 # ...and that parent id should itself point at another job that's *also* visible in the
-# very same snapshot -- the still-running `list:of` job that's blocked waiting on this
+# very same snapshot -- the still-running `$list.of` job that's blocked waiting on this
 # very substitution to finish, not a dangling/empty reference. (If $snapshot_parent_id
 # were Empty, comparing it against an Integer id column below would fail per-row and
 # this filter would simply come back empty, correctly failing the count check -- no
@@ -52,7 +52,7 @@ $parent_rows := $($snapshot | where {($id == $snapshot_parent_id)} | materialize
 $parent_row_count := $($parent_rows | count)
 assert ($parent_row_count == 1) "the substitution's recorded parent should itself be a visible, still-running job in the same snapshot"
 
-# ...and that parent job's own definition should indeed be the enclosing `list:of`, not
+# ...and that parent job's own definition should indeed be the enclosing `$list.of`, not
 # merely some unrelated job that happens to share its id.
-$parent_definition := $($($parent_rows | select definition | list:collect)[0])
-assert ($parent_definition:starts_with("\$list:of ")) "the recorded parent should be the enclosing list:of job, not an unrelated one"
+$parent_definition := $($($parent_rows | select definition | $list.collect)[0])
+assert ($parent_definition.starts_with("\$list.of ")) "the recorded parent should be the enclosing $list.of job, not an unrelated one"

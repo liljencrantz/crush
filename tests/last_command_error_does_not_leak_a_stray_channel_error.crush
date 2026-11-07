@@ -15,15 +15,15 @@
 # $msg is pre-declared holding a (throwaway) struct rather than a string, since `catch`
 # hands back a struct describing the error (message/type/command) and `=` reassignment
 # requires the new value to be the same type as the variable's first value.
-$msg := $(struct:of message="")
+$msg := $($struct.of message="")
 try {
     seq 0 3 | convert $integer "notanumber"
 } catch { |$e|
     $msg = $e
 }
 
-$leaked := $(like $msg:message *disconnected*)
+$leaked := $(like $msg.message *disconnected*)
 assert ($leaked == $false) "the real error should be the only thing caught, no leaked channel error"
 
-$len := $($msg:message:len)
+$len := $($msg.message.len)
 assert ($len > 0) "expected a non-empty caught error message"

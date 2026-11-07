@@ -276,7 +276,7 @@ pub fn group(mut context: CommandContext) -> CrushResult<()> {
         match output.control() {
             Some(control) => {
                 let (receivers, shutdown) =
-                    spawn_control_fanout(&context, "group:control-fanout", control, WORKER_COUNT)?;
+                    spawn_control_fanout(&context, "$group.control-fanout", control, WORKER_COUNT)?;
                 (receivers.into_iter().map(Some).collect(), Some(shutdown))
             }
             None => ((0..WORKER_COUNT).map(|_| None).collect(), None),

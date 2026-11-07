@@ -83,8 +83,8 @@ assert (($describe_glob("hello.txt")) == "text") "match's is arm should accept a
 ## Custom __is__ patterns, used from like/=~ inside expression mode
 
 $Even := $(class)
-$Even:__is__ = {|$needle| ($needle mod 2 == 0)}
-$even := $(Even:new)
+$Even.__is__ = {|$needle| ($needle mod 2 == 0)}
+$even := $($Even.new)
 assert $(like 4 $even) "like should accept a custom type implementing __is__"
 assert (!$(like 5 $even)) "like should correctly reject via a custom __is__ implementation"
 
@@ -104,13 +104,13 @@ $caught_message := "unset"
 try {
     convert $integer "notanumber"
 } catch {|$e|
-    $caught_message = $e:message
+    $caught_message = $e.message
 }
 assert ($caught_message == "invalid digit found in string") "catch should capture the real error message for a clean (non-operator) failure"
 
 ## try/catch, directly in expression mode -- no $(...) needed. Like match, try/catch is
 ## real grammar in expression mode (ExprItem in src/lang/lalrparser.lalrpop), desugaring
-## into a call to the same global:control:try command mode's own `try {...} catch {...}`
+## into a call to the same $global.control.try command mode's own `try {...} catch {...}`
 ## already uses.
 
 $safe_result := (try {
@@ -130,7 +130,7 @@ assert ($no_catch_result == "no catch clause needed either") "try without a catc
 
 $destructure_ok := $false
 try {
-    $v := $(list:of 1 2 3)
+    $v := $($list.of 1 2 3)
     [$va $vb $vc] := $v
     $destructure_ok = (($va == 1) and (($vb == 2) and ($vc == 3)))
 } catch {|$e|
@@ -140,7 +140,7 @@ assert $destructure_ok "try/catch should not interfere with destructuring assign
 
 $destructure_errored := $false
 try {
-    [$too $many $names] := $(list:of 1 2)
+    [$too $many $names] := $($list.of 1 2)
 } catch {|$e|
     $destructure_errored = $true
 }

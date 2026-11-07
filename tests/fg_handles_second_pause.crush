@@ -31,7 +31,7 @@ fg $repause_job
 # fg should have returned (without hanging) once the second pause landed, without the
 # job ever actually completing -- it should still be sitting Paused, re-registered for
 # another fg/bg, not gone.
-$status := $($(jobs | where {($id == $job_id)} | select status | list:collect)[0])
+$status := $($(jobs | where {($id == $job_id)} | select status | $list.collect)[0])
 assert ($status == "Paused") "job should still be Paused after fg returned from a second pause"
 
 # Clean up quickly rather than waiting out the rest of the sleep: terminate

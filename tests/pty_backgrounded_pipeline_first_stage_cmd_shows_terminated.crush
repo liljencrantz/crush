@@ -1,6 +1,6 @@
 # A `cmd` inside a block in a *non-last* stage of a trailing-`&` pipeline
 # (`{ cmd sleep N; seq 3 } | count &`) must still show up as `Terminated` after its
-# process is killed with `host:signal`. `Job::eval` must mark a trailing-`&` job as not
+# process is killed with `$host.signal`. `Job::eval` must mark a trailing-`&` job as not
 # holding the foreground before *any* stage dispatches, not just before the last one --
 # earlier stages create nested jobs too (see `JobData::backgrounded`).
 #
@@ -10,7 +10,7 @@
 # write, so it proves nothing about whether the command just written has actually
 # finished; a counted prompt can only ever be satisfied once the right command
 # genuinely has. `pty_child_pid` (also counted-retry rather than a fixed delay) finds
-# the backgrounded `sleep`'s pid without needing to round-trip a `host:procs` query
+# the backgrounded `sleep`'s pid without needing to round-trip a `$host.procs` query
 # through the nested session's own screen.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
@@ -18,10 +18,10 @@ $n := $(pty_enable_counted_prompt $t)
 
 $n = $(pty_run $t $n "{ cmd sleep 7433; seq 3 } | count &")
 $pid := $(pty_child_pid $t ^(.*sleep))
-host:signal $pid signal=SIGKILL
+$host.signal $pid signal=SIGKILL
 
 $n = $(pty_run $t $n "$n := $(jobs | where {($status == \"Terminated\")} | count)")
-$t:write "echo $(\"FIRST_STAGE_CHECK_{}\":format $n)\n"
-$t:wait_for "FIRST_STAGE_CHECK_1"
+$t.write "echo $(\"FIRST_STAGE_CHECK_{}\".format $n)\n"
+$t.wait_for "FIRST_STAGE_CHECK_1"
 
-$t:close
+$t.close

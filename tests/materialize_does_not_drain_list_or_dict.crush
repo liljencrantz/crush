@@ -5,12 +5,12 @@
 # serialization calls materialize() on every value before serializing it) -- silently
 # emptied the original too. struct.rs's own materialize() already did this correctly (clone
 # via iter(), not drain()); list.rs and dict.rs have been fixed to match.
-$list := $(list:of 1 2 3)
+$list := $($list.of 1 2 3)
 $materialized_list := $($list | materialize)
-assert ($list == $(list:of 1 2 3)) "materializing a list should not empty the original"
-assert ($materialized_list == $(list:of 1 2 3)) "materialize should still produce a correct copy"
+assert ($list == $($list.of 1 2 3)) "materializing a list should not empty the original"
+assert ($materialized_list == $($list.of 1 2 3)) "materialize should still produce a correct copy"
 
-$dict := $(dict:of a=1 b=2)
+$dict := $($dict.of a=1 b=2)
 $materialized_dict := $($dict | materialize)
-assert ($dict == $(dict:of a=1 b=2)) "materializing a dict should not empty the original"
-assert ($materialized_dict == $(dict:of a=1 b=2)) "materialize should still produce a correct copy"
+assert ($dict == $($dict.of a=1 b=2)) "materializing a dict should not empty the original"
+assert ($materialized_dict == $($dict.of a=1 b=2)) "materialize should still produce a correct copy"

@@ -7,27 +7,27 @@
 # bypasses the lexer's keyword handling for bare words -- but the name would then be
 # unreachable as a *command*, since the bare word `if` always wins there.
 
-for name=$(list:of global true false if else for while try catch match break continue help loop return throw) {
+for name=$($list.of global true false if else for while try catch match break continue help loop return throw) {
     $errored := $false
     $message := ""
     try {
-        # var:let_destructure declares its (runtime, not literal) `names` positionally --
-        # unlike `var:let x=5`/`$x := 5`, this lets the loop variable itself be the name
+        # $var.let_destructure declares its (runtime, not literal) `names` positionally --
+        # unlike `$var.let x=5`/`$x := 5`, this lets the loop variable itself be the name
         # under test, rather than only ever exercising one hardcoded literal name.
-        var:let_destructure $name value=$(list:of 5)
+        $var.let_destructure $name value=$($list.of 5)
     } catch {|$e|
         $errored = $true
-        $message = $e:message
+        $message = $e.message
     }
-    assert $errored $("declaring a variable named `{}` should error":format $name)
-    $pattern := $(glob:new $("*`{}`*reserved word*":format $name))
-    assert $(like $message $pattern) $("the error for `{}` should name it and call it a reserved word, got: {}":format $name $message)
+    assert $errored $("declaring a variable named `{}` should error".format $name)
+    $pattern := $($glob.new $("*`{}`*reserved word*".format $name))
+    assert $(like $message $pattern) $("the error for `{}` should name it and call it a reserved word, got: {}".format $name $message)
 }
 
 # The destructuring form of `:=` goes through the same check.
 $destructure_errored := $false
 try {
-    [$a $if] := $(list:of 1 2)
+    [$a $if] := $($list.of 1 2)
 } catch {|$e|
     $destructure_errored = $true
 }

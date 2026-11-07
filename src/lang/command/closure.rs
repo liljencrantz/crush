@@ -557,7 +557,7 @@ fn create_long_help(signature: &Vec<ParameterDefinition>) -> String {
             }
             // `@@ $name`: collects every stray named argument into a dict, exactly
             // like a #[named()] `OrderedStringMap<T>` field on a regular command (e.g.
-            // csv:from's `columns`). Unlike `@` above, showing `name` here would be
+            // $csv.from's `columns`). Unlike `@` above, showing `name` here would be
             // actively misleading -- `name=value` isn't how you set this, any key not
             // otherwise bound is -- so it's rendered `<any>=$any` instead, the same
             // placeholder a regular command's own `<any>=$type` uses (always `$any`
@@ -1083,7 +1083,15 @@ impl<'a> ClosureSerializer<'a> {
                     model::value_definition::ValueDefinition::Job(self.job(j)?)
                 }
 
-                ValueDefinition::Identifier(l) => {
+                // The `explicit_sigil` flag (see its doc comment on
+                // `ValueDefinition::Identifier`) deliberately isn't threaded through
+                // serialization -- it only governs whether a *failed* command-head
+                // lookup may fall back to an external process, a local, interactive/
+                // script-parsing-time concern that doesn't carry meaningful semantics
+                // across a process boundary (sudo/remote:exec). Deserializing always
+                // produces `false` (the more permissive case), matching the historical,
+                // unconditional-fallback behavior this flag didn't exist to restrict yet.
+                ValueDefinition::Identifier(l, _) => {
                     model::value_definition::ValueDefinition::Identifier(
                         l.serialize(self.elements, self.state)? as u64,
                     )
@@ -1426,11 +1434,10 @@ impl<'a> ClosureDeserializer<'a> {
                 }
 
                 model::value_definition::ValueDefinition::Identifier(s) => {
-                    ValueDefinition::Identifier(Source::deserialize(
-                        *s as usize,
-                        self.elements,
-                        self.state,
-                    )?)
+                    ValueDefinition::Identifier(
+                        Source::deserialize(*s as usize, self.elements, self.state)?,
+                        false,
+                    )
                 }
                 model::value_definition::ValueDefinition::GetAttr(a) => {
                     ValueDefinition::GetAttr(

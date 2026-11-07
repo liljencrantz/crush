@@ -1,4 +1,4 @@
-# crush:* commands mostly report on and control the running crush process itself.
+# $crush.* commands mostly report on and control the running crush process itself.
 # Several are legitimately hard to test in a golden-output script: exit would end
 # this very test process, and terminate is a separate, already-known-buggy case
 # tracked elsewhere -- both are deliberately not exercised here. Everything else gets at
@@ -6,131 +6,131 @@
 
 ## pid/ppid/arguments
 
-assert ($(typeof $(crush:pid)) == $integer) "crush:pid should be an integer"
-assert ($(crush:pid) > 0) "crush:pid should be positive"
-assert ($(typeof $(crush:ppid)) == $integer) "crush:ppid should be an integer"
-assert ($(crush:ppid) > 0) "crush:ppid should be positive"
+assert ($(typeof $($crush.pid)) == $integer) "$crush.pid should be an integer"
+assert ($($crush.pid) > 0) "$crush.pid should be positive"
+assert ($(typeof $($crush.ppid)) == $integer) "$crush.ppid should be an integer"
+assert ($($crush.ppid) > 0) "$crush.ppid should be positive"
 
-# crush:arguments is [binary_path, script_path, ...] -- the binary's own path varies by
+# $crush.arguments is [binary_path, script_path, ...] -- the binary's own path varies by
 # build location, so only the shape (a non-empty list of strings) is checked.
-$args := $(crush:arguments)
-assert ($(typeof $args) == $(list $string)) "crush:arguments should be a list of strings"
-assert ($($args:len) > 0) "crush:arguments should be non-empty when running a script"
+$args := $($crush.arguments)
+assert ($(typeof $args) == $(list $string)) "$crush.arguments should be a list of strings"
+assert ($($args.len) > 0) "$crush.arguments should be non-empty when running a script"
 
 ## jobs/threads/history
 
 # All three are just table streams reporting live process state -- checked for shape
 # and a sane row count, not exact contents, since both vary run to run.
 assert ($(jobs | count) >= 0) "jobs should not error"
-$job_columns := $(jobs | members | select name | list:collect name)
-for col=$(list:of id parent definition type status) {
+$job_columns := $(jobs | members | select name | $list.collect name)
+for col=$($list.of id parent definition type status) {
     $found := $($job_columns | any_match {($value == $col)})
-    assert $found $("jobs should have a column called {}":format $col)
+    assert $found $("jobs should have a column called {}".format $col)
 }
 
-assert ($(crush:threads | count) >= 0) "crush:threads should not error"
-$thread_columns := $(crush:threads | members | select name | list:collect name)
-for col=$(list:of job_id command_id created name) {
+assert ($($crush.threads | count) >= 0) "$crush.threads should not error"
+$thread_columns := $($crush.threads | members | select name | $list.collect name)
+for col=$($list.of job_id command_id created name) {
     $found := $($thread_columns | any_match {($value == $col)})
-    assert $found $("crush:threads should have a column called {}":format $col)
+    assert $found $("$crush.threads should have a column called {}".format $col)
 }
 
-# crush:history is empty in a fresh non-interactive run like this one -- there's no
+# $crush.history is empty in a fresh non-interactive run like this one -- there's no
 # interactive prompt to have populated it.
-assert ($(crush:history | count) == 0) "crush:history should be empty in a fresh test run"
+assert ($($crush.history | count) == 0) "$crush.history should be empty in a fresh test run"
 
 ## warn
 
-# crush:warn:new reports directly into the same bounded log crush:warn:list reads --
+# $crush.warn.new reports directly into the same bounded log $crush.warn.list reads --
 # checked by count (relative to before/after, since other tests earlier in this file
 # may have left warnings of their own) and by finding the message among the most
 # recent entries.
-$warnings_before := $(crush:warn:list | count)
-crush:warn:new "test warning message from tests/crush_namespace.crush"
-assert ($(crush:warn:list | count) == ($warnings_before + 1)) "crush:warn:new should add exactly one entry to crush:warn:list"
-$latest_messages := $(crush:warn:list | select message | list:collect message)
+$warnings_before := $($crush.warn.list | count)
+$crush.warn.new "test warning message from tests/crush_namespace.crush"
+assert ($($crush.warn.list | count) == ($warnings_before + 1)) "$crush.warn.new should add exactly one entry to $crush.warn.list"
+$latest_messages := $($crush.warn.list | select message | $list.collect message)
 $found_warning := $($latest_messages | any_match {($value == "test warning message from tests/crush_namespace.crush")})
-assert $found_warning "crush:warn:new's message should appear in crush:warn:list"
+assert $found_warning "$crush.warn.new's message should appear in $crush.warn.list"
 
 ## run_mode/language_mode
 
 # Both are genuinely deterministic here: a script run non-interactively is always
 # "non-interactive", and the top level of a .crush file is always Command mode.
-assert ($(crush:run_mode) == "non-interactive") "crush:run_mode should be non-interactive when running a script"
-assert ($(crush:language_mode) == "command") "crush:language_mode should be command at the top level of a script"
+assert ($($crush.run_mode) == "non-interactive") "$crush.run_mode should be non-interactive when running a script"
+assert ($($crush.language_mode) == "command") "$crush.language_mode should be command at the top level of a script"
 
 ## highlight
 
-# crush:highlight is a dict of syntax-highlight category -> ANSI color code. The exact
+# $crush.highlight is a dict of syntax-highlight category -> ANSI color code. The exact
 # color values are configuration, not something to pin down, but the set of documented
 # category keys should always be present.
-$highlight_keys := $(crush:highlight | select key | list:collect key)
-for key=$(list:of operator string_literal file_literal identifier numeric_literal glob_literal regex_literal command keyword error warning comment) {
+$highlight_keys := $($crush.highlight | select key | $list.collect key)
+for key=$($list.of operator string_literal file_literal identifier numeric_literal glob_literal regex_literal command keyword error warning comment) {
     $found := $($highlight_keys | any_match {($value == $key)})
-    assert $found $("crush:highlight should have a key called {}":format $key)
+    assert $found $("$crush.highlight should have a key called {}".format $key)
 }
 
 ## byte_unit / locale -- both are get/set/list config scopes
 
-$byte_units := $(crush:byte_unit:list | select name | list:collect name)
-assert ($($byte_units:len) == 3) "crush:byte_unit:list should offer exactly binary/decimal/raw"
-for unit=$(list:of binary decimal raw) {
+$byte_units := $($crush.byte_unit.list | select name | $list.collect name)
+assert ($($byte_units.len) == 3) "$crush.byte_unit.list should offer exactly binary/decimal/raw"
+for unit=$($list.of binary decimal raw) {
     $found := $($byte_units | any_match {($value == $unit)})
-    assert $found $("crush:byte_unit:list should include {}":format $unit)
+    assert $found $("$crush.byte_unit.list should include {}".format $unit)
 }
-$original_byte_unit := $(crush:byte_unit:get)
-crush:byte_unit:set decimal
-assert ($(crush:byte_unit:get) == "decimal") "crush:byte_unit:set should change what :get reports"
-crush:byte_unit:set $original_byte_unit
+$original_byte_unit := $($crush.byte_unit.get)
+$crush.byte_unit.set decimal
+assert ($($crush.byte_unit.get) == "decimal") "$crush.byte_unit.set should change what .get reports"
+$crush.byte_unit.set $original_byte_unit
 
-# crush:locale:list is a real system-dependent list of every locale the host has
+# $crush.locale.list is a real system-dependent list of every locale the host has
 # installed -- checked only for a sane non-zero count, not specific entries, since
 # which locales exist varies by machine.
-assert ($(crush:locale:list | count) > 0) "crush:locale:list should report at least one installed locale"
-$original_locale := $(crush:locale:get)
-assert (($($original_locale:len)) > 0) "crush:locale:get should return a non-empty string"
-crush:locale:set $original_locale
-assert ($(crush:locale:get) == $original_locale) "crush:locale:set should round-trip back to the same locale"
+assert ($($crush.locale.list | count) > 0) "$crush.locale.list should report at least one installed locale"
+$original_locale := $($crush.locale.get)
+assert (($($original_locale.len)) > 0) "$crush.locale.get should return a non-empty string"
+$crush.locale.set $original_locale
+assert ($($crush.locale.get) == $original_locale) "$crush.locale.set should round-trip back to the same locale"
 
-## warn:limit / warn:print / prompt / title -- simple get/set config scopes
+## $warn.limit / $warn.print / prompt / title -- simple get/set config scopes
 
-$original_warning_limit := $(crush:warn:limit:get)
-crush:warn:limit:set 50
-assert ($(crush:warn:limit:get) == 50) "crush:warn:limit:set should change what :get reports"
-crush:warn:limit:set $original_warning_limit
+$original_warning_limit := $($crush.warn.limit.get)
+$crush.warn.limit.set 50
+assert ($($crush.warn.limit.get) == 50) "$crush.warn.limit.set should change what .get reports"
+$crush.warn.limit.set $original_warning_limit
 
-# crush:warn:print only affects whether a warning is *also* printed immediately in
+# $crush.warn.print only affects whether a warning is *also* printed immediately in
 # interactive mode -- not exercisable here, since this test runs non-interactively and
 # warn() never prints in that mode regardless of this flag (see global_state.rs's own
 # warn()). What's checked here is just the setting itself. Note $true/$false (the bool
 # globals), not bareword true/false -- a bareword parses as a plain string in command
-# mode, which :set would then reject as the wrong type; the same gotcha is called out
-# in warn:print:set's own example=.
-assert ($(crush:warn:print:get) == $true) "crush:warn:print should default to true"
-crush:warn:print:set $false
-assert ($(crush:warn:print:get) == $false) "crush:warn:print:set should change what :get reports"
-crush:warn:print:set $true
-assert ($(crush:warn:print:get) == $true) "crush:warn:print:set should round-trip back to true"
+# mode, which .set would then reject as the wrong type; the same gotcha is called out
+# in $warn.print.set's own example=.
+assert ($($crush.warn.print.get) == $true) "$crush.warn.print should default to true"
+$crush.warn.print.set $false
+assert ($($crush.warn.print.get) == $false) "$crush.warn.print.set should change what .get reports"
+$crush.warn.print.set $true
+assert ($($crush.warn.print.get) == $true) "$crush.warn.print.set should round-trip back to true"
 
-crush:prompt:set {echo "test> "}
-assert ($(typeof $(crush:prompt:get)) == $command) "crush:prompt:get should return the command set via :set"
+$crush.prompt.set {echo "test> "}
+assert ($(typeof $($crush.prompt.get)) == $command) "$crush.prompt.get should return the command set via .set"
 
-crush:title:set {echo "test title"}
-assert ($(typeof $(crush:title:get)) == $command) "crush:title:get should return the command set via :set"
+$crush.title.set {echo "test title"}
+assert ($(typeof $($crush.title.get)) == $command) "$crush.title.get should return the command set via .set"
 
-## env -- crush:env is a dict-like scope, addressed by subscript, not get/set/unset
-## methods (only :list and :unset exist as commands; reads/writes go through [...])
+## env -- $crush.env is a dict-like scope, addressed by subscript, not get/set/unset
+## methods (only .list and .unset exist as commands; reads/writes go through [...])
 
 $(crush[env])["MY_TEST_VAR_XYZ"] = "hello"
-assert ($($(crush[env])["MY_TEST_VAR_XYZ"]) == "hello") "crush:env should round-trip a value set via subscript"
-$(crush[env]):unset MY_TEST_VAR_XYZ
+assert ($($(crush[env])["MY_TEST_VAR_XYZ"]) == "hello") "$crush.env should round-trip a value set via subscript"
+$(crush[env]).unset MY_TEST_VAR_XYZ
 $env_errored := $false
 try {
     $(crush[env])["MY_TEST_VAR_XYZ"]
 } catch {|$e|
     $env_errored = $true
 }
-assert $env_errored "crush:env should no longer have a variable after :unset"
+assert $env_errored "$crush.env should no longer have a variable after .unset"
 
 ## pause/resume
 

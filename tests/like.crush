@@ -2,7 +2,7 @@
 # value can act as a pattern by implementing an `__is__` method (and, for negation,
 # `__is_not__`). These are named with dunders specifically because they aren't meant to
 # be called directly -- the public interface is the `like` command (which just calls
-# `pattern:__is__ value`) and, in expression mode, the `=~`/`!~` operators (which desugar
+# `$pattern.__is__ value`) and, in expression mode, the `=~`/`!~` operators (which desugar
 # to the same methods, receiver-reversed since the method lives on the pattern).
 assert $(like fooo ^(ooo))
 assert (!$(like fooo ^(zzz)))
@@ -15,7 +15,7 @@ $re := ^(a+b)
 assert $(like "aaab" $re)
 assert (!$(like "xyz" $re))
 
-$g := $(glob:new "*.txt")
+$g := $($glob.new "*.txt")
 assert $(like "foo.txt" $g)
 assert (!$(like "notatextfile" $g))
 
@@ -30,18 +30,18 @@ assert $(like "foo.txt" ^(zzz) $g "nope")
 assert (!$(like "foo.txt" ^(zzz) "nope"))
 
 # The dunder methods are still real, callable methods -- just not the intended surface.
-assert $($re:__is__ "aaab")
-assert (!$($re:__is_not__ "aaab"))
+assert $($re.__is__ "aaab")
+assert (!$($re.__is_not__ "aaab"))
 
 # string/glob/regex's __is__ accept a `file` value as the thing being tested, not just a
 # `string` -- the needle argument is typed `Text` (file-or-string), so this has always
 # worked, it just had no test coverage before.
 assert $(like foo.txt *.txt)
-assert $(*.txt:__is__ foo.txt)
+assert $($g.__is__ foo.txt)
 assert $(like foo.txt ^(.*\.txt))
-assert $(^(.*\.txt):__is__ foo.txt)
+assert $(^(.*\.txt).__is__ foo.txt)
 assert $(like foo.txt "foo.txt")
-assert $("foo.txt":__is__ foo.txt)
+assert $("foo.txt".__is__ foo.txt)
 
 # =~/!~ work with a file value too. Files must always be quoted in expression mode --
 # a bare unquoted file literal is only recognized as such in command mode, by design --

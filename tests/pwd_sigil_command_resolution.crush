@@ -1,0 +1,50 @@
+# `$` is otherwise optional for a bare command name (`echo` and `$echo` both resolve
+# the same builtin), but that shorthand only ever extends to *falling back to an
+# external process* for the bare spelling -- a real shell's own distinction between a
+# bare word (which can run anything on `$PATH`) and an explicit `$VAR` (a deliberate
+# request for a real binding, never silently satisfied by some same-named external
+# program instead).
+#
+# Set up a directory with one fake external executable, named after a bareword that is
+# *not* a builtin or a bound variable, and put it on $PATH for the duration of this
+# script only.
+$dir := $(convert $file $("/tmp/.pwd_sigil_test_{}".format $($random.integer 1000000000)))
+$dir.mkdir
+$script := $(convert $file $("{}/shadowtest".format $dir))
+$bin.from "#!/bin/sh\necho ran external shadowtest\n" | $bin.to $script
+$script.chmod "u+x"
+$old_path := $($crush.env["PATH"])
+$crush.env["PATH"] = $("{}:{}".format $dir $old_path)
+
+# A bare word that isn't a builtin or a bound variable still falls back to running it
+# as an external process, exactly like a real shell would.
+$bare_output := $($(shadowtest) | materialize | convert $string)
+assert ($bare_output.starts_with("ran external shadowtest")) "a bare, unbound word should still fall back to an external process"
+
+# The exact same name, referenced with an explicit `$` sigil, must *not* fall back to
+# running the external program -- it's a deliberate request for a real binding, so an
+# unresolved one should error, not silently satisfy itself from $PATH.
+$explicit_errored := $false
+try {
+    echo $($shadowtest)
+} catch {|$e|
+    $explicit_errored = $true
+    assert ($e.message.starts_with("Unknown variable")) "the error should be a plain unknown-variable error, not something about an external process"
+}
+assert $explicit_errored "an explicit \$-sigil reference to an unbound name must not fall back to an external process"
+
+# A bare name that *is* a real builtin still prefers the builtin over a same-named
+# external program shadowing it on $PATH (put one there too, right alongside the real
+# builtin's name, to make sure).
+$echo_script := $(convert $file $("{}/echo".format $dir))
+$bin.from "#!/bin/sh\necho FAKE EXTERNAL ECHO\n" | $bin.to $echo_script
+$echo_script.chmod "u+x"
+$echo_output := $($(echo "real builtin") | materialize | convert $string)
+assert (!($echo_output.starts_with("FAKE EXTERNAL"))) "a bare name that's a real builtin should prefer the builtin over a same-named external program"
+
+# `cmd` forces external-only resolution either way, unaffected by any of the above.
+$cmd_output := $($(cmd shadowtest) | materialize | convert $string)
+assert ($cmd_output.starts_with("ran external shadowtest")) "cmd should still force external-only resolution"
+
+$crush.env["PATH"] = $old_path
+$dir.remove --recursive

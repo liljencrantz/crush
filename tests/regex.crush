@@ -12,47 +12,47 @@ assert (!$(like "xyz" $my_re))
 
 # replace (first match only) vs replace_all
 $digits := ^([0-9]+)
-$r1 := $($digits:replace "abc123def456" "X")
+$r1 := $($digits.replace "abc123def456" "X")
 assert ($r1 == "abcXdef456")
-$r2 := $($digits:replace_all "abc123def456" "X")
+$r2 := $($digits.replace_all "abc123def456" "X")
 assert ($r2 == "abcXdefX")
 
 # replace supports capture group references in the replacement
 $email := ^(([a-z]+)@([a-z]+))
-$r3 := $($email:replace "user@host" "$2!$1")
+$r3 := $($email.replace "user@host" "$2!$1")
 assert ($r3 == "host!user")
 
-# re:new compiles a string into the same kind of value as a ^(...) literal
-$compiled := $(re:new "[0-9]+")
+# $re.new compiles a string into the same kind of value as a ^(...) literal
+$compiled := $($re.new "[0-9]+")
 assert $(like "abc123" $compiled)
 $compiled_type := $(typeof $compiled)
 assert ($compiled_type == $re)
 
 # filter: default searches all textual columns; restricted to a single named column;
 # no match at all. Both sides of a table comparison need to have gone through
-# `| materialize`: a bare table-producing pipeline (e.g. csv:from) yields a
+# `| materialize`: a bare table-producing pipeline (e.g. $csv.from) yields a
 # table_input_stream, a different value type than table, and comparing across value
 # types is always false -- streams aren't auto-materialized for comparison since doing
 # so would consume them, so the caller has to materialize explicitly on both sides.
 # $t itself is materialized here (rather than left as a stream) because it's read
 # multiple times below -- a stream is one-shot, so reusing it unmaterialized would leave
 # every read after the first seeing an already-drained, empty stream.
-$t := $($(csv:from "alice,eng,30\nbob,sales,25\ncarol,engineering,40\n" name=$string dept=$string age=$integer) | materialize)
-$matched := $($t | ^(eng):filter | select name | materialize)
-$expected_matched := $($(csv:from "alice\ncarol\n" name=$string) | materialize)
+$t := $($($csv.from "alice,eng,30\nbob,sales,25\ncarol,engineering,40\n" name=$string dept=$string age=$integer) | materialize)
+$matched := $($t | ^(eng).filter | select name | materialize)
+$expected_matched := $($($csv.from "alice\ncarol\n" name=$string) | materialize)
 assert ($matched == $expected_matched)
-assert (($($t | ^(eng):filter name | materialize | count)) == 0)
-assert (($($t | ^(zzz):filter | materialize | count)) == 0)
+assert (($($t | ^(eng).filter name | materialize | count)) == 0)
+assert (($($t | ^(zzz).filter | materialize | count)) == 0)
 
 # filter on a non-textual column errors
 $filter_type_errored := $false
-try { $t | ^(eng):filter age } catch { |$e| $filter_type_errored = $true }
+try { $t | ^(eng).filter age } catch { |$e| $filter_type_errored = $true }
 assert $filter_type_errored "filter on a non-textual column should error"
 
-# re:new on an invalid pattern errors
+# $re.new on an invalid pattern errors
 $bad_pattern_errored := $false
-try { re:new "[" } catch { |$e| $bad_pattern_errored = $true }
-assert $bad_pattern_errored "re:new on an invalid pattern should error"
+try { $re.new "[" } catch { |$e| $bad_pattern_errored = $true }
+assert $bad_pattern_errored "$re.new on an invalid pattern should error"
 
 # one_of restricts a closure parameter to a set of allowed types
 $string_or_int := $(one_of $string $integer)

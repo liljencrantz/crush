@@ -203,15 +203,15 @@ pub fn broadcast_control(
     }
 }
 
-/// Spawns one dedicated fan-out thread, named `name` (e.g. `"group:control-fanout"`,
-/// `"tee:control-fanout"`), and returns `count` receivers, each independently seeing
+/// Spawns one dedicated fan-out thread, named `name` (e.g. `"$group.control-fanout"`,
+/// `"$tee.control-fanout"`), and returns `count` receivers, each independently seeing
 /// every message `control` does -- unlike a plain `Receiver::clone()`, which only ever
 /// delivers each message to whichever one clone claims it first (see
 /// `TableOutputStream::control`'s doc comment). Used to give every one of a command's
 /// several worker/branch threads its own working copy of the job's control channel
 /// instead of the single shared one `CommandContext::initialize_output` registered --
 /// without this, only one of them could ever actually be paused/terminated (this is
-/// exactly the bug stream:group had, and stream:tee's branches had, before each grew
+/// exactly the bug $stream.group had, and $stream.tee's branches had, before each grew
 /// its own call to this).
 ///
 /// Also returns a `Sender<()>` the caller must fire once every one of the `count`
@@ -251,7 +251,7 @@ mod tests {
     // every control message sent through `control`, not just whichever one happens to
     // claim it first (see TableOutputStream::control's doc comment, and
     // pipe::tests::plain_clone_of_an_interruptible_table_output_stream_does_not_broadcast_control
-    // for why a plain Receiver clone -- what stream:group's create_worker_thread used to
+    // for why a plain Receiver clone -- what $stream.group's create_worker_thread used to
     // hand every worker, before this existed -- can't do this). Ends the fan-out loop
     // by dropping control_sender after sending both messages, rather than racing a
     // timeout to detect "no more messages are coming".
@@ -295,7 +295,7 @@ mod tests {
     }
 
     // Regression test for the deadlock this actually caused in practice (tests/group.crush
-    // hung indefinitely once stream:group started using a real fan-out thread): `control`
+    // hung indefinitely once $stream.group started using a real fan-out thread): `control`
     // is the job's own job-wide control channel, registered once for the whole job and
     // never disconnecting until every thread under that job -- the fan-out thread
     // included -- has already exited. Without `shutdown` as an independent way out,
@@ -322,7 +322,7 @@ mod tests {
             done_rx.recv_timeout(Duration::from_secs(5)).is_ok(),
             "broadcast_control did not exit within 5s of its shutdown channel firing, \
              even though control will never disconnect on its own -- this is the exact \
-             deadlock a stream:group job could never finish from"
+             deadlock a $stream.group job could never finish from"
         );
     }
 }

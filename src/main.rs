@@ -85,7 +85,7 @@ fn print_help(printer: &Printer) {
         "  standard input, and executed. The output of the closure will be written in pup-format",
     );
     printer
-        .line("  to standard output. This third mode is used by e.g. sudo and remote:exec to run");
+        .line("  to standard output. This third mode is used by e.g. sudo and $remote.exec to run");
     printer.line("  closures in a different process.");
 }
 

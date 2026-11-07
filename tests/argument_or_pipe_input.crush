@@ -16,12 +16,12 @@ assert (($(typeof $(5 | member __neg__))) == $command) "member via pipe should r
 assert (($(5 | typeof 3.0)) == $integer) "typeof should prefer the piped value over an argument"
 assert (($(5 | convert $string "not five")) == "5") "convert should prefer the piped value over an argument"
 
-$s := $(struct:of a=1 b=2)
+$s := $($struct.of a=1 b=2)
 assert (($($(val $s | dir "unused") | count)) == 2) "dir should prefer the piped value over an argument"
 assert (($(val $s | member a "unused")) == 1) "member should prefer the piped value over an argument"
 
 # with neither an argument nor a pipe, all four error the same way
-for cmd=$(list:of typeof dir convert member) {
+for cmd=$($list.of typeof dir convert member) {
     $errored := $false
     try {
         match $cmd {
@@ -32,9 +32,9 @@ for cmd=$(list:of typeof dir convert member) {
         }
     } catch {|$e|
         $errored = $true
-        assert ($e:message == "No value specified") $("{}'s error message should be consistent":format $cmd)
+        assert ($e.message == "No value specified") $("{}'s error message should be consistent".format $cmd)
     }
-    assert $errored $("{} should error when given neither an argument nor a pipe":format $cmd)
+    assert $errored $("{} should error when given neither an argument nor a pipe".format $cmd)
 }
 
 # help is the one exception: with neither a topic argument nor a pipe, it shows an
@@ -46,5 +46,5 @@ assert ($piped == $argued) "help should show the same thing via argument or pipe
 $overridden := $($(5 | help 3.0 format=markdown))
 assert ($overridden == $piped) "help should prefer the piped value over a topic argument"
 $welcome := $($(help format=markdown))
-assert ($welcome:starts_with("\n# Welcome to Crush!")) "help with neither an argument nor a pipe should show the welcome message"
+assert ($welcome.starts_with("\n# Welcome to Crush!")) "help with neither an argument nor a pipe should show the welcome message"
 

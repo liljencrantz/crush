@@ -68,7 +68,7 @@ enum ChildEvent {
 }
 
 /// Waits for `child` (identified by `pid`, already spawned onto its own tracked
-/// `cmd:wait` thread that owns it and reports its state transitions via `events`)
+/// `$cmd.wait` thread that owns it and reports its state transitions via `events`)
 /// while reacting to `control` the same way `schedule`'s `wait_for_command` does --
 /// except here Pause and Terminate must reach the real OS process this job spawned,
 /// not just this waiting thread: `cmd`'s child runs independently of any crush-level
@@ -238,7 +238,7 @@ fn spawn_child_wait(
                     Ok(WaitStatus::Exited(_, _)) => ChildEvent::Done(Ok(())),
                     Ok(WaitStatus::Signaled(_, _, _)) => {
                         // The child died because it received a real OS signal directly
-                        // (e.g. via `host:signal ... SIGKILL`, or a pipeline stage
+                        // (e.g. via `$host.signal ... SIGKILL`, or a pipeline stage
                         // killed by `SIGPIPE`, or a process that terminates itself with
                         // `kill -TERM $$`), entirely bypassing crush's own job-control
                         // plumbing -- nothing has told job control this job is dead yet,
@@ -262,7 +262,7 @@ fn spawn_child_wait(
                         // or via an ancestor, however it got there (`is_backgrounded`:
                         // trailing `&`, `{ cmd sleep 100 } &` where this `cmd`'s own
                         // job id is nested under the block's, or a pause such as
-                        // Ctrl-Z followed by `bg`): every `terminate`/`host:signal`
+                        // Ctrl-Z followed by `bg`): every `terminate`/`$host.signal`
                         // scenario this exists for targets one, and gating on it
                         // avoids leaving a misleading one-time "Terminated" row behind for an entirely ordinary
                         // *foreground* command that happens to die from a signal for

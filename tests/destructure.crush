@@ -8,22 +8,22 @@
 ## Command mode
 
 # List, via :=
-[$a $b] := $(list:of 1 2)
+[$a $b] := $($list.of 1 2)
 assert ($a == 1) "list destructuring should assign the first element to the first name"
 assert ($b == 2) "list destructuring should assign the second element to the second name"
 
 # A single target is a degenerate but valid case, not just a two-or-more feature.
-[$only] := $(list:of 42)
+[$only] := $($list.of 42)
 assert ($only == 42) "single-target destructuring should work too"
 
 # Struct, via :=
-$point := $(struct:of x=10 y=20)
+$point := $($struct.of x=10 y=20)
 [$px $py] := $point
 assert ($px == 10) "struct destructuring should assign fields in declaration order"
 assert ($py == 20) "struct destructuring should assign fields in declaration order"
 
 # Dict, via := -- insertion order, not key order
-$d := $($(dict $string $integer):new)
+$d := $($(dict $string $integer).new)
 $d["z"] = 1
 $d["a"] = 2
 [$first $second] := $d
@@ -31,12 +31,12 @@ assert ($first == 1) "dict destructuring should use insertion order, not key ord
 assert ($second == 2) "dict destructuring should use insertion order, not key order"
 
 # Reassignment via =, on already-declared variables
-[$a $b] = $(list:of 100 200)
+[$a $b] = $($list.of 100 200)
 assert ($a == 100) "= destructuring should reassign existing variables"
 assert ($b == 200) "= destructuring should reassign existing variables"
 
 # Three-way destructuring, to make sure this isn't hardcoded to exactly two names
-[$one $two $three] := $(list:of "x" "y" "z")
+[$one $two $three] := $($list.of "x" "y" "z")
 assert ($one == "x") "three-way destructuring should work, not just two"
 assert ($two == "y") "three-way destructuring should work, not just two"
 assert ($three == "z") "three-way destructuring should work, not just two"
@@ -44,7 +44,7 @@ assert ($three == "z") "three-way destructuring should work, not just two"
 # Wrong element count: too few
 $errored := $false
 try {
-    [$m1 $m2 $m3] := $(list:of 1 2)
+    [$m1 $m2 $m3] := $($list.of 1 2)
 } catch {|$e|
     $errored = $true
 }
@@ -53,7 +53,7 @@ assert $errored "destructuring with more names than elements should error"
 # Wrong element count: too many
 $errored2 := $false
 try {
-    [$m1 $m2] := $(list:of 1 2 3)
+    [$m1 $m2] := $($list.of 1 2 3)
 } catch {|$e|
     $errored2 = $true
 }
@@ -71,7 +71,7 @@ assert $errored3 "destructuring a value that isn't a list, struct, or dict shoul
 # = requires every name to already exist, exactly like plain set does
 $errored4 := $false
 try {
-    [$never_declared_1 $never_declared_2] = $(list:of 1 2)
+    [$never_declared_1 $never_declared_2] = $($list.of 1 2)
 } catch {|$e|
     $errored4 = $true
 }
@@ -85,7 +85,7 @@ assert $errored4 "= destructuring on undeclared variables should error, like set
 $errored5 := $false
 try {
     $already := 1
-    [$already $new_one] := $(list:of 1 2)
+    [$already $new_one] := $($list.of 1 2)
 } catch {|$e|
     $errored5 = $true
 }
@@ -98,23 +98,23 @@ assert $errored5 ":= destructuring should error when a name already exists in th
 # comma/newline-separated (`([1, 2, 3])` works, `([1 2 3])` does not), so destructuring
 # targets follow that same convention here instead of Command mode's bare whitespace.
 
-([$ea, $eb] := $(list:of 1 2))
+([$ea, $eb] := $($list.of 1 2))
 assert ($ea == 1) "expression mode: list destructuring via :=, first name"
 assert ($eb == 2) "expression mode: list destructuring via :=, second name"
 
-$epoint := $(struct:of x=10 y=20)
+$epoint := $($struct.of x=10 y=20)
 ([$epx, $epy] := $epoint)
 assert ($epx == 10) "expression mode: struct destructuring via := should use declaration order"
 assert ($epy == 20) "expression mode: struct destructuring via := should use declaration order"
 
-$ed := $($(dict $string $integer):new)
+$ed := $($(dict $string $integer).new)
 $ed["z"] = 1
 $ed["a"] = 2
 ([$efirst, $esecond] := $ed)
 assert ($efirst == 1) "expression mode: dict destructuring via := should use insertion order, not key order"
 assert ($esecond == 2) "expression mode: dict destructuring via := should use insertion order, not key order"
 
-([$ea, $eb] = $(list:of 100 200))
+([$ea, $eb] = $($list.of 100 200))
 assert ($ea == 100) "expression mode: = destructuring should reassign existing variables"
 assert ($eb == 200) "expression mode: = destructuring should reassign existing variables"
 
@@ -122,13 +122,13 @@ assert ($eb == 200) "expression mode: = destructuring should reassign existing v
 # and list literals now share one AST node internally, so this is the regression check
 # that the sharing didn't change ordinary list-literal behavior.
 $plain_list := ([1, 2, 3])
-assert ($($plain_list:len) == 3) "expression mode: an ordinary list literal should be unaffected by sharing an AST node with destructuring"
+assert ($($plain_list.len) == 3) "expression mode: an ordinary list literal should be unaffected by sharing an AST node with destructuring"
 $plain_list_sum := $($plain_list | sum)
 assert ($plain_list_sum == 6) "expression mode: an ordinary list literal's values should be unaffected"
 
 $eerrored := $false
 try {
-    ([$em1, $em2, $em3] := $(list:of 1 2))
+    ([$em1, $em2, $em3] := $($list.of 1 2))
 } catch {|$e|
     $eerrored = $true
 }
@@ -136,7 +136,7 @@ assert $eerrored "expression mode: destructuring with more names than elements s
 
 $eerrored2 := $false
 try {
-    ([$em1, $em2] := $(list:of 1 2 3))
+    ([$em1, $em2] := $($list.of 1 2 3))
 } catch {|$e|
     $eerrored2 = $true
 }
@@ -152,7 +152,7 @@ assert $eerrored3 "expression mode: destructuring a value that isn't a list, str
 
 $eerrored4 := $false
 try {
-    ([$never_declared_e1, $never_declared_e2] = $(list:of 1 2))
+    ([$never_declared_e1, $never_declared_e2] = $($list.of 1 2))
 } catch {|$e|
     $eerrored4 = $true
 }
@@ -161,7 +161,7 @@ assert $eerrored4 "expression mode: = destructuring on undeclared variables shou
 $eerrored5 := $false
 try {
     $ealready := 1
-    ([$ealready, $enew_one] := $(list:of 1 2))
+    ([$ealready, $enew_one] := $($list.of 1 2))
 } catch {|$e|
     $eerrored5 = $true
 }

@@ -38,7 +38,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Integer),
     short = "Returns the byte at the specified offset.",
-    example = "$(bin:from Cargo.toml)[4]",
+    example = "$($bin.from Cargo.toml)[4]",
 )]
 struct GetItem {
     #[description("index")]

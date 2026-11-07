@@ -1,6 +1,6 @@
 # Coverage for try/catch as real expression-mode grammar (ExprItem in
 # src/lang/lalrparser.lalrpop), desugaring (Node::try_expr) into a call to the same
-# global:control:try command mode's own `try {...} catch {...}` already uses.
+# $global.control.try command mode's own `try {...} catch {...}` already uses.
 
 $recovered := (try { convert($integer, "notanumber") } catch {|$e| -1})
 assert ($recovered == -1) "catch should run and receive the error when the body fails"
@@ -27,8 +27,8 @@ assert ($nested_match == "recovered") "try/catch should work directly around a n
 $rethrown := (try {
     try {
         convert($integer, "notanumber")
-    } catch {|$inner| throw("StillBad", $inner:message)}
-} catch {|$e| "{}: {}":format($e:type, $e:message)})
+    } catch {|$inner| throw("StillBad", $inner.message)}
+} catch {|$e| "{}: {}".format($e.type, $e.message)})
 assert ($rethrown == "StillBad: invalid digit found in string") "a catch clause should be able to re-throw as a different, custom error type"
 
 # a catch clause with no parameters is valid too, just like command mode
@@ -65,5 +65,5 @@ $propagated := (try {
     try {
         throw("HttpError", "boom")
     } catch ^(Serde) {|$e| "wrong"} catch $(Dns*) {|$e| "wrong"}
-} catch {|$e| "{}: {}":format($e:type, $e:message)})
+} catch {|$e| "{}: {}".format($e.type, $e.message)})
 assert ($propagated == "HttpError: boom") "an error matching no catch clause's filter should propagate past try in expression mode too"

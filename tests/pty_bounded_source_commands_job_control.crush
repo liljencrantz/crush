@@ -12,7 +12,7 @@
 # (superseded, never committed) called `bg`/`fg` with no job id around an
 # already-finished job to simulate Ctrl-Z/bg/fg mechanics; `bg` actually requires a
 # job id and errored every time inside the nested session, silently, because
-# `$t:run` only waits for the screen to go quiet, not for the typed command to
+# `$t.run` only waits for the screen to go quiet, not for the typed command to
 # actually succeed -- so that version never caught its own `bg` failing and asserted
 # nothing about any command's real result. Dropped that dance: Ctrl-Z/bg/fg
 # mechanics for a job that's still genuinely running are already covered thoroughly
@@ -20,7 +20,7 @@
 # there is no "still running" moment to catch for a command that finishes in
 # milliseconds.
 #
-# `remote:identity`/`remote:host:list` are wrapped in `try`/`catch` (falling back to
+# `$remote.identity`/`$remote.host.list` are wrapped in `try`/`catch` (falling back to
 # 0) since they depend on the local environment having an ssh-agent / known_hosts
 # file, which this test doesn't control -- the point here is that job control around
 # them doesn't hang or corrupt the session, not that they succeed everywhere.
@@ -28,52 +28,52 @@ source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$n = $(pty_run $t $n "$r := $(sockets:tcp | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "sockets:tcp did not produce a real result"
+$n = $(pty_run $t $n "$r := $($sockets.tcp | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$sockets.tcp did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(sockets:udp | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "sockets:udp did not produce a real result"
+$n = $(pty_run $t $n "$r := $($sockets.udp | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$sockets.udp did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(host:battery | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "host:battery did not produce a real result"
+$n = $(pty_run $t $n "$r := $($host.battery | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$host.battery did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(host:procs | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "host:procs did not produce a real result"
+$n = $(pty_run $t $n "$r := $($host.procs | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$host.procs did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(host:threads | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "host:threads did not produce a real result"
+$n = $(pty_run $t $n "$r := $($host.threads | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$host.threads did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(groups:list | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "groups:list did not produce a real result"
+$n = $(pty_run $t $n "$r := $($groups.list | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$groups.list did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(users:list | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "users:list did not produce a real result"
+$n = $(pty_run $t $n "$r := $($users.list | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$users.list did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(fs:stat . | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "fs:stat did not produce a real result"
+$n = $(pty_run $t $n "$r := $($fs.stat . | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$fs.stat did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(fs:mounts | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "fs:mounts did not produce a real result"
+$n = $(pty_run $t $n "$r := $($fs.mounts | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$fs.mounts did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(crush:history | count &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "crush:history did not produce a real result"
+$n = $(pty_run $t $n "$r := $($crush.history | count &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$crush.history did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(try { remote:identity | count } catch {|$e| 0 } &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "remote:identity did not produce a real result"
+$n = $(pty_run $t $n "$r := $(try { $remote.identity | count } catch {|$e| 0 } &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$remote.identity did not produce a real result"
 
-$n = $(pty_run $t $n "$r := $(try { remote:host:list | count } catch {|$e| 0 } &)")
-$n = $(pty_run $t $n "echo $(\"__RESULT__{}\":format $(fg))")
-assert ($t:contents() =~ ^(__RESULT__-?[0-9]+)) "remote:host:list did not produce a real result"
+$n = $(pty_run $t $n "$r := $(try { $remote.host.list | count } catch {|$e| 0 } &)")
+$n = $(pty_run $t $n "echo $(\"__RESULT__{}\".format $(fg))")
+assert ($t.contents() =~ ^(__RESULT__-?[0-9]+)) "$remote.host.list did not produce a real result"
 
-$t:close
+$t.close

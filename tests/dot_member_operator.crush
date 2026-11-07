@@ -1,0 +1,66 @@
+# `.` is the member-access operator (`$foo.bar`), added without taking away unquoted
+# `.` in bareword file/glob literals like `cat.txt` or `.crush` -- those still lex as a
+# single bareword token exactly as before, since this only ever kicks in for a `.`
+# encountered as the very first character of a fresh token, immediately after
+# something a member can be accessed on (no whitespace gap).
+
+# bareword file/glob literals with embedded or leading dots are still a single token,
+# and `val` (which takes exactly one argument) accepts each as one.
+$f1 := $(val cat.txt)
+assert (($f1.name()) == "cat.txt") "a bareword with an embedded dot should still be one token"
+$f2 := $(val .crush)
+assert (($f2.name()) == ".crush") "a bareword starting with a dot should still be one token"
+
+$x := "hello"
+
+# chained `.` access works -- the member name right after a `.` is scanned narrowly so
+# a second `.` isn't swallowed into the same member name.
+$s := $($struct.of inner=$($struct.of value=42))
+assert (($s.inner.value) == 42) "chained .member.member should work"
+
+# a space before `.` breaks the chain -- `$x .len` is two separate bareword arguments
+# (matching ordinary shell whitespace-separates-arguments semantics, not member
+# access), so `val`, which takes exactly one argument, rejects it as a stray extra one.
+$errored := $false
+try {
+    val $x .len
+} catch {|$e|
+    $errored = $true
+}
+assert $errored "whitespace before . should prevent member access, leaving two stray arguments"
+
+# with no whitespace, `$x.len` is one argument (a bound method), which `val` accepts.
+$no_error := $true
+try {
+    val $x.len
+} catch {|$e|
+    $no_error = $false
+}
+assert $no_error "$x.len with no whitespace should be a single argument"
+
+# member access works on a quoted string literal too (unquoted strings don't support
+# it, since an unquoted word is always a bareword/file/glob literal instead).
+assert ((("hello").len()) == ($x.len())) ". should work right after a quoted string literal"
+
+# member access works on a number literal, and a `.` immediately after a digit is only
+# the start of a float when a digit actually follows it -- `5.__neg__`/`5.len` is a
+# number followed by member access, not a malformed float glued onto an identifier.
+assert (($(2.__add__ 3)) == 5) ". should work right after an integer literal"
+assert ((3.14) == (3.14)) "an ordinary float literal should still parse correctly"
+
+# member access works on a regex literal too.
+assert ($(^(aaa).__is__ "aaa")) "member access should work right after a regex literal"
+
+# `.`-based namespaced *command names* (e.g. `$struct.of`) require an explicit `$`,
+# even though the `$` sigil is otherwise optional for a bare command name. Without
+# that requirement, a bare namespaced-command-shaped word would be indistinguishable
+# from a real external command with a dot in its name -- e.g. `backup.sh`, found via
+# `PATH` with no leading `./`, which must keep invoking the script named "backup.sh",
+# not be misread as "the `sh` command in a `backup` namespace".
+$bare_dot_errored := $false
+try {
+    struct.of x=1
+} catch {|$e|
+    $bare_dot_errored = $true
+}
+assert $bare_dot_errored "a bare (no $) namespaced command name must not resolve via ."

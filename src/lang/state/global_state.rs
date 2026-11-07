@@ -28,8 +28,8 @@ use std::mem;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 /// The default value for how many warnings GlobalState keeps around for later
-/// inspection (e.g. via `crush:warn:list`) before evicting the oldest -- adjustable at
-/// runtime via `crush:warn:limit:set`.
+/// inspection (e.g. via `$crush.warn.list`) before evicting the oldest -- adjustable at
+/// runtime via `$crush.warn.limit.set`.
 const DEFAULT_WARNING_LIMIT: usize = 100;
 
 /**
@@ -277,7 +277,7 @@ impl GlobalState {
     /// `is_background` branch (`job &`) sends back a plain job-id value the moment it has
     /// registered the *real* pipeline with `add_background_job` -- but that real
     /// pipeline's own stages keep running, deliberately unjoined, under this exact same
-    /// `job_id`, for as long as it takes (a `fs:watch` producer can run forever). Blindly
+    /// `job_id`, for as long as it takes (a `$fs.watch` producer can run forever). Blindly
     /// `join_job`-ing on receipt of that job-id value would defeat the entire point of
     /// `&`, blocking here until the backgrounded work finishes instead of returning
     /// immediately. `job_id`'s presence in `is_background_job` is race-free to check:
@@ -443,7 +443,7 @@ impl GlobalState {
     }
 
     /// Whether a warning is also printed immediately (in interactive mode) as soon as
-    /// it's reported, rather than only being visible later via `crush:warn:list`.
+    /// it's reported, rather than only being visible later via `$crush.warn.list`.
     pub fn warn_print(&self) -> bool {
         let data = self.data.lock().unwrap();
         data.warn_print
@@ -630,7 +630,7 @@ impl GlobalState {
 
     /// Terminates `jid`, and every job nested inside it (see `descendant_job_ids`'s doc
     /// comment) -- so terminating a job that's currently running a closure (e.g. one of
-    /// `stream:tee`'s branches) also reaches whatever that closure's own body is doing,
+    /// `$stream.tee`'s branches) also reaches whatever that closure's own body is doing,
     /// not just `jid`'s own directly-registered controllers.
     ///
     /// Only `jid` itself gets a `terminated_snapshot` (see that field's doc comment), and
@@ -670,7 +670,7 @@ impl GlobalState {
     }
 
     /// Notes that `jid`'s underlying external process was observed to have died from a
-    /// real OS signal sent directly to it (e.g. via `host:signal`), entirely bypassing
+    /// real OS signal sent directly to it (e.g. via `$host.signal`), entirely bypassing
     /// crush's own job-control plumbing -- called from `cmd.rs`'s `spawn_child_wait`.
     /// Bookkeeping only (see `JobControlData::mark_terminated`): deliberately does
     /// *not* notify this job's registered controllers the way `terminate` does, since
@@ -1019,7 +1019,7 @@ fn snapshot(data: &mut MutexGuard<StateData>, jid: JobId, definition: String) {
 /// `pause`/`resume` (`GlobalState::terminate`/`pause`/`resume`) actually
 /// send a message to -- so without this, telling a job to stop would leave anything
 /// still running inside a closure it's currently evaluating completely unreachable,
-/// e.g. a `stream:tee` branch's own command never seeing termination even after tee
+/// e.g. a `$stream.tee` branch's own command never seeing termination even after tee
 /// itself does.
 ///
 /// Guards against revisiting an id: `JobId`s are recycled (`next_id` hands out the
@@ -1031,7 +1031,7 @@ fn snapshot(data: &mut MutexGuard<StateData>, jid: JobId, definition: String) {
 /// id reuse across what were, at different real moments, entirely unrelated jobs (e.g.
 /// `0`'s recorded parent is `3`, `3`'s is `1`, `1`'s is `0`). Without a visited set, that
 /// cycle sends this into an infinite loop -- confirmed directly: a `while {$true} {}`
-/// stream:tee branch reproduced exactly this shape and hung here.
+/// $stream.tee branch reproduced exactly this shape and hung here.
 fn descendant_job_ids(data: &MutexGuard<StateData>, jid: JobId) -> Vec<JobId> {
     let mut visited = HashSet::new();
     visited.insert(jid);

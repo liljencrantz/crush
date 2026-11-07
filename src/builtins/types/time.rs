@@ -71,7 +71,7 @@ binary_op!(
     can_block = false,
     output = Known(ValueType::Time),
     short = "The current point in time.",
-    example = "time:now"
+    example = "$time.now"
 )]
 struct Now {}
 
@@ -134,7 +134,7 @@ fn now(context: CommandContext) -> CrushResult<()> {
     long = " * `%t` a literal tab character.",
     long = " * `%n` a literal newline character.",
     long = " * `%%` a literal % character.",
-    example = "time:parse format=\"%s\" time=\"1234567890\"",
+    example = "$time.parse format=\"%s\" time=\"1234567890\"",
 )]
 struct Parse {
     #[description("the format of the time.")]
@@ -204,7 +204,7 @@ fn parse(mut context: CommandContext) -> CrushResult<()> {
     long = " * `%t` a literal tab character.",
     long = " * `%n` a literal newline character.",
     long = " * `%%` a literal % character.",
-    example = "time:now:format \"%s\"",
+    example = "$time.now.format \"%s\"",
 )]
 struct Format {
     #[description("the format of the time.")]

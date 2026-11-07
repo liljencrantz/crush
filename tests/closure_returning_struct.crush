@@ -7,6 +7,6 @@
 # even with zero arguments, instead of falling through to the generic "forward this
 # value" behavior every other type gets in that same zero-argument case (see
 # `eval_command_definition`'s final catch-all arm).
-$f := {|| $(struct:of x=1 y=2)}
+$f := {|| $($struct.of x=1 y=2)}
 $r := $(f)
-assert (($r:x) == 1) "closure's returned struct should be usable after the call"
+assert (($r.x) == 1) "closure's returned struct should be usable after the call"

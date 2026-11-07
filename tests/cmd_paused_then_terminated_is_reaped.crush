@@ -43,12 +43,12 @@ terminate $job_id
 # `count`/field access are read from a plain variable assigned once up front, matching
 # this file's own existing style for the second check below -- see
 # `tests/terminated_job_is_reaped.crush` for more on this pattern.
-$first_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 6234"} | materialize)
+$first_rows := $(jobs | where {$definition.starts_with "\$cmd \"sleep\" 6234"} | materialize)
 $first_count := $($first_rows | count)
 assert ($first_count == 1) "a job that was ever paused and then terminated should be reported once, with status Terminated, on the next jobs listing"
-$first_status := ($first_rows[0]):status
+$first_status := ($first_rows[0]).status
 assert ($first_status == "Terminated") "the one-time report of a paused-then-terminated job should have status Terminated"
 
-$remaining_rows := $(jobs | where {$definition:starts_with "\$cmd \"sleep\" 6234"} | materialize)
+$remaining_rows := $(jobs | where {$definition.starts_with "\$cmd \"sleep\" 6234"} | materialize)
 $remaining_count := $($remaining_rows | count)
 assert ($remaining_count == 0) "a job that was ever paused should still be reaped from jobs once terminated, not linger forever"

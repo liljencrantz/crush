@@ -97,9 +97,9 @@ fn __is_not__(mut context: CommandContext) -> CrushResult<()> {
     immediately followed by a character that would otherwise be read as part of the \
     group number or name.",
     example = "# Replaces the first run of digits",
-    example = "^([0-9]+):replace \"a123b456\" \"X\"",
+    example = "^([0-9]+).replace \"a123b456\" \"X\"",
     example = "# Swap the two halves of a dash-separated pair, using capture groups",
-    example = "^((.*)-(.*)):replace \"123-456\" \"$2-$1\"",
+    example = "^((.*)-(.*)).replace \"123-456\" \"$2-$1\"",
 )]
 struct ReplaceSignature {
     #[description("the text to perform replacement on.")]
@@ -128,9 +128,9 @@ fn replace(mut context: CommandContext) -> CrushResult<()> {
     immediately followed by a character that would otherwise be read as part of the \
     group number or name.",
     example = "# Replaces every run of digits",
-    example = "^([0-9]+):replace_all \"a123b456c789\" \"X\"",
+    example = "^([0-9]+).replace_all \"a123b456c789\" \"X\"",
     example = "# Swap key and value in every space-separated pair",
-    example = "^(([a-z]+)=([0-9]+)):replace_all \"a=1 b=2 c=3\" \"$2=$1\"",
+    example = "^(([a-z]+)=([0-9]+)).replace_all \"a=1 b=2 c=3\" \"$2=$1\"",
 )]
 struct ReplaceAllSignature {
     #[description("the text to perform replacement on.")]
@@ -156,7 +156,7 @@ fn replace_all(mut context: CommandContext) -> CrushResult<()> {
     short = "Filter input stream based on this regex.",
     long = "Search all textual (string and file) columns for matches of the regex, and output the rows that match.",
     example = "# Recursively search current directory for all files containing four `a` characters in a row",
-    example = "files --recurse | ^(aaaa):filter",
+    example = "files --recurse | ^(aaaa).filter",
 )]
 struct Filter {
     #[unnamed()]

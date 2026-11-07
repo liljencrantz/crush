@@ -33,11 +33,11 @@ $identity := {|$x "the x param"| $x}
 assert($identity(9) == 9, "a parameter doc string should not affect how the parameter binds")
 
 # @ collects stray unnamed arguments into a list
-$count_unnamed := {|@ $rest| $rest:len()}
+$count_unnamed := {|@ $rest| $rest.len()}
 assert($count_unnamed(1, 2, 3) == 3, "@ in a signature should collect stray unnamed arguments")
 
 # @@ collects stray named arguments into a dict
-$count_named := {|@@ $named| $named:len()}
+$count_named := {|@@ $named| $named.len()}
 assert($count_named(x=1, y=2) == 2, "@@ in a signature should collect stray named arguments")
 
 )

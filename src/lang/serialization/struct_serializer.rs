@@ -100,7 +100,7 @@ mod tests {
 
     /// A struct's parent carries its inherited members (e.g. methods declared via
     /// `class()`). serialize() must preserve it so a struct sent through pup (used by
-    /// `pup:to`/`pup:from`, `sudo`, and `remote:exec`) still has access to everything it
+    /// `$pup.to`/`$pup.from`, `sudo`, and `$remote.exec`) still has access to everything it
     /// inherited once deserialized on the other side.
     #[test]
     fn struct_parent_survives_pup_round_trip() {

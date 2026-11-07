@@ -2,7 +2,7 @@
 //! inspect it from a script. Lives in a private, global `id -> Option<PtySession>`
 //! registry (`SESSIONS` below), exactly like `GrpcClient` in
 //! `src/builtins/grpc/client.rs`: scripts never hold a Rust handle to this directly, only
-//! the plain integer id embedded in the `Struct` `pty:create` returns (see `create.rs`).
+//! the plain integer id embedded in the `Struct` `$pty.create` returns (see `create.rs`).
 
 use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};

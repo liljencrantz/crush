@@ -112,7 +112,7 @@ In expression mode, this method can be used via the the `and` operator.
 # Examples
 ```
 # true, if $file exists and is a symlink
-and $($file:exists) {$(stat $file)[0]:is_symlink}
+and $($file.exists) {$(stat $file)[0].is_symlink}
 
 # true, if $file exists and is a symlink
 ($file.exists() and {stat($file)[0].is_symlink})
@@ -143,7 +143,7 @@ In expression mode, this method can be used via the the `or` operator.
 $stat_out := $(stat $file)[0]
 
 # true, if $file is either a symlink or a directory
-or $stat_out:is_symlink $stat_out:is_dir
+or $stat_out.is_symlink $stat_out.is_dir
 
 # true, if $file is either a symlink or a directory
 ($stat_out.is_symlink or $stat_out.is_dir)

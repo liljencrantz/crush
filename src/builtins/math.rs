@@ -66,7 +66,7 @@ macro_rules! math_fun {
     math.sin,
     output = Known(ValueType::Float),
     short = "The sine of number.",
-    example = "math:sin 1",
+    example = "$math.sin 1",
 )]
 pub struct Sin {
     #[description("the number to take the sine of, in radians.")]
@@ -78,7 +78,7 @@ math_fun!(sin, Sin, |x: f64| x.sin());
     math.cos,
     output = Known(ValueType::Float),
     short = "The cosine of number.",
-    example = "math:cos 1",
+    example = "$math.cos 1",
 )]
 pub struct Cos {
     #[description("the number to take the cosine of, in radians.")]
@@ -170,11 +170,11 @@ math_fun!(ln, Ln, |x: f64| x.ln());
     math.exp,
     output = Known(ValueType::Float),
     short = "e (Euler's number) raised to the power of number.",
-    long = "The same result is available as `math:pow math:e number`, but `exp` doesn't \
+    long = "The same result is available as `$math.pow $math.e number`, but `exp` doesn't \
     require knowing about the `e` constant, and its dedicated implementation is generally \
     more numerically precise than going through a general-purpose `pow`.",
     example = "# Returns 1, since e^0 is 1",
-    example = "math:exp 0",
+    example = "$math.exp 0",
 )]
 pub struct Exp {
     #[description("the exponent to raise e to.")]
@@ -233,7 +233,7 @@ fn abs_sign_dynamic_output(
     output = Unknown,
     dynamic_output = abs_sign_dynamic_output,
     short = "The absolute value of number.",
-    example = "math:abs -5",
+    example = "$math.abs -5",
 )]
 pub struct Abs {
     #[description("the number to take the absolute value of.")]
@@ -258,7 +258,7 @@ fn abs(mut context: CommandContext) -> CrushResult<()> {
     output = Unknown,
     dynamic_output = abs_sign_dynamic_output,
     short = "-1, 0 or 1 depending on the sign of number.",
-    example = "math:sign -5",
+    example = "$math.sign -5",
 )]
 pub struct Sign {
     #[description("the number to inspect the sign of.")]
@@ -307,7 +307,7 @@ fn clamp_dynamic_output(
     output = Unknown,
     dynamic_output = clamp_dynamic_output,
     short = "Number restricted to the inclusive range [min, max].",
-    example = "math:clamp 15 min=0 max=10",
+    example = "$math.clamp 15 min=0 max=10",
 )]
 pub struct Clamp {
     #[description("the number to clamp.")]

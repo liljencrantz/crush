@@ -8,32 +8,32 @@
 # (`pty_spawn`, not `$pty_spawn`).
 
 # Spawns a nested crush session and waits for its first prompt. Replaces the
-# "$crush_bin := $(crush:env[\"CRUSH_BIN\"]); $t := $(pty:create $crush_bin);
-# $t:wait_for \"# \"" preamble duplicated at the top of every existing
+# "$crush_bin := $($crush.env[\"CRUSH_BIN\"]); $t := $($pty.create $crush_bin);
+# $t.wait_for \"# \"" preamble duplicated at the top of every existing
 # tests/pty_*.crush file.
 $pty_spawn := {||
-    $crush_bin := $(crush:env["CRUSH_BIN"])
-    $t := $(pty:create $crush_bin)
-    $t:wait_for "# "
+    $crush_bin := $($crush.env["CRUSH_BIN"])
+    $t := $($pty.create $crush_bin)
+    $t.wait_for "# "
     $t
 }
 
 # The pid of the one child process of the nested session $t whose command name
 # matches $name_pattern (a plain string for exact match, or a glob/regex -- see
-# `host:procs`'s own `name` column and the `=~` operator), asserting exactly one
-# match. Replaces writing "$my_pid := $(crush:pid)" *into* the nested session and
-# scraping it back off the rendered screen just to filter `host:procs` by parent
-# pid -- `$t:pid()` already is that pid, queryable directly out here, no round
+# `$host.procs`'s own `name` column and the `=~` operator), asserting exactly one
+# match. Replaces writing "$my_pid := $($crush.pid)" *into* the nested session and
+# scraping it back off the rendered screen just to filter `$host.procs` by parent
+# pid -- `$t.pid()` already is that pid, queryable directly out here, no round
 # trip through the screen needed.
 $pty_child_pid := {|$t $name_pattern|
-    # `host:procs | where {...}` is a one-shot stream -- reading it once (e.g. via
+    # `$host.procs | where {...}` is a one-shot stream -- reading it once (e.g. via
     # `count`) drains it, leaving nothing for a second read -- so it's materialized
-    # into a reusable `list:collect`ed list of pids before being read twice below.
+    # into a reusable `$list.collect`ed list of pids before being read twice below.
     #
     # Retries (up to 1s total, same budget as `pty_assert_job_status`/
     # `pty_assert_no_thread` below) rather than checking once: the real external
     # process a backgrounded `cmd ... &` starts isn't necessarily visible in a fresh
-    # `host:procs` scan yet at the exact instant this is called -- `cmd`'s own
+    # `$host.procs` scan yet at the exact instant this is called -- `cmd`'s own
     # `std::process::Command::spawn()` call happens inside that job's worker thread,
     # some unknown amount of real time after the backgrounding statement's own prompt
     # already returned (which only proves the *crush-side* job was created and
@@ -41,18 +41,18 @@ $pty_child_pid := {|$t $name_pattern|
     # would wrongly fail during that window instead of waiting it out -- the same
     # reasoning as the two retry-based helpers below, just for OS process-table
     # visibility instead of crush's own job-status/thread bookkeeping.
-    $pids := $(list:of 0)
+    $pids := $($list.of 0)
     $match_count := 0
     $tries := 0
     while {(($tries < 20) and ($match_count != 1))} {
-        $pids = $(host:procs | where {(($ppid == ($t:pid())) and ($name =~ $name_pattern))} | select pid | list:collect pid)
+        $pids = $($host.procs | where {(($ppid == ($t.pid())) and ($name =~ $name_pattern))} | select pid | $list.collect pid)
         $match_count = $($pids | count)
         if (($match_count) != 1) {
             sleep 50ms
             $tries = ($tries + 1)
         }
     }
-    assert (($match_count) == 1) $("expected exactly one child of pid {} matching {}, found {} within the retry budget":format ($t:pid()) $name_pattern $match_count)
+    assert (($match_count) == 1) $("expected exactly one child of pid {} matching {}, found {} within the retry budget".format ($t.pid()) $name_pattern $match_count)
     $pids[0]
 }
 
@@ -64,8 +64,8 @@ $pty_child_pid := {|$t $name_pattern|
 # only ever needs to check status against a known expected string (never to
 # inspect an otherwise-unknown value), and asserting directly avoids needing to
 # parse an arbitrary string back out of rendered screen text, for which crush has
-# no regex capture-group extraction method to begin with (only `:replace`/
-# `:replace_all` on a whole match, not a capture).
+# no regex capture-group extraction method to begin with (only `.replace`/
+# `.replace_all` on a whole match, not a capture).
 $pty_assert_job_status := {|$t $job_id $expected|
     # Deliberately one write with no intermediate `:=` (not two): this helper can be
     # called more than once against the same nested session (e.g. "Running" then
@@ -80,18 +80,18 @@ $pty_assert_job_status := {|$t $job_id $expected|
     $matched := $false
     $tries := 0
     while {(($tries < 20) and (!$matched))} {
-        $t:write $("echo $(\"__PTY_JOB_STATUS__{{}}\":format ($(jobs | where {{($id == {})}} | select status))[0]:status)\n":format $job_id)
+        $t.write $("echo $(\"__PTY_JOB_STATUS__{{}}\".format ($(jobs | where {{($id == {})}} | select status))[0].status)\n".format $job_id)
         try {
-            $t:wait_for $("__PTY_JOB_STATUS__{}":format $expected) timeout=250ms
+            $t.wait_for $("__PTY_JOB_STATUS__{}".format $expected) timeout=250ms
             $matched = $true
         } catch {|$e|
             $tries = ($tries + 1)
         }
     }
-    assert $matched $("job {} never reached status {} within the retry budget":format $job_id $expected)
+    assert $matched $("job {} never reached status {} within the retry budget".format $job_id $expected)
 }
 
-# Asserts that no thread remains tracked (`crush:threads`) under job $job_id in
+# Asserts that no thread remains tracked (`$crush.threads`) under job $job_id in
 # the nested session $t -- replaces the identical write+wait_for pair that was
 # duplicated across four separate tests. Same retry rationale as
 # `pty_assert_job_status`: right after `terminate`, thread-tracking cleanup may
@@ -100,18 +100,18 @@ $pty_assert_no_thread := {|$t $job_id|
     $matched := $false
     $tries := 0
     while {(($tries < 20) and (!$matched))} {
-        $t:write $("echo $(\"__PTY_THREAD_COUNT__{{}}\":format ($(crush:threads | where {{($job_id == {})}} | count)))\n":format $job_id)
+        $t.write $("echo $(\"__PTY_THREAD_COUNT__{{}}\".format ($($crush.threads | where {{($job_id == {})}} | count)))\n".format $job_id)
         try {
-            $t:wait_for "__PTY_THREAD_COUNT__0" timeout=250ms
+            $t.wait_for "__PTY_THREAD_COUNT__0" timeout=250ms
             $matched = $true
         } catch {|$e|
             $tries = ($tries + 1)
         }
     }
-    assert $matched $("expected no thread left running under job {} within the retry budget":format $job_id)
+    assert $matched $("expected no thread left running under job {} within the retry budget".format $job_id)
 }
 
-# Sends a raw control byte (e.g. `pty:control:z`/`pty:control:c`) to the nested
+# Sends a raw control byte (e.g. `$pty.control.z`/`$pty.control.c`) to the nested
 # session $t, resending it only if it genuinely doesn't land within a generous
 # per-attempt window, until the job it interrupted (paused or terminated) has
 # actually stopped occupying the foreground -- evidenced by the *next counted
@@ -132,7 +132,7 @@ $pty_assert_no_thread := {|$t $job_id|
 #
 # Why there's no separate marker command written right after the control byte,
 # the way `pty_assert_job_status`'s retries do: confirmed directly that writing
-# one immediately -- even separated into its own `$t:write` call -- is itself
+# one immediately -- even separated into its own `$t.write` call -- is itself
 # racy. The kernel's own signal-generation handling for the control byte can
 # still be in the middle of settling when that write lands, and the marker text
 # can be swallowed by the same mechanism that makes combining a command and a
@@ -152,9 +152,9 @@ $pty_send_control := {|$t $n $control_char|
     $tries := 0
     $next := ($n + 1)
     while {(($tries < 5) and (!$matched))} {
-        $t:write $control_char
+        $t.write $control_char
         try {
-            $t:wait_for $("PROMPT {}#":format $next) timeout=500ms
+            $t.wait_for $("PROMPT {}#".format $next) timeout=500ms
             $matched = $true
         } catch {|$e|
             $tries = ($tries + 1)
@@ -174,8 +174,8 @@ $pty_send_control := {|$t $n $control_char|
 # alone finished. Every prompt this produces is numbered once and never repeats,
 # so there is no stale earlier prompt a later wait could mistake for a new one.
 $pty_enable_counted_prompt := {|$t|
-    $t:write "$cmd_counter := 0; crush:prompt:set {$cmd_counter = ($cmd_counter+1); \"PROMPT {}#\":format $cmd_counter}\n"
-    $t:wait_for "PROMPT 1#"
+    $t.write "$cmd_counter := 0; $crush.prompt.set {$cmd_counter = ($cmd_counter+1); \"PROMPT {}#\".format $cmd_counter}\n"
+    $t.wait_for "PROMPT 1#"
     1
 }
 
@@ -187,7 +187,7 @@ $pty_enable_counted_prompt := {|$t|
 # since the count lives in the nested session's own scope, not anywhere this
 # function could persist it between calls on its own.
 #
-# This is the replacement for the "`$t:write \"...\\n\"; $t:wait_for \"# \"; sleep
+# This is the replacement for the "`$t.write \"...\\n\"; $t.wait_for \"# \"; sleep
 # <N>ms`" idiom used throughout the older pty tests: that bare `wait_for \"# \"`
 # provides essentially no synchronization by itself (a prompt already on screen
 # before the write satisfies it instantly), so every one of those tests also
@@ -196,8 +196,8 @@ $pty_enable_counted_prompt := {|$t|
 # A counted prompt has no such tradeoff: this returns the instant (and not before)
 # the nth prompt is genuinely rendered, however long that actually took.
 $pty_run := {|$t $n $command_line|
-    $t:write $("{}\n":format $command_line)
+    $t.write $("{}\n".format $command_line)
     $next := ($n + 1)
-    $t:wait_for $("PROMPT {}#":format $next)
+    $t.wait_for $("PROMPT {}#".format $next)
     $next
 }

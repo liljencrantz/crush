@@ -308,9 +308,9 @@ of every comparison (`==`, `<`, ...) and logical (`and`, `or`) operator.",
             ValueType::Duration =>
                     "To create your own duration use a duration literal, an integer number combined with one of the suffixes `h`, `m`, `s`, `ms`, and `ns`. `5s` means five seconds, for example.
 
-If you want to create a duration object with of a size not known at the point of writing the code, use the `duration:of` method, for example
+If you want to create a duration object with of a size not known at the point of writing the code, use the `$duration.of` method, for example
 
-    duration:of seconds=10
+    $duration.of seconds=10
 
 A duration instance has nanosecond precision. It is represented internally as two 64 bit numbers,
 one for the number of seconds, and one for the nanosecond remainder.
@@ -323,8 +323,8 @@ to or subtracted from a `time` instance.
 In expression mode, you can multiply or divide a `duration` by an integer.",
 
             ValueType::Time =>
-                    "To get the current time, use `time:now`. To parse a time from text, use
-`time:parse`.
+                    "To get the current time, use `$time.now`. To parse a time from text, use
+`$time.parse`.
 
 All time instances use the local time zone.
 
@@ -339,8 +339,8 @@ in expression mode) return a new time rather than changing the receiver. `time` 
             ValueType::Glob => "Globs are usually created by writing an unescaped string containing
 a wildcard character (`*` or `?`), like `files *.toml`.
 
-If you want to construct a new glob from a string, use the `glob:new` command, e.g.
-`glob:new \"*.txt\"`.
+If you want to construct a new glob from a string, use the `$glob.new` command, e.g.
+`$glob.new \"*.txt\"`.
 
 Globs are immutable. The most similar type is `re`, which supports much richer
 patterns at the cost of more complex syntax.",
@@ -348,8 +348,8 @@ patterns at the cost of more complex syntax.",
             ValueType::Regex => "Regular expressions are usually created by writing using regexp
 literal syntax, e.g. `files ^(^...$)`.
 
-If you want to construct a new glob from a string, use the `re:new` command, e.g.
-`re:new \"[a-z]*\\.txt\"`.
+If you want to construct a new glob from a string, use the `$re.new` command, e.g.
+`$re.new \"[a-z]*\\.txt\"`.
 
 Regular expressions are immutable. The most similar type is `glob`, which supports only
 simple wildcard patterns but with much simpler syntax.",
@@ -371,7 +371,7 @@ strings based on their syntax. You can also convert an existing string explicitl
 
 A file value simply names a path; the value itself is immutable, though of course the
 file it points at on disk can change, be created, or be removed out from under it via
-methods like `remove` or commands like `fs:mkdir`. See `help string` for exactly how
+methods like `remove` or commands like `$fs.mkdir`. See `help string` for exactly how
 `file` differs from `string` and `binary`, the other two types that represent a sequence
 of data rather than a single scalar value; `glob` is also related, matching a whole set
 of paths rather than naming a single one.",
@@ -379,7 +379,7 @@ of paths rather than naming a single one.",
             ValueType::TableInputStream(_) =>
                     "A table_input_stream is produced by any streaming command -- for example, the
 output of `files` or `seq` -- or by reading the `read` member of a pipe object (see
-`(table_input_stream ...):pipe`, under `help pipe`).
+`(table_input_stream ...).pipe`, under `help pipe`).
 
 It can only be traversed once: each row is consumed as it's read, so a second pass over
 the same stream sees nothing. If you need to read the same rows more than once, pipe the
@@ -389,11 +389,11 @@ the writable counterpart of the same rows.",
             ValueType::TableOutputStream(_) =>
                     "A table_output_stream is obtained from the `output` member of a pipe object,
 created by calling `:pipe` on a `table_input_stream` type, e.g.
-`$p := $($(table_input_stream value=$integer):pipe)`; `$p:output` is then a
-table_output_stream that rows can be written to, and `$p:read` is the matching
+`$p := $($(table_input_stream value=$integer).pipe)`; `$p.output` is then a
+table_output_stream that rows can be written to, and `$p.read` is the matching
 table_input_stream those same rows can be read back from.
 
-Rows are written with the `write` method (see `help pipe:write`). The most similar type
+Rows are written with the `write` method (see `help $pipe.write`). The most similar type
 is `table_input_stream`, its read-side counterpart.",
 
             ValueType::Table(_) =>
@@ -401,32 +401,32 @@ is `table_input_stream`, its read-side counterpart.",
 `files | materialize`.
 
 Unlike a table_input_stream, a table is a fixed snapshot: it can be read more than once,
-indexed by row number (`$t[0]`), and asked for its length (`$t:len`) -- but it has no
+indexed by row number (`$t[0]`), and asked for its length (`$t.len`) -- but it has no
 methods for adding, removing, or replacing rows. The most similar type is
 `table_input_stream`, the one-shot, streaming form it's materialized from.",
 
-            ValueType::Struct => "To create a simple immutable struct, use the `struct:of` command,
-e.g. `struct:of x=1 y=2`; its fields can be read (`$s:x`) but not reassigned.
+            ValueType::Struct => "To create a simple immutable struct, use the `$struct.of` command,
+e.g. `$struct.of x=1 y=2`; its fields can be read (`$s.x`) but not reassigned.
 
 To create a mutable struct that supports inheritance and methods, use the `class`
-command; instances created from a class (`$MyClass:new ...`) do support field
-reassignment (`$instance:x = 5`) from outside the class as well as from within its own
+command; instances created from a class (`$MyClass.new ...`) do support field
+reassignment (`$instance.x = 5`) from outside the class as well as from within its own
 methods.
 
 The most similar type is `dict`, which is also a mapping from keys to values, but with
 keys chosen at runtime rather than fixed named fields, and no support for methods or
 inheritance.",
 
-            ValueType::List(_) => "Create a list with the `list:of` command, e.g. `list:of 1 2 3`,
-or by collecting a column out of piped table input with `list:collect`.
+            ValueType::List(_) => "Create a list with the `$list.of` command, e.g. `$list.of 1 2 3`,
+or by collecting a column out of piped table input with `$list.collect`.
 
 Lists are mutable: elements can be appended, removed, or replaced in place. The most
 similar type is `table`, which is also an ordered sequence of items but where each item
 is a row of several named, differently-typed columns rather than a single value.",
 
-            ValueType::Dict(_, _) => "Create a dict with the `dict:of` command, e.g.
-`dict:of a=1 b=2`, or by collecting key/value columns out of piped table input with
-`dict:collect`.
+            ValueType::Dict(_, _) => "Create a dict with the `$dict.of` command, e.g.
+`$dict.of a=1 b=2`, or by collecting key/value columns out of piped table input with
+`$dict.collect`.
 
 Dicts are mutable: entries can be inserted, removed, or have their value replaced in
 place. The most similar type is `struct`, which is also a mapping from keys to values,
@@ -436,7 +436,7 @@ mutable set of keys.",
             ValueType::Scope => "A scope is normally not constructed directly -- crush creates one
 implicitly for the root namespace (`$global`) and for every closure or block invocation.
 The scope currently executing can be obtained by calling `__current_scope__` on any
-existing scope value, e.g. `$global:__current_scope__`.
+existing scope value, e.g. `$global.__current_scope__`.
 
 Scopes are mutable: declaring a new variable (`:=`) or assignment (`=`) modifies the
 scope it's declared or resolved in.",
@@ -451,8 +451,8 @@ restriction -- it is not a type user code constructs values of directly.",
 
             ValueType::BinaryInputStream =>
                     "A binary_stream is obtained by reading binary data without fully loading it into
-memory first, e.g. `bin:from ./Cargo.toml`, or the `body` of an HTTP response from
-`io:http`.
+memory first, e.g. `$bin.from ./Cargo.toml`, or the `body` of an HTTP response from
+`$io.http`.
 
 Like `table_input_stream`, it can only be read once. Pipe it through `materialize` to
 get a reusable `binary` value instead.",
@@ -460,7 +460,7 @@ get a reusable `binary` value instead.",
             ValueType::Binary =>
                     "A binary value can be created by converting another value, e.g.
 `convert $binary \"hi\"`, or by reading a `binary_stream` to completion with
-`materialize`, e.g. `bin:from ./Cargo.toml | materialize`.
+`materialize`, e.g. `$bin.from ./Cargo.toml | materialize`.
 
 Binary data is immutable once created, and unlike `string` or `file` it has no legality
 constraint at all -- it's simply an arbitrary sequence of bytes, the type to reach for

@@ -25,10 +25,10 @@ try {
     convert $integer "notanumber"
     echo "should not run: body stops at the failing statement"
 } catch {
-    |$error| echo "caught message:" $error:message
-    echo "caught type:" $error:type
+    |$error| echo "caught message:" $error.message
+    echo "caught type:" $error.type
     # command is a plain string when known -- not asserting a specific value here since
     # exactly what ends up attached to a given error is an implementation detail, but the
     # field should always be present and typed, never missing or erroring to access.
-    assert ($(typeof $error:command) == $string) "error:command should always be a string"
+    assert ($(typeof $error.command) == $string) "$error.command should always be a string"
 }

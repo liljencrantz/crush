@@ -32,7 +32,7 @@ $job_id := $(cmd sleep 30 &)
 # probe whether the value behaves like an integer (arithmetic succeeds) or not
 # (arithmetic errors, caught below) to tell the two apart.
 $rows := $(jobs | where {($id == $job_id)} | materialize)
-$parent_after_x_died := $($rows[0]):parent
+$parent_after_x_died := $($rows[0]).parent
 $parent_is_still_an_id := $true
 try {
     $unused := ($parent_after_x_died + 0)
@@ -46,12 +46,12 @@ assert (!$parent_is_still_an_id) "job_id's dead parent should have been orphaned
 # currently-unused id -- which, before the fix, would have been X's just-freed one.
 # This job is unrelated to $job_id in every way.
 cmd sleep 31 &
-$colliding_id := $($($(jobs | where {like $definition *sleep*31*} | materialize)[0]):id)
+$colliding_id := $($($(jobs | where {like $definition *sleep*31*} | materialize)[0]).id)
 
 # Pausing the unrelated job must never affect $job_id, regardless of whether their ids
 # happen to collide with whatever job_id's parent used to be.
 pause $colliding_id
-$job_id_status := $($($(jobs | where {($id == $job_id)} | materialize)[0]):status)
+$job_id_status := $($($(jobs | where {($id == $job_id)} | materialize)[0]).status)
 assert ($job_id_status == "Running") "pausing an unrelated job must not pause job_id itself, no matter what id it was handed"
 
 terminate $job_id

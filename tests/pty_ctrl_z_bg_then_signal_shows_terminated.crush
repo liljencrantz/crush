@@ -1,7 +1,7 @@
 # Regression test: an external job that stopped holding the foreground via Ctrl-Z (and
 # was then resumed in place with `bg`) -- rather than via a trailing `&` -- must still
 # show up as `Terminated` in `jobs` after being killed by a real signal sent straight to
-# its process with `host:signal`, exactly like a `cmd sleep N &` job does (see
+# its process with `$host.signal`, exactly like a `cmd sleep N &` job does (see
 # `pty_terminate_and_signal_external_job.crush`).
 #
 # Root cause: `cmd.rs`'s signal-death bookkeeping is deliberately limited to jobs that
@@ -17,19 +17,19 @@
 # pty_test_helpers.crush). `pty_send_control` (see that file) sends the Ctrl-Z byte and
 # resends it if it doesn't land rather than waiting out a fixed guess. `pty_child_pid`
 # (also retry-based, not a fixed delay) finds the backgrounded `sleep`'s pid without
-# round-tripping a `host:procs` query through the nested session's own screen.
+# round-tripping a `$host.procs` query through the nested session's own screen.
 source tests/pty_test_helpers.crush
 $t := $(pty_spawn)
 $n := $(pty_enable_counted_prompt $t)
 
-$t:write "cmd sleep 7419\n"
-$n = $(pty_send_control $t $n $pty:control:z)
+$t.write "cmd sleep 7419\n"
+$n = $(pty_send_control $t $n $pty.control.z)
 $n = $(pty_run $t $n "bg 0")
 
 $pid := $(pty_child_pid $t ^(.*sleep))
-host:signal $pid signal=SIGKILL
-$n = $(pty_run $t $n "$status := ($(jobs | where {($id == 0)} | select status))[0]:status")
-$t:write "echo $(\"BG_SIG_CHECK_{}\":format $status)\n"
-$t:wait_for "BG_SIG_CHECK_Terminated"
+$host.signal $pid signal=SIGKILL
+$n = $(pty_run $t $n "$status := ($(jobs | where {($id == 0)} | select status))[0].status")
+$t.write "echo $(\"BG_SIG_CHECK_{}\".format $status)\n"
+$t.wait_for "BG_SIG_CHECK_Terminated"
 
-$t:close
+$t.close

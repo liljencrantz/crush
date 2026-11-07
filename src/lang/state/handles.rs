@@ -69,7 +69,7 @@ impl JobHandle {
     /// Closes the registration race between `ThreadStore::spawn`'s generic controller
     /// (registered on the *calling* thread before the worker thread is even created,
     /// so inherently race-free) and the second, real controller several builtins
-    /// (`cmd`, `sleep`, `fs:watch`, `schedule`, `remote:pexec`, and
+    /// (`cmd`, `sleep`, `$fs.watch`, `schedule`, `$remote.pexec`, and
     /// `CommandContext::initialize_output`, used by every stream-source builtin)
     /// register from *inside* that worker thread, once the OS actually schedules it --
     /// which can be arbitrarily later. Before this, a `terminate`/`pause` landing in
@@ -177,7 +177,7 @@ impl JobHandle {
     /// happens to observe their real result. Checking this flag directly (rather than
     /// relying on a join's return value to infer "was this terminated") sidesteps two
     /// independent races that can otherwise silently discard a terminated statement's
-    /// real `Err` result, confirmed directly via `{sleep $(duration:of seconds=100);
+    /// real `Err` result, confirmed directly via `{sleep $($duration.of seconds=100);
     /// echo SHOULD_NOT_APPEAR} &` followed by `terminate` on the whole block -- see
     /// `tests/terminate_mid_closure_statement_stops_next_statement.crush`:
     ///
@@ -579,8 +579,8 @@ mod tests {
 
     // Regression test for the registration race this plan's job-control audit found:
     // `ThreadStore::spawn` registers a generic controller for a command *before*
-    // spawning its worker thread, but commands like `cmd`/`sleep`/`fs:watch`/
-    // `schedule`/`remote:pexec` (and `CommandContext::initialize_output`, used by every
+    // spawning its worker thread, but commands like `cmd`/`sleep`/`$fs.watch`/
+    // `schedule`/`$remote.pexec` (and `CommandContext::initialize_output`, used by every
     // stream-source builtin) each register their own *second*, real controller only
     // once their already-spawned worker thread actually starts running -- which can be
     // arbitrarily later, purely depending on OS thread scheduling. A `terminate` sent

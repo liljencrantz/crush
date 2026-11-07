@@ -8,17 +8,17 @@
 #
 #   crush generate_docs.crush > docs/builtins.html
 
-$colon_re := $(re:new ":")
-$backtick_re := $(re:new "`")
+$dot_re := $($re.new "\\.")
+$backtick_re := $($re.new "`")
 
-# global:foo:bar -> foo:bar. Every real full_path this script produces starts
-# with "global:" (see $scope_path below), but nobody ever types that prefix
+# $global.foo.bar -> $foo.bar. Every real full_path this script produces starts
+# with "global." (see $scope_path below), but nobody ever types that prefix
 # at the prompt -- it's an artifact of $global itself having the name
 # "global", not something a caller writes.
 $display_path := {
     |$p|
-    if ($p:starts_with("global:")) {
-        $p:substr from=7
+    if ($p.starts_with("global.")) {
+        $p.substr from=7
     } else {
         $p
     }
@@ -27,7 +27,7 @@ $display_path := {
 # A namespace path (colon-separated) turned into a safe HTML id/anchor.
 $slugify := {
     |$p|
-    $colon_re:replace_all $(display_path $p) "-"
+    $dot_re.replace_all $(display_path $p) "-"
 }
 
 # The one-line description of any Help-implementing value (a command or a
@@ -40,58 +40,58 @@ $slugify := {
 $short_of := {
     |$val|
     $full := $(help $val format=markdown)
-    $bits := $($full:split "\n\n")
-    $backtick_re:replace_all $($bits[1]) ""
+    $bits := $($full.split "\n\n")
+    $backtick_re.replace_all $($bits[1]) ""
 }
 
 $scope_path := {
     |$s|
     if ($s == $global) {
-        $s:__name__
+        $s.__name__
     } else {
-        "{}:{}":format $(scope_path $($s:__super__)) $($s:__name__)
+        "{}.{}".format $(scope_path $($s.__super__)) $($s.__name__)
     }
 }
 
-$errors := $($(list $string):new)
-$seen := $($(dict $string $bool):new)
+$errors := $($(list $string).new)
+$seen := $($(dict $string $bool).new)
 
 # path -> help($s, format=html), with the auto-generated "This scope contains
 # the following elements" listing cut off the end -- this script builds its
 # own linked index instead (see $render_ns), so keeping both would just show
 # the same member list twice, once as plain text and once as real links.
-$ns_prose := $($(dict $string $string):new)
+$ns_prose := $($(dict $string $string).new)
 # path -> sorted list of full paths of the commands declared directly in
 # that namespace (not recursively).
-$ns_commands := $($(dict $string $(list $string)):new)
+$ns_commands := $($(dict $string $(list $string)).new)
 # path -> sorted list of full paths of the namespaces nested directly inside
 # that namespace (not recursively).
-$ns_children := $($(dict $string $(list $string)):new)
+$ns_children := $($(dict $string $(list $string)).new)
 # full command path -> help($cmd, format=html), unmodified.
-$cmd_doc := $($(dict $string $string):new)
+$cmd_doc := $($(dict $string $string).new)
 # path -> sorted list of full paths of the types declared directly in that
-# namespace (not recursively) -- e.g. types:float, types:one_of. A type's
+# namespace (not recursively) -- e.g. $types.float, $types.one_of. A type's
 # own help (signature, description, member list) is exactly as
 # documentable as a command's, and just as often referenced by name in an
-# argument type (math:acos's signature literally reads
+# argument type ($math.acos's signature literally reads
 # "number=$(one_of $float $integer)"), so it gets the same treatment: its
 # own little page and an anchor, not just a crawl of namespaces/commands.
-$ns_types := $($(dict $string $(list $string)):new)
+$ns_types := $($(dict $string $(list $string)).new)
 # full type path -> help($type, format=html), unmodified.
-$type_doc := $($(dict $string $string):new)
+$type_doc := $($(dict $string $string).new)
 # full type path -> sorted list of full paths of that type's own methods
-# (types:float:is_nan, types:list:len, ...) -- these are documented the
+# ($types.float.is_nan, $types.list.len, ...) -- these are documented the
 # same as any other command (and land in $cmd_doc alongside them), this
 # just tracks which ones belong to which type for $render_type's index.
-$type_methods := $($(dict $string $(list $string)):new)
+$type_methods := $($(dict $string $(list $string)).new)
 # Every command and namespace, flattened, for the client-side search index.
-$search_items := $($(list $struct):new)
+$search_items := $($(list $struct).new)
 # bare (unqualified) name -> full command path, for every command that's
 # also reachable without its namespace prefix -- e.g. "help" for
-# control:help, since control is use'd by default and plenty of examples
+# $control.help, since control is use'd by default and plenty of examples
 # write the bare form. See the bare-alias detection below for how this is
 # populated and why identity can't just be checked with ==.
-$bare_aliases := $($(dict $string $string):new)
+$bare_aliases := $($(dict $string $string).new)
 
 $prose_marker := "<p>This scope contains the following elements:</p>"
 
@@ -101,27 +101,27 @@ $prose_marker := "<p>This scope contains the following elements:</p>"
 # demand. Crawling them would introspect everything on both busses, and the
 # result would document whatever happens to run on the machine generating the
 # docs rather than crush itself.
-$skip_scopes := $($(dict $string $bool):new)
-$skip_scopes["global:dbus:system"] = $true
-$skip_scopes["global:dbus:session"] = $true
+$skip_scopes := $($(dict $string $bool).new)
+$skip_scopes["global.dbus.system"] = $true
+$skip_scopes["global.dbus.session"] = $true
 
-# Wrapped in try/catch per member: a few builtins (e.g. crush:env:list,
-# users:list) touch real OS/environment state and can fail to even look up
+# Wrapped in try/catch per member: a few builtins (e.g. $crush.env.list,
+# $users.list) touch real OS/environment state and can fail to even look up
 # in this context -- one bad member should not abort documenting everything
 # else.
 $crawl := {
     |$s|
     $path := $(scope_path $s)
-    if ($seen:contains($path)) {
+    if ($seen.contains($path)) {
         return
     }
     $seen[$path] = $true
 
     try {
         $full_prose := $(help $s format=html)
-        $ns_prose[$path] = $($($full_prose:split $prose_marker)[0])
+        $ns_prose[$path] = $($($full_prose.split $prose_marker)[0])
     } catch {|$e|
-        $errors:push $("{} (namespace help failed)":format $path)
+        $errors.push $("{} (namespace help failed)".format $path)
     }
     # $global itself is never rendered as its own section (its direct
     # children are the top-level sections), so it has no anchor to link to
@@ -130,22 +130,22 @@ $crawl := {
     # one is exactly what the search box is for.
     if ($s != $global) {
         try {
-            $search_items:push $(struct:of \
+            $search_items.push $($struct.of \
                 path=$(display_path $path) \
                 anchor=$(slugify $path) \
                 short=$(short_of $s) \
                 kind="namespace")
         } catch {|$e|
-            $errors:push $("{} (namespace search entry failed)":format $path)
+            $errors.push $("{} (namespace search entry failed)".format $path)
         }
     }
 
-    $my_commands := $($(list $string):new)
-    $my_children := $($(list $string):new)
-    $my_types := $($(list $string):new)
+    $my_commands := $($(list $string).new)
+    $my_children := $($(list $string).new)
+    $my_types := $($(list $string).new)
 
     for name=$(dir $s) {
-        if ($name:starts_with("__")) {
+        if ($name.starts_with("__")) {
         } else {
             try {
                 $val := $($s[$name])
@@ -158,19 +158,19 @@ $crawl := {
                     # no seen-set of its own, rendering "constants" would
                     # recurse into "global", which recurses into
                     # "constants", forever.
-                    if (($val != $global) and ($($skip_scopes:contains $("{}:{}":format $path $name)) == $false)) {
+                    if (($val != $global) and ($($skip_scopes.contains $("{}.{}".format $path $name)) == $false)) {
                         crawl $val
-                        $my_children:push $(scope_path $val)
+                        $my_children.push $(scope_path $val)
                         # Sub-namespaces of a use'd namespace are bare-
                         # reachable too, e.g. "json" resolves directly
                         # since io is use'd by default -- which is also
-                        # why a partial path like json:to works without
+                        # why a partial path like $json.to works without
                         # the "io:" prefix. Unlike commands, two Scope
                         # values CAN be compared directly and reliably
                         # with ==, so there's no need for the help-text
                         # workaround used for commands below.
                         try {
-                            $bare_val := $(var:get $name)
+                            $bare_val := $($var.get $name)
                             # A top-level namespace (dns, io, math, ...) is
                             # ALWAYS trivially "bare" too, e.g. $io always
                             # resolves -- not because anything's use'd, but
@@ -188,12 +188,12 @@ $crawl := {
                     }
                 } else {
                     if ($t == $command) {
-                        $full_name := $("{}:{}":format $path $name)
+                        $full_name := $("{}.{}".format $path $name)
                         try {
                             $doc := $(help $val format=html)
                             $cmd_doc[$full_name] = $doc
-                            $my_commands:push $full_name
-                            $search_items:push $(struct:of \
+                            $my_commands.push $full_name
+                            $search_items.push $($struct.of \
                                 path=$(display_path $full_name) \
                                 anchor=$(slugify $full_name) \
                                 short=$(short_of $val) \
@@ -210,40 +210,40 @@ $crawl := {
                             # identical full help text (signature, every
                             # example, everything) isn't realistic.
                             try {
-                                $bare_val := $(var:get $name)
+                                $bare_val := $($var.get $name)
                                 if ($($(help $bare_val format=html)) == $doc) {
                                     $bare_aliases[$name] = $full_name
                                 }
                             } catch {|$e| }
                         } catch {|$e|
-                            $errors:push $("{} (help failed)":format $full_name)
+                            $errors.push $("{} (help failed)".format $full_name)
                         }
                     } else {
                         if ($t == $type) {
-                            $full_name := $("{}:{}":format $path $name)
+                            $full_name := $("{}.{}".format $path $name)
                             try {
                                 $doc := $(help $val format=html)
                                 $type_doc[$full_name] = $doc
-                                $my_types:push $full_name
-                                $search_items:push $(struct:of \
+                                $my_types.push $full_name
+                                $search_items.push $($struct.of \
                                     path=$(display_path $full_name) \
                                     anchor=$(slugify $full_name) \
                                     short=$(short_of $val) \
                                     kind="type")
                                 # Base types are bare-reachable the same
                                 # way sub-namespaces are (float, not just
-                                # types:float) -- and unlike commands, Type
+                                # $types.float) -- and unlike commands, Type
                                 # values DO support a reliable ==, same as
                                 # Scope.
                                 try {
-                                    $bare_val := $(var:get $name)
+                                    $bare_val := $($var.get $name)
                                     if (($bare_val == $val) and ($name != $(display_path $full_name))) {
                                         $bare_aliases[$name] = $full_name
                                     }
                                 } catch {|$e| }
 
-                                # A type's own methods (float:is_nan,
-                                # list:len, ...) are exactly as
+                                # A type's own methods ($float.is_nan,
+                                # $list.len, ...) are exactly as
                                 # documentable as a namespace's commands --
                                 # there's no $val["name"] lookup for a type
                                 # the way there is for a scope ($val["is_nan"]
@@ -257,59 +257,59 @@ $crawl := {
                                 # existing command resolution pass
                                 # (bare/compound aliasing included) for
                                 # free -- list being bare-aliased to
-                                # types:list already makes list:len resolve
-                                # the same way json:to does.
-                                $my_methods := $($(list $string):new)
+                                # $types.list already makes $list.len resolve
+                                # the same way $json.to does.
+                                $my_methods := $($(list $string).new)
                                 try {
                                     for entry=$(dir $val) {
-                                        $method_full_name := $("{}:{}":format $full_name $entry)
+                                        $method_full_name := $("{}.{}".format $full_name $entry)
                                         try {
                                             $method_val := $($val | member $entry)
                                             $cmd_doc[$method_full_name] = $(help $method_val format=html)
-                                            $my_methods:push $method_full_name
-                                            $search_items:push $(struct:of \
+                                            $my_methods.push $method_full_name
+                                            $search_items.push $($struct.of \
                                                 path=$(display_path $method_full_name) \
                                                 anchor=$(slugify $method_full_name) \
                                                 short=$(short_of $method_val) \
                                                 kind="command")
                                         } catch {|$e|
-                                            $errors:push $("{} (method help failed)":format $method_full_name)
+                                            $errors.push $("{} (method help failed)".format $method_full_name)
                                         }
                                     }
                                 } catch {|$e|
-                                    $errors:push $("{} (dir failed)":format $full_name)
+                                    $errors.push $("{} (dir failed)".format $full_name)
                                 }
-                                $type_methods[$full_name] = $($my_methods | sort | list:collect value)
+                                $type_methods[$full_name] = $($my_methods | sort | $list.collect value)
                             } catch {|$e|
-                                $errors:push $("{} (type help failed)":format $full_name)
+                                $errors.push $("{} (type help failed)".format $full_name)
                             }
                         }
                     }
                 }
             } catch {|$e|
-                $errors:push $("{}:{} (lookup failed)":format $path $name)
+                $errors.push $("{}:{} (lookup failed)".format $path $name)
             }
         }
     }
 
-    $ns_commands[$path] = $($my_commands | sort | list:collect value)
-    $ns_children[$path] = $($my_children | sort | list:collect value)
-    $ns_types[$path] = $($my_types | sort | list:collect value)
+    $ns_commands[$path] = $($my_commands | sort | $list.collect value)
+    $ns_children[$path] = $($my_children | sort | $list.collect value)
+    $ns_types[$path] = $($my_types | sort | $list.collect value)
 }
 
 crawl $global
 
-$command_count := $($cmd_doc:len)
+$command_count := $($cmd_doc.len)
 # $ns_prose includes one entry for $global itself, which (per above) is
 # never rendered as its own section -- excluded here so the count matches
 # what's actually on the page.
-$namespace_count := (($ns_prose:len()) - 1)
-$error_count := $($errors:len)
+$namespace_count := (($ns_prose.len()) - 1)
+$error_count := $($errors.len)
 
-# json:to, like every codec's :to command, produces a binary_stream (bytes
+# $json.to, like every codec's :to command, produces a binary_stream (bytes
 # ready to write to disk or pipe onward) -- convert to a plain string since
 # that's what gets spliced into the page below.
-$search_json := $(convert $string $($search_items | json:to compact=$true))
+$search_json := $(convert $string $($search_items | $json.to compact=$true))
 
 # Renders one namespace section (its own prose, an index of its direct
 # Renders one type as its own mini-section, the same shape $render_ns
@@ -326,28 +326,28 @@ $render_type := {
     $dp := $(display_path $path)
     $slug := $(slugify $path)
     $level := $(if (($depth + 2) > 6) { 6 } else { ($depth + 2) })
-    $tag := $("h{}":format $level)
+    $tag := $("h{}".format $level)
 
     $methods := $type_methods[$path]
-    $prose := $($($type_doc[$path]:split "<ul>")[0])
+    $prose := $($($type_doc[$path].split "<ul>")[0])
 
-    $html := $("<section class=\"ns type-section\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
+    $html := $("<section class=\"ns type-section\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n".format \
         slug=$slug depth=$depth tag=$tag dp=$dp prose=$prose)
 
-    if (($methods:len()) > 0) {
-        $items := $($(list $string):new)
+    if (($methods.len()) > 0) {
+        $items := $($(list $string).new)
         for c=$methods {
-            $items:push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $c) $(display_path $c))
+            $items.push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>".format $(slugify $c) $(display_path $c))
         }
-        $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n":format $html $($items | fold {"{}{}":format $acc $value} initial=""))
+        $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n".format $html $($items | fold {"{}{}".format $acc $value} initial=""))
     }
 
     for c=$methods {
-        $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
+        $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n".format \
             $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($cmd_doc[$c]))
     }
 
-    $("{}</section>\n":format $html)
+    $("{}</section>\n".format $html)
 }
 
 # commands and child namespaces, each command's own doc block) and then,
@@ -359,42 +359,42 @@ $render_ns := {
     $dp := $(display_path $path)
     $slug := $(slugify $path)
     $level := $(if (($depth + 2) > 6) { 6 } else { ($depth + 2) })
-    $tag := $("h{}":format $level)
+    $tag := $("h{}".format $level)
 
     $commands := $ns_commands[$path]
     $children := $ns_children[$path]
     $types := $ns_types[$path]
 
-    $html := $("<section class=\"ns\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n":format \
+    $html := $("<section class=\"ns\" id=\"{slug}\" data-depth=\"{depth}\">\n<{tag} class=\"ns-title\"><code>{dp}</code></{tag}>\n<div class=\"ns-prose\">{prose}</div>\n".format \
         slug=$slug depth=$depth tag=$tag dp=$dp prose=$($ns_prose[$path]))
 
-    if ((($commands:len()) > 0) or (($children:len()) > 0) or (($types:len()) > 0)) {
-        $items := $($(list $string):new)
+    if ((($commands.len()) > 0) or (($children.len()) > 0) or (($types.len()) > 0)) {
+        $items := $($(list $string).new)
         for c=$children {
-            $items:push $("<li class=\"idx-ns\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">namespace</span></li>":format $(slugify $c) $(display_path $c))
+            $items.push $("<li class=\"idx-ns\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">namespace</span></li>".format $(slugify $c) $(display_path $c))
         }
         for c=$types {
-            $items:push $("<li class=\"idx-type\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">type</span></li>":format $(slugify $c) $(display_path $c))
+            $items.push $("<li class=\"idx-type\"><a href=\"#{}\"><code>{}</code></a> <span class=\"idx-tag\">type</span></li>".format $(slugify $c) $(display_path $c))
         }
         for c=$commands {
-            $items:push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $c) $(display_path $c))
+            $items.push $("<li class=\"idx-cmd\"><a href=\"#{}\"><code>{}</code></a></li>".format $(slugify $c) $(display_path $c))
         }
-        $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n":format $html $($items | fold {"{}{}":format $acc $value} initial=""))
+        $html = $("{}<nav class=\"ns-index\"><ul>{}</ul></nav>\n".format $html $($items | fold {"{}{}".format $acc $value} initial=""))
     }
 
     for c=$commands {
-        $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n":format \
+        $html = $("{}<article class=\"cmd\" id=\"{}\">\n<h{} class=\"cmd-title\"><code>{}</code></h{}>\n<div class=\"cmd-doc\">{}</div>\n</article>\n".format \
             $html $(slugify $c) ($level + 1) $(display_path $c) ($level + 1) $($cmd_doc[$c]))
     }
 
-    $html = $("{}</section>\n":format $html)
+    $html = $("{}</section>\n".format $html)
 
     for c=$types {
-        $html = $("{}{}":format $html $(render_type $c ($depth + 1)))
+        $html = $("{}{}".format $html $(render_type $c ($depth + 1)))
     }
 
     for c=$children {
-        $html = $("{}{}":format $html $(render_ns $c ($depth + 1)))
+        $html = $("{}{}".format $html $(render_ns $c ($depth + 1)))
     }
 
     $html
@@ -402,13 +402,13 @@ $render_ns := {
 
 $top_level := $ns_children["global"]
 
-$sidebar_items := $($(list $string):new)
+$sidebar_items := $($(list $string).new)
 for ns=$top_level {
-    $sidebar_items:push $("<li><a href=\"#{}\"><code>{}</code></a></li>":format $(slugify $ns) $(display_path $ns))
+    $sidebar_items.push $("<li><a href=\"#{}\"><code>{}</code></a></li>".format $(slugify $ns) $(display_path $ns))
 }
-$sidebar := $($sidebar_items | fold {"{}{}":format $acc $value} initial="")
+$sidebar := $($sidebar_items | fold {"{}{}".format $acc $value} initial="")
 
-$sections := $($top_level | fold {"{}{}":format $acc $(render_ns $value 0)} initial="")
+$sections := $($top_level | fold {"{}{}".format $acc $(render_ns $value 0)} initial="")
 
 # Rust's help(format=html) (see syntax_highlight_html's doc comment in
 # src/util/highlight.rs, and recurse_html's InlineCode arm in
@@ -420,7 +420,7 @@ $sections := $($top_level | fold {"{}{}":format $acc $(render_ns $value 0)} init
 # tree), so resolving a data-ref into a real link, or dropping it when
 # there's nothing to link to, happens here.
 #
-# re:replace_all only does literal/backreference substitution, not
+# $re.replace_all only does literal/backreference substitution, not
 # per-match conditional logic, so this needs three passes:
 #   1. for every path actually documented on this page, mark the data-ref
 #      that names it with the anchor it should link to. (These are real
@@ -432,86 +432,86 @@ $sections := $($top_level | fold {"{}{}":format $acc $(render_ns $value 0)} init
 #      example, or prose backtick text that was never a command to begin
 #      with -- has the now-meaningless attribute stripped.
 for entry=$ns_prose {
-    if ($entry:key != "global") {
-        # A data-ref never carries the "global:" prefix (nobody writes
-        # global:dns:query in an example or a `backtick` reference) --
+    if ($entry.key != "global") {
+        # A data-ref never carries the "global." prefix (nobody writes
+        # $global.dns.query in an example or a `backtick` reference) --
         # match against the same stripped form $slugify itself derives
         # its anchor from, not the raw dict key.
-        $dp := $(display_path $entry:key)
-        $slug := $(slugify $entry:key)
-        $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
-        $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+        $dp := $(display_path $entry.key)
+        $slug := $(slugify $entry.key)
+        $ref_re := $($re.new $("data-ref=\"{}\"".format $dp))
+        $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $dp $slug))
     }
 }
 for entry=$cmd_doc {
-    $dp := $(display_path $entry:key)
-    $slug := $(slugify $entry:key)
-    $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
-    $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+    $dp := $(display_path $entry.key)
+    $slug := $(slugify $entry.key)
+    $ref_re := $($re.new $("data-ref=\"{}\"".format $dp))
+    $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $dp $slug))
 }
 for entry=$type_doc {
-    $dp := $(display_path $entry:key)
-    $slug := $(slugify $entry:key)
-    $ref_re := $(re:new $("data-ref=\"{}\"":format $dp))
-    $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $dp $slug))
+    $dp := $(display_path $entry.key)
+    $slug := $(slugify $entry.key)
+    $ref_re := $($re.new $("data-ref=\"{}\"".format $dp))
+    $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $dp $slug))
 }
 # Same idea, for the bare aliases collected during the crawl (e.g. "help"
-# on its own, not just "control:help") -- a bare data-ref never collides
+# on its own, not just "$control.help") -- a bare data-ref never collides
 # with a qualified one, since the qualified pattern always has more text
 # between the quotes.
 for entry=$bare_aliases {
-    $slug := $(slugify $entry:value)
-    $ref_re := $(re:new $("data-ref=\"{}\"":format $entry:key))
-    $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $entry:key $slug))
+    $slug := $(slugify $entry.value)
+    $ref_re := $($re.new $("data-ref=\"{}\"".format $entry.key))
+    $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $entry.key $slug))
 }
 # A bare-reachable namespace also makes everything under it reachable via
-# a partial path -- json:to works without the "io:" prefix precisely
+# a partial path -- $json.to works without the "io:" prefix precisely
 # because json itself does (io being use'd by default). Every
 # $bare_aliases entry that names a namespace (one that names a command
 # has no descendants, so these inner loops just find nothing for it) gets
 # every one of its descendants registered under this same compound form.
 for alias=$bare_aliases {
-    $prefix := $("{}:":format $alias:value)
-    $prefix_len := $($prefix:len)
+    $prefix := $("{}:".format $alias.value)
+    $prefix_len := $($prefix.len)
     for entry=$cmd_doc {
-        if ($entry:key:starts_with($prefix)) {
-            $compound := $("{}:{}":format $alias:key $($entry:key:substr from=$prefix_len))
-            $slug := $(slugify $entry:key)
-            $ref_re := $(re:new $("data-ref=\"{}\"":format $compound))
-            $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $compound $slug))
+        if ($entry.key.starts_with($prefix)) {
+            $compound := $("{}.{}".format $alias.key $($entry.key.substr from=$prefix_len))
+            $slug := $(slugify $entry.key)
+            $ref_re := $($re.new $("data-ref=\"{}\"".format $compound))
+            $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $compound $slug))
         }
     }
     for entry=$ns_prose {
-        if (($entry:key != "global") and ($entry:key:starts_with($prefix))) {
-            $compound := $("{}:{}":format $alias:key $($entry:key:substr from=$prefix_len))
-            $slug := $(slugify $entry:key)
-            $ref_re := $(re:new $("data-ref=\"{}\"":format $compound))
-            $sections = $($ref_re:replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"":format $compound $slug))
+        if (($entry.key != "global") and ($entry.key.starts_with($prefix))) {
+            $compound := $("{}.{}".format $alias.key $($entry.key.substr from=$prefix_len))
+            $slug := $(slugify $entry.key)
+            $ref_re := $($re.new $("data-ref=\"{}\"".format $compound))
+            $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $compound $slug))
         }
     }
 }
 
-$code_link_re := $(re:new "<code data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</code>")
-$sections = $($code_link_re:replace_all $sections "<a href=\"#$1\"><code>$2</code></a>")
+$code_link_re := $($re.new "<code data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</code>")
+$sections = $($code_link_re.replace_all $sections "<a href=\"#$1\"><code>$2</code></a>")
 
-$command_link_re := $(re:new "<span class=\"tok-command\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
-$sections = $($command_link_re:replace_all $sections "<a href=\"#$1\"><span class=\"tok-command\">$2</span></a>")
+$command_link_re := $($re.new "<span class=\"tok-command\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
+$sections = $($command_link_re.replace_all $sections "<a href=\"#$1\"><span class=\"tok-command\">$2</span></a>")
 
 # A bare $float/$one_of reference in an example or a signature line (see
 # syntax_highlight_html's identifier arm in src/util/highlight.rs) --
 # same idea as tok-command, just for a type being referenced rather than
 # invoked.
-$identifier_link_re := $(re:new "<span class=\"tok-identifier\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
-$sections = $($identifier_link_re:replace_all $sections "<a href=\"#$1\"><span class=\"tok-identifier\">$2</span></a>")
+$identifier_link_re := $($re.new "<span class=\"tok-identifier\" data-ref=\"[^\"]*\" data-link=\"([^\"]*)\">([^<]*)</span>")
+$sections = $($identifier_link_re.replace_all $sections "<a href=\"#$1\"><span class=\"tok-identifier\">$2</span></a>")
 
-$stray_code_ref_re := $(re:new "<code data-ref=\"[^\"]*\">")
-$sections = $($stray_code_ref_re:replace_all $sections "<code>")
+$stray_code_ref_re := $($re.new "<code data-ref=\"[^\"]*\">")
+$sections = $($stray_code_ref_re.replace_all $sections "<code>")
 
-$stray_command_ref_re := $(re:new "<span class=\"tok-command\" data-ref=\"[^\"]*\">")
-$sections = $($stray_command_ref_re:replace_all $sections "<span class=\"tok-command\">")
+$stray_command_ref_re := $($re.new "<span class=\"tok-command\" data-ref=\"[^\"]*\">")
+$sections = $($stray_command_ref_re.replace_all $sections "<span class=\"tok-command\">")
 
-$stray_identifier_ref_re := $(re:new "<span class=\"tok-identifier\" data-ref=\"[^\"]*\">")
-$sections = $($stray_identifier_ref_re:replace_all $sections "<span class=\"tok-identifier\">")
+$stray_identifier_ref_re := $($re.new "<span class=\"tok-identifier\" data-ref=\"[^\"]*\">")
+$sections = $($stray_identifier_ref_re.replace_all $sections "<span class=\"tok-identifier\">")
 
 # The CSS and JS below are plain text, never passed through :format
 # themselves -- they're full of literal `{`/`}` (every CSS rule, every JS
@@ -590,7 +590,7 @@ pre code { background: none; padding: 0; }
 .tok-operator { color: var(--ink-soft); }
 .tok-error { color: var(--tok-error); text-decoration: underline wavy; }
 a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+$a.hover { text-decoration: underline; }
 
 header.top {
   position: sticky;
@@ -625,7 +625,7 @@ header.top .count {
   background: var(--bg-raised);
   color: var(--ink);
 }
-#search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#search-$input.focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 #search-results {
   position: absolute;
   top: calc(100% + 6px);
@@ -648,7 +648,7 @@ header.top .count {
   color: var(--ink);
   border-bottom: 1px solid var(--line);
 }
-#search-results li:last-child a { border-bottom: none; }
+#search-results $li.last-child a { border-bottom: none; }
 #search-results a code { color: var(--accent); background: none; padding: 0; }
 #search-results a .r-short {
   display: block;
@@ -680,7 +680,7 @@ nav.sidebar {
 nav.sidebar ul { list-style: none; margin: 0; padding: 0; }
 nav.sidebar li { margin-bottom: 4px; }
 nav.sidebar a { display: block; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem; }
-nav.sidebar a:hover { background: var(--mono-bg); text-decoration: none; }
+nav.sidebar $a.hover { background: var(--mono-bg); text-decoration: none; }
 
 main { flex: 1; min-width: 0; padding: 8px 24px 96px; max-width: 900px; }
 
@@ -698,7 +698,7 @@ section.ns[data-depth] { margin-left: calc(var(--depth, 0) * 0px); }
 section.type-section { border-left: 3px solid var(--accent); }
 .ns-title { margin: 0 0 10px; }
 .ns-title code { font-size: 1em; background: none; padding: 0; color: inherit; }
-.ns-prose p:first-child { margin-top: 0; }
+.ns-prose $p.first-child { margin-top: 0; }
 .ns-prose h1 {
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var p = item.path.toLowerCase();
     if (p === q) return 0;
     if (p.indexOf(q) === 0) return 1;
-    var lastSeg = p.split(':').pop();
+    var lastSeg = p.split('.').pop();
     if (lastSeg.indexOf(q) === 0) return 2;
     if (p.indexOf(q) !== -1) return 3;
     if (item.short.toLowerCase().indexOf(q) !== -1) return 4;
@@ -874,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>"
 
-$style_and_script := $("{}{}{}":format $style_css $search_json $script_js)
+$style_and_script := $("{}{}{}".format $style_css $search_json $script_js)
 
 $doc := $("<!doctype html>
 <html lang=\"en\">
@@ -903,7 +903,7 @@ $doc := $("<!doctype html>
 Auto-generated by <code>generate_docs.crush</code> by introspecting the running binary's own namespace. {error_count} members skipped.
 </footer>
 </body>
-</html>":format \
+</html>".format \
     style_and_script=$style_and_script \
     command_count=$command_count \
     namespace_count=$namespace_count \

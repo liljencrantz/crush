@@ -1,14 +1,14 @@
 # `cat` has no prompt of its own to `wait_for`, so "did Ctrl-D actually end it" is checked
-# by polling `:alive` directly in a loop (with a hard iteration cap so a real bug makes the
+# by polling `.alive` directly in a loop (with a hard iteration cap so a real bug makes the
 # test fail promptly instead of hanging) rather than waiting for any particular screen text.
-$t := $(pty:create cat)
-assert ($t:alive())
-assert (($t:pid()) > 0)
-$t:write $pty:control:d
+$t := $($pty.create cat)
+assert ($t.alive())
+assert (($t.pid()) > 0)
+$t.write $pty.control.d
 $tries := 0
-while {($tries < 50 and $t:alive())} {
+while {($tries < 50 and $t.alive())} {
     sleep 100ms
     $tries = ($tries + 1)
 }
-assert (not ($t:alive()))
-$t:close
+assert (not ($t.alive()))
+$t.close
