@@ -22,9 +22,9 @@ use crate::util::interruptible_sleep::interruptible_sleep;
     long = "",
     long = "If a command fails, the timer will stop.",
     example = "# Show one row of the pipeline output every second",
-    example = "files / --recurse | schedule $(duration:of seconds=1)", 
+    example = "files / --recurse | schedule 1s",
     example = "# Wait for a second and then print hello once",
-    example = "schedule $(duration:of seconds=1) command={ echo hello } --once",
+    example = "schedule 1s command={ echo hello } --once",
 )]
 pub struct Schedule {
     #[description("the interval between heartbeats. ")]

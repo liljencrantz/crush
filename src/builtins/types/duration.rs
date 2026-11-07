@@ -97,8 +97,8 @@ binary_op!(div, duration, Integer, Duration, |a, b| a / (b as i32));
     can_block = false,
     output = Known(ValueType::Duration),
     short = "Create a new duration.",
-    long = "Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding for example exactly one day to a `time` value will not always do what you might think, if a leap second or a daylight savings time changeover happened in the interim.",
-    example = "duration:of minutes=1",
+    long = "Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding for example exactly one day to a `time` value will not always do what you might think, if a leap second or a daylight savings time changeover happened in the interim. The most common way to create a duration is to use a duration literal, such as `1s` for 1 second or `5m` for five minutes. But the `$duration:of` command offers more flexibility.",
+    example = "duration:of minutes=1 seconds=10",
 )]
 struct Of {
     #[description("the number of nanoseconds in the duration.")]

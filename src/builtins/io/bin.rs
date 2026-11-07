@@ -54,6 +54,11 @@ pub fn to(mut context: CommandContext) -> CrushResult<()> {
             std::io::copy(input.as_mut(), out.as_mut())?;
             Ok(())
         }
+        Value::Binary(input) => {
+            let mut out = files::writer(cfg.file, context.output, &command_handle)?;
+            out.write(&input)?;
+            Ok(())
+        }
         v => command_error(format!(
             "Expected input to be a `binary_stream`, got a value of type `{}`.",
             v.value_type()
@@ -74,3 +79,4 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     )?;
     Ok(())
 }
+

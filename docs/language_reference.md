@@ -64,7 +64,24 @@ Argument mapping works as follows:
 
 A command can also declare that stray named or stray unnamed arguments (the ones left
 over after normal assignment) should be collected into a dict or list instead of being
-rejected -- see [`@`/`@@`](#the--and--operators) below.
+rejected -- see [`@`/`@@`](#the--and--operators) below. IF there are stray arguments no
+stray argument collector is configured for a given job, this is an argument error and
+the command will exit with an error.
+
+### Argument types
+
+Argument declarations generally have a type. If you pass in a value of the wrong type,
+the command will not run, and will instead exit with an error.
+
+Example:
+
+The `cd` builtin command changes the current working directory of the crush process 
+to the specified directory. The signature of the `cd` builtin is:
+
+    fs:cd destination=one_of $string $file $glob $re
+
+This signature means that the only argument`cd` acceots is `destination`, and the type of
+`destination` must be one of four different types: `string`, `file`, `glob` and `re`.
 
 Boolean arguments are very common, so Crush has a shorthand for them: Adding one or
 two leading dashes to an argument name sets that boolean argument to true. So the
@@ -1275,7 +1292,7 @@ immediately, and the job's eventual result is registered for later retrieval ins
 being waited for.
 
 ```shell script
-$job_id := $(sleep $(duration:of seconds=2) &)
+$job_id := $(sleep 2s &)
 # ... do other work while it runs ...
 fg $job_id
 ```
@@ -1338,13 +1355,12 @@ number that some unrelated later job might happen to be given next.
 
 ### Suspending, resuming, and canceling jobs interactively
 
-At an interactive prompt, `Ctrl-Z` pauses whatever job is currently running -- the
-command you just typed, or whichever of its nested jobs is currently doing the work --
-and immediately hands control back to the prompt, whether or not that job happened to be
-started with a trailing `&`:
+At an interactive prompt, `Ctrl-Z` pauses whatever job is currently running, the
+command you just typed, or whichever of its nested jobs is currently doing the work. 
+and immediately hands control back to the prompt:
 
 ```shell script
-crush# sleep $(duration:of seconds=30)
+crush# sleep 30s
 ^Z
 crush#
 ```
@@ -1358,19 +1374,20 @@ crush# fg
 ```
 
 `fg` given an explicit job id -- as printed by `jobs`, or captured as a `$(... &)`
-substitution's return value -- resumes that specific job instead, regardless of how
-recently it was backgrounded or paused:
+substitution's return value, puts that job in the foreground. If the job was paused,
+it is unpaused. If it was previously running in the background, it is simply connected
+to the terminal.
 
 ```shell script
-crush# $job_id := $(sleep $(duration:of seconds=30) &)
+crush# $job_id := $(sleep 30s &)
 crush# fg $job_id
 ```
 
 `Ctrl-C` cancels the job currently running at the prompt outright, rather than pausing
-it -- the interactive equivalent of calling `terminate` on it:
+it, the interactive equivalent of calling `terminate` on it:
 
 ```shell script
-crush# sleep $(duration:of seconds=30)
+crush# sleep 30s
 ^C
 crush#
 ```
@@ -1396,5 +1413,4 @@ outright. `crush:warn:list` lists the most recent entries; `crush:warn:limit:get
 interactive mode, a warning is also printed immediately as it happens; in a script, the
 only way to notice one happened is to check `crush:warn:list` (or, for commands that
 report per-item this way, to compare how much output you got against how much you
-expected -- see e.g. `remote:pexec`'s own documentation).
-
+expected. See e.g. `remote:pexec`'s own documentation).

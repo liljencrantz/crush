@@ -157,7 +157,7 @@ impl BinaryReader for PipeReader {
     can_block = true,
     output = Known(ValueType::Empty),
     short = "Pause execution of commands for the specified amount of time",
-    example = "sleep $(duration:of seconds=10)",
+    example = "sleep 10s",
 )]
 struct Sleep {
     #[description("the time to sleep for.")]
@@ -195,7 +195,7 @@ fn sleep(mut context: CommandContext) -> CrushResult<()> {
     long = "that never cooperates and never finishes on its own (an infinite loop, for",
     long = "example) will keep the script -- or the whole interactive session -- from",
     long = "exiting cleanly, even though `timeout` itself already returned its error.",
-    example = "timeout $(duration:of seconds=5) {sleep $(duration:of seconds=30)}",
+    example = "timeout 5s {sleep 30s}",
 )]
 struct Timeout {
     #[description("how long to let the command run before terminating it.")]
