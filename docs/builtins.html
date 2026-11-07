@@ -984,9 +984,9 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 <ul>
 <li><p>If a command is specified, timer will run the command at the specified cadence.</p>
 </li>
-<li><p>If timer is used inside a pipeline, it will read one row of input at the specified cadence and write it out again.</p>
+<li><p>If timer is used inside a pipeline, it will read one row of input at the specified cadence and write it out again. This allows you to set the pace of the output of another command.</p>
 </li>
-<li><p>Otherwise, timer will simply write an empty row at the specified cadence.</p>
+<li><p>Otherwise, timer will simply write an empty row at the specified cadence. This empty row can then act as a heartbeat, allowing a downstream command to get woken up at the right interval.</p>
 </li>
 </ul>
 <p>If a command fails, the timer will stop.</p>
@@ -1006,9 +1006,9 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 </ul>
 <h1>Examples</h1>
 <pre><code><span class="tok-comment"># Show one row of the pipeline output every second</span>
-<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-file_literal">/</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <a href="#control-schedule"><span class="tok-command">schedule</span></a> <span class="tok-operator">$(</span><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span><span class="tok-operator">)</span>
+<a href="#fs-files"><span class="tok-command">files</span></a> <span class="tok-file_literal">/</span> <span class="tok-named_argument">--recurse</span> <span class="tok-operator">|</span> <a href="#control-schedule"><span class="tok-command">schedule</span></a> <span class="tok-numeric_literal">1s</span>
 <span class="tok-comment"># Wait for a second and then print hello once</span>
-<a href="#control-schedule"><span class="tok-command">schedule</span></a> <span class="tok-operator">$(</span><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span><span class="tok-operator">)</span> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-operator">{</span> <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">hello</span> <span class="tok-operator">}</span> <span class="tok-named_argument">--once</span></code></pre>
+<a href="#control-schedule"><span class="tok-command">schedule</span></a> <span class="tok-numeric_literal">1s</span> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-operator">{</span> <a href="#io-echo"><span class="tok-command">echo</span></a> <span class="tok-string_literal">hello</span> <span class="tok-operator">}</span> <span class="tok-named_argument">--once</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-sleep">
@@ -1022,7 +1022,7 @@ skipped. If nothing matches, <a href="#control-match"><code>match</code></a> err
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-operator">$(</span><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span><span class="tok-operator">)</span></code></pre>
+<pre><code><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-numeric_literal">10s</span></code></pre>
 <h2>Output signature</h2>
 <pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
@@ -1141,7 +1141,7 @@ exiting cleanly, even though <a href="#control-timeout"><code>timeout</code></a>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#control-timeout"><span class="tok-command">timeout</span></a> <span class="tok-operator">$(</span><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">5</span><span class="tok-operator">)</span> <span class="tok-operator">{</span><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-operator">$(</span><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">30</span><span class="tok-operator">)</span><span class="tok-operator">}</span></code></pre>
+<pre><code><a href="#control-timeout"><span class="tok-command">timeout</span></a> <span class="tok-numeric_literal">5s</span> <span class="tok-operator">{</span><a href="#control-sleep"><span class="tok-command">sleep</span></a> <span class="tok-numeric_literal">30s</span><span class="tok-operator">}</span></code></pre>
 </div>
 </article>
 <article class="cmd" id="control-timer">
@@ -4318,7 +4318,7 @@ to or subtracted from a <a href="#types-time"><code>time</code></a> instance.</p
 <h4 class="cmd-title"><code>types:duration:of</code></h4>
 <div class="cmd-doc"><pre><code><a href="#types-duration-of"><span class="tok-command">types:duration:of</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">nanoseconds</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">microseconds</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">milliseconds</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">minutes</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">hours</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-string_literal">days</span><span class="tok-operator">=</span><span class="tok-string_literal">integer</span><span class="tok-operator">]</span></code></pre>
 <p>Create a new duration.</p>
-<p>Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding for example exactly one day to a <a href="#types-time"><code>time</code></a> value will not always do what you might think, if a leap second or a daylight savings time changeover happened in the interim.</p>
+<p>Durations are stored as a time span in number of seconds. Because of leap seconds and daylight saving time, adding for example exactly one day to a <a href="#types-time"><code>time</code></a> value will not always do what you might think, if a leap second or a daylight savings time changeover happened in the interim. The most common way to create a duration is to use a duration literal, such as <code>1s</code> for 1 second or <code>5m</code> for five minutes. But the <code>$duration:of</code> command offers more flexibility.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
 <ul>
@@ -4338,7 +4338,7 @@ to or subtracted from a <a href="#types-time"><code>time</code></a> instance.</p
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">minutes</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span></code></pre>
+<pre><code><a href="#types-duration-of"><span class="tok-command">duration:of</span></a> <span class="tok-string_literal">minutes</span><span class="tok-operator">=</span><span class="tok-numeric_literal">1</span> <span class="tok-string_literal">seconds</span><span class="tok-operator">=</span><span class="tok-numeric_literal">10</span></code></pre>
 <h2>Output signature</h2>
 <pre><code><a href="#types-duration"><span class="tok-command">duration</span></a></code></pre>
 </div>
