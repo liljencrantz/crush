@@ -1,9 +1,11 @@
+use crate::lang::argument::ValidationArgument;
+use crate::lang::command::{OutputType, PipeInputType};
 use crate::lang::data::binary::{BinaryWriter, binary_channel};
 use crate::lang::errors::{CrushError, CrushResult, command_error};
 use crate::lang::job_control::ChannelBasedController;
 use crate::lang::pipe::ValueSender;
 use crate::lang::state::handles::CommandHandle;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use crate::util::file::cwd;
 use crate::util::glob::Glob;
 use crate::util::regex::RegexFileMatcher;
@@ -116,6 +118,35 @@ pub fn writer(
     }
 }
 
+/// Computes the real output type of any `*:to` command built on `writer` above: whether
+/// a `file` argument was given at all decides it, matching `writer`'s own behavior
+/// exactly -- given a destination file, it writes there and sends `Empty`; given none,
+/// it sends back a `binary_stream` instead. The argument's own value never matters here,
+/// only whether one was supplied, so this works even when that value itself isn't
+/// resolved to anything yet. `file` must be each such command's first declared field (as
+/// it is for every one of them today) for this to find it correctly by position when
+/// it's given unnamed; a later, unrelated field that can also be given positionally
+/// (e.g. `json:to`'s `compact`) is never mistaken for it.
+pub fn writer_dynamic_output(
+    _input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let mut seen_positional = false;
+    let file_given = arguments.iter().any(|arg| match &arg.argument_type {
+        Some(name) => name == "file",
+        None => {
+            let first = !seen_positional;
+            seen_positional = true;
+            first
+        }
+    });
+    Ok(OutputType::Known(if file_given {
+        ValueType::Empty
+    } else {
+        ValueType::BinaryInputStream
+    }))
+}
+
 pub fn path(files: Option<Files>, fallback: impl Into<PathBuf>) -> CrushResult<PathBuf> {
     match files {
         None => Ok(fallback.into()),
@@ -130,5 +161,71 @@ pub fn path(files: Option<Files>, fallback: impl Into<PathBuf>) -> CrushResult<P
                 )),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::{ArgumentValue, SwitchStyle};
+    use crate::lang::ast::source::{Source, SourceType};
+    use std::sync::Arc;
+
+    fn unnamed_arg(value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: None,
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn named_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    #[test]
+    fn no_file_argument_is_binary_input_stream() {
+        let out = writer_dynamic_output(PipeInputType::None, &[]).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::BinaryInputStream)));
+    }
+
+    #[test]
+    fn an_unnamed_file_argument_is_empty() {
+        let args = [unnamed_arg(ArgumentValue::Value(Value::from("out.bin")))];
+        let out = writer_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Empty)));
+    }
+
+    #[test]
+    fn a_named_file_argument_is_empty() {
+        let args = [named_arg("file", ArgumentValue::Value(Value::from("out.bin")))];
+        let out = writer_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Empty)));
+    }
+
+    #[test]
+    fn an_unresolved_file_argument_is_still_empty() {
+        let args = [unnamed_arg(ArgumentValue::Unknown)];
+        let out = writer_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Empty)));
+    }
+
+    /// A second, unrelated unnamed argument (like json:to's `compact`, given
+    /// positionally) must never cause this to look past it and reconsider -- only the
+    /// *first* unnamed argument is ever treated as `file`.
+    #[test]
+    fn a_second_unnamed_argument_does_not_change_the_result() {
+        let args = [
+            unnamed_arg(ArgumentValue::Value(Value::from("out.bin"))),
+            unnamed_arg(ArgumentValue::Value(Value::Bool(true))),
+        ];
+        let out = writer_dynamic_output(PipeInputType::None, &args).unwrap();
+        assert!(matches!(out, OutputType::Known(ValueType::Empty)));
     }
 }

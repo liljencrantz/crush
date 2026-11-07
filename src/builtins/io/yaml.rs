@@ -157,6 +157,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     io.yaml.to,
     can_block = true,
     output = Unknown,
+    dynamic_output = files::writer_dynamic_output,
     short = "Serialize to yaml format",
     long = "When serializing a list, some types have to be squashed, because yaml does not have all the same types that Crush does:",
     long = "* `time` values are turned into strings in the RFC 3339 format.",

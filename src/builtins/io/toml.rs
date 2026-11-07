@@ -167,6 +167,7 @@ fn to_toml(value: Value) -> CrushResult<toml::Value> {
     io.toml.to,
     can_block = true,
     output = Unknown,
+    dynamic_output = files::writer_dynamic_output,
     short = "Serialize to toml format",
     long = "If no file is specified, output is returned as a BinaryStream. The following Crush types are supported: File, string, integer, float, bool, list, table, table_input_stream, struct, time, duration, binary and binary_stream.",
     long = "",

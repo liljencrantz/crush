@@ -2,6 +2,7 @@ use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, data_error};
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::signature::binary_input::ToReader;
+use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
@@ -65,6 +66,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.lines.to,
     can_block = true,
+    dynamic_output = files::writer_dynamic_output,
     short = "Write specified stream of strings to a file (or convert to BinaryStream) separated by newlines"
 )]
 struct To {
@@ -113,3 +115,4 @@ pub fn declare(root: &mut ScopeLoader) -> CrushResult<()> {
     )?;
     Ok(())
 }
+

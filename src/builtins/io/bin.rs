@@ -33,6 +33,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     io.bin.to,
     can_block = true,
+    dynamic_output = files::writer_dynamic_output,
     short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines"
 )]
 struct To {
