@@ -16,11 +16,11 @@ use signature::signature;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
-fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
+fn from_yaml(yaml_value: &serde_yaml_ng::Value) -> CrushResult<Value> {
     match yaml_value {
-        serde_yaml::Value::Null => Ok(Value::Empty),
-        serde_yaml::Value::Bool(b) => Ok(Value::Bool(*b)),
-        serde_yaml::Value::Number(f) => {
+        serde_yaml_ng::Value::Null => Ok(Value::Empty),
+        serde_yaml_ng::Value::Bool(b) => Ok(Value::Bool(*b)),
+        serde_yaml_ng::Value::Number(f) => {
             if f.is_u64() {
                 Ok(Value::Integer(f.as_u64().expect("") as i128))
             } else if f.is_i64() {
@@ -29,8 +29,8 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
                 Ok(Value::Float(f.as_f64().ok_or("Not a valid number")?))
             }
         }
-        serde_yaml::Value::String(s) => Ok(Value::from(s.as_str())),
-        serde_yaml::Value::Sequence(arr) => {
+        serde_yaml_ng::Value::String(s) => Ok(Value::from(s.as_str())),
+        serde_yaml_ng::Value::Sequence(arr) => {
             let mut lst = arr
                 .iter()
                 .map(|v| from_yaml(v))
@@ -68,7 +68,7 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
                 _ => Ok(List::new(ValueType::Any, lst).into()),
             }
         }
-        serde_yaml::Value::Mapping(o) => {
+        serde_yaml_ng::Value::Mapping(o) => {
             let d = Dict::new(ValueType::Any, ValueType::Any)?;
             for (k, v) in o.into_iter() {
                 d.insert(from_yaml(k)?, from_yaml(v)?)?;
@@ -76,21 +76,21 @@ fn from_yaml(yaml_value: &serde_yaml::Value) -> CrushResult<Value> {
             Ok(d.into())
         }
 
-        serde_yaml::Value::Tagged(t) => from_yaml(&t.value),
+        serde_yaml_ng::Value::Tagged(t) => from_yaml(&t.value),
     }
 }
 
-fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
+fn to_yaml(value: Value) -> CrushResult<serde_yaml_ng::Value> {
     match value.materialize()? {
-        Value::File(s) => Ok(serde_yaml::Value::from(
+        Value::File(s) => Ok(serde_yaml_ng::Value::from(
             s.to_str().ok_or("Invalid filename")?,
         )),
 
-        Value::String(s) => Ok(serde_yaml::Value::from(s.to_string())),
+        Value::String(s) => Ok(serde_yaml_ng::Value::from(s.to_string())),
 
-        Value::Integer(i) => Ok(serde_yaml::Value::from(i64::try_from(i)?)),
+        Value::Integer(i) => Ok(serde_yaml_ng::Value::from(i64::try_from(i)?)),
 
-        Value::List(l) => Ok(serde_yaml::Value::Sequence(
+        Value::List(l) => Ok(serde_yaml_ng::Value::Sequence(
             l.iter().map(to_yaml).collect::<CrushResult<Vec<_>>>()?,
         )),
 
@@ -101,26 +101,26 @@ fn to_yaml(value: Value) -> CrushResult<serde_yaml::Value> {
                 .map(|r| r.clone().into_struct(&types))
                 .map(|s| to_yaml(Value::Struct(s)))
                 .collect::<CrushResult<Vec<_>>>()?;
-            Ok(serde_yaml::Value::Sequence(structs))
+            Ok(serde_yaml_ng::Value::Sequence(structs))
         }
 
-        Value::Bool(b) => Ok(serde_yaml::Value::from(b)),
+        Value::Bool(b) => Ok(serde_yaml_ng::Value::from(b)),
 
-        Value::Float(f) => Ok(serde_yaml::Value::from(f)),
+        Value::Float(f) => Ok(serde_yaml_ng::Value::from(f)),
 
         Value::Struct(s) => {
-            let mut map = serde_yaml::Mapping::new();
+            let mut map = serde_yaml_ng::Mapping::new();
             for (k, v) in s.local_elements() {
                 map.insert(to_yaml(Value::from(k))?, to_yaml(v)?);
             }
-            Ok(serde_yaml::Value::Mapping(map))
+            Ok(serde_yaml_ng::Value::Mapping(map))
         }
 
-        Value::Duration(d) => Ok(serde_yaml::Value::from(d.num_seconds())),
+        Value::Duration(d) => Ok(serde_yaml_ng::Value::from(d.num_seconds())),
 
-        Value::Time(t) => Ok(serde_yaml::Value::from(t.to_rfc3339())),
+        Value::Time(t) => Ok(serde_yaml_ng::Value::from(t.to_rfc3339())),
 
-        Value::Binary(b) => Ok(serde_yaml::Value::from(b.to_vec())),
+        Value::Binary(b) => Ok(serde_yaml_ng::Value::from(b.to_vec())),
 
         Value::BinaryInputStream(_) => panic!("Impossible"),
 
@@ -148,7 +148,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
         FromSignature::parse(context.remove_arguments(), &context.global_state.printer())?;
     let command_handle = context.command_handle().clone();
     let reader = BufReader::new(cfg.files.to_reader(context.input, &command_handle)?);
-    let serde_value = serde_yaml::from_reader(reader)?;
+    let serde_value = serde_yaml_ng::from_reader(reader)?;
     let crush_value = from_yaml(&serde_value)?;
     context.output.send(crush_value)
 }
@@ -175,7 +175,7 @@ fn to(mut context: CommandContext) -> CrushResult<()> {
     let mut writer = files::writer(cfg.file, context.output, &command_handle)?;
     let value = context.input.recv()?;
     let yaml_value = to_yaml(value)?;
-    writer.write(serde_yaml::to_string(&yaml_value)?.as_bytes())?;
+    writer.write(serde_yaml_ng::to_string(&yaml_value)?.as_bytes())?;
     Ok(())
 }
 

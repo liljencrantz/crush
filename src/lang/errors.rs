@@ -60,7 +60,7 @@ pub enum CrushErrorType {
     SerdeJsonError(serde_json::Error),
     SerdeTomlError(toml::de::Error),
     SerdeTomlSerError(toml::ser::Error),
-    SerdeYamlError(serde_yaml::Error),
+    SerdeYamlError(serde_yaml_ng::Error),
     SSH2Error(ssh2::Error),
     ChronoParseError(chrono::ParseError),
     LoginsError(String),
@@ -519,8 +519,8 @@ impl From<toml::ser::Error> for CrushError {
     }
 }
 
-impl From<serde_yaml::Error> for CrushError {
-    fn from(e: serde_yaml::Error) -> Self {
+impl From<serde_yaml_ng::Error> for CrushError {
+    fn from(e: serde_yaml_ng::Error) -> Self {
         SerdeYamlError(e).into()
     }
 }
