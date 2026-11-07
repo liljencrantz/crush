@@ -1,3 +1,4 @@
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::CrushResult;
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::binary_input::BinaryInput;
@@ -8,9 +9,12 @@ use crate::lang::{data::table::ColumnType, data::table::Row, value::Value, value
 use signature::signature;
 use std::io::{BufRead, BufReader};
 
+static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("word", ValueType::String, "one word of the input.")];
+
 #[signature(
     io.words.from,
     can_block = true,
+    output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
     short = "Read input and split on word boundaries.",
     long = "Input can be files or the input pipe, which must be a binary input stream, split on word boundaries, trim away punctuation and discard empty \"words\".",
 )]
@@ -30,7 +34,7 @@ fn send(output: &TableOutputStream, mut ptr: &str) -> CrushResult<()> {
 }
 
 pub fn from(mut context: CommandContext) -> CrushResult<()> {
-    let output = context.initialize_output(&[ColumnType::new("word", ValueType::String, "one word of the input.")])?;
+    let output = context.initialize_output(&OUTPUT_TYPE)?;
     let cfg = From::parse(context.remove_arguments(), &context.global_state.printer())?;
 
     let command_handle = context.command_handle().clone();

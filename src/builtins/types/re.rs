@@ -89,6 +89,7 @@ fn __is_not__(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.re.replace,
     can_block = false,
+    output = Known(ValueType::String),
     short = "Replace the first match of the regex in text with the replacement",
     long = "The replacement string may reference capture groups from the match: `$0` for \
     the whole match, `$1`, `$2`, ... for positional groups, or `$name` for a named group \
@@ -119,6 +120,7 @@ fn replace(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.re.replace_all,
     can_block = false,
+    output = Known(ValueType::String),
     short = "Replace all matches of the regex in text with the replacement",
     long = "The replacement string may reference capture groups from each match: `$0` for \
     the whole match, `$1`, `$2`, ... for positional groups, or `$name` for a named group \

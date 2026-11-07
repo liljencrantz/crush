@@ -1,3 +1,4 @@
+use crate::lang::command::OutputType::Known;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::binary_input::BinaryInput;
 use crate::lang::signature::binary_input::ToReader;
@@ -5,12 +6,13 @@ use crate::lang::signature::files;
 use crate::lang::signature::files::Files;
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::ScopeLoader;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use signature::signature;
 
 #[signature(
     io.bin.from,
     can_block = true,
+    output = Known(ValueType::BinaryInputStream),
     short = "Read specified files (or input) as a binary stream",
     long = "If no file is specified, the input must be either binary or a string which will be converted to a binary using utf-8."
 )]

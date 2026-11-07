@@ -1612,6 +1612,8 @@ any -- no network query is made. Returns <code>$empty</code> if none is configur
 is made. This is exactly what <a href="#dns-query"><code>dns:query</code></a>/<a href="#dns-query_reverse"><code>dns:query_reverse</code></a> themselves fall
 back to when their own <code>nameserver</code> argument is left unset (specifically, the
 first one listed).</p>
+<h2>Output signature</h2>
+<pre><code><a href="#types-list"><span class="tok-command">list</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="dns-query">
@@ -1696,6 +1698,8 @@ contain one.</p>
 </ul>
 <h1>Examples</h1>
 <pre><code><a href="#dns-query_reverse"><span class="tok-command">dns:query_reverse</span></a> <span class="tok-string_literal">&quot;127.0.0.1&quot;</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-string"><span class="tok-command">string</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="dns-search_paths">
@@ -1707,6 +1711,8 @@ query is made. A system resolver normally appends these, in order, to an
 unqualified hostname before giving up (e.g. trying <code>host.example.com</code> when
 asked to resolve plain <a href="#host"><code>host</code></a>); <a href="#dns-query"><code>dns:query</code></a> does not apply this itself --
 <code>name</code> is always looked up exactly as given.</p>
+<h2>Output signature</h2>
+<pre><code><a href="#types-list"><span class="tok-command">list</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -2363,6 +2369,8 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) source to read from. If unspecified, will read from input, which must be a <a href="#types-string"><code>string</code></a>, <a href="#types-binary"><code>binary</code></a> or <a href="#types-binary_stream"><code>binary_stream</code></a>.</p>
 </li>
 </ul>
+<h2>Output signature</h2>
+<pre><code><a href="#types-binary_stream"><span class="tok-command">binary_stream</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="io-bin-to">
@@ -2641,6 +2649,12 @@ lambdas can be serialized to this format.</p>
 <li><p><code>allow_empty</code> (default: <code>false</code>) allow empty tokens.</p>
 </li>
 </ul>
+<h2>Output signature</h2>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>token</code> (string) one token of the split input.</p>
+</li>
+</ul>
 </div>
 </article>
 </section>
@@ -2704,6 +2718,12 @@ lambdas can be serialized to this format.</p>
 <p>This command accepts the following arguments:</p>
 <ul>
 <li><p><code>files</code> (list $(one_of $file $glob $re $string $binary $binary_stream)) the files to read from (read from input pipe if no file is specified).</p>
+</li>
+</ul>
+<h2>Output signature</h2>
+<p>A table input stream with the following columns</p>
+<ul>
+<li><p><code>word</code> (string) one word of the input.</p>
 </li>
 </ul>
 </div>
@@ -3047,6 +3067,8 @@ underlying process. For control characters (e.g. Ctrl-Z), use the module-level
 <span class="tok-identifier">$t</span><span class="tok-operator">:</span><span class="tok-command">wait_for</span> <span class="tok-string_literal">&quot;hello&quot;</span>
 <span class="tok-identifier">$t</span><span class="tok-operator">:</span><span class="tok-command">write</span> <a href="#pty"><span class="tok-identifier">$pty</span></a><span class="tok-operator">:</span><span class="tok-string_literal">control</span><span class="tok-operator">:</span><span class="tok-string_literal">z</span>
 <span class="tok-identifier">$t</span><span class="tok-operator">:</span><span class="tok-command">close</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-struct"><span class="tok-command">struct</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -4971,6 +4993,8 @@ group number or name.</p>
 <span class="tok-regex_literal">^([0-9]+)</span><span class="tok-operator">:</span><span class="tok-string_literal">replace</span> <span class="tok-string_literal">&quot;a123b456&quot;</span> <span class="tok-string_literal">&quot;X&quot;</span>
 <span class="tok-comment"># Swap the two halves of a dash-separated pair, using capture groups</span>
 <span class="tok-regex_literal">^((.*)-(.*))</span><span class="tok-operator">:</span><span class="tok-string_literal">replace</span> <span class="tok-string_literal">&quot;123-456&quot;</span> <span class="tok-string_literal">&quot;$2-$1&quot;</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-string"><span class="tok-command">string</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="types-re-replace_all">
@@ -4995,6 +5019,8 @@ group number or name.</p>
 <span class="tok-regex_literal">^([0-9]+)</span><span class="tok-operator">:</span><span class="tok-string_literal">replace_all</span> <span class="tok-string_literal">&quot;a123b456c789&quot;</span> <span class="tok-string_literal">&quot;X&quot;</span>
 <span class="tok-comment"># Swap key and value in every space-separated pair</span>
 <span class="tok-regex_literal">^(([a-z]+)=([0-9]+))</span><span class="tok-operator">:</span><span class="tok-string_literal">replace_all</span> <span class="tok-string_literal">&quot;a=1 b=2 c=3&quot;</span> <span class="tok-string_literal">&quot;$2=$1&quot;</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-string"><span class="tok-command">string</span></a></code></pre>
 </div>
 </article>
 </section>
@@ -6046,6 +6072,8 @@ name of the variable you want to get.</p>
 <pre><code><span class="tok-comment"># These two lines are equivalent</span>
 <span class="tok-identifier">$x</span> <span class="tok-operator">:=</span> <span class="tok-numeric_literal">2</span>
 <a href="#var-let"><span class="tok-command">var:let</span></a> <span class="tok-string_literal">x</span><span class="tok-operator">=</span><span class="tok-numeric_literal">2</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="var-let_destructure">
@@ -6069,6 +6097,8 @@ number of names, or an error results.</p>
 <pre><code># These two lines are equivalent
 [$a, $b] := [1, 2]
 var:let_destructure a b value=[1, 2]</code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="var-list">
@@ -6113,6 +6143,8 @@ operator.</p>
 <pre><code><span class="tok-comment"># These two lines are equivalent</span>
 <span class="tok-identifier">$x</span> <span class="tok-operator">=</span> <span class="tok-numeric_literal">2</span>
 <a href="#var-set"><span class="tok-command">var:set</span></a> <span class="tok-string_literal">x</span><span class="tok-operator">=</span><span class="tok-numeric_literal">2</span></code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="var-set_destructure">
@@ -6137,6 +6169,8 @@ or an error results.</p>
 <pre><code># These two lines are equivalent
 [$a, $b] = [1, 2]
 var:set_destructure a b value=[1, 2]</code></pre>
+<h2>Output signature</h2>
+<pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
 </article>
 <article class="cmd" id="var-unset">

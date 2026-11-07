@@ -1,15 +1,17 @@
 use crate::builtins::pty::methods::methods;
 use crate::builtins::pty::session::PtySession;
+use crate::lang::command::OutputType::Known;
 use crate::lang::data::r#struct::Struct;
 use crate::lang::errors::{CrushResult, command_error};
 use crate::lang::signature::text::Text;
 use crate::lang::state::contexts::CommandContext;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 use signature::signature;
 
 #[signature(
     pty.create,
     can_block = true,
+    output = Known(ValueType::Struct),
     short = "Spawn a command attached to a fresh virtual terminal, for driving and inspecting a real interactive session from a script.",
     long = "Returns a struct with one method per operation (`write`, `wait_for`, `contents`,",
     long = "`close`, plus `pid`/`alive`). Always call `close` once done, to release the",

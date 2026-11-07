@@ -460,6 +460,7 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     dns.query_reverse,
     can_block = true,
+    output = Known(ValueType::String),
     short = "Perform a reverse DNS lookup on a given IP address",
     long = "Looks up the hostname associated with `address` via a `PTR` record,",
     long = "automatically building the reverse-lookup name DNS uses for this (e.g. under",
@@ -540,6 +541,7 @@ fn query_reverse_internal(
 #[signature(
     dns.nameserver,
     can_block = true,
+    output = Known(ValueType::List(Box::new(ValueType::String))),
     short = "List of default nameservers",
     long = "Reads the nameservers configured in `/etc/resolv.conf` -- no network query",
     long = "is made. This is exactly what `dns:query`/`dns:query_reverse` themselves fall",
@@ -565,6 +567,7 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
 #[signature(
     dns.search_paths,
     can_block = true,
+    output = Known(ValueType::List(Box::new(ValueType::String))),
     short = "List of DNS search paths",
     long = "Reads the DNS search domains configured in `/etc/resolv.conf` -- no network",
     long = "query is made. A system resolver normally appends these, in order, to an",

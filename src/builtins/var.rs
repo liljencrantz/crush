@@ -10,7 +10,7 @@ use signature::signature;
 #[signature(
     var.r#let,
     can_block = false,
-    output = Unknown,
+    output = Known(ValueType::Empty),
     short = "Declare new variables in the current scope.",
     long = "No variable can exist in the local scope, or an error will result.",
     long = "",
@@ -38,7 +38,7 @@ pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     var.set,
     can_block = false,
-    output = Unknown,
+    output = Known(ValueType::Empty),
     short = "Reassign existing variables",
     long = "A variable by the specified name must already exist in some visible scope before calling 
     the `set` builtin, or an error will result.",
@@ -105,7 +105,7 @@ fn destructure(value: Value, expected: usize) -> CrushResult<Vec<Value>> {
 #[signature(
     var.let_destructure,
     can_block = false,
-    output = Unknown,
+    output = Known(ValueType::Empty),
     short = "Declare new variables in the current scope by destructuring a list, struct, or dict.",
     long = "Not normally called directly, but via the syntactic sugar of the := operator applied",
     long = "to a bracketed list of names, e.g. `[$a, $b] := $pair`. `value`'s elements -- a",
@@ -136,7 +136,7 @@ pub fn let_destructure(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     var.set_destructure,
     can_block = false,
-    output = Unknown,
+    output = Known(ValueType::Empty),
     short = "Reassign existing variables by destructuring a list, struct, or dict.",
     long = "Not normally called directly, but via the syntactic sugar of the = operator applied",
     long = "to a bracketed list of names, e.g. `[$a, $b] = $pair`. Every name must already exist",
