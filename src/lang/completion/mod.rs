@@ -487,6 +487,20 @@ pub fn complete(
         ParseResult::PartialQuotedString(_) => {}
     }
 
+    // Sorted alphabetically by what the user actually sees, with `completion`/
+    // `position` only as tie-breakers for two entries that happen to display the same.
+    // This also makes deduplication below trivial: different completion sources (a
+    // label, an external command, a file, ...) can independently suggest the exact
+    // same completion -- e.g. a directory entry named `ls` and the external command
+    // `ls` on $PATH both completing to the same text at the same position -- and once
+    // sorted, every such duplicate is adjacent.
+    res.sort_by(|a, b| {
+        (&a.display, &a.completion, a.position).cmp(&(&b.display, &b.completion, b.position))
+    });
+    res.dedup_by(|a, b| {
+        a.display == b.display && a.completion == b.completion && a.position == b.position
+    });
+
     Ok(res)
 }
 
@@ -1284,5 +1298,50 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &directory_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "which_gizmo ");
+    }
+
+    /// The exact scenario this guards: a name that's *both* a scope function and a
+    /// runnable `$PATH` entry (easily happens -- a builtin and a real tool sharing a
+    /// name, or just two different completion sources genuinely agreeing) must still
+    /// only be offered once, not once per source that happened to suggest it.
+    #[test]
+    fn check_completion_deduplicates_across_sources() {
+        let _lock = PATH_TEST_LOCK.lock().unwrap();
+        let dir = scratch_dir("dedup_across_sources");
+        write_executable(&dir.join("which_gizmo"), b"#!/bin/sh\n");
+        let _guard = PathGuard::set(&dir);
+
+        let line = "which_g";
+        let cursor = line.len();
+        let s = Scope::create_root();
+        s.declare("which_gizmo", Value::Command(MyCmdSignature::create_command()))
+            .unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &directory_lister()).unwrap();
+        assert_eq!(
+            completions.len(),
+            1,
+            "expected one deduplicated completion, got {:?}",
+            completions.iter().map(|c| c.display()).collect::<Vec<_>>()
+        );
+        assert_eq!(&completions[0].complete(line), "which_gizmo ");
+    }
+
+    /// Completions from unrelated sources (here, two scope variables) come back sorted
+    /// alphabetically by what's actually displayed, regardless of declaration order.
+    #[test]
+    fn check_completions_are_sorted_alphabetically() {
+        let line = "";
+        let cursor = 0;
+
+        let s = Scope::create_root();
+        s.declare("zebra", Value::Empty).unwrap();
+        s.declare("apple", Value::Empty).unwrap();
+        s.declare("mango", Value::Empty).unwrap();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        let displays: Vec<&str> = completions.iter().map(|c| c.display()).collect();
+        let mut sorted = displays.clone();
+        sorted.sort();
+        assert_eq!(displays, sorted);
+        assert_eq!(displays, vec!["apple", "mango", "zebra"]);
     }
 }
