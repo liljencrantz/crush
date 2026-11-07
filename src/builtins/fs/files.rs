@@ -1,6 +1,8 @@
 use crate::data::table::ColumnFormat;
+use crate::lang::argument::{ArgumentValue, ValidationArgument};
 use crate::lang::ast::source::Source;
 use crate::lang::command::OutputType::Unknown;
+use crate::lang::command::{OutputType, PipeInputType};
 use crate::lang::errors::{CrushResult, CrushResultExtra, data_error};
 use crate::lang::pipe::TableOutputStream;
 use crate::lang::signature::files;
@@ -246,7 +248,8 @@ fn run_for_single_directory_or_file(
     long = "",
     long = "By default, `files` will not recurse into subdirectories. You can override this using",
     long = "the `--recurse` switch.",
-    output = Unknown)]
+    output = Unknown,
+    dynamic_output = files_dynamic_output)]
 pub struct FilesSignature {
     #[unnamed()]
     #[description("directories and files to list")]
@@ -289,61 +292,188 @@ pub struct FilesSignature {
     file: bool,
 }
 
-fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
-    let mut types = Vec::new();
-    let mut cols = Vec::new();
+/// Whether each of `files`'s optional columns is included -- the single source of truth
+/// for both `column_data` (building the real output from a fully parsed `FilesSignature`)
+/// and `files_dynamic_output` (computing the same column list from raw, unparsed
+/// arguments, before anything runs), so the two can never drift out of sync with each
+/// other the way two separately hand-maintained column lists could.
+struct ColumnFlags {
+    permissions: bool,
+    inode: bool,
+    links: bool,
+    user: bool,
+    group: bool,
+    size: bool,
+    blocks: bool,
+    modified: bool,
+    accessed: bool,
+    r#type: bool,
+    file: bool,
+}
 
-    if config.permissions {
+impl Default for ColumnFlags {
+    /// Mirrors every `#[default(...)]` on `FilesSignature`'s own boolean fields.
+    fn default() -> Self {
+        ColumnFlags {
+            permissions: true,
+            inode: false,
+            links: true,
+            user: true,
+            group: true,
+            size: true,
+            blocks: false,
+            modified: true,
+            accessed: false,
+            r#type: true,
+            file: true,
+        }
+    }
+}
+
+impl From<&FilesSignature> for ColumnFlags {
+    fn from(config: &FilesSignature) -> Self {
+        ColumnFlags {
+            permissions: config.permissions,
+            inode: config.inode,
+            links: config.links,
+            user: config.user,
+            group: config.group,
+            size: config.size,
+            blocks: config.blocks,
+            modified: config.modified,
+            accessed: config.accessed,
+            r#type: config.r#type,
+            file: config.file,
+        }
+    }
+}
+
+fn column_types(flags: &ColumnFlags) -> Vec<ColumnType> {
+    let mut types = Vec::new();
+
+    if flags.permissions {
         types.push(ColumnType::new("permissions", ValueType::String, "the file's permission bits, in symbolic form."));
-        cols.push(Column::Permissions);
     }
-    if config.inode {
+    if flags.inode {
         types.push(ColumnType::new("inode", ValueType::Integer, "the file's inode number."));
-        cols.push(Column::Inode);
     }
-    if config.links {
+    if flags.links {
         types.push(ColumnType::new("links", ValueType::Integer, "the number of hard links to the file."));
-        cols.push(Column::Links);
     }
-    if config.user {
+    if flags.user {
         types.push(ColumnType::new("user", ValueType::String, "the name of the file's owning user."));
-        cols.push(Column::User);
     }
-    if config.group {
+    if flags.group {
         types.push(ColumnType::new("group", ValueType::String, "the name of the file's owning group."));
-        cols.push(Column::Group);
     }
-    if config.size {
+    if flags.size {
         types.push(ColumnType::new_with_format(
             "size",
             ColumnFormat::ByteUnit,
             ValueType::Integer,
             "the file's size in bytes.",
         ));
+    }
+    if flags.blocks {
+        types.push(ColumnType::new("blocks", ValueType::Integer, "the number of blocks allocated to the file."));
+    }
+    if flags.modified {
+        types.push(ColumnType::new("modified", ValueType::Time, "when the file's contents were last modified."));
+    }
+    if flags.accessed {
+        types.push(ColumnType::new("accessed", ValueType::Time, "when the file was last accessed."));
+    }
+    if flags.r#type {
+        types.push(ColumnType::new("type", ValueType::String, "the kind of file, e.g. file, directory, or symlink."));
+    }
+    if flags.file {
+        types.push(ColumnType::new("file", ValueType::File, "the file itself."));
+    }
+
+    types
+}
+
+fn column_data(config: &FilesSignature) -> (Vec<ColumnType>, Vec<Column>) {
+    let flags = ColumnFlags::from(config);
+    let types = column_types(&flags);
+    let mut cols = Vec::new();
+
+    if flags.permissions {
+        cols.push(Column::Permissions);
+    }
+    if flags.inode {
+        cols.push(Column::Inode);
+    }
+    if flags.links {
+        cols.push(Column::Links);
+    }
+    if flags.user {
+        cols.push(Column::User);
+    }
+    if flags.group {
+        cols.push(Column::Group);
+    }
+    if flags.size {
         cols.push(Column::Size);
     }
-    if config.blocks {
-        types.push(ColumnType::new("blocks", ValueType::Integer, "the number of blocks allocated to the file."));
+    if flags.blocks {
         cols.push(Column::Blocks);
     }
-    if config.modified {
-        types.push(ColumnType::new("modified", ValueType::Time, "when the file's contents were last modified."));
+    if flags.modified {
         cols.push(Column::Modified);
     }
-    if config.accessed {
-        types.push(ColumnType::new("accessed", ValueType::Time, "when the file was last accessed."));
+    if flags.accessed {
         cols.push(Column::Accessed);
     }
-    if config.r#type {
-        types.push(ColumnType::new("type", ValueType::String, "the kind of file, e.g. file, directory, or symlink."));
+    if flags.r#type {
         cols.push(Column::Type);
     }
-    if config.file {
-        types.push(ColumnType::new("file", ValueType::File, "the file itself."));
+    if flags.file {
         cols.push(Column::File);
     }
 
     (types, cols)
+}
+
+/// Computes `files`'s real output type: a `table_input_stream` whose columns are exactly
+/// the ones that will actually be shown, which depends on every one of its boolean
+/// arguments (`permissions=`, `size=`, ...) -- each defaulting the same way
+/// `FilesSignature`'s own fields do when not given at all. `directory`/`recurse` don't
+/// affect which columns are shown, so they're simply ignored here.
+fn files_dynamic_output(
+    _input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let mut flags = ColumnFlags::default();
+    for arg in arguments {
+        let Some(name) = &arg.argument_type else {
+            continue;
+        };
+        let target: &mut bool = match name.as_str() {
+            "permissions" => &mut flags.permissions,
+            "inode" => &mut flags.inode,
+            "links" => &mut flags.links,
+            "user" => &mut flags.user,
+            "group" => &mut flags.group,
+            "size" => &mut flags.size,
+            "blocks" => &mut flags.blocks,
+            "modified" => &mut flags.modified,
+            "accessed" => &mut flags.accessed,
+            "type" => &mut flags.r#type,
+            "file" => &mut flags.file,
+            _ => continue,
+        };
+        match &arg.value {
+            ArgumentValue::Value(Value::Bool(b)) => *target = *b,
+            ArgumentValue::Unknown | ArgumentValue::Type(_) => return Ok(OutputType::Unknown),
+            ArgumentValue::Value(_) => {
+                return arg.error(format!("`{}` must be given a boolean value", name));
+            }
+        }
+    }
+    Ok(OutputType::Known(ValueType::TableInputStream(column_types(
+        &flags,
+    ))))
 }
 
 fn files(mut context: CommandContext) -> CrushResult<()> {
@@ -380,4 +510,75 @@ fn files(mut context: CommandContext) -> CrushResult<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::SwitchStyle;
+    use crate::lang::ast::source::{Source, SourceType};
+    use std::sync::Arc;
+
+    fn bool_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn column_names(args: &[ValidationArgument]) -> Vec<String> {
+        match files_dynamic_output(PipeInputType::None, args).unwrap() {
+            OutputType::Known(ValueType::TableInputStream(columns)) => {
+                columns.iter().map(|c| c.name().to_string()).collect()
+            }
+            other => panic!("expected Known(TableInputStream), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn default_columns_match_the_signature_defaults() {
+        let names = column_names(&[]);
+        assert_eq!(
+            names,
+            vec!["permissions", "links", "user", "group", "size", "modified", "type", "file"]
+        );
+    }
+
+    #[test]
+    fn disabling_a_default_column_removes_it() {
+        let names = column_names(&[bool_arg("user", ArgumentValue::Value(Value::Bool(false)))]);
+        assert!(!names.contains(&"user".to_string()));
+    }
+
+    #[test]
+    fn enabling_a_non_default_column_adds_it() {
+        let names = column_names(&[bool_arg("inode", ArgumentValue::Value(Value::Bool(true)))]);
+        assert!(names.contains(&"inode".to_string()));
+    }
+
+    #[test]
+    fn unrelated_arguments_are_ignored() {
+        let names = column_names(&[bool_arg("recurse", ArgumentValue::Value(Value::Bool(true)))]);
+        assert_eq!(
+            names,
+            vec!["permissions", "links", "user", "group", "size", "modified", "type", "file"]
+        );
+    }
+
+    #[test]
+    fn non_boolean_column_value_is_an_error() {
+        let args = [bool_arg("size", ArgumentValue::Value(Value::from("oops")))];
+        assert!(files_dynamic_output(PipeInputType::None, &args).is_err());
+    }
+
+    #[test]
+    fn unresolved_column_value_falls_back_to_unknown() {
+        let args = [bool_arg("size", ArgumentValue::Type(ValueType::Bool))];
+        match files_dynamic_output(PipeInputType::None, &args).unwrap() {
+            OutputType::Unknown => {}
+            other => panic!("expected Unknown, got {:?}", other),
+        }
+    }
 }
