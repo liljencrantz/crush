@@ -1,7 +1,9 @@
 use crate::CrushResult;
 use crate::data::list::List;
 use crate::data::table::{ColumnType, Row};
+use crate::lang::argument::{ArgumentValue, ValidationArgument};
 use crate::lang::command::OutputType::Known;
+use crate::lang::command::{OutputType, PipeInputType};
 use crate::lang::errors::{command_error, data_error};
 use crate::lang::state::contexts::CommandContext;
 use crate::lang::state::scope::Scope;
@@ -57,6 +59,76 @@ static TXT_STREAM_OUTPUT_TYPE: [ColumnType; 2] = [
 /// causing unbounded recursion with a fresh network round trip at every hop.
 const MAX_CNAME_DEPTH: u32 = 8;
 
+/// Computes `dns:query`'s real output type: it depends entirely on `record_type`,
+/// mirroring `query_internal`'s own match on it exactly (see that function's doc for
+/// each type's columns). `record_type` can be given either by name or positionally (the
+/// `example`s show `dns:query NAME RECORD_TYPE`), so both are checked here -- the
+/// second unnamed argument is `record_type` the same way the real parser would bind it,
+/// since `name` is the first positional field.
+///
+/// One thing this can never predict: if the response's first answer is itself a `CNAME`
+/// and `no_follow_cname` is set (or `record_type` is already `CNAME`), `perform_query`
+/// emits `A_STREAM_OUTPUT_TYPE` regardless of `record_type` -- that depends on the
+/// actual DNS response, which doesn't exist yet at this point. This reports the type
+/// `dns:query` produces in the ordinary case.
+fn query_dynamic_output(
+    _input: PipeInputType,
+    arguments: &[ValidationArgument],
+) -> CrushResult<OutputType> {
+    let mut record_type: Option<String> = None;
+    let mut unresolved = false;
+    let mut positional_index = 0usize;
+
+    let mut classify = |arg: &ValidationArgument| -> CrushResult<()> {
+        match &arg.value {
+            ArgumentValue::Value(Value::String(s)) => {
+                record_type = Some(s.to_string());
+                Ok(())
+            }
+            ArgumentValue::Unknown | ArgumentValue::Type(_) => {
+                unresolved = true;
+                Ok(())
+            }
+            ArgumentValue::Value(_) => arg.error("`record_type` must be given a string value"),
+        }
+    };
+
+    for arg in arguments {
+        match &arg.argument_type {
+            Some(name) if name == "record_type" => classify(arg)?,
+            Some(_) => {}
+            None => {
+                if positional_index == 1 {
+                    classify(arg)?;
+                }
+                positional_index += 1;
+            }
+        }
+    }
+
+    let record_type = match record_type {
+        Some(s) => s,
+        None if unresolved => return Ok(OutputType::Unknown),
+        None => "A".to_string(),
+    };
+
+    let columns: &[ColumnType] = match record_type.as_str() {
+        "A" | "AAAA" | "NS" | "PTR" | "CNAME" => &A_STREAM_OUTPUT_TYPE,
+        "MX" => &MX_STREAM_OUTPUT_TYPE,
+        "SOA" => &SOA_STREAM_OUTPUT_TYPE,
+        "SRV" => &SRV_STREAM_OUTPUT_TYPE,
+        "TXT" => &TXT_STREAM_OUTPUT_TYPE,
+        _ => {
+            return command_error(format!(
+                "Unknown DNS record type {}. Expected one of A, AAAA, CNAME, MX, NS, PTR, SOA, SRV, TXT.",
+                record_type
+            ));
+        }
+    };
+
+    Ok(OutputType::Known(ValueType::table_input_stream(columns)))
+}
+
 #[signature(
     dns.query,
     can_block = true,
@@ -87,6 +159,7 @@ const MAX_CNAME_DEPTH: u32 = 8;
     example = "dns:query \"example.com\" MX",
     example = "# See the alias itself instead of transparently following it",
     example = "dns:query \"www.example.com\" CNAME",
+    dynamic_output = query_dynamic_output,
 )]
 struct Query {
     #[description("DNS record to look up.")]
@@ -560,4 +633,111 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
         }),
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lang::argument::SwitchStyle;
+    use crate::lang::ast::source::{Source, SourceType};
+    use std::sync::Arc;
+
+    fn named_arg(name: &str, value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: Some(name.to_string()),
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn unnamed_arg(value: ArgumentValue) -> ValidationArgument {
+        ValidationArgument {
+            argument_type: None,
+            switch_style: SwitchStyle::None,
+            value,
+            source: Source::new(SourceType::Input, Arc::from("")),
+        }
+    }
+
+    fn column_names(args: &[ValidationArgument]) -> Vec<String> {
+        match query_dynamic_output(PipeInputType::None, args).unwrap() {
+            OutputType::Known(ValueType::TableInputStream(columns)) => {
+                columns.iter().map(|c| c.name().to_string()).collect()
+            }
+            other => panic!("expected Known(TableInputStream), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn no_record_type_defaults_to_a() {
+        let args = vec![unnamed_arg(ArgumentValue::Value(Value::from("example.com")))];
+        assert_eq!(column_names(&args), vec!["target", "ttl"]);
+    }
+
+    #[test]
+    fn positional_record_type_is_respected() {
+        let args = vec![
+            unnamed_arg(ArgumentValue::Value(Value::from("example.com"))),
+            unnamed_arg(ArgumentValue::Value(Value::from("MX"))),
+        ];
+        assert_eq!(column_names(&args), vec!["target", "preference", "ttl"]);
+    }
+
+    #[test]
+    fn named_record_type_is_respected() {
+        let args = vec![
+            unnamed_arg(ArgumentValue::Value(Value::from("example.com"))),
+            named_arg("record_type", ArgumentValue::Value(Value::from("SOA"))),
+        ];
+        assert_eq!(
+            column_names(&args),
+            vec!["mname", "rname", "serial", "refresh", "retry", "expire", "ttl"]
+        );
+    }
+
+    #[test]
+    fn srv_and_txt_have_their_own_columns() {
+        let srv_args = vec![named_arg("record_type", ArgumentValue::Value(Value::from("SRV")))];
+        assert_eq!(
+            column_names(&srv_args),
+            vec!["target", "priority", "weight", "port", "ttl"]
+        );
+
+        let txt_args = vec![named_arg("record_type", ArgumentValue::Value(Value::from("TXT")))];
+        assert_eq!(column_names(&txt_args), vec!["text", "ttl"]);
+    }
+
+    #[test]
+    fn unresolved_record_type_falls_back_to_unknown() {
+        let args = vec![named_arg("record_type", ArgumentValue::Type(ValueType::String))];
+        match query_dynamic_output(PipeInputType::None, &args).unwrap() {
+            OutputType::Unknown => {}
+            other => panic!("expected Unknown, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn non_string_record_type_is_an_error() {
+        let args = vec![named_arg("record_type", ArgumentValue::Value(Value::Integer(1)))];
+        assert!(query_dynamic_output(PipeInputType::None, &args).is_err());
+    }
+
+    #[test]
+    fn invalid_record_type_literal_is_an_error() {
+        let args = vec![named_arg(
+            "record_type",
+            ArgumentValue::Value(Value::from("NOT_A_REAL_TYPE")),
+        )];
+        assert!(query_dynamic_output(PipeInputType::None, &args).is_err());
+    }
+
+    #[test]
+    fn unrelated_named_arguments_are_ignored() {
+        let args = vec![
+            unnamed_arg(ArgumentValue::Value(Value::from("example.com"))),
+            named_arg("tcp", ArgumentValue::Value(Value::Bool(true))),
+        ];
+        assert_eq!(column_names(&args), vec!["target", "ttl"]);
+    }
 }
