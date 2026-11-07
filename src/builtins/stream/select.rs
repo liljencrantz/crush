@@ -390,4 +390,31 @@ mod tests {
             other => panic!("expected Unknown, got {:?}", other),
         }
     }
+
+    /// End-to-end regression test for the real `select` command (not a mock): a named
+    /// argument (`foo=`) and an unresolved identifier inside its closure body (`$size`,
+    /// a row-column binding highlight.rs can't see in scope) must not be highlighted
+    /// as errors -- `select`'s own completion_data needs `named: true` for the first,
+    /// and highlight.rs's closure leniency covers the second.
+    #[test]
+    fn select_with_named_closure_argument_is_not_highlighted_as_an_error() {
+        let root = crate::lang::state::scope::Scope::create_root();
+        crate::builtins::stream::declare(&root).unwrap();
+
+        let mut colors = std::collections::HashMap::new();
+        colors.insert("error".to_string(), "<<ERR>>".to_string());
+
+        let rendered = crate::util::highlight::syntax_highlight(
+            "select foo={$size}",
+            &colors,
+            &Some(root),
+        )
+        .unwrap();
+
+        assert!(
+            !rendered.contains("<<ERR>>"),
+            "expected no error highlighting, got: {}",
+            rendered
+        );
+    }
 }

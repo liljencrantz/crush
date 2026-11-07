@@ -1,8 +1,8 @@
-use crate::lang::command::CrushCommand;
 use crate::lang::command::OutputType::Unknown;
+use crate::lang::command::{CrushCommand, Parameter};
 use crate::lang::errors::CrushResult;
 use crate::lang::state::scope::Scope;
-use crate::lang::value::Value;
+use crate::lang::value::{Value, ValueType};
 
 mod aggregation;
 mod count;
@@ -83,7 +83,25 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
     files | select * age={(time.now() - modified)}"#,
                     ),
                     Unknown,
-                    [],
+                    // `named: true` is the only thing that matters here: it's what
+                    // `allowed_named_argument`/`named_argument_type` (both in
+                    // util::highlight) check for a command, like this one, that takes
+                    // arbitrary named arguments rather than a fixed set -- without it,
+                    // every named argument (`foo={...}`) was highlighted as an error,
+                    // since none of them could ever match a (nonexistent) known name.
+                    [Parameter {
+                        name: "".to_string(),
+                        value_type: ValueType::Any,
+                        default: None,
+                        allowed: None,
+                        description: Some(
+                            "a new or replaced column, computed from a closure, or an existing column's name to copy".to_string(),
+                        ),
+                        complete: None,
+                        named: true,
+                        unnamed: true,
+                        dirs_only: false,
+                    }],
                     Some(select::select_dynamic_output),
                 )),
             )?;

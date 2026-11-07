@@ -643,6 +643,7 @@ fn classify_tokens<'a>(
             None
         };
 
+        let inside_closure = bracket_stack.iter().any(|f| f.kind == BracketKind::Block);
         let category = get_category(
             tok,
             ntok,
@@ -651,6 +652,7 @@ fn classify_tokens<'a>(
             &current_command,
             current_reference_exists,
             &expected_argument_type,
+            inside_closure,
         );
         result.push((tok, category));
 
@@ -782,6 +784,7 @@ fn get_category(
     current_command: &Option<Command>,
     current_reference_exists: bool,
     expected_argument_type: &Option<ValueType>,
+    inside_closure: bool,
 ) -> Option<&'static str> {
     use crate::lang::ast::token::Token::*;
 
@@ -885,6 +888,16 @@ fn get_category(
                 (Some(_), Some(Declare(_))) => Some("error"),
                 (Some(_), _) => Some("identifier"),
                 (None, Some(Declare(_))) => Some("identifier"),
+                // A closure body can be called with arbitrary named arguments its
+                // caller decides on -- a row's own columns, for `select`/`where`/`each`
+                // (`$size`, `$file`, ...), an accumulator for `fold` (`$acc`), and so
+                // on -- none of which are, or ever could be, visible in `scope` itself.
+                // Flagging an unresolved identifier as a real error only makes sense
+                // when we actually know the full set of names that could ever bind it;
+                // inside a closure, we don't, so this stays neutral instead of guessing
+                // wrong. Outside a closure, an unresolved name is still a real error --
+                // this is the one case this highlighter can be confident about.
+                (None, _) if inside_closure => Some("identifier"),
                 (None, _) => Some("error"),
             },
         },
@@ -1721,5 +1734,51 @@ mod tests {
         assert_ne!(cat, Some("error"));
         let (_, inner_cat) = find_command_token(&classified, "closure_arg_like");
         assert_ne!(inner_cat, Some("error"));
+    }
+
+    fn find_identifier_token<'a>(
+        classified: &'a [(Token<'a>, Option<&'static str>)],
+        name: &str,
+    ) -> Option<&'static str> {
+        classified
+            .iter()
+            .find(|(tok, _)| matches!(tok, Token::Identifier(s, _) if *s == name))
+            .map(|(_, cat)| *cat)
+            .unwrap_or_else(|| panic!("no `{}` token found in {:?}", name, classified))
+    }
+
+    /// The bug report this guards: `select foo={$size}` (or any closure-argument
+    /// command) must not flag `$size` as an unknown variable just because it isn't a
+    /// real, lexically-scoped variable -- a closure passed as an argument can be called
+    /// with arbitrary named arguments its caller decides on (a row's own columns, for
+    /// `select`/`where`/`each`), which this highlighter has no way to know ahead of time.
+    #[test]
+    fn unresolved_identifier_inside_a_closure_argument_is_not_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified =
+            classify_tokens("closure_arg_like x={$size}", &scope).unwrap();
+        let cat = find_identifier_token(&classified, "$size");
+        assert_ne!(cat, Some("error"));
+    }
+
+    /// The same unresolved name at the top level, outside any closure, is still a real
+    /// error -- the leniency above is specifically scoped to closure bodies, not a
+    /// blanket "stop checking variables" regression.
+    #[test]
+    fn unresolved_identifier_at_top_level_is_still_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("$size", &scope).unwrap();
+        let cat = find_identifier_token(&classified, "$size");
+        assert_eq!(cat, Some("error"));
+    }
+
+    /// A substitution is not a closure -- `$(...)` runs in the same lexical scope as the
+    /// code around it, so an unresolved identifier inside one is still a real error.
+    #[test]
+    fn unresolved_identifier_inside_a_substitution_is_still_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let classified = classify_tokens("checks_arg_type x=$($size)", &scope).unwrap();
+        let cat = find_identifier_token(&classified, "$size");
+        assert_eq!(cat, Some("error"));
     }
 }
