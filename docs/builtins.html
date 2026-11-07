@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#cond-and"><code>cond:and</code></a></li><li class="idx-cmd"><a href="#cond-or"><code>cond:or</code></a></li></ul></nav>
 <article class="cmd" id="cond-and">
 <h3 class="cmd-title"><code>cond:and</code></h3>
-<div class="cmd-doc"><pre><code>and condition:(bool|command)... -&gt; boolean</code></pre>
+<div class="cmd-doc"><pre><code><a href="#cond-and"><span class="tok-command">and</span></a> <span class="tok-string_literal">condition</span><span class="tok-operator">:</span><span class="tok-operator">(</span><span class="tok-string_literal">bool</span><span class="tok-operator">|</span><a href="#types-command"><span class="tok-command">command</span></a><span class="tok-operator">)</span><span class="tok-file_literal">...</span> <span class="tok-named_argument">-</span><span class="tok-error">&gt; boolean</span></code></pre>
 <p>True if all arguments are true</p>
 <p>Every argument to and must be either a boolean or a command that returns a boolean.
 The and command will check all arguments in order, and if any of them are false, and
@@ -540,7 +540,7 @@ is found to be false, <a href="#cond-and"><code>and</code></a> will not evaluate
 </article>
 <article class="cmd" id="cond-or">
 <h3 class="cmd-title"><code>cond:or</code></h3>
-<div class="cmd-doc"><pre><code>or condition:(bool|command)... -&gt; boolean</code></pre>
+<div class="cmd-doc"><pre><code><a href="#cond-or"><span class="tok-command">or</span></a> <span class="tok-string_literal">condition</span><span class="tok-operator">:</span><span class="tok-operator">(</span><span class="tok-string_literal">bool</span><span class="tok-operator">|</span><a href="#types-command"><span class="tok-command">command</span></a><span class="tok-operator">)</span><span class="tok-file_literal">...</span> <span class="tok-named_argument">-</span><span class="tok-error">&gt; boolean</span></code></pre>
 <p>True if any argument is true</p>
 <p>Every argument to or must be either a <code>boolean</code> or a command that returns a <code>boolean</code>.
 The or command will check all arguments in order, and if any of them are <code>true</code>, or
@@ -632,7 +632,7 @@ foreground the way <a href="#control-fg"><code>fg</code></a> would.</p>
 </article>
 <article class="cmd" id="control-cmd">
 <h3 class="cmd-title"><code>control:cmd</code></h3>
-<div class="cmd-doc"><pre><code>control:cmd command=file [&lt;any&gt;=any...] [arguments=any...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#control-cmd"><span class="tok-command">control:cmd</span></a> <span class="tok-string_literal">command</span><span class="tok-operator">=</span><span class="tok-string_literal">file</span> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...] [arguments=any...]</span></code></pre>
 <p>Execute an external command</p>
 <p>Globs are file-expanded. Argument and switch order is preserved.</p>
 <h2>Input signature</h2>
@@ -746,7 +746,7 @@ eventual result for later retrieval; <a href="#control-fg"><code>fg</code></a> w
 </article>
 <article class="cmd" id="control-for">
 <h3 class="cmd-title"><code>control:for</code></h3>
-<div class="cmd-doc"><pre><code>control:for [&lt;any&gt;=any...] body=command</code></pre>
+<div class="cmd-doc"><pre><code><a href="#control-for"><span class="tok-command">control:for</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...] body=command</span></code></pre>
 <p>Execute a command once for each element in a stream.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -2394,7 +2394,7 @@ https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml</p>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#io-csv-from"><code>io:csv:from</code></a></li></ul></nav>
 <article class="cmd" id="io-csv-from">
 <h4 class="cmd-title"><code>io:csv:from</code></h4>
-<div class="cmd-doc"><pre><code>io:csv:from [files=one_of $file $string $binary $binary_input_stream $glob $re...] [&lt;any&gt;=type...] [separator=string] [head=integer] [trim=string]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#io-csv-from"><span class="tok-command">io:csv:from</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">files</span><span class="tok-operator">=</span><span class="tok-string_literal">one_of</span> <a href="#types-file"><span class="tok-identifier">$file</span></a> <a href="#types-string"><span class="tok-identifier">$string</span></a> <a href="#types-binary"><span class="tok-identifier">$binary</span></a> <span class="tok-identifier">$binary_input_stream</span> <a href="#types-glob"><span class="tok-identifier">$glob</span></a> <a href="#types-re"><span class="tok-identifier">$re</span></a><span class="tok-file_literal">...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=type...] [separator=string] [head=integer] [trim=string]</span></code></pre>
 <p>Parse specified files as CSV files</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -3470,7 +3470,7 @@ Materialized types, i.e. <code>$table</code>, <code>$list</code> and <code>$dict
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code>host:procs | where {$status != &quot;Sleeping&quot;} | each {echo (&quot;{} is sleepy&quot;:format $name)}</code></pre>
+<pre><code><a href="#host-procs"><span class="tok-command">host:procs</span></a> <span class="tok-operator">|</span> <a href="#stream-where"><span class="tok-command">where</span></a> <span class="tok-operator">{</span><span class="tok-identifier">$status</span><span class="tok-error"> != &quot;Sleeping&quot;} | each {echo (&quot;{} is sleepy&quot;:format $name)}</span></code></pre>
 <h2>Output signature</h2>
 <pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
@@ -3502,7 +3502,7 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 </article>
 <article class="cmd" id="stream-group">
 <h3 class="cmd-title"><code>stream:group</code></h3>
-<div class="cmd-doc"><pre><code>stream:group [group_by=string...] [&lt;any&gt;=command...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#stream-group"><span class="tok-command">stream:group</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">group_by</span><span class="tok-operator">=</span><span class="tok-file_literal">string...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=command...]</span></code></pre>
 <p>Group stream by the specified column(s)</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -3535,7 +3535,7 @@ dedicated command like <a href="#stream-sum"><code>sum</code></a> or <a href="#s
 </article>
 <article class="cmd" id="stream-join">
 <h3 class="cmd-title"><code>stream:join</code></h3>
-<div class="cmd-doc"><pre><code>stream:join [&lt;any&gt;=any...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#stream-join"><span class="tok-command">stream:join</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...]</span></code></pre>
 <p>Join two streams together on the specified keys.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -3615,7 +3615,7 @@ The column type must be numeric.</p>
 </article>
 <article class="cmd" id="stream-rename">
 <h3 class="cmd-title"><code>stream:rename</code></h3>
-<div class="cmd-doc"><pre><code>stream:rename [&lt;any&gt;=string...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#stream-rename"><span class="tok-command">stream:rename</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=string...]</span></code></pre>
 <p>Rename one or more columns of a stream.</p>
 <p>Every argument name is the current name of a column, and its value is the
 new name to give it. Columns not mentioned pass through unchanged.</p>
@@ -4238,7 +4238,7 @@ to or subtracted from a <a href="#types-time"><code>time</code></a> instance.</p
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-duration-__add__"><code>types:duration:__add__</code></a></li><li class="idx-cmd"><a href="#types-duration-__div__"><code>types:duration:__div__</code></a></li><li class="idx-cmd"><a href="#types-duration-__mul__"><code>types:duration:__mul__</code></a></li><li class="idx-cmd"><a href="#types-duration-__neg__"><code>types:duration:__neg__</code></a></li><li class="idx-cmd"><a href="#types-duration-__sub__"><code>types:duration:__sub__</code></a></li><li class="idx-cmd"><a href="#types-duration-days"><code>types:duration:days</code></a></li><li class="idx-cmd"><a href="#types-duration-hours"><code>types:duration:hours</code></a></li><li class="idx-cmd"><a href="#types-duration-milliseconds"><code>types:duration:milliseconds</code></a></li><li class="idx-cmd"><a href="#types-duration-minutes"><code>types:duration:minutes</code></a></li><li class="idx-cmd"><a href="#types-duration-nanoseconds_part"><code>types:duration:nanoseconds_part</code></a></li><li class="idx-cmd"><a href="#types-duration-of"><code>types:duration:of</code></a></li><li class="idx-cmd"><a href="#types-duration-seconds"><code>types:duration:seconds</code></a></li></ul></nav>
 <article class="cmd" id="types-duration-__add__">
 <h4 class="cmd-title"><code>types:duration:__add__</code></h4>
-<div class="cmd-doc"><pre><code>duration + (delta:duration | time:time)</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-duration"><span class="tok-command">duration</span></a><span class="tok-error"> + (delta:duration | time:time)</span></code></pre>
 <p>Add the specified delta or time to this duration.</p>
 </div>
 </article>
@@ -4544,7 +4544,7 @@ expression promotes the result to a float.</p>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-float-__add__"><code>types:float:__add__</code></a></li><li class="idx-cmd"><a href="#types-float-__div__"><code>types:float:__div__</code></a></li><li class="idx-cmd"><a href="#types-float-__mul__"><code>types:float:__mul__</code></a></li><li class="idx-cmd"><a href="#types-float-__neg__"><code>types:float:__neg__</code></a></li><li class="idx-cmd"><a href="#types-float-__sub__"><code>types:float:__sub__</code></a></li><li class="idx-cmd"><a href="#types-float-infinity"><code>types:float:infinity</code></a></li><li class="idx-cmd"><a href="#types-float-is_infinite"><code>types:float:is_infinite</code></a></li><li class="idx-cmd"><a href="#types-float-is_nan"><code>types:float:is_nan</code></a></li><li class="idx-cmd"><a href="#types-float-max"><code>types:float:max</code></a></li><li class="idx-cmd"><a href="#types-float-min"><code>types:float:min</code></a></li><li class="idx-cmd"><a href="#types-float-nan"><code>types:float:nan</code></a></li></ul></nav>
 <article class="cmd" id="types-float-__add__">
 <h4 class="cmd-title"><code>types:float:__add__</code></h4>
-<div class="cmd-doc"><pre><code>types:float + term=$(one_of $float $integer) # Only available in expression mode</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-float"><span class="tok-command">types:float</span></a><span class="tok-error"> + term=$(one_of $float $integer) # Only available in expression mode</span></code></pre>
 <p>Add this number and the specified term and return the result</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -4757,7 +4757,7 @@ promotes the result to a float.</p>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-integer-__add__"><code>types:integer:__add__</code></a></li><li class="idx-cmd"><a href="#types-integer-__div__"><code>types:integer:__div__</code></a></li><li class="idx-cmd"><a href="#types-integer-__mod__"><code>types:integer:__mod__</code></a></li><li class="idx-cmd"><a href="#types-integer-__mul__"><code>types:integer:__mul__</code></a></li><li class="idx-cmd"><a href="#types-integer-__neg__"><code>types:integer:__neg__</code></a></li><li class="idx-cmd"><a href="#types-integer-__rem__"><code>types:integer:__rem__</code></a></li><li class="idx-cmd"><a href="#types-integer-__sub__"><code>types:integer:__sub__</code></a></li><li class="idx-cmd"><a href="#types-integer-max"><code>types:integer:max</code></a></li><li class="idx-cmd"><a href="#types-integer-min"><code>types:integer:min</code></a></li></ul></nav>
 <article class="cmd" id="types-integer-__add__">
 <h4 class="cmd-title"><code>types:integer:__add__</code></h4>
-<div class="cmd-doc"><pre><code>types:integer + term=$(one_of $float $integer) # Only available in expression mode</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-integer"><span class="tok-command">types:integer</span></a><span class="tok-error"> + term=$(one_of $float $integer) # Only available in expression mode</span></code></pre>
 <p>Add this number and the specified term and return the result</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -5227,7 +5227,7 @@ erroring, crush falls back to displaying it as the placeholder text
 </article>
 <article class="cmd" id="types-string-format">
 <h4 class="cmd-title"><code>types:string:format</code></h4>
-<div class="cmd-doc"><pre><code>types:string:format [&lt;any&gt;=any...] [unnamed=any...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-string-format"><span class="tok-command">types:string:format</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...] [unnamed=any...]</span></code></pre>
 <p>Format arguments into a string</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -5514,7 +5514,7 @@ columns from more than one source, applied here to struct members instead.</p>
 </article>
 <article class="cmd" id="types-struct-of">
 <h4 class="cmd-title"><code>types:struct:of</code></h4>
-<div class="cmd-doc"><pre><code>types:struct:of [unnamed=any...] [&lt;any&gt;=any...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-struct-of"><span class="tok-command">types:struct:of</span></a> <span class="tok-operator">[</span><span class="tok-string_literal">unnamed</span><span class="tok-operator">=</span><span class="tok-file_literal">any...</span><span class="tok-operator">]</span> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...]</span></code></pre>
 <p>Construct a struct with the specified members</p>
 <p>Unnamed arguments will be given the names _1, _2, _3, and so on.</p>
 <p>Unlike a struct created via the <a href="#types-class"><code>class</code></a> command, a struct created via <a href="#types-struct-of"><code>struct:of</code></a> does not have a parent or a <code>__setattr__</code> method. The lack of a <code>__setattr__</code> method means that a &quot;data struct&quot; is immutable, though its members may potentially be modified, depending on their type.</p>
@@ -5547,7 +5547,7 @@ methods for adding, removing, or replacing rows. The most similar type is
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-table-__call__"><code>types:table:__call__</code></a></li><li class="idx-cmd"><a href="#types-table-__getitem__"><code>types:table:__getitem__</code></a></li></ul></nav>
 <article class="cmd" id="types-table-__call__">
 <h4 class="cmd-title"><code>types:table:__call__</code></h4>
-<div class="cmd-doc"><pre><code>types:table_input_stream:__call__ [&lt;any&gt;=type...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-table_input_stream-__call__"><span class="tok-command">types:table_input_stream:__call__</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=type...]</span></code></pre>
 <p>return the table_input_stream type with the specified column signature.</p>
 <p>You usually do this in order to create a pipe specialized to a specific column signature.</p>
 <h2>Input signature</h2>
@@ -5594,7 +5594,7 @@ the writable counterpart of the same rows.</p>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-table_input_stream-__call__"><code>types:table_input_stream:__call__</code></a></li><li class="idx-cmd"><a href="#types-table_input_stream-__getitem__"><code>types:table_input_stream:__getitem__</code></a></li><li class="idx-cmd"><a href="#types-table_input_stream-pipe"><code>types:table_input_stream:pipe</code></a></li></ul></nav>
 <article class="cmd" id="types-table_input_stream-__call__">
 <h4 class="cmd-title"><code>types:table_input_stream:__call__</code></h4>
-<div class="cmd-doc"><pre><code>types:table_input_stream:__call__ [&lt;any&gt;=type...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-table_input_stream-__call__"><span class="tok-command">types:table_input_stream:__call__</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=type...]</span></code></pre>
 <p>return the table_input_stream type with the specified column signature.</p>
 <p>You usually do this in order to create a pipe specialized to a specific column signature.</p>
 <h2>Input signature</h2>
@@ -5689,7 +5689,7 @@ is <a href="#types-table_input_stream"><code>table_input_stream</code></a>, its 
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-table_output_stream-__call__"><code>types:table_output_stream:__call__</code></a></li><li class="idx-cmd"><a href="#types-table_output_stream-write"><code>types:table_output_stream:write</code></a></li></ul></nav>
 <article class="cmd" id="types-table_output_stream-__call__">
 <h4 class="cmd-title"><code>types:table_output_stream:__call__</code></h4>
-<div class="cmd-doc"><pre><code>types:table_output_stream:__call__ [&lt;any&gt;=type...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-table_output_stream-__call__"><span class="tok-command">types:table_output_stream:__call__</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=type...]</span></code></pre>
 <p>return the table_output_stream type with the specified column signature.</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -5727,7 +5727,7 @@ points in time.</p>
 <nav class="ns-index"><ul><li class="idx-cmd"><a href="#types-time-__add__"><code>types:time:__add__</code></a></li><li class="idx-cmd"><a href="#types-time-__sub__"><code>types:time:__sub__</code></a></li><li class="idx-cmd"><a href="#types-time-format"><code>types:time:format</code></a></li><li class="idx-cmd"><a href="#types-time-now"><code>types:time:now</code></a></li><li class="idx-cmd"><a href="#types-time-parse"><code>types:time:parse</code></a></li></ul></nav>
 <article class="cmd" id="types-time-__add__">
 <h4 class="cmd-title"><code>types:time:__add__</code></h4>
-<div class="cmd-doc"><pre><code>types:integer + term=duration # Only available in expression mode</code></pre>
+<div class="cmd-doc"><pre><code><a href="#types-integer"><span class="tok-command">types:integer</span></a><span class="tok-error"> + term=duration # Only available in expression mode</span></code></pre>
 <p>Add the specified delta to this time</p>
 <h2>Input signature</h2>
 <p>This command accepts the following arguments:</p>
@@ -6058,7 +6058,7 @@ name of the variable you want to get.</p>
 </article>
 <article class="cmd" id="var-let">
 <h3 class="cmd-title"><code>var:let</code></h3>
-<div class="cmd-doc"><pre><code>var:let [&lt;any&gt;=any...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#var-let"><span class="tok-command">var:let</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...]</span></code></pre>
 <p>Declare new variables in the current scope.</p>
 <p>No variable can exist in the local scope, or an error will result.</p>
 <p>The let builtin is not normally called directly, but via the syntactic sugar of the := operator.</p>
@@ -6094,9 +6094,9 @@ number of names, or an error results.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code># These two lines are equivalent
-[$a, $b] := [1, 2]
-var:let_destructure a b value=[1, 2]</code></pre>
+<pre><code><span class="tok-comment"># These two lines are equivalent</span>
+<span class="tok-operator">[</span><span class="tok-identifier">$a</span><span class="tok-error">, $b] := [1, 2]
+var:let_destructure a b value=[1, 2]</span></code></pre>
 <h2>Output signature</h2>
 <pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>
@@ -6127,7 +6127,7 @@ the scopes used in any of those scopes.</p>
 </article>
 <article class="cmd" id="var-set">
 <h3 class="cmd-title"><code>var:set</code></h3>
-<div class="cmd-doc"><pre><code>var:set [&lt;any&gt;=any...]</code></pre>
+<div class="cmd-doc"><pre><code><a href="#var-set"><span class="tok-command">var:set</span></a> <span class="tok-operator">[</span><span class="tok-error">&lt;any&gt;=any...]</span></code></pre>
 <p>Reassign existing variables</p>
 <p>A variable by the specified name must already exist in some visible scope before calling
 the <code>set</code> builtin, or an error will result.</p>
@@ -6166,9 +6166,9 @@ or an error results.</p>
 </li>
 </ul>
 <h1>Examples</h1>
-<pre><code># These two lines are equivalent
-[$a, $b] = [1, 2]
-var:set_destructure a b value=[1, 2]</code></pre>
+<pre><code><span class="tok-comment"># These two lines are equivalent</span>
+<span class="tok-operator">[</span><span class="tok-identifier">$a</span><span class="tok-error">, $b] = [1, 2]
+var:set_destructure a b value=[1, 2]</span></code></pre>
 <h2>Output signature</h2>
 <pre><code><a href="#types-empty"><span class="tok-command">empty</span></a></code></pre>
 </div>

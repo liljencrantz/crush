@@ -5,7 +5,7 @@ use crate::lang::ast::source::{Source, SourceType};
 use crate::lang::ast::token::Token;
 use crate::lang::command::{Command, CrushCommand, OutputType, Parameter, PipeInputType};
 use crate::lang::command_invocation::{is_runnable_as_command, resolve_external_command};
-use crate::lang::errors::{CrushError, CrushResult};
+use crate::lang::errors::CrushResult;
 use crate::lang::help::Help;
 use crate::lang::serialization::SerializationState;
 use crate::lang::serialization::model::Element;
@@ -267,21 +267,34 @@ struct BracketFrame {
 
 /// Every token of `code`, in order, paired with the presentation category
 /// (matching a key of the `crush:highlight` color map, or a `tok-<name>`
-/// CSS class for HTML output) that applies to it, if any. Shared by both
-/// output modes below so the (fairly involved) command/argument-tracking
-/// state machine only needs to live in one place.
+/// CSS class for HTML output) that applies to it, if any -- plus whether the lexer
+/// itself failed partway through (e.g. `ls <`, where `<` isn't a valid token start in
+/// command mode). The lexer can't recover from an error and resume, so there's no way to
+/// classify anything from that point onward; everything up to it is still classified
+/// normally, and the caller is expected to render the remainder of `code` (from the end
+/// of the last successful token, i.e. where rendering `classified` would otherwise leave
+/// off) in the "error" color/class itself, rather than discarding all of `classified` and
+/// falling back to no highlighting at all for the entire line. Shared by both output
+/// modes below so the (fairly involved) command/argument-tracking state machine only
+/// needs to live in one place.
 fn classify_tokens<'a>(
     code: &'a str,
     scope: &Option<Scope>,
-) -> CrushResult<Vec<(Token<'a>, Option<&'static str>)>> {
+) -> (Vec<(Token<'a>, Option<&'static str>)>, bool) {
     let mut new_command = true;
     let mut prev = None;
 
-    let l = Lexer::new(code, LanguageMode::Command, TokenizerMode::IncludeComments);
-    let tokens = l
-        .into_iter()
-        .map(|item| item.map(|it| it.1).map_err(|e| CrushError::from(e)))
-        .collect::<CrushResult<Vec<Token>>>()?;
+    let mut tokens: Vec<Token<'a>> = Vec::new();
+    let mut had_lexer_error = false;
+    for item in Lexer::new(code, LanguageMode::Command, TokenizerMode::IncludeComments) {
+        match item {
+            Ok((_, tok, _)) => tokens.push(tok),
+            Err(_) => {
+                had_lexer_error = true;
+                break;
+            }
+        }
+    }
 
     let mut current_command: Option<Command> = None;
     // Whether the current command-position name resolves to *anything* in scope, not
@@ -667,7 +680,7 @@ fn classify_tokens<'a>(
         result[i].1 = Some(cat);
     }
 
-    Ok(result)
+    (result, had_lexer_error)
 }
 
 pub fn syntax_highlight(
@@ -675,7 +688,7 @@ pub fn syntax_highlight(
     colors: &HashMap<String, String>,
     scope: &Option<Scope>,
 ) -> CrushResult<String> {
-    let classified = classify_tokens(code, scope)?;
+    let (classified, had_lexer_error) = classify_tokens(code, scope);
     let mut res = String::new();
     let mut pos = 0;
 
@@ -697,6 +710,22 @@ pub fn syntax_highlight(
         }
         pos = tok.location().end;
     }
+
+    // The lexer can't recover and resume after a failure, so there's nothing left to
+    // classify token-by-token from here on -- but the failure itself is exactly the
+    // thing a user most needs to see highlighted, instead of the rest of the line
+    // silently reverting to no color at all.
+    if had_lexer_error && pos < code.len() {
+        match colors.get("error") {
+            Some(color) if !color.is_empty() => {
+                res.push_str(color);
+                res.push_str(&code[pos..]);
+                res.push_str("\x1b[0m");
+            }
+            _ => res.push_str(&code[pos..]),
+        }
+    }
+
     Ok(res)
 }
 
@@ -712,7 +741,7 @@ pub fn syntax_highlight(
 /// paths (see `generate_docs.crush`) can turn genuine matches into links,
 /// leaving anything that merely looks like a command alone.
 pub fn syntax_highlight_html(code: &str) -> CrushResult<String> {
-    let classified = classify_tokens(code, &None)?;
+    let (classified, had_lexer_error) = classify_tokens(code, &None);
     let mut res = String::new();
     let mut pos = 0;
     let mut i = 0;
@@ -773,6 +802,12 @@ pub fn syntax_highlight_html(code: &str) -> CrushResult<String> {
         pos = tok.location().end;
         i += 1;
     }
+
+    if had_lexer_error && pos < code.len() {
+        let escaped = html_escape(&code[pos..]);
+        res.push_str(&format!("<span class=\"tok-error\">{escaped}</span>"));
+    }
+
     Ok(res)
 }
 
@@ -1079,7 +1114,7 @@ mod tests {
     #[test]
     fn bare_namespace_used_as_command_is_not_an_error() {
         let scope = Some(scope_with_fs_namespace());
-        let classified = classify_tokens("fs", &scope).unwrap();
+        let classified = classify_tokens("fs", &scope).0;
         assert_eq!(classified.len(), 1);
         assert_ne!(
             classified[0].1,
@@ -1093,7 +1128,7 @@ mod tests {
     #[test]
     fn namespace_member_access_is_still_a_command() {
         let scope = Some(scope_with_fs_namespace());
-        let classified = classify_tokens("fs:my_cmd", &scope).unwrap();
+        let classified = classify_tokens("fs:my_cmd", &scope).0;
         assert_eq!(classified[0].1, Some("command"));
         assert_eq!(classified[2].1, Some("command"));
     }
@@ -1113,7 +1148,7 @@ mod tests {
             .unwrap();
         let scope = Some(root);
 
-        let classified = classify_tokens("fs:my_cmd|count", &scope).unwrap();
+        let classified = classify_tokens("fs:my_cmd|count", &scope).0;
         assert_eq!(classified[0].1, Some("command"), "fs");
         assert_eq!(classified[2].1, Some("command"), "my_cmd");
         assert_eq!(
@@ -1128,7 +1163,7 @@ mod tests {
     #[test]
     fn unresolvable_bare_word_is_still_an_error() {
         let scope = Some(scope_with_fs_namespace());
-        let classified = classify_tokens("not_a_real_command_or_namespace", &scope).unwrap();
+        let classified = classify_tokens("not_a_real_command_or_namespace", &scope).0;
         assert_eq!(classified[0].1, Some("error"));
     }
 
@@ -1149,7 +1184,7 @@ mod tests {
         let _guard = PathGuard::set(&dir);
 
         let scope = Some(Scope::create_root());
-        let classified = classify_tokens("just_a_data_file", &scope).unwrap();
+        let classified = classify_tokens("just_a_data_file", &scope).0;
         assert_eq!(
             classified[0].1,
             Some("error"),
@@ -1171,7 +1206,7 @@ mod tests {
         let _guard = PathGuard::set(&dir);
 
         let scope = Some(Scope::create_root());
-        let classified = classify_tokens("a_real_program", &scope).unwrap();
+        let classified = classify_tokens("a_real_program", &scope).0;
         assert_eq!(classified[0].1, Some("command"));
     }
 
@@ -1187,7 +1222,7 @@ mod tests {
         let _guard = PathGuard::set(&dir);
 
         let scope = Some(Scope::create_root());
-        let classified = classify_tokens("a_directory", &scope).unwrap();
+        let classified = classify_tokens("a_directory", &scope).0;
         assert_ne!(
             classified[0].1,
             Some("error"),
@@ -1211,7 +1246,7 @@ mod tests {
 
         let scope = Some(Scope::create_root());
         let code = format!("{}", file.display());
-        let classified = classify_tokens(&code, &scope).unwrap();
+        let classified = classify_tokens(&code, &scope).0;
         assert_eq!(
             classified[0].1,
             Some("error"),
@@ -1229,7 +1264,7 @@ mod tests {
 
         let scope = Some(Scope::create_root());
         let code = format!("{}", sub_dir.display());
-        let classified = classify_tokens(&code, &scope).unwrap();
+        let classified = classify_tokens(&code, &scope).0;
         assert_ne!(classified[0].1, Some("error"));
     }
 
@@ -1247,7 +1282,7 @@ mod tests {
 
         let scope = Some(Scope::create_root());
         let code = format!("{}", file.display());
-        let classified = classify_tokens(&code, &scope).unwrap();
+        let classified = classify_tokens(&code, &scope).0;
         assert_eq!(classified[0].1, Some("file_literal"));
     }
 
@@ -1260,7 +1295,7 @@ mod tests {
         root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
             .unwrap();
 
-        let classified = classify_tokens("my_cmd ./this_file_does_not_exist_anywhere", &Some(root)).unwrap();
+        let classified = classify_tokens("my_cmd ./this_file_does_not_exist_anywhere", &Some(root)).0;
         assert_eq!(classified[0].1, Some("command"));
         assert_eq!(classified[1].1, Some("file_literal"));
     }
@@ -1476,7 +1511,7 @@ mod tests {
     #[test]
     fn literal_pipe_input_rejected_by_dynamic_output_is_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("3|sort_like", &scope).unwrap();
+        let classified = classify_tokens("3|sort_like", &scope).0;
         let sort_like_idx = classified
             .iter()
             .position(|(tok, _)| matches!(tok, Token::String(s, _) if *s == "sort_like"))
@@ -1489,7 +1524,7 @@ mod tests {
     #[test]
     fn dynamic_output_with_no_pipe_input_is_not_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("sort_like", &scope).unwrap();
+        let classified = classify_tokens("sort_like", &scope).0;
         assert_eq!(classified[0].1, Some("command"));
     }
 
@@ -1499,7 +1534,7 @@ mod tests {
     #[test]
     fn error_in_one_stage_does_not_cascade_to_the_next() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("3|sort_like|sort_like", &scope).unwrap();
+        let classified = classify_tokens("3|sort_like|sort_like", &scope).0;
         let sort_like_positions: Vec<usize> = classified
             .iter()
             .enumerate()
@@ -1516,7 +1551,7 @@ mod tests {
     #[test]
     fn literal_argument_rejected_by_dynamic_output_is_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("takes_args bad", &scope).unwrap();
+        let classified = classify_tokens("takes_args bad", &scope).0;
         assert_eq!(classified[0].1, Some("error"));
     }
 
@@ -1524,7 +1559,7 @@ mod tests {
     #[test]
     fn literal_argument_accepted_by_dynamic_output_is_not_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("takes_args good", &scope).unwrap();
+        let classified = classify_tokens("takes_args good", &scope).0;
         assert_eq!(classified[0].1, Some("command"));
     }
 
@@ -1537,7 +1572,7 @@ mod tests {
         let root = Scope::create_root();
         root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
             .unwrap();
-        let classified = classify_tokens("my_cmd -c", &Some(root)).unwrap();
+        let classified = classify_tokens("my_cmd -c", &Some(root)).0;
         assert_eq!(classified.len(), 2);
     }
 
@@ -1549,7 +1584,7 @@ mod tests {
         let root = Scope::create_root();
         root.declare("my_cmd", Value::Command(MyCmdSignature::create_command()))
             .unwrap();
-        let classified = classify_tokens("my_cmd -", &Some(root)).unwrap();
+        let classified = classify_tokens("my_cmd -", &Some(root)).0;
         assert_eq!(classified.len(), 2);
     }
 
@@ -1572,7 +1607,7 @@ mod tests {
     #[test]
     fn substitution_argument_type_crosses_the_boundary() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("checks_arg_type x=$(produces_integer)", &scope).unwrap();
+        let classified = classify_tokens("checks_arg_type x=$(produces_integer)", &scope).0;
         let (_, cat) = find_command_token(&classified, "checks_arg_type");
         assert_ne!(cat, Some("error"), "an integer substitution should be accepted");
     }
@@ -1582,7 +1617,7 @@ mod tests {
     #[test]
     fn substitution_argument_of_the_wrong_type_is_rejected() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("checks_arg_type x=$(produces_string)", &scope).unwrap();
+        let classified = classify_tokens("checks_arg_type x=$(produces_string)", &scope).0;
         let (_, cat) = find_command_token(&classified, "checks_arg_type");
         assert_eq!(cat, Some("error"), "a string substitution should be rejected");
     }
@@ -1594,7 +1629,7 @@ mod tests {
     #[test]
     fn substitution_as_job_head_feeds_the_next_pipe_stage() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("$(produces_integer)|sort_like", &scope).unwrap();
+        let classified = classify_tokens("$(produces_integer)|sort_like", &scope).0;
         let (_, cat) = find_command_token(&classified, "sort_like");
         assert_eq!(
             cat,
@@ -1609,7 +1644,7 @@ mod tests {
     #[test]
     fn closure_argument_predicted_type_crosses_the_boundary() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("closure_arg_like x={produces_integer}", &scope).unwrap();
+        let classified = classify_tokens("closure_arg_like x={produces_integer}", &scope).0;
         let (_, cat) = find_command_token(&classified, "closure_arg_like");
         assert_ne!(
             cat,
@@ -1622,7 +1657,7 @@ mod tests {
     #[test]
     fn closure_argument_of_the_wrong_predicted_type_is_rejected() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("closure_arg_like x={produces_string}", &scope).unwrap();
+        let classified = classify_tokens("closure_arg_like x={produces_string}", &scope).0;
         let (_, cat) = find_command_token(&classified, "closure_arg_like");
         assert_eq!(
             cat,
@@ -1637,7 +1672,7 @@ mod tests {
     #[test]
     fn error_inside_a_bracket_still_marks_the_inner_command() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("checks_arg_type x=$(3|sort_like)", &scope).unwrap();
+        let classified = classify_tokens("checks_arg_type x=$(3|sort_like)", &scope).0;
         let (_, cat) = find_command_token(&classified, "sort_like");
         assert_eq!(cat, Some("error"), "sort_like given Known(Integer) should still be flagged, even nested inside a substitution");
     }
@@ -1649,7 +1684,7 @@ mod tests {
     fn argument_after_a_bracket_is_still_collected() {
         let scope = Some(scope_with_dynamic_output_commands());
         let classified =
-            classify_tokens("two_args_like x=$(produces_integer) y=5", &scope).unwrap();
+            classify_tokens("two_args_like x=$(produces_integer) y=5", &scope).0;
         let (_, cat) = find_command_token(&classified, "two_args_like");
         assert_ne!(cat, Some("error"), "both x and y were given, just with x's value nested in a substitution");
     }
@@ -1660,7 +1695,7 @@ mod tests {
     #[test]
     fn missing_argument_after_a_bracket_is_still_rejected() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("two_args_like x=$(produces_integer)", &scope).unwrap();
+        let classified = classify_tokens("two_args_like x=$(produces_integer)", &scope).0;
         let (_, cat) = find_command_token(&classified, "two_args_like");
         assert_eq!(cat, Some("error"), "y was never given");
     }
@@ -1673,7 +1708,7 @@ mod tests {
         // sort_like only rejects a *Known(Integer)* input; a bare closure statement's
         // own type (Command) should pass through untouched -- same as any other
         // non-Integer input.
-        let classified = classify_tokens("{produces_integer}|sort_like", &scope).unwrap();
+        let classified = classify_tokens("{produces_integer}|sort_like", &scope).0;
         let (_, cat) = find_command_token(&classified, "sort_like");
         assert_ne!(
             cat,
@@ -1725,7 +1760,7 @@ mod tests {
             "checks_arg_type x=$(closure_arg_like x={$(produces_integer)})",
             &scope,
         )
-        .unwrap();
+        .0;
         let (_, cat) = find_command_token(&classified, "checks_arg_type");
         // closure_arg_like's own x is a closure {$(produces_integer)}, whose predicted
         // return type is Integer (from the innermost substitution) -- so closure_arg_like
@@ -1756,7 +1791,7 @@ mod tests {
     fn unresolved_identifier_inside_a_closure_argument_is_not_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
         let classified =
-            classify_tokens("closure_arg_like x={$size}", &scope).unwrap();
+            classify_tokens("closure_arg_like x={$size}", &scope).0;
         let cat = find_identifier_token(&classified, "$size");
         assert_ne!(cat, Some("error"));
     }
@@ -1767,7 +1802,7 @@ mod tests {
     #[test]
     fn unresolved_identifier_at_top_level_is_still_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("$size", &scope).unwrap();
+        let classified = classify_tokens("$size", &scope).0;
         let cat = find_identifier_token(&classified, "$size");
         assert_eq!(cat, Some("error"));
     }
@@ -1777,8 +1812,80 @@ mod tests {
     #[test]
     fn unresolved_identifier_inside_a_substitution_is_still_an_error() {
         let scope = Some(scope_with_dynamic_output_commands());
-        let classified = classify_tokens("checks_arg_type x=$($size)", &scope).unwrap();
+        let classified = classify_tokens("checks_arg_type x=$($size)", &scope).0;
         let cat = find_identifier_token(&classified, "$size");
         assert_eq!(cat, Some("error"));
+    }
+
+    // --- lexer failures ---
+
+    /// classify_tokens itself must report that the lexer failed, alongside whatever it
+    /// did manage to classify beforehand -- not discard that prefix's classification
+    /// (`ls` is still a perfectly good, resolvable command) just because `<` can't be
+    /// lexed in command mode.
+    #[test]
+    fn classify_tokens_reports_lexer_failure_without_discarding_the_prefix() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let (classified, had_lexer_error) = classify_tokens("sort_like <", &scope);
+        assert!(had_lexer_error);
+        let (_, cat) = find_command_token(&classified, "sort_like");
+        assert_ne!(
+            cat,
+            Some("error"),
+            "the successfully-lexed prefix should still be classified normally"
+        );
+    }
+
+    /// A line that lexes cleanly end to end must report no lexer failure at all.
+    #[test]
+    fn classify_tokens_reports_no_lexer_failure_for_valid_input() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let (_, had_lexer_error) = classify_tokens("sort_like file", &scope);
+        assert!(!had_lexer_error);
+    }
+
+    /// The motivating example: `ls <` must color the unlexable remainder (`<`) as an
+    /// error, with the valid prefix (`ls`) left exactly as it would otherwise be
+    /// colored -- not fall back to no highlighting at all for the entire line, which is
+    /// what propagating classify_tokens's old Err all the way up to the rustyline
+    /// Highlighter (see highlight_internal in rustyline_helper.rs) used to do.
+    #[test]
+    fn syntax_highlight_unlexable_remainder_is_colored_and_prefix_is_preserved() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let mut colors = HashMap::new();
+        colors.insert("error".to_string(), "<<ERR>>".to_string());
+        colors.insert("command".to_string(), "<<CMD>>".to_string());
+
+        let rendered = syntax_highlight("sort_like <", &colors, &scope).unwrap();
+
+        assert!(rendered.contains("<<CMD>>sort_like"), "got: {}", rendered);
+        // The error region starts right after the valid prefix and still contains the
+        // actual unlexable character -- whether or not the gap's own whitespace is
+        // included in the colored span doesn't matter for how it looks rendered.
+        let (_, after_prefix) = rendered.split_once("<<CMD>>sort_like").unwrap();
+        assert!(after_prefix.contains("<<ERR>>"), "got: {}", rendered);
+        let (_, after_error) = after_prefix.split_once("<<ERR>>").unwrap();
+        assert!(after_error.contains('<'), "got: {}", rendered);
+    }
+
+    /// A line that's entirely unlexable from the very first character (nothing
+    /// successfully classified at all) must still color the whole thing as an error,
+    /// not panic or silently produce no output.
+    #[test]
+    fn syntax_highlight_wholly_unlexable_input_is_colored_as_an_error() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let mut colors = HashMap::new();
+        colors.insert("error".to_string(), "<<ERR>>".to_string());
+
+        let rendered = syntax_highlight("<", &colors, &scope).unwrap();
+        assert_eq!(rendered, "<<ERR>><\x1b[0m");
+    }
+
+    /// HTML rendering gets the same treatment: the unlexable remainder is wrapped in
+    /// tok-error, not silently dropped.
+    #[test]
+    fn syntax_highlight_html_colors_the_unlexable_remainder_as_an_error() {
+        let rendered = syntax_highlight_html("ls <").unwrap();
+        assert!(rendered.contains("<span class=\"tok-error\">"), "got: {}", rendered);
     }
 }
