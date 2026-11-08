@@ -203,6 +203,51 @@ process and the output is where the processed data ends up.
 
 ## Streams
 
+### Stream-like values
+
+Stream commands (`where`, `group`, `join`, `each`, ... -- see below) don't only accept
+a real `table_input_stream`/`table_output_stream`/`table`; several other types are
+**stream-like** and get converted into a table stream automatically when piped into
+one, each with its own fixed column shape:
+
+| Value | Column(s) |
+|---|---|
+| `table_input_stream`/`table_output_stream`/`table` | its own declared columns |
+| `list` | one `value` column holding each element |
+| `dict` | `key` and `value` columns, one row per entry |
+| `struct` | `name` and `value` columns, one row per field |
+| `scope` | `name` and `value` columns, one row per variable in that scope |
+| `glob` | one `value` column of `file`s -- the glob is expanded against the current directory, exactly like using it as a command's argument |
+
+```shell script
+crush# $($list.of 1 2 3) | where {gt $value 1} | each {echo $value}
+2
+3
+
+crush# $($struct.of x=1 y=2) | each {echo $name $value}
+x
+1
+y
+2
+
+crush# *.md | each {echo $value}
+README.md
+CLAUDE.md
+```
+
+Piping a value that isn't one of these (or a real table stream) into a stream command
+is a type error. But a `list`'s one `value` column holds each element *as a whole*,
+field structure and all -- a `list` of structs still only has the one `value` column,
+never one column per field, even though each individual element happens to be a
+struct with fields of its own. A condition closure that refers to one of those inner
+fields by name (`{eq $x 2}`, say, expecting an `x` column) doesn't error: that column
+genuinely doesn't exist on any row, so the closure fails with "Unknown variable `x`"
+every time it runs, and `where` quietly treats every failing row as a non-match rather
+than propagating the error -- the net effect looks exactly like "nothing matched".
+Reach into the element with `$value.x` instead of `$x` to fix it, or use `select`,
+which errors loudly on an unknown column name instead of silently filtering, if
+something isn't behaving as expected and you suspect this is why.
+
 ### Processing streams
 
 The point of having almost everything in Crush be a table stream is that crush can
@@ -724,9 +769,10 @@ mutability, and related types in more depth than fits here.
 ### Parameterized types
 
 Several types take a type parameter -- `list`'s element type, `dict`'s key and value
-types, and a table-shaped type's (`table`/`table_input_stream`/`table_output_stream`)
-column schema. You get the parameterized version by calling the type itself, the same
-`__call__` mechanism any other callable value uses:
+types, a table-shaped type's (`table`/`table_input_stream`/`table_output_stream`)
+column schema, and `one_of`'s set of allowed types. You get the parameterized version
+by calling the type itself, the same `__call__` mechanism any other callable value
+uses:
 
 ```shell script
 crush# $t := $(list $string)
@@ -740,12 +786,17 @@ dict $string $integer
 
 crush# $(table_input_stream x=$integer y=$string)
 table_input_stream x=$integer y=$string
+
+crush# $(one_of $integer $float)
+one_of $integer $float
 ```
 
-`list` and `dict` take their element/key/value type(s) as unnamed arguments; a
-table-shaped type takes its columns as named arguments, one `name=type` pair per
-column. Either way, the result is an ordinary `type` value -- usable as an argument to
-`.new`, in a closure parameter's type annotation, or anywhere else a type is expected.
+`list`/`dict`/`one_of` take their type parameters as unnamed arguments (`one_of`
+accepting any number of them, not just one or two); a table-shaped type takes its
+columns as named arguments, one `name=type` pair per column. Either way, the result is
+an ordinary `type` value -- usable as an argument to `.new`, in a closure parameter's
+type annotation (accepting any one of `one_of`'s listed types, and rejecting anything
+else with a clear error naming the type it got), or anywhere else a type is expected.
 
 ### Creating custom types
 
@@ -784,8 +835,97 @@ $p.len
 
 `class` creates a struct with a `new` method; calling `new` creates an instance and
 calls `__init__` (if defined), passing along any arguments. Add methods by assigning to
-the class; add instance fields by assigning to `$this` inside `__init__`. Pass a parent
-class to `class` for single inheritance.
+the class; add instance fields by assigning to `$this` inside `__init__`.
+
+#### `$this`
+
+Inside a method -- any closure invoked as `$instance.method(...)`, like `__init__`,
+`len`, and `__add__` above -- `$this` is bound to the instance the method was called
+on. A closure invoked any other way has no `$this` at all:
+
+```shell script
+crush# $f := {echo $this}
+crush# $f
+Error: Unknown variable `this`
+```
+
+so a method body only makes sense once it's attached to a class or struct and called
+through an instance of it.
+
+#### Inheritance
+
+Pass a parent class as `class`'s one argument to inherit its fields, methods, and
+constructor:
+
+```shell script
+$Animal := $(class)
+$Animal.__init__ = {
+    |$name|
+    $this.name = $name
+}
+$Animal.speak = {
+    "{} makes a sound".format($this.name)
+}
+
+$Dog := $(class $Animal)
+$Dog.speak = {
+    "{} barks".format($this.name)
+}
+
+$a := $($Animal.new "Rex")
+$a.speak
+# Rex makes a sound
+
+$d := $($Dog.new "Rex")
+$d.speak
+# Rex barks
+```
+
+`$Dog` inherits `$Animal`'s `__init__` (it doesn't define its own), so `$Dog.new`
+works exactly like `$Animal.new` -- but it overrides `speak` with its own version
+instead of using the inherited one. With no parent given at all, `class` uses crush's
+own root object as the parent, which is where every class's default `__setattr__` (see
+below) comes from.
+
+#### Special methods
+
+A class or struct can customize how the rest of the language treats its instances by
+defining a method with one of these reserved ("dunder") names, exactly like `__init__`
+and `__add__` above:
+
+| Method | Called for |
+|---|---|
+| `__init__` | `$Type.new ...` -- initialize a new instance's fields. |
+| `__add__`, `__sub__`, `__mul__`, `__div__`, `__mod__`, `__rem__`, `__neg__` | `+`, `-`, `*`, `/`, `mod`, `rem`, unary `-x` -- see [Operator overloading](#operator-overloading). |
+| `__getitem__`, `__setitem__` | `x[key]`, `x[key] = value` -- see [Operator overloading](#operator-overloading). |
+| `__setattr__` | `x.attr = value` -- see [Operator overloading](#operator-overloading) for why `$struct.of`'s result has none (making it immutable) while `class` gives every instance a default one. |
+| `__is__`, `__is_not__` | using the instance as a pattern -- `like`, `=~`/`!~`, and `match`'s `is` arm; see [Matching](#matching). |
+| `__call__` | calling the instance itself as a command, `$instance(...)`/`$instance ...` -- the same mechanism [parameterized types](#parameterized-types) use to take a type argument. |
+
+None of these are meant to be called directly -- they exist purely so the ordinary
+syntax (`+`, `x[key]`, `x.attr = ...`, calling the instance, ...) has something to
+dispatch to.
+
+#### Documenting a class
+
+Four more reserved names -- plain strings this time, not methods -- feed `help`:
+`__short_help__` is the one-line summary, `__long_help__` the longer description,
+`__signature__` the line shown in place of the type's own (usually unhelpful,
+auto-generated) one, and `__example__` example code shown under its own "Examples"
+heading:
+
+```shell script
+$Point.__short_help__ = "A point in 2D space"
+$Point.__signature__ = "class Point"
+$Point.__long_help__ = "Uses floating point numbers to represent the x and y coordinates"
+$Point.__example__ = "$p := ($Point.new(1.0, 2.0))"
+help $Point
+```
+
+This is the class-level counterpart to [documenting a
+closure](#documenting-a-closure) -- a method defined with its own
+`short_help`/parameter docs, the same way `len` or `__add__` could be, is documented
+exactly like an ordinary closure.
 
 ### The `@` and `@@` operators
 
@@ -1496,23 +1636,31 @@ type must come before the default value.
 ```shell script
 # Create a closure that expects input parameters named a and b, both integers. b has a default value of 1.
 $add := {|$a :$integer $b :$integer = 1| ($a + $b)}
-# Outputs 3
-add 1 2
 # Outputs 6
 add 5
 # Outputs 7
 add a=6
 # Error, no argument supplied for a
 add b=3
-# Error, wrong type flost for argument a
+# Error, wrong type float for argument a
 add 1.0
 ```
 
 The type can be a simple value such as `$integer` or `$string`, or it can be a command substitution that returns a type,
-such as `one_of $integer $float`. If the value provided is not a type, an error is emitted.
+such as `one_of $integer $float` (see [Parameterized types](#parameterized-types)). If the value provided is not a
+type, an error is emitted.
 
-A parameter with a default can only be overridden by naming it (`$f 1 b=2`) -- a second
-*positional* argument does not fill it in.
+**A parameter with a default can only be overridden by naming it, never positionally.**
+`add 5` above works precisely because there's no second positional argument competing
+for `$b`'s slot -- a second positional argument errors instead of filling it in, even
+though it would happily do so for a parameter with no default:
+
+```shell script
+crush# add 1 2
+Error: Stray unnamed argument.
+crush# add a=1 b=2
+3
+```
 
 The default value of an argument is evaluated once, at the construction of the closure. This means that in this example,
 every call to the closure adds a new element to the list `$l`.
