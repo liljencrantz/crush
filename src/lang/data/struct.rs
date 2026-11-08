@@ -251,7 +251,7 @@ impl DisplayNonRecursive for Struct {
         let elements = self.local_elements();
         let data = self.data.lock().unwrap();
 
-        f.write_str("data")?;
+        f.write_str("$struct.of")?;
         if let Some(parent) = data.parent.clone() {
             drop(data);
             f.write_str(" parent=(")?;
