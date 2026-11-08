@@ -35,7 +35,11 @@ and `like`'s argument must be a string; `like "foo.txt" *.txt` (explicitly quote
 A character sequence starting with a dollar sign (`$`) is a variable lookup. The first
 word of a command (i.e. the command name) is interpreted as a variable lookup even
 without the leading `$` -- commands live in the same namespace as all other variables,
-which is why `$echo` and `echo` refer to the same value.
+which is why `$echo` and `echo` refer to the same value. The two aren't always
+interchangeable, though -- see [Variables](#variables) and [Specifying which command to
+run](#specifying-which-command-to-run) below for the declare/reassign/drop operations
+on variables in general, and exactly how bare vs. `$`-qualified command names differ
+when a name isn't bound to anything.
 
 A whole number immediately followed (no space) by one of `ns`, `ms`, `m`, `h`, or `s` is
 a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
@@ -1009,12 +1013,208 @@ crush# $level
 A
 ```
 
+## Variables
+
+`$name` reads the current value of a variable named `name`.
+
+`:=` declares a variable in the *current* scope, giving it an initial value:
+
+```shell script
+crush# $x := "hello"
+crush# $x
+hello
+```
+
+Declaring a name that's already declared *in that same scope* is an error:
+
+```shell script
+crush# $x := 5
+crush# $x := 6
+Error: Tried to declare variable x, but it already exists
+```
+
+But `:=` inside a nested scope (a closure, or a block passed to `if`/`try`/etc.) never
+collides with an outer variable of the same name -- it declares a fresh local variable
+that *shadows* the outer one for the rest of that scope, leaving the outer variable
+untouched:
+
+```shell script
+crush# $x := 1
+crush# $f := {$x := 2; echo $x}
+crush# $f
+2
+crush# $x
+1
+```
+
+See [Assignment takes exactly one value](#assignment-takes-exactly-one-value) above for
+the syntactic restrictions on what can appear on the right-hand side of `:=`.
+
+### Reassigning a variable (`=`)
+
+`=` looks for an *existing* variable, searching the current scope and then each
+enclosing scope in turn, and replaces its value in whichever scope it's found in --
+which means it can reach out and mutate a variable declared by an *outer* scope,
+unlike `:=`:
+
+```shell script
+crush# $x := 1
+crush# $f := {$x = 2}
+crush# $f
+crush# $x
+2
+```
+
+Reassigning a name with no existing declaration anywhere in that chain is an error:
+
+```shell script
+crush# $y = 5
+Error: Unknown variable y
+```
+
+**Reassignment can never change a variable's type.** `=` checks the new value's type
+against the variable's current type and refuses the assignment if they differ:
+
+```shell script
+crush# $x := 5
+crush# $x = "hello"
+Error: Type mismatch when reassigning variable x. Use `$var.unset "x"` to remove the old variable if you want to reassign it.
+```
+
+### Dropping a variable
+
+`$var.unset` removes a variable from its scope entirely. Among other things, this is
+how you work around the type lock above, since `:=` is free to declare a dropped name
+again with any type:
+
+```shell script
+crush# $x := 5
+crush# $var.unset "x"
+crush# $x := "hello"
+crush# $x
+hello
+```
+
+A variable name starting with `__` is reserved for Crush's own internal use, and a
+handful of keywords (`global`, `true`, `false`, `if`, `else`, `for`, `while`, `try`,
+`catch`, `match`, `break`, `continue`, `help`, `loop`, `return`, `throw`) can't be used
+as a declared variable name at all.
+
+### Importing scopes with `use` and `unuse`
+
+Every name lookup -- a variable reference or a bare command name -- searches the
+current scope, its ancestors, and any scope that's been **used** into that chain.
+`$var.use` adds a scope to that search list, so its members no longer need their
+namespace prefix; `$var.unuse` reverses it:
+
+```shell script
+crush# $var.use $math
+crush# sqrt 2
+1.4142135623730951
+crush# $var.unuse $math
+crush# sqrt 2
+Error: Unknown command name `sqrt`
+```
+
+`unuse` recursively removes the given scope from the entire parent-scope chain, not
+just the current one.
+
+A handful of namespaces are used into the global scope from the start, which is why
+most of the language's everyday vocabulary needs no namespace prefix at all:
+
+| Namespace | Contents |
+|---|---|
+| `constants` | `$true`, `$false`, `$global` |
+| `control` | Control flow and process control: `if`, `while`, `for`, `match`, `try`, `cmd`, `source`, `exit`, ... |
+| `comp` | Comparison operators: `gt`, `lt`, `eq`, `not`, ... |
+| `cond` | `and` and `or` |
+| `types` | Crush's built-in types and type-related builtins |
+| `stream` | Stream commands: `where`, `sort`, `group`, `join`, `uniq`, ... |
+| `io` | I/O and serialization: `echo`, `readline`, `json`, `yaml`, `csv`, ... |
+| `fs` | File system commands: `files`, `cwd`, `watch`, ... |
+
+Every other namespace (`math`, `host`, `users`, `dns`, ...) must be referenced with its
+full qualifier, or explicitly `use`d first.
+
+## Specifying which command to run
+
+The first word of a job names the command to run. Crush offers a few different ways to
+write that name, each with its own resolution rule.
+
+### Bare name
+
+A bare name (no `$` sigil) is resolved the way a traditional shell would: Crush first
+looks it up as an ordinary variable (searching the current scope, its ancestors, and
+any `use`d scopes -- see [Variables](#variables) above), and if that search finds
+nothing, falls back to looking for an external program of that name on `$PATH`:
+
+```shell script
+crush# pwd
+/home/me
+```
+
+`pwd` isn't a Crush builtin -- the variable lookup fails, so Crush falls back to
+running whatever `pwd` it finds on `$PATH`. If there is no builtin or external 
+command with the given name, an error is raised.
+
+### `$name`
+
+An explicit `$` sigil asks for strict resolution with no shell-style fallback: if
+`name` isn't bound to anything, Crush raises an error immediately, even if a program
+with that exact name exists on `$PATH`:
+
+```shell script
+crush# $pwd
+Error: Unknown variable `pwd`
+```
+
+Use this whenever you want to be sure you're calling a closure or a
+builtin command rather than risk accidentally shelling out to some same-named
+external program.
+
+### Specifying a namespaced command
+
+Adding a namespace qualifier narrows which scope the lookup starts in, but otherwise
+follows the exact same strict rule as plain `$name`:
+
+```shell script
+crush# $math.sqrt 2
+1.4142135623730951
+```
+
+The `$` is mandatory here, even though `.` is the member-access operator used
+everywhere else in the language writing the same thing without it does *not* do
+what you'd expect:
+
+```shell script
+crush# math.sqrt 2
+Error: Unknown command math.sqrt
+```
+
+### Explicitly using an external command using `cmd`
+
+The `cmd` builtin command executes an external command even
+when a builtin of that same name exists and would otherwise take priority:
+
+```shell script
+crush# cmd echo hello
+hello
+```
+
+This allows you to reach a same-named external program when a builtin would
+otherwise shadow it. See [Calling external commands](#calling-external-commands) below
+for how arguments get translated when calling out to a real program.
+
 ## Namespaces, members and methods
 
 Crush relies heavily on namespaces to separate commands and avoid name clashes. Members
 (namespace contents, struct/dict fields, and value methods) are all accessed with the
-`:` operator -- other languages tend to use `.`, but that's a very common character in
-file names, so Crush needed something else.
+`.` operator. Since `.` is also an ordinary character in file names and numbers
+(`backup.sh`, `3.14`), a `.` only ever starts a member chain immediately after
+something a member can meaningfully follow -- a value, a closing bracket, or a quoted
+literal -- never floating free the way it can inside a file name; see [Specifying
+which command to run](#specifying-which-command-to-run) above for how this plays out
+for namespace-qualified commands specifically.
 
 A few of the built-in namespaces:
 
@@ -1039,27 +1239,10 @@ is_dir file
 true   .
 ```
 
-**`$var.use`** widens unqualified name resolution to also search a namespace directly,
-so its members no longer need the `namespace:` prefix -- **`$var.unuse`** reverses it:
-
-```shell script
-crush# $var.use $math
-crush# sqrt 2
-1.4142135623730951
-crush# $var.unuse $math
-crush# sqrt 2
-Error: Unknown command name `sqrt`
-```
-
-`unuse` recursively removes the given scope from the entire parent-scope chain, not
-just the current one.
-
-A variable name starting with `__` is reserved for Crush's own internal use.
-
 ## Blocks and closures
 
-By wrapping a set of commands within braces (`{}`), you create a block of code. Many commands,
-such as `if`, `where` and `$remote.exec` take a block of code as an argument:
+By wrapping a set of commands within braces (`{}`), you create a block of code that you can pass in as an argument to 
+another command. Many commands, such as `if`, `where` and `$remote.exec` take a block of code as an argument:
 
 ```shell
 if $true {echo "Yes!"}
@@ -1110,7 +1293,7 @@ To make a closure into a block, list the names of all expected parameters betwee
 pipes (`|`) at the top of the block:
 
 ```shell script
-# Create a closure that expects to input parameters named a and b
+# Create a closure that expects input parameters named a and b
 $add := {|$a $b| ($a + $b)}
 # Outputs 3
 add 1 2
