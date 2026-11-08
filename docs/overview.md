@@ -1,8 +1,8 @@
 # Crush overview
 
-Crush is an attempt to make a traditional command line shell that is also a modern
+Crush is a traditional command line shell that is also a modern
 programming language. It has the features one would expect from a modern programming
-language -- a type system, closures, lexical scoping -- with a syntax geared toward both
+language -- a type system, closures, lexical scoping paired with a syntax geared toward both
 batch and interactive shell usage.
 
 For the full syntax and language semantics, see the
@@ -14,8 +14,7 @@ makes Crush different.
 The basic structure of the Crush language resembles a regular shell like bash. How you
 invoke commands, pass arguments, and set up pipelines are unchanged, as is the central
 concept of a current working directory. Trivial invocations like `ls` or `find .. |
-count` look the same -- but under the hood they're quite different, and nearly
-everything beyond that is different too.
+count` look the same, but under the hood they're quite different.
 
 ## Scratching the surface
 
@@ -61,8 +60,9 @@ process list, a JSON file, an HTTP response, and so on.
 ## Reading and writing files
 
 Traditional shell I/O is a stream of bytes. Since Crush streams are typed, Crush instead
-has command pairs for serializing and deserializing file formats -- e.g. `$json.from`/
-`$json.to` for JSON, `$toml.from`/`$toml.to` for TOML:
+has codecs (short for coder/decoder), command pairs for serializing and deserializing 
+various file formats, e.g. `$json.from`/`$json.to` for JSON, `$toml.from`/`$toml.to` 
+for TOML:
 
 | Namespace | Description                                       |
 |-----------|----------------------------------------------------|
@@ -74,16 +74,19 @@ has command pairs for serializing and deserializing file formats -- e.g. `$json.
 | `toml`    | TOML file format.                                   |
 | `yaml`    | YAML file format.                                   |
 
+You will generally use a codec in crush where you would use an IO redirection
+in a traditional shell.
+
 ```shell script
-# Dump the output of files to listing.json
+# Dump the output of files in json format to the file listing.json
 crush# files | $json.to ./listing.json
 
 # Read Cargo.toml and extract its dependencies field
 crush# $toml.from Cargo.toml | member dependencies
 ```
 
-If a deserializer isn't given an input file, it reads from its input instead (which must
-be `binary`/`binary_stream`); if a serializer isn't given an output file, it writes a
+If a decoder isn't given an input file, it reads from its input instead (which must
+be `binary`/`binary_stream`); if a coder isn't given an output file, it writes a
 binary stream to its output instead of a file:
 
 ```shell script
@@ -98,13 +101,6 @@ crush# $list.of "carrot" "carrot" "acorn" | $json.to
 `pup`, Crush's own native format, is the only one of these that can losslessly represent
 every Crush value, including closures and class instances -- at the cost of being
 useless for sharing data with anything that isn't Crush.
-
-This one-namespace-per-format shape -- rather than a single `serialize`/`deserialize`
-command taking a `format=json` argument -- is a deliberate, recurring choice in Crush's
-own builtins: prefer several small, focused, composable commands over one command
-configured by a flag. Each format namespace only needs to know its own format, and
-supporting a new one means adding a namespace, not touching a shared command that
-already handles every other one.
 
 ## Expression mode and pattern matching
 
@@ -191,17 +187,17 @@ a multitude of issues with double expansion, whitespace splitting, and escaping.
 
 Crush instead passes a *closure* as an argument to the command. The command serializes
 the closure, transfers it to the remote process, runs it there, and serializes the
-result back:
+result, which is passed back:
 
 ```shell script
-# Run a closure as another user
-crush# users[root].do {'./carrot'.chown group="rabbit"}
+# Run a closure locally as another user
+crush# users[root].do {$host.uptime}
 
 # Run a closure on a remote host
-crush# $remote.exec {uptime} "popplar.meadow"
+crush# $remote.exec {$host.uptime} "popplar.meadow"
 
-# Run a closure on several remote hosts at once
-crush# $remote.pexec {uptime} "popplar.meadow" "elm.meadow"
+# Run a closure on several remote hosts in parallel
+crush# $remote.pexec {$host.uptime} "popplar.meadow" "elm.meadow"
 ```
 
 ## Creating custom types

@@ -34,8 +34,7 @@ echo one; echo two
 ```
 
 Beyond separating jobs, whitespace is not significant. Crush has no indentation rules
-of any kind -- unlike some other languages, how a block is indented has no effect on
-what it means:
+of any kind, how a block is indented has no effect on what it means:
 
 ```shell script
 if $true {
@@ -43,10 +42,6 @@ echo "indentation doesn't matter"
         echo "however much or little you use"
 }
 ```
-
-(Inside `[...]`/`{...}` *literal* syntax specifically -- list/dict literals in
-expression mode -- a comma is the separator instead; see [List
-literals](#list-literals)/[Dict literals](#dict-literals) below.)
 
 ### Names and keywords
 
@@ -129,8 +124,8 @@ when a name isn't bound to anything.
 A whole number immediately followed (no space) by one of `ns`, `ms`, `m`, `h`, or `s` is
 a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
 respectively -- e.g. `5s` is exactly `$duration.of seconds=5`. There's no literal syntax
-for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
-duration values instead, e.g. `1h + 30m`.
+for a duration made of more than one unit (e.g. an hour and a half); use 
+`$duration.of hours=1 minutes=30`.
 
 ## Running Crush code
 
@@ -155,7 +150,7 @@ Running a file exits `0` on success and `1` if an uncaught error reached the top
 Call **`exit`** with a `status=<integer>` argument to set a specific status
 explicitly -- this always wins over the automatic `0`/`1`, including when it happens
 partway through the file. By default `exit` fails (refusing to exit) if other jobs are
-still running; `exit force=$true` terminates them first instead. See [Background
+still running; `exit --force` terminates them first instead. See [Background
 jobs](#background-jobs) below.
 
 ### Loading more code: `source`
@@ -210,7 +205,7 @@ Argument mapping works as follows:
 
 A command can also declare that stray named or stray unnamed arguments (the ones left
 over after normal assignment) should be collected into a dict or list instead of being
-rejected -- see [`@`/`@@`](#the--and--operators) below. IF there are stray arguments no
+rejected -- see [`@`/`@@`](#the--and--operators) below. If there are stray arguments no
 stray argument collector is configured for a given job, this is an argument error and
 the command will exit with an error.
 
@@ -226,7 +221,7 @@ to the specified directory. The signature of the `cd` builtin is:
 
     $fs.cd destination=one_of $string $file $glob $re
 
-This signature means that the only argument`cd` acceots is `destination`, and the type of
+This signature means that the only argument `cd` accepts is `destination`, and the type of
 `destination` must be one of four different types: `string`, `file`, `glob` and `re`.
 
 Boolean arguments are very common, so Crush has a shorthand for them: Adding one or
@@ -309,8 +304,8 @@ process and the output is where the processed data ends up.
 
 Stream commands (`where`, `group`, `join`, `each`, ... -- see below) don't only accept
 a real `table_input_stream`/`table_output_stream`/`table`; several other types are
-**stream-like** and get converted into a table stream automatically when piped into
-one, each with its own fixed column shape:
+**stream-like** and can be used with any command that expects a stream, each with its 
+own fixed column shape:
 
 | Value | Column(s) |
 |---|---|
