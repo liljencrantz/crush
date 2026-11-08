@@ -239,14 +239,22 @@ Piping a value that isn't one of these (or a real table stream) into a stream co
 is a type error. But a `list`'s one `value` column holds each element *as a whole*,
 field structure and all -- a `list` of structs still only has the one `value` column,
 never one column per field, even though each individual element happens to be a
-struct with fields of its own. A condition closure that refers to one of those inner
-fields by name (`{eq $x 2}`, say, expecting an `x` column) doesn't error: that column
-genuinely doesn't exist on any row, so the closure fails with "Unknown variable `x`"
-every time it runs, and `where` quietly treats every failing row as a non-match rather
-than propagating the error -- the net effect looks exactly like "nothing matched".
-Reach into the element with `$value.x` instead of `$x` to fix it, or use `select`,
-which errors loudly on an unknown column name instead of silently filtering, if
-something isn't behaving as expected and you suspect this is why.
+struct with fields of its own. This is deliberate, not a missed case: unlike a `table`,
+whose whole point is that every row shares one fixed, declared column schema, nothing
+about a `list` guarantees its elements are even structs, let alone structs that all
+have the *same* fields -- a single `list` can freely mix a `$struct.of x=1` with a
+`$struct.of y=2 z=3`, so there's no set of per-field columns a `list` of structs could
+promise in general. A plain `value` column holding the whole element, whatever it is,
+is the only shape that always works.
+
+A condition closure that refers to one of those inner fields by name (`{eq $x 2}`, say,
+expecting an `x` column) doesn't error: that column genuinely doesn't exist on any row,
+so the closure fails with "Unknown variable `x`" every time it runs, and `where`
+quietly treats every failing row as a non-match rather than propagating the error --
+the net effect looks exactly like "nothing matched". Reach into the element with
+`$value.x` instead of `$x` to fix it, or use `select`, which errors loudly on an
+unknown column name instead of silently filtering, if something isn't behaving as
+expected and you suspect this is why.
 
 ### Processing streams
 
