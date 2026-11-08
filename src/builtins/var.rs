@@ -318,8 +318,9 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
              through `$name`/`:=`/`=` syntax: declaring, setting, unsetting, reading, and \
              destructuring, plus `$var.use`/`$var.unuse` for importing a scope's contents into \
              the current one and `$var.list`/`$var.local` for introspecting what's currently in \
-             scope. This namespace is imported into the global scope, so e.g. `$var.let` and \
-             bare `let` are the same command."
+             scope. Unlike most other builtin namespaces, `var` is not imported into the global \
+             scope -- its commands always need the `$var.` prefix, e.g. `$var.let`, never bare \
+             `let`."
                 .to_string(),
         ),
         Box::new(move |ns| {

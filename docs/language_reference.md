@@ -601,8 +601,9 @@ triggers them:
 | Type | Meaning |
 |---|---|
 | `GenericError` | A failure with no more specific category. |
-| `InvalidArgument` | A command was called with arguments it can't accept -- also what `assert` raises on failure. |
+| `InvalidArgument` | A command was called with arguments it can't accept. |
 | `InvalidData` | A value was correctly typed but held a bad or unexpected value. |
+| `AssertionError` | Raised by `assert` when its condition is false -- its own type, distinct from `InvalidArgument`, specifically so `catch` can filter on failed assertions alone. |
 | `InvalidJump` | `break`, `continue`, or `return` was used somewhere it doesn't apply. |
 | `Terminate` | Raised internally when `terminate` is sent to a job. Avoid filtering `catch` on this -- catching it defeats job control. |
 
@@ -719,6 +720,32 @@ cell can be any of these types:
 
 `help $<type>` (e.g. `help $list`, `help $time`) documents each type's own creation syntax,
 mutability, and related types in more depth than fits here.
+
+### Parameterized types
+
+Several types take a type parameter -- `list`'s element type, `dict`'s key and value
+types, and a table-shaped type's (`table`/`table_input_stream`/`table_output_stream`)
+column schema. You get the parameterized version by calling the type itself, the same
+`__call__` mechanism any other callable value uses:
+
+```shell script
+crush# $t := $(list $string)
+crush# $t
+list $string
+crush# $t.new
+[]
+
+crush# $(dict $string $integer)
+dict $string $integer
+
+crush# $(table_input_stream x=$integer y=$string)
+table_input_stream x=$integer y=$string
+```
+
+`list` and `dict` take their element/key/value type(s) as unnamed arguments; a
+table-shaped type takes its columns as named arguments, one `name=type` pair per
+column. Either way, the result is an ordinary `type` value -- usable as an argument to
+`.new`, in a closure parameter's type annotation, or anywhere else a type is expected.
 
 ### Creating custom types
 
@@ -918,7 +945,15 @@ $r.x
 ```
 
 `x[key] = value` is the write-side counterpart, calling `__setitem__(key, value)`
-instead of `__getitem__(key)`.
+instead of `__getitem__(key)`. Plain member assignment, `x.attr = value`, works the same
+way, calling `__setattr__(attr, value)` -- which is what makes `$this.x = $x` inside
+`$Point.__init__` actually set a field: `class` gives every instance a default
+`__setattr__` that does exactly that. `$struct.of` gives its result no `__setattr__` at
+all, which is why it's immutable -- there's nothing for `x.attr = value` to call.
+Defining your own `__setattr__` on a class replaces that default entirely, including
+for assignments inside your own `__init__`, so a class that overrides it needs to
+implement real field storage itself (or delegate to the inherited one) if it still
+wants plain fields to work.
 
 **Comparisons, `!`, and `and`/`or` are not overloadable.** `==`, `!=`, `<`, `<=`, `>`,
 `>=`, and `!` always use Crush's own built-in comparison and negation, regardless of any
@@ -1270,6 +1305,22 @@ most of the language's everyday vocabulary needs no namespace prefix at all:
 
 Every other namespace (`math`, `host`, `users`, `dns`, ...) must be referenced with its
 full qualifier, or explicitly `use`d first.
+
+### Introspecting scopes
+
+`$var.list` returns every variable name currently in scope -- local, inherited from an
+ancestor scope, or pulled in via `use` -- along with each one's type, as a
+`name`/`type` stream:
+
+```shell script
+crush# $x := 5
+crush# $var.list | where {eq $name "x"}
+name type
+x    integer
+```
+
+`$var.local` returns the current scope itself, as a `scope` value -- the same kind of
+value `$var.use`/`$var.unuse` take, or that a closure captures when it's created.
 
 ## Specifying which command to run
 
@@ -1623,12 +1674,13 @@ never `fg`'d has its failure go unreported.
 `fg` waits for and returns a backgrounded job's result. `jobs` lists every
 currently running job (including nested ones, like command substitutions running as
 part of a larger job), with `id`/`parent`/`definition`/`type`/`status` columns.
-`pause`/`bg` pause a running job and later resume it in the background (as opposed
-to `&`, which starts a job in the background from the moment it's created).
+`pause` and `bg` are a complementary pair: `pause` suspends a running job, and `bg`
+resumes a paused job, letting it continue running in the background (as opposed to `&`,
+which starts a job in the background from the moment it's created).
 
 For two jobs that need to communicate directly -- one producing data the other consumes,
 both running concurrently -- create a **pipe** by calling `.pipe` on a
-`table_input_stream` type:
+[parameterized](#parameterized-types) `table_input_stream` type:
 
 ```shell script
 # Create a pipe
