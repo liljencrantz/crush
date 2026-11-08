@@ -4,15 +4,60 @@ This document describes Crush's syntax and core language features in depth. If y
 new to Crush, read [the overview](overview.md) first for a narrative tour; come back here
 for the details it doesn't have room for.
 
-## Commands and jobs
+## Lexical analysis
 
-The structure of a Crush command is a space separated list. The first element of the
-list is the command, the remaining elements are the arguments:
+This section covers the low-level rules for how Crush reads source text into tokens --
+comments, how one statement ends and the next begins, whitespace, names, and literals --
+independent of what any of it means once parsed.
+
+### Comments
+
+`#` starts a comment that runs to the end of the line; it's stripped before anything
+else is parsed, so it can appear after real code on the same line as well as on a line
+of its own. Inside a quoted string or file literal, `#` is just an ordinary character,
+not a comment:
 
 ```shell script
-echo 5
-git commit message="This commit is amazing"
+echo hello # this comment is ignored
+echo "a # b" # prints "a # b" -- the one inside quotes isn't a comment
 ```
+
+There's no block-comment syntax; every comment runs to the end of its line.
+
+### Statement separators and whitespace
+
+A newline or a `;` ends one job and starts the next, so writing two jobs on a single
+line separated by `;` is the same as writing them on two separate lines:
+
+```shell script
+echo one; echo two
+```
+
+Beyond separating jobs, whitespace is not significant. Crush has no indentation rules
+of any kind -- unlike some other languages, how a block is indented has no effect on
+what it means:
+
+```shell script
+if $true {
+echo "indentation doesn't matter"
+        echo "however much or little you use"
+}
+```
+
+(Inside `[...]`/`{...}` *literal* syntax specifically -- list/dict literals in
+expression mode -- a comma is the separator instead; see [List
+literals](#list-literals)/[Dict literals](#dict-literals) below.)
+
+### Names and keywords
+
+An unquoted sequence of letters, digits, and underscores is a name -- used for
+variables, commands, and struct/dict member access alike, since they all share one
+namespace (see [Variables](#variables) below). A name starting with `__` is reserved
+for Crush's own internal use; the [special methods](#special-methods) a custom type
+implements are the main place you'll see this. A handful of keywords -- `global`,
+`true`, `false`, `if`, `else`, `for`, `while`, `try`, `catch`, `match`, `break`,
+`continue`, `help`, `loop`, `return`, `throw` -- can't be used as a declared variable
+name at all.
 
 ### Literals
 
@@ -86,6 +131,63 @@ a **duration** literal -- nanoseconds, milliseconds, minutes, hours, or seconds,
 respectively -- e.g. `5s` is exactly `$duration.of seconds=5`. There's no literal syntax
 for a duration made of more than one unit (e.g. an hour and a half); use `+` on two
 duration values instead, e.g. `1h + 30m`.
+
+## Running Crush code
+
+Crush runs in one of three modes, chosen by how it's invoked from the command line:
+
+* **Interactive** (the default, when given no file argument): reads commands one at a
+  time from standard input, normally a terminal. Each top-level expression's result is
+  printed automatically -- the examples throughout this document showing a bare value
+  after a `crush#` prompt rely on this. An error on one line is printed and execution
+  returns to the prompt; the session itself keeps going.
+* **File** (`crush script.crush`): reads and runs the whole file non-interactively,
+  with no implicit printing of results (use `echo` to produce output). An uncaught
+  error aborts the rest of the file immediately.
+* **Pup** (`crush --pup`): reads a closure serialized in Crush's own `pup` binary
+  format from standard input, runs it, and writes its result back to standard output
+  in the same format. This is an internal mode used by `sudo` and `$remote.exec` to
+  run a closure in a different process, not something you'd invoke by hand.
+
+### Exit status
+
+Running a file exits `0` on success and `1` if an uncaught error reached the top.
+Call **`exit`** with a `status=<integer>` argument to set a specific status
+explicitly -- this always wins over the automatic `0`/`1`, including when it happens
+partway through the file. By default `exit` fails (refusing to exit) if other jobs are
+still running; `exit force=$true` terminates them first instead. See [Background
+jobs](#background-jobs) below.
+
+### Loading more code: `source`
+
+`source` runs one or more other files' contents into the *current* scope -- unlike
+calling a closure, which always gets a fresh child scope, a `source`d file's top-level
+variable declarations become visible to the caller afterward:
+
+```shell script
+# greet.crush contains: $greeting := "hello"
+
+crush# source greet.crush
+crush# $greeting
+hello
+```
+
+`source`'s own return value is the value of the last statement actually run in the
+file (or an earlier `return`, which also stops the rest of that file from running) --
+sourcing more than one file in a single call still runs every file to completion, but
+only the very last file's value this way becomes `source`'s own return value. `eval`
+does the same thing for a string, binary blob, or stream of Crush code instead of a
+file on disk.
+
+## Commands and jobs
+
+The structure of a Crush command is a space separated list. The first element of the
+list is the command, the remaining elements are the arguments:
+
+```shell script
+echo 5
+git commit message="This commit is amazing"
+```
 
 ### Named and unnamed arguments
 
@@ -306,7 +408,7 @@ files | where {eq $type directory}
 ```
 
 The where command evaluates a block of code once for each row of data.
-Blocks are written using the [block syntax](blocks-and-closures).
+Blocks are written using the [block syntax](#blocks-and-closures).
 The example above uses the `eq` command to test for equality. There 
 are other comparison commands, check `help $comp` for the full list.
 
@@ -753,6 +855,303 @@ crush# $x
 -1
 ```
 
+## Expression mode
+
+Crush has a second syntax mode, entered with parentheses, for writing mathematical and
+logical expressions with conventional infix operators and precedence:
+
+```shell script
+crush# (5 + 6)
+11
+crush# (1 + 2 * 3)
+7
+```
+
+Comparisons use `>`, `<`, `<=`, `>=`, `==` and `!=`; comparing values of different types
+is an error:
+
+```shell script
+crush# (4 > 5)
+false
+crush# (40.0 > 5)
+Error: Values of type float and integer can't be compared with each other
+```
+
+Expression mode is a fully functional secondary syntax, not just a calculator: pipes
+work, and so does calling commands -- but a call's arguments go inside parentheses after
+the command name, unlike in command mode's space-separated form:
+
+```shell script
+# An entire pipeline written in expression mode
+(files() | sort("file", reverse=true) | where({size < 1000}))
+
+# A method call's argument needs its own parens too
+("Hello, {}".format($name))
+```
+
+Every call needs its `()`, even one that takes no arguments at all -- expression mode is
+modeled on C-style languages, where a bare name is a reference to a value, not an
+invocation of it:
+
+```shell script
+crush# $items := $($list.of 1 2 3)
+crush# ($items.len() > 0)
+$true
+crush# (($items.len) > 0)
+Error: The two provided values of types command and integer could not be compared
+```
+
+Without `()`, `$items.len` is the method itself (a `command` value) rather than the
+result of calling it -- the same distinction
+[Assignment takes exactly one value](#assignment-takes-exactly-one-value) shows further
+down for `$string.upper`.
+
+### Syntactic sugar in expression mode
+
+In regular command mode, `for`, `while`, `if`/`else`, `try`/`catch` and `match` are simple builtin commands.
+If they were to work in the same way in expression mode, the syntax would become clumsy, with many unwanted parenthesis.
+Instead, the language has added some syntactic sugar to make these work identically to how they work in command mode:
+
+```
+(
+
+for $i=seq(5) {
+  echo($i)
+}
+
+while condition_test() {
+  ...
+}
+
+if $a > 10 { 
+  "big"
+} else { 
+  "small" 
+}
+
+try {
+    throw("DnsTimeout", "no response")
+} catch ^(Serde) {
+    |$e| "serde"
+} catch $(Dns*) {
+    |$e| "dns"
+}
+
+match $x {
+    case 2 {"two"}
+    any $seq(5, 10) {"between 5 and 10"}
+    is $string {"a string"}
+    default {"something else"}
+}
+)
+```
+
+### Operators in expression mode
+
+In expression mode, Crush provides operators for arithmetic, comparison, and a few other things that read
+better as symbols than as commands. Grouped roughly by precedence, highest first:
+
+| Operator                    | Example                                                          | Description                                                     |
+|------------------------------|------------------------------------------------------------------|-------------------------------------------------------------------|
+| `:=` `=`                    | `$foo := 7`                                                      | Declare a new variable, or reassign an existing one                |
+| `and` `or`                  | `$a and $b`                                                      | Logical operators. Also work as ordinary commands: `or $a $b`      |
+| `==` `!=` `>` `>=` `<` `<=` | `$foo > 5`                                                       | Compare two values                                                 |
+| `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`                                             | True/false if the left value matches the right-hand pattern        |
+| `+` `-`                     | `1 + 1`, `-5`                                                    | Addition, subtraction, and unary negation                          |
+| `*` `/`                     | `5 * 5`, `7 / 2`                                                 | Multiplication and division (truncating for two integers)          |
+| `mod` `rem`                  | `-7 mod 2`, `-7 rem 2`                                           | Same precedence as `*`/`/`. `mod` is the least positive residue (always `>= 0`); `rem` is the ordinary, truncating remainder (`-7 mod 2` is `1`, `-7 rem 2` is `-1`) |
+| `@` `@@`                    | see the separate section on these operators for more information | Argument/parameter list spreading                                  |
+
+Many of these -- the arithmetic operators and unary negation, plus `x[key]` indexing
+(see [Namespaces, members and methods](#namespaces-members-and-methods)) -- desugar to
+a call to a correspondingly-named special method on the left (or only) operand, so a
+custom type can overload them; see [Special methods](#special-methods) under [Crush
+types](#crush-types) for the full mapping and which operators (comparisons, `!`,
+`and`/`or`) can't be overloaded this way.
+
+### Evaluation order
+
+Arguments and operands are evaluated left to right. In `$a + $b`, `$a` is evaluated
+before `$b`; in a call with several arguments, each one -- named or unnamed -- is
+evaluated in the order it's written, before the command itself runs. `:=`/`=`
+evaluate their right-hand side before binding the name on the left.
+
+### Globs in expression mode
+
+Glob literals (e.g. `*.txt`) only parse in command mode -- expression mode has no glob
+literal syntax at all, so `(x =~ *.txt)` fails to parse. This is because of the clash of the `*`
+symbol as both the multiplication operator and a glob wildcard. To use a glob from within
+expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. 
+
+### List literals
+
+`[...]` in a value position builds a list, with elements separated by commas -- this is
+exactly equivalent to calling `$list.of` with the same elements as unnamed arguments:
+
+```shell script
+crush# ["a", "b", "c"]
+[a, b, c]
+crush# [1, [2, 3], 4]
+[1, [2, 3], 4]
+```
+
+Unlike command mode's space-separated arguments, the commas are required -- `[1 2 3]`
+doesn't parse. A trailing comma is allowed (`[1, 2, 3,]`), but there's no syntax for an
+empty list literal: `[]` parses, but fails at run time with "Expected at least one
+argument", the same error `$list.of` itself gives with no arguments. Use `$list.new`
+instead to build an empty list -- see `help $list`.
+
+A bracketed name list on the left of `:=`/`=` is unrelated syntax -- that's
+[destructuring](#destructuring-assignment), not a list literal, even though it uses the
+same brackets.
+
+### Dict literals
+
+`{key: value, ...}` builds a dict, equivalent to calling `$dict.of` with alternating
+key/value arguments. A key can be a bareword, a quoted string, or any other single
+value -- a `$variable`, a parenthesized sub-expression, a number, and so on -- that's
+evaluated to produce the key's actual value; each value is a full expression:
+
+```shell script
+crush# {foo: "bar", "baz": 42}
+key value
+foo bar
+baz 42
+crush# $n := 2
+crush# {($n + 1): "three"}
+key value
+  3 three
+```
+
+`{}` is still an empty closure, not an empty dict -- there's nothing in an empty pair
+of braces to signal dict-ness with, so the ambiguity resolves the same way it always
+has. This is the one case a dict literal can't produce, the same gap `[]` has for
+lists.
+
+## Destructuring assignment
+
+A bracketed list of names on the left of `:=`/`=` splits a list, struct, or dict on the
+right into one variable per name, positionally. Struct fields and dict entries are both
+backed by an order-preserving map, so "positionally" means declaration order for a
+struct and insertion order for a dict -- key order is never involved. The number of
+names must exactly match the number of elements, or the assignment errors:
+
+```shell script
+crush# [$a $b] := $($list.of 1 2)
+crush# $a
+1
+crush# $point := $($struct.of x=10 y=20)
+crush# [$x $y] := $point
+crush# $y
+20
+
+# = destructures into already-declared variables, exactly like plain = does for one
+[$a $b] = $($list.of 3 4)
+```
+
+`:=` still requires that none of the names already exist in the local scope, and `=`
+still requires that all of them do -- both exactly as for a single-target `:=`/`=`.
+
+## Matching
+
+Matching in Crush is built on one mechanism: any value can act as a *pattern*
+by implementing an `__is__` method (and, for negation, `__is_not__`), which takes a
+value to test and returns a bool. Strings, globs, regular expressions, and types all
+implement it, and so can your own custom types -- see [Matching against a custom
+class](#matching-against-a-custom-class) below. These
+methods are named with dunders specifically because they're not meant to be called
+directly; the interfaces below all just call them for you.
+
+The **`like`** command checks a value against one or more patterns, returning true as
+soon as one matches:
+
+```shell script
+crush# like "foo.txt" *.txt
+true
+crush# like "foo.txt" *.md
+false
+crush# like abbbbbc ^(ab+c)
+true
+```
+
+A pattern can be a **glob** (shell-style wildcards `*` for any run of characters,
+`?` for a single character, `**` to recurse into subdirectories; the type most shell
+users already know from filename expansion), a **regular expression** (usual regex
+syntax, constructed with `^(...)`), a plain **string** (exact match -- not a substring
+search), or a **type** (checks the value's own type, e.g. `like 5 $integer`). Globs
+aren't automatically expanded against the filesystem -- a glob is a value in its own
+right, passed to whatever command receives it, which decides what to match it against.
+
+The value being tested against a glob, regex, or string pattern can itself be either a
+`string` or a `file` -- `like 'foo.txt' *.txt` works the same as `like "foo.txt" *.txt`.
+
+In expression mode, a single pattern can be checked with the **`=~`**/**`!~`**
+operators instead, which read more naturally there:
+
+```shell script
+crush# (abbbbbc =~ ^(ab+c))
+true
+crush# (abbbbbc !~ ^(zzz))
+true
+```
+
+(`=~ y` and `!~ y` desugar to calling `y`'s own `__is__`/`__is_not__` method, which is
+why the pattern goes on the right.)
+
+### Matching against a custom class
+
+Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any type can
+be used as a pattern by implementing it:
+
+```shell script
+$even := $($struct.of __is__={|$needle| ($needle mod 2 == 0)})
+
+like 4 $even   # true
+like 5 $even   # false
+```
+
+### Pattern matching
+
+The `match` command branches a value against a sequence of arms, useful when you'd
+otherwise write a chain of `if`/`else if`:
+
+```shell script
+match $x {
+    case 2 {echo "$x is 2"}
+    any $(seq 5 10) {echo "$x is between 5 and 10"}
+    is *.txt {echo "$x looks like a text file"}
+    is $string {echo "$x is a string"}
+    default {echo "I don't know what $x is"}
+}
+```
+
+Each arm is tried in order; the first that matches runs and the rest are skipped:
+
+* `case <value> {...}` matches if the subject equals `<value>`.
+* `any <stream> {...}` matches if the subject equals any value produced by `<stream>`
+  (e.g. a list or `$(seq 5 10)`).
+* `is <pattern> {...}` matches if `<pattern>` (a type, glob, regex, or anything else
+  with an `__is__` method) matches the subject -- the same mechanism `like` uses.
+* `default {...}` always matches.
+
+If nothing matches and there's no `default` arm, `match` fails with an error.
+
+`match` also works in expression mode, with the exact same arm syntax as
+above:
+
+```shell script
+crush# $describe := ({|$n| match $n {
+    case 2 {"two"}
+    is $string {"a string"}
+    default {"something else"}
+}})
+crush# ($describe(2))
+two
+```
+
+A match arm's value can be any expression, with no restrictions beyond what command
+mode's arms already have.
+
 ## Crush types
 
 Crush values are typed. Most commands operate on streams of tabular data, where each
@@ -893,34 +1292,14 @@ $d.speak
 works exactly like `$Animal.new` -- but it overrides `speak` with its own version
 instead of using the inherited one. With no parent given at all, `class` uses crush's
 own root object as the parent, which is where every class's default `__setattr__` (see
-below) comes from.
-
-#### Special methods
-
-A class or struct can customize how the rest of the language treats its instances by
-defining a method with one of these reserved ("dunder") names, exactly like `__init__`
-and `__add__` above:
-
-| Method | Called for |
-|---|---|
-| `__init__` | `$Type.new ...` -- initialize a new instance's fields. |
-| `__add__`, `__sub__`, `__mul__`, `__div__`, `__mod__`, `__rem__`, `__neg__` | `+`, `-`, `*`, `/`, `mod`, `rem`, unary `-x` -- see [Operator overloading](#operator-overloading). |
-| `__getitem__`, `__setitem__` | `x[key]`, `x[key] = value` -- see [Operator overloading](#operator-overloading). |
-| `__setattr__` | `x.attr = value` -- see [Operator overloading](#operator-overloading) for why `$struct.of`'s result has none (making it immutable) while `class` gives every instance a default one. |
-| `__is__`, `__is_not__` | using the instance as a pattern -- `like`, `=~`/`!~`, and `match`'s `is` arm; see [Matching](#matching). |
-| `__call__` | calling the instance itself as a command, `$instance(...)`/`$instance ...` -- the same mechanism [parameterized types](#parameterized-types) use to take a type argument. |
-
-None of these are meant to be called directly -- they exist purely so the ordinary
-syntax (`+`, `x[key]`, `x.attr = ...`, calling the instance, ...) has something to
-dispatch to.
+[Special methods](#special-methods) below) comes from.
 
 #### Documenting a class
 
-Four more reserved names -- plain strings this time, not methods -- feed `help`:
-`__short_help__` is the one-line summary, `__long_help__` the longer description,
-`__signature__` the line shown in place of the type's own (usually unhelpful,
-auto-generated) one, and `__example__` example code shown under its own "Examples"
-heading:
+Four reserved names -- plain strings, not methods -- feed `help`: `__short_help__` is
+the one-line summary, `__long_help__` the longer description, `__signature__` the line
+shown in place of the type's own (usually unhelpful, auto-generated) one, and
+`__example__` example code shown under its own "Examples" heading:
 
 ```shell script
 $Point.__short_help__ = "A point in 2D space"
@@ -935,146 +1314,24 @@ closure](#documenting-a-closure) -- a method defined with its own
 `short_help`/parameter docs, the same way `len` or `__add__` could be, is documented
 exactly like an ordinary closure.
 
-### The `@` and `@@` operators
+### Special methods
 
-`@` spreads a list as a sequence of unnamed arguments, and `@@` spreads a dict as a
-sequence of named arguments -- both at call sites and in a closure's own parameter list,
-where they instead *collect* stray arguments:
+A class or struct can customize how the rest of the language treats its instances by
+defining a method with one of these reserved ("dunder") names, exactly like `__init__`
+and `__add__` above:
 
-```shell script
-# @args collects every unnamed argument into a list; @@kwargs collects every named
-# argument not otherwise bound in the parameter list into a dict.
-$print_everything := {|@ $unnamed @@ $named| echo "Named" $named "Unnamed" $unnamed}
-$print_everything 1 2 x=3 y=4
+| Method | Called for |
+|---|---|
+| `__init__` | `$Type.new ...` -- initialize a new instance's fields. |
+| `__add__`, `__sub__`, `__mul__`, `__div__`, `__mod__`, `__rem__`, `__neg__` | `+`, `-`, `*`, `/`, `mod`, `rem`, unary `-x`. |
+| `__getitem__`, `__setitem__` | `x[key]`, `x[key] = value`. |
+| `__setattr__` | `x.attr = value`. |
+| `__is__`, `__is_not__` | using the instance as a pattern -- `like`, `=~`/`!~`, and `match`'s `is` arm; see [Matching](#matching). |
+| `__call__` | calling the instance itself as a command, `$instance(...)`/`$instance ...` -- the same mechanism [parameterized types](#parameterized-types) use to take a type argument. |
 
-# The mirrored use, at a call site: spread a list/dict back out into arguments. This
-# defines an `ls` that forwards whatever it's given to `files`, then selects one column.
-$ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs | select file}
-```
-
-## Expression mode
-
-Crush has a second syntax mode, entered with parentheses, for writing mathematical and
-logical expressions with conventional infix operators and precedence:
-
-```shell script
-crush# (5 + 6)
-11
-crush# (1 + 2 * 3)
-7
-```
-
-Comparisons use `>`, `<`, `<=`, `>=`, `==` and `!=`; comparing values of different types
-is an error:
-
-```shell script
-crush# (4 > 5)
-false
-crush# (40.0 > 5)
-Error: Values of type float and integer can't be compared with each other
-```
-
-Expression mode is a fully functional secondary syntax, not just a calculator: pipes
-work, and so does calling commands -- but a call's arguments go inside parentheses after
-the command name, unlike in command mode's space-separated form:
-
-```shell script
-# An entire pipeline written in expression mode
-(files() | sort("file", reverse=true) | where({size < 1000}))
-
-# A method call's argument needs its own parens too
-("Hello, {}".format($name))
-```
-
-Every call needs its `()`, even one that takes no arguments at all -- expression mode is
-modeled on C-style languages, where a bare name is a reference to a value, not an
-invocation of it:
-
-```shell script
-crush# $items := $($list.of 1 2 3)
-crush# ($items.len() > 0)
-$true
-crush# (($items.len) > 0)
-Error: The two provided values of types command and integer could not be compared
-```
-
-Without `()`, `$items.len` is the method itself (a `command` value) rather than the
-result of calling it -- the same distinction
-[Assignment takes exactly one value](#assignment-takes-exactly-one-value) shows further
-down for `$string.upper`.
-
-### Syntactic sugar in expression mode
-
-In regular command mode, `for`, `while`, `if`/`else`, `try`/`catch` and `match` are simple builtin commands.
-If they were to work in the same way in expression mode, the syntax would become clumsy, with many unwanted parenthesis.
-Instead, the language has added some syntactic sugar to make these work identically to how they work in command mode:
-
-```
-(
-
-for $i=seq(5) {
-  echo($i)
-}
-
-while condition_test() {
-  ...
-}
-
-if $a > 10 { 
-  "big"
-} else { 
-  "small" 
-}
-
-try {
-    throw("DnsTimeout", "no response")
-} catch ^(Serde) {
-    |$e| "serde"
-} catch $(Dns*) {
-    |$e| "dns"
-}
-
-match $x {
-    case 2 {"two"}
-    any $seq(5, 10) {"between 5 and 10"}
-    is $string {"a string"}
-    default {"something else"}
-}
-)
-```
-
-### Operators in expression mode
-
-In expression mode, Crush provides operators for arithmetic, comparison, and a few other things that read
-better as symbols than as commands. Grouped roughly by precedence, highest first:
-
-| Operator                    | Example                                                          | Description                                                     |
-|------------------------------|------------------------------------------------------------------|-------------------------------------------------------------------|
-| `:=` `=`                    | `$foo := 7`                                                      | Declare a new variable, or reassign an existing one                |
-| `and` `or`                  | `$a and $b`                                                      | Logical operators. Also work as ordinary commands: `or $a $b`      |
-| `==` `!=` `>` `>=` `<` `<=` | `$foo > 5`                                                       | Compare two values                                                 |
-| `=~` `!~`                   | `abbbbbc =~ ^(ab+c)`                                             | True/false if the left value matches the right-hand pattern        |
-| `+` `-`                     | `1 + 1`, `-5`                                                    | Addition, subtraction, and unary negation                          |
-| `*` `/`                     | `5 * 5`, `7 / 2`                                                 | Multiplication and division (truncating for two integers)          |
-| `mod` `rem`                  | `-7 mod 2`, `-7 rem 2`                                           | Same precedence as `*`/`/`. `mod` is the least positive residue (always `>= 0`); `rem` is the ordinary, truncating remainder (`-7 mod 2` is `1`, `-7 rem 2` is `-1`) |
-| `@` `@@`                    | see the separate section on these operators for more information | Argument/parameter list spreading                                  |
-
-### Operator overloading
-
-The arithmetic operators, unary negation, and indexing all desugar to a dunder-method
-call on the left (or only) operand, so a [custom type](#creating-custom-types) can
-implement them by defining the matching method:
-
-| Operator | Method        |
-|----------|---------------|
-| `+`      | `__add__`     |
-| `-`      | `__sub__`     |
-| `*`      | `__mul__`     |
-| `/`      | `__div__`     |
-| `mod`    | `__mod__`     |
-| `rem`    | `__rem__`     |
-| `-x`     | `__neg__`     |
-| `x[key]` | `__getitem__` |
+None of these are meant to be called directly -- they exist purely so the ordinary
+syntax (`+`, `x[key]`, `x.attr = ...`, calling the instance, ...) has something to
+dispatch to.
 
 Extending the `$Point` example from [Creating custom types](#creating-custom-types)
 with an `__add__` method makes `+` work directly on two points:
@@ -1092,8 +1349,8 @@ $r.x
 4
 ```
 
-`x[key] = value` is the write-side counterpart, calling `__setitem__(key, value)`
-instead of `__getitem__(key)`. Plain member assignment, `x.attr = value`, works the same
+`x[key] = value` is the write-side counterpart of `__getitem__`, calling
+`__setitem__(key, value)`. Plain member assignment, `x.attr = value`, works the same
 way, calling `__setattr__(attr, value)` -- which is what makes `$this.x = $x` inside
 `$Point.__init__` actually set a field: `class` gives every instance a default
 `__setattr__` that does exactly that. `$struct.of` gives its result no `__setattr__` at
@@ -1117,182 +1374,43 @@ $false
 `=~`/`!~` are the one exception that *is* overloadable, but through the `__is__`/
 `__is_not__` methods described in [Matching](#matching), not a same-named dunder.
 
-### Globs in expression mode
+## Variables
 
-Glob literals (e.g. `*.txt`) only parse in command mode -- expression mode has no glob
-literal syntax at all, so `(x =~ *.txt)` fails to parse. This is because of the clash of the `*`
-symbol as both the multiplication operator and a glob wildcard. To use a glob from within
-expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. 
+`$name` reads the current value of a variable named `name`.
 
-### List literals
+### Declaring a new variable (`:=`)
 
-`[...]` in a value position builds a list, with elements separated by commas -- this is
-exactly equivalent to calling `$list.of` with the same elements as unnamed arguments:
+`:=` declares a variable in the *current* scope, giving it an initial value:
 
 ```shell script
-crush# ["a", "b", "c"]
-[a, b, c]
-crush# [1, [2, 3], 4]
-[1, [2, 3], 4]
+crush# $x := "hello"
+crush# $x
+hello
 ```
 
-Unlike command mode's space-separated arguments, the commas are required -- `[1 2 3]`
-doesn't parse. A trailing comma is allowed (`[1, 2, 3,]`), but there's no syntax for an
-empty list literal: `[]` parses, but fails at run time with "Expected at least one
-argument", the same error `$list.of` itself gives with no arguments. Use `$list.new`
-instead to build an empty list -- see `help $list`.
-
-A bracketed name list on the left of `:=`/`=` is unrelated syntax -- that's
-[destructuring](#destructuring-assignment), not a list literal, even though it uses the
-same brackets.
-
-### Dict literals
-
-`{key: value, ...}` builds a dict, equivalent to calling `$dict.of` with alternating
-key/value arguments. A key can be a bareword, a quoted string, or any other single
-value -- a `$variable`, a parenthesized sub-expression, a number, and so on -- that's
-evaluated to produce the key's actual value; each value is a full expression:
+Declaring a name that's already declared *in that same scope* is an error:
 
 ```shell script
-crush# {foo: "bar", "baz": 42}
-key value
-foo bar
-baz 42
-crush# $n := 2
-crush# {($n + 1): "three"}
-key value
-  3 three
+crush# $x := 5
+crush# $x := 6
+Error: Tried to declare variable x, but it already exists
 ```
 
-`{}` is still an empty closure, not an empty dict -- there's nothing in an empty pair
-of braces to signal dict-ness with, so the ambiguity resolves the same way it always
-has. This is the one case a dict literal can't produce, the same gap `[]` has for
-lists.
-
-## Destructuring assignment
-
-A bracketed list of names on the left of `:=`/`=` splits a list, struct, or dict on the
-right into one variable per name, positionally. Struct fields and dict entries are both
-backed by an order-preserving map, so "positionally" means declaration order for a
-struct and insertion order for a dict -- key order is never involved. The number of
-names must exactly match the number of elements, or the assignment errors:
+But `:=` inside a nested scope (a closure, or a block passed to `if`/`try`/etc.) never
+collides with an outer variable of the same name -- it declares a fresh local variable
+that *shadows* the outer one for the rest of that scope, leaving the outer variable
+untouched:
 
 ```shell script
-crush# [$a $b] := $($list.of 1 2)
-crush# $a
+crush# $x := 1
+crush# $f := {$x := 2; echo $x}
+crush# $f
+2
+crush# $x
 1
-crush# $point := $($struct.of x=10 y=20)
-crush# [$x $y] := $point
-crush# $y
-20
-
-# = destructures into already-declared variables, exactly like plain = does for one
-[$a $b] = $($list.of 3 4)
 ```
 
-`:=` still requires that none of the names already exist in the local scope, and `=`
-still requires that all of them do -- both exactly as for a single-target `:=`/`=`.
-
-## Matching
-
-Matching in Crush is built on one mechanism: any value can act as a *pattern*
-by implementing an `__is__` method (and, for negation, `__is_not__`), which takes a
-value to test and returns a bool. Strings, globs, regular expressions, and types all
-implement it, and so can your own custom types -- see the end of this section. These
-methods are named with dunders specifically because they're not meant to be called
-directly; the interfaces below all just call them for you.
-
-The **`like`** command checks a value against one or more patterns, returning true as
-soon as one matches:
-
-```shell script
-crush# like "foo.txt" *.txt
-true
-crush# like "foo.txt" *.md
-false
-crush# like abbbbbc ^(ab+c)
-true
-```
-
-A pattern can be a **glob** (shell-style wildcards `*` for any run of characters,
-`?` for a single character, `**` to recurse into subdirectories; the type most shell
-users already know from filename expansion), a **regular expression** (usual regex
-syntax, constructed with `^(...)`), a plain **string** (exact match -- not a substring
-search), or a **type** (checks the value's own type, e.g. `like 5 $integer`). Globs
-aren't automatically expanded against the filesystem -- a glob is a value in its own
-right, passed to whatever command receives it, which decides what to match it against.
-
-The value being tested against a glob, regex, or string pattern can itself be either a
-`string` or a `file` -- `like 'foo.txt' *.txt` works the same as `like "foo.txt" *.txt`.
-
-In expression mode, a single pattern can be checked with the **`=~`**/**`!~`**
-operators instead, which read more naturally there:
-
-```shell script
-crush# (abbbbbc =~ ^(ab+c))
-true
-crush# (abbbbbc !~ ^(zzz))
-true
-```
-
-(`=~ y` and `!~ y` desugar to calling `y`'s own `__is__`/`__is_not__` method, which is
-why the pattern goes on the right.)
-
-### Matching against a custom class
-
-Because `like`, `=~`/`!~`, and `match`'s `is` arm all just call `__is__`, any type can
-be used as a pattern by implementing it:
-
-```shell script
-$even := $($struct.of __is__={|$needle| ($needle mod 2 == 0)})
-
-like 4 $even   # true
-like 5 $even   # false
-```
-
-## Pattern matching
-
-The `match` command branches a value against a sequence of arms, useful when you'd
-otherwise write a chain of `if`/`else if`:
-
-```shell script
-match $x {
-    case 2 {echo "$x is 2"}
-    any $(seq 5 10) {echo "$x is between 5 and 10"}
-    is *.txt {echo "$x looks like a text file"}
-    is $string {echo "$x is a string"}
-    default {echo "I don't know what $x is"}
-}
-```
-
-Each arm is tried in order; the first that matches runs and the rest are skipped:
-
-* `case <value> {...}` matches if the subject equals `<value>`.
-* `any <stream> {...}` matches if the subject equals any value produced by `<stream>`
-  (e.g. a list or `$(seq 5 10)`).
-* `is <pattern> {...}` matches if `<pattern>` (a type, glob, regex, or anything else
-  with an `__is__` method) matches the subject -- the same mechanism `like` uses.
-* `default {...}` always matches.
-
-If nothing matches and there's no `default` arm, `match` fails with an error.
-
-`match` also works in expression mode, with the exact same arm syntax as
-above:
-
-```shell script
-crush# $describe := ({|$n| match $n {
-    case 2 {"two"}
-    is $string {"a string"}
-    default {"something else"}
-}})
-crush# ($describe(2))
-two
-```
-
-A match arm's value can be any expression, with no restrictions beyond what command
-mode's arms already have.
-
-## Assignment takes exactly one value
+### Assignment takes exactly one value
 
 `:=` and `=` each take exactly one value on the right-hand side. A single token -- a
 literal, a `$variable`, or a bare `$value.member` reference with no arguments of its
@@ -1330,43 +1448,6 @@ crush# $level := $(if ($score > 90) {"A"} else {"B"})
 crush# $level
 A
 ```
-
-## Variables
-
-`$name` reads the current value of a variable named `name`.
-
-`:=` declares a variable in the *current* scope, giving it an initial value:
-
-```shell script
-crush# $x := "hello"
-crush# $x
-hello
-```
-
-Declaring a name that's already declared *in that same scope* is an error:
-
-```shell script
-crush# $x := 5
-crush# $x := 6
-Error: Tried to declare variable x, but it already exists
-```
-
-But `:=` inside a nested scope (a closure, or a block passed to `if`/`try`/etc.) never
-collides with an outer variable of the same name -- it declares a fresh local variable
-that *shadows* the outer one for the rest of that scope, leaving the outer variable
-untouched:
-
-```shell script
-crush# $x := 1
-crush# $f := {$x := 2; echo $x}
-crush# $f
-2
-crush# $x
-1
-```
-
-See [Assignment takes exactly one value](#assignment-takes-exactly-one-value) above for
-the syntactic restrictions on what can appear on the right-hand side of `:=`.
 
 ### Reassigning a variable (`=`)
 
@@ -1549,6 +1630,29 @@ something a member can meaningfully follow -- a value, a closing bracket, or a q
 literal -- never floating free the way it can inside a file name; see [Specifying
 which command to run](#specifying-which-command-to-run) above for how this plays out
 for namespace-qualified commands specifically.
+
+`x[key]` is the other way to pull a piece out of a value -- indexing by position for a
+`list`, by key for a `dict`, by row number for a `table`/`table`-shaped type, and so
+on, each type deciding what `key` means for itself:
+
+```shell script
+crush# $($list.of "a" "b" "c")[0]
+a
+crush# $($dict.of "x" 1 "y" 2)["x"]
+1
+```
+
+An out-of-range index is an error, not an empty/default result:
+
+```shell script
+crush# $($list.of "a" "b" "c")[10]
+Error: Index out of bounds. Tried to get element 10 in a list with 3 elements.
+```
+
+`x[key] = value` writes through the same syntax; both directions are implemented by a
+value's own `__getitem__`/`__setitem__` methods, and a custom type can support indexing
+itself by defining them -- see [Special methods](#special-methods) under [Crush
+types](#crush-types).
 
 A few of the built-in namespaces:
 
@@ -1785,6 +1889,23 @@ The output value of a closure that ends through a call to `return` is the value 
 in to `return`. If none was given, the output value is `$empty`. If a closure does not
 have a return command, the output will be the output of the last command, just like in
 a regular block.
+
+### The `@` and `@@` operators
+
+`@` spreads a list as a sequence of unnamed arguments, and `@@` spreads a dict as a
+sequence of named arguments -- both at call sites and in a closure's own parameter list,
+where they instead *collect* stray arguments:
+
+```shell script
+# @args collects every unnamed argument into a list; @@kwargs collects every named
+# argument not otherwise bound in the parameter list into a dict.
+$print_everything := {|@ $unnamed @@ $named| echo "Named" $named "Unnamed" $unnamed}
+$print_everything 1 2 x=3 y=4
+
+# The mirrored use, at a call site: spread a list/dict back out into arguments. This
+# defines an `ls` that forwards whatever it's given to `files`, then selects one column.
+$ls := {|@ $args @@ $kwargs| files @ $args @@ $kwargs | select file}
+```
 
 ## Calling external commands
 
