@@ -20,6 +20,46 @@ A character sequence enclosed in double quotes is a string literal, e.g. `"hello
 Unquoted character sequences containing only letters, digits and underscore are also
 strings, e.g. `user` or `hat`.
 
+#### Escape sequences
+
+Inside a quoted string (or a quoted file literal, see below), `\` starts an escape
+sequence:
+
+| Escape        | Meaning                                                              |
+|---------------|-----------------------------------------------------------------------|
+| `\n`          | newline                                                                |
+| `\r`          | carriage return                                                        |
+| `\t`          | tab                                                                    |
+| `\0`          | null byte                                                              |
+| `\e`          | escape (`0x1b`)                                                        |
+| `\xHH`        | the byte with hex value `HH` (exactly two hex digits)                  |
+| `\uHHHH`      | the Unicode code point `U+HHHH` (exactly four hex digits)              |
+| `\UHHHHHHHH`  | the Unicode code point `U+HHHHHHHH` (exactly eight hex digits)        |
+| `\` + anything else | that character literally, e.g. `\\` is a single backslash, `\"` a literal quote |
+
+```shell script
+crush# echo --raw "snowman: \u2603, fox: \U0001F98A"
+snowman: ☃, fox: 🦊
+```
+
+In a *string*, the bytes an `\x`/`\u`/`\U` escape produces must form valid UTF-8 (a
+standalone `\xff` is an error, since `0xff` isn't valid UTF-8 on its own) -- a quoted
+**file** literal has no such restriction, since a file path doesn't have to be valid
+UTF-8 either.
+
+`echo` (and other places that print a string as part of a larger structure) show
+control characters -- including a literal `\n` -- escaped back out by default, so an
+embedded newline doesn't visibly disrupt the output; pass `echo --raw` to print the
+string's actual bytes instead:
+
+```shell script
+crush# echo "foo\nbar"
+"foo\nbar"
+crush# echo --raw "foo\nbar"
+foo
+bar
+```
+
 An unquoted character sequence containing a wildcard character (`*` or `?`) is a
 **glob**, an object used for matching against text, see
 [matching](#matching) below.
@@ -844,12 +884,107 @@ better as symbols than as commands. Grouped roughly by precedence, highest first
 | `mod` `rem`                  | `-7 mod 2`, `-7 rem 2`                                           | Same precedence as `*`/`/`. `mod` is the least positive residue (always `>= 0`); `rem` is the ordinary, truncating remainder (`-7 mod 2` is `1`, `-7 rem 2` is `-1`) |
 | `@` `@@`                    | see the separate section on these operators for more information | Argument/parameter list spreading                                  |
 
+### Operator overloading
+
+The arithmetic operators, unary negation, and indexing all desugar to a dunder-method
+call on the left (or only) operand, so a [custom type](#creating-custom-types) can
+implement them by defining the matching method:
+
+| Operator | Method        |
+|----------|---------------|
+| `+`      | `__add__`     |
+| `-`      | `__sub__`     |
+| `*`      | `__mul__`     |
+| `/`      | `__div__`     |
+| `mod`    | `__mod__`     |
+| `rem`    | `__rem__`     |
+| `-x`     | `__neg__`     |
+| `x[key]` | `__getitem__` |
+
+Extending the `$Point` example from [Creating custom types](#creating-custom-types)
+with an `__add__` method makes `+` work directly on two points:
+
+```shell script
+$Point.__add__ = {
+    |$other|
+    $Point.new x=($this.x + $other.x) y=($this.y + $other.y)
+}
+
+$p := $($Point.new x=1.0 y=2.0)
+$q := $($Point.new x=3.0 y=4.0)
+$r := ($p + $q)
+$r.x
+4
+```
+
+`x[key] = value` is the write-side counterpart, calling `__setitem__(key, value)`
+instead of `__getitem__(key)`.
+
+**Comparisons, `!`, and `and`/`or` are not overloadable.** `==`, `!=`, `<`, `<=`, `>`,
+`>=`, and `!` always use Crush's own built-in comparison and negation, regardless of any
+`__eq__`-, `__lt__`-, or similarly named method a type might define -- there's no such
+method, and defining one has no effect:
+
+```shell script
+$Point.__eq__ = {|$other| $true}   # has no effect on == at all
+($p == $q)
+$false
+```
+
+`=~`/`!~` are the one exception that *is* overloadable, but through the `__is__`/
+`__is_not__` methods described in [Matching](#matching), not a same-named dunder.
+
 ### Globs in expression mode
 
 Glob literals (e.g. `*.txt`) only parse in command mode -- expression mode has no glob
 literal syntax at all, so `(x =~ *.txt)` fails to parse. This is because of the clash of the `*`
 symbol as both the multiplication operator and a glob wildcard. To use a glob from within
 expression mode, wrap it in a command substitution instead: `(x =~ $(*.txt))`. 
+
+### List literals
+
+`[...]` in a value position builds a list, with elements separated by commas -- this is
+exactly equivalent to calling `$list.of` with the same elements as unnamed arguments:
+
+```shell script
+crush# ["a", "b", "c"]
+[a, b, c]
+crush# [1, [2, 3], 4]
+[1, [2, 3], 4]
+```
+
+Unlike command mode's space-separated arguments, the commas are required -- `[1 2 3]`
+doesn't parse. A trailing comma is allowed (`[1, 2, 3,]`), but there's no syntax for an
+empty list literal: `[]` parses, but fails at run time with "Expected at least one
+argument", the same error `$list.of` itself gives with no arguments. Use `$list.new`
+instead to build an empty list -- see `help $list`.
+
+A bracketed name list on the left of `:=`/`=` is unrelated syntax -- that's
+[destructuring](#destructuring-assignment), not a list literal, even though it uses the
+same brackets.
+
+### Dict literals
+
+`{key: value, ...}` builds a dict, equivalent to calling `$dict.of` with alternating
+key/value arguments. A key can be a bareword, a quoted string, or any other single
+value -- a `$variable`, a parenthesized sub-expression, a number, and so on -- that's
+evaluated to produce the key's actual value; each value is a full expression:
+
+```shell script
+crush# {foo: "bar", "baz": 42}
+key value
+foo bar
+baz 42
+crush# $n := 2
+crush# {($n + 1): "three"}
+key value
+  3 three
+```
+
+`{}` is still an empty closure, not an empty dict -- there's nothing in an empty pair
+of braces to signal dict-ness with, so the ambiguity resolves the same way it always
+has. This is the one case a dict literal can't produce, the same gap `[]` has for
+lists.
 
 ## Destructuring assignment
 
@@ -1597,3 +1732,42 @@ interactive mode, a warning is also printed immediately as it happens; in a scri
 only way to notice one happened is to check `$crush.warn.list` (or, for commands that
 report per-item this way, to compare how much output you got against how much you
 expected. See e.g. `$remote.pexec`'s own documentation).
+
+## Environment variables
+
+`$crush.env` gives read/write access to the process environment, indexed by name:
+
+```shell script
+crush# $crush.env["HOME"]
+/home/me
+crush# $crush.env["MY_VAR"] = "hello"
+crush# $crush.env["MY_VAR"]
+hello
+```
+
+Reading a name that isn't set is an error:
+
+```shell script
+crush# $crush.env["NO_SUCH_VAR"]
+Error: environment variable not found
+```
+
+`$crush.env.unset` removes one or more variables, and `$crush.env.list` returns every
+currently set variable as a `name`/`value` stream:
+
+```shell script
+crush# $crush.env.unset "MY_VAR" "OTHER_VAR"
+crush# $crush.env.list | where {eq $name "PATH"} | select name value
+name value
+PATH /usr/bin:/bin
+```
+
+Environment variables set this way are visible to every external command Crush
+spawns afterward, the same as if they'd been set before Crush itself started -- this is
+the usual way to adjust `$PATH` or pass configuration down to a subprocess:
+
+```shell script
+crush# $crush.env["GREETING"] = "hi"
+crush# cmd printenv GREETING
+hi
+```
