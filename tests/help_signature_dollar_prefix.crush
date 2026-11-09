@@ -1,0 +1,14 @@
+# A namespaced command or namespace's own `help` signature line must show the `$`
+# that's actually required to invoke it -- `fs.files` as a bareword does not resolve
+# (see CLAUDE.md: a dotted bareword command is always ambiguous with a real external
+# command of that name found via PATH), only `$fs.files` does. The signature used to
+# render the dotted path with no `$` at all.
+
+$files_sig := $(help topic=$fs.files format="markdown")
+assert ($files_sig.starts_with("    $fs.files ")) "command signature must start with $"
+
+$add_sig := $(help topic=$global.types.integer.__add__ format="markdown")
+assert ($add_sig.starts_with("    $types.integer.__add__ ")) "operator-overload signature must start with $"
+
+$fs_sig := $(help topic=$fs format="markdown")
+assert ($fs_sig.starts_with("    $global.fs")) "namespace's own signature must start with $"

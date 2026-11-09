@@ -341,6 +341,58 @@ mod tests {
             assert_accounted_for(expected);
         }
     }
+
+    /// The exact text and span a `Flag` token should have for `source` -- unlike
+    /// `lexes_to` above, this checks more than just the variant, since the bug this
+    /// guards against (a bare trailing `--`'s second dash silently vanishing from
+    /// its own token's reported span -- the lexer's cursor had genuinely consumed
+    /// it, just never recorded where) only shows up in the token's actual text/
+    /// location, not its discriminant.
+    fn lexes_single_flag_to(source: &str, expected_text: &str) {
+        let tokens: Vec<_> =
+            Lexer::new(source, LanguageMode::Command, TokenizerMode::IncludeComments)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+        let flags: Vec<_> = tokens
+            .iter()
+            .filter_map(|(start, t, end)| match t {
+                Token::Flag(text, _) => Some((*text, *start, *end)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            flags.len(),
+            1,
+            "expected exactly one Flag token lexing {:?}, got {:?}",
+            source,
+            flags
+        );
+        let (text, start, end) = flags[0];
+        assert_eq!(text, expected_text, "wrong Flag token text for {:?}", source);
+        assert_eq!(
+            end - start,
+            expected_text.len(),
+            "Flag token span width doesn't match its own text for {:?}: [{}, {})",
+            source,
+            start,
+            end
+        );
+    }
+
+    #[test]
+    fn test_that_a_bare_trailing_double_dash_keeps_both_dashes_in_its_own_span() {
+        lexes_single_flag_to("files --", "--");
+    }
+
+    #[test]
+    fn test_that_a_named_double_dash_flag_is_unaffected() {
+        lexes_single_flag_to("files --foo", "--foo");
+    }
+
+    #[test]
+    fn test_that_a_single_dash_flag_is_unaffected() {
+        lexes_single_flag_to("files -foo", "-foo");
+    }
 }
 
 impl<'a> Into<Spanned<'a>> for Token<'a> {

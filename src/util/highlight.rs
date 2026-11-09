@@ -1880,6 +1880,26 @@ mod tests {
         assert!(after_error.contains('<'), "got: {}", rendered);
     }
 
+    /// A bare trailing `--` (no flag name after it) must keep both dashes in the
+    /// rendered/highlighted output -- the lexer used to record the Flag token's own
+    /// span as covering only the first dash, even though its cursor had genuinely
+    /// consumed both, so the second dash fell into a gap no token claimed and never
+    /// made it into the highlighted line at all.
+    #[test]
+    fn syntax_highlight_keeps_both_dashes_of_a_bare_trailing_double_dash() {
+        let scope = Some(scope_with_dynamic_output_commands());
+        let colors = HashMap::new();
+
+        let rendered = syntax_highlight("files --", &colors, &scope).unwrap();
+        let visible: String = rendered.chars().filter(|c| *c != '\x1b').collect();
+        assert!(
+            rendered.contains("--"),
+            "expected both dashes of a bare trailing -- to survive highlighting, got: {:?} (visible: {:?})",
+            rendered,
+            visible
+        );
+    }
+
     /// A line that's entirely unlexable from the very first character (nothing
     /// successfully classified at all) must still color the whole thing as an error,
     /// not panic or silently produce no output.

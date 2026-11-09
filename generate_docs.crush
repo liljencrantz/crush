@@ -11,11 +11,11 @@
 $dot_re := $($re.new "\\.")
 $backtick_re := $($re.new "`")
 
-# $global.foo.bar -> $foo.bar. Every real full_path this script produces starts
+# $global.foo.bar -> foo.bar. Every real full_path this script produces starts
 # with "global." (see $scope_path below), but nobody ever types that prefix
 # at the prompt -- it's an artifact of $global itself having the name
 # "global", not something a caller writes.
-$display_path := {
+$strip_global := {
     |$p|
     if ($p.starts_with("global.")) {
         $p.substr from=7
@@ -24,10 +24,19 @@ $display_path := {
     }
 }
 
-# A namespace path (colon-separated) turned into a safe HTML id/anchor.
+# $global.foo.bar -> $foo.bar, the syntax actually used to reference it. A dotted
+# bareword command never resolves on its own (it's ambiguous with a real external
+# command of that name found via PATH), so anything with a dot needs its $ shown.
+$display_path := {
+    |$p|
+    "${}".format $(strip_global $p)
+}
+
+# A namespace path turned into a safe HTML id/anchor -- independent of
+# $display_path (which prepends a "$" for human-facing text): an id must stay plain.
 $slugify := {
     |$p|
-    $dot_re.replace_all $(display_path $p) "-"
+    $dot_re.replace_all $(strip_global $p) "-"
 }
 
 # The one-line description of any Help-implementing value (a command or a
@@ -181,7 +190,7 @@ $crawl := {
                             # would make the compound pass below re-mark
                             # (and double data-link) every already-correct
                             # full path under it.
-                            if (($bare_val == $val) and ($name != $(display_path $(scope_path $val)))) {
+                            if (($bare_val == $val) and ($name != $(strip_global $(scope_path $val)))) {
                                 $bare_aliases[$name] = $(scope_path $val)
                             }
                         } catch {|$e| }
@@ -237,7 +246,7 @@ $crawl := {
                                 # Scope.
                                 try {
                                     $bare_val := $($var.get $name)
-                                    if (($bare_val == $val) and ($name != $(display_path $full_name))) {
+                                    if (($bare_val == $val) and ($name != $(strip_global $full_name))) {
                                         $bare_aliases[$name] = $full_name
                                     }
                                 } catch {|$e| }
@@ -308,8 +317,12 @@ $error_count := $($errors.len)
 
 # $json.to, like every codec's :to command, produces a binary_stream (bytes
 # ready to write to disk or pipe onward) -- convert to a plain string since
-# that's what gets spliced into the page below.
-$search_json := $(convert $string $($search_items | $json.to compact=$true))
+# that's what gets spliced into the page below. Deliberately *not*
+# compact=$true: this blob is hundreds of entries long, and a single-line
+# JSON dump makes the generated HTML unreadable and can blow up a line-based
+# `git diff`/`git log -p` on it. The default (indented) form is spliced
+# into a <script> tag, where the extra whitespace is inert.
+$search_json := $(convert $string $($search_items | $json.to))
 
 # Renders one namespace section (its own prose, an index of its direct
 # Renders one type as its own mini-section, the same shape $render_ns
@@ -433,24 +446,25 @@ $sections := $($top_level | fold {"{}{}".format $acc $(render_ns $value 0)} init
 #      with -- has the now-meaningless attribute stripped.
 for entry=$ns_prose {
     if ($entry.key != "global") {
-        # A data-ref never carries the "global." prefix (nobody writes
-        # $global.dns.query in an example or a `backtick` reference) --
-        # match against the same stripped form $slugify itself derives
-        # its anchor from, not the raw dict key.
-        $dp := $(display_path $entry.key)
+        # A data-ref never carries the "global." prefix, and -- unlike
+        # $display_path's human-facing text -- never carries a "$" either
+        # (nobody writes $global.dns.query in an example or a `backtick`
+        # reference): match against the same stripped form $slugify itself
+        # derives its anchor from, not the raw dict key.
+        $dp := $(strip_global $entry.key)
         $slug := $(slugify $entry.key)
         $ref_re := $($re.new $("data-ref=\"{}\"".format $dp))
         $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $dp $slug))
     }
 }
 for entry=$cmd_doc {
-    $dp := $(display_path $entry.key)
+    $dp := $(strip_global $entry.key)
     $slug := $(slugify $entry.key)
     $ref_re := $($re.new $("data-ref=\"{}\"".format $dp))
     $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $dp $slug))
 }
 for entry=$type_doc {
-    $dp := $(display_path $entry.key)
+    $dp := $(strip_global $entry.key)
     $slug := $(slugify $entry.key)
     $ref_re := $($re.new $("data-ref=\"{}\"".format $dp))
     $sections = $($ref_re.replace_all $sections $("data-ref=\"{}\" data-link=\"{}\"".format $dp $slug))

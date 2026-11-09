@@ -273,32 +273,41 @@ fn parse_metadata(metadata: TokenStream) -> SignatureResult<Metadata> {
 }
 
 fn generate_signature(path: &[String], signature: Vec<String>) -> String {
+    // `path` never includes the command's own name (`parse_full_name` pops that off
+    // into `signature[0]` instead), so this is the one place that reassembles the
+    // full, actually-typeable reference -- and a dotted bareword command never
+    // resolves on its own (see CLAUDE.md: `fs.files` is ambiguous with a real
+    // external `files` command found via PATH in a `fs` directory), so it needs the
+    // `$` that every other dotted value reference in a signature already gets (e.g.
+    // the `$string`/`$file` alternatives in a `one_of` argument type).
+    let full_name = if path.is_empty() {
+        signature[0].clone()
+    } else {
+        format!("${}.{}", path.join("."), signature[0])
+    };
     match (signature[0].as_str(), signature.len()) {
         ("__add__", 2) => format!(
             "{} + {} # Only available in expression mode",
-            path.join("."),
-            signature[1]
+            full_name, signature[1]
         ),
         ("__sub__", 2) => format!(
             "{} - {} # Only available in expression mode",
-            path.join("."),
-            signature[1]
+            full_name, signature[1]
         ),
         ("__mul__", 2) => format!(
             "{} * {} # Only available in expression mode",
-            path.join("."),
-            signature[1]
+            full_name, signature[1]
         ),
         ("__div__", 2) => format!(
             "{} / {} # Only available in expression mode",
-            path.join("."),
-            signature[1]
+            full_name, signature[1]
         ),
-        ("__getitem__", 2) => format!("{}[{}]", path.join("."), signature[1]),
-        ("__setitem__", 3) => format!("{}[{}] = {}", path.join("."), signature[1], signature[2]),
-        ("match", 2) => format!("{} =~ {}", path.join("."), signature[1]),
-        ("not_match", 2) => format!("{} !~ {}", path.join("."), signature[1]),
-        _ => format!("{}.{}", path.join("."), signature.join(" ")),
+        ("__getitem__", 2) => format!("{}[{}]", full_name, signature[1]),
+        ("__setitem__", 3) => format!("{}[{}] = {}", full_name, signature[1], signature[2]),
+        ("match", 2) => format!("{} =~ {}", full_name, signature[1]),
+        ("not_match", 2) => format!("{} !~ {}", full_name, signature[1]),
+        _ if signature.len() == 1 => full_name,
+        _ => format!("{} {}", full_name, signature[1..].join(" ")),
     }
 }
 

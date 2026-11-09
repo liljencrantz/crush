@@ -308,11 +308,18 @@ impl<'input> Lexer<'input> {
                 },
 
                 Some((i, '-')) => {
-                    if let Some((_, '-')) = self.chars.peek() {
+                    let mut end_idx = i;
+                    // The optional second `-` (`--foo`/bare `--`) is consumed here
+                    // unconditionally -- `end_idx` must track it explicitly, since
+                    // nothing else will: if nothing follows (a bare `--`), the loop
+                    // below never runs at all, and the token's own reported span
+                    // would otherwise still end at the first dash, one character
+                    // short of what was actually consumed from `self.chars`.
+                    if let Some((i2, '-')) = self.chars.peek() {
+                        end_idx = *i2;
                         self.chars.next();
                     }
 
-                    let mut end_idx = i;
                     loop {
                         let cc2 = self.chars.peek();
                         match cc2 {

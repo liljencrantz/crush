@@ -920,8 +920,11 @@ impl Identity for Scope {
 
 impl Help for Scope {
     fn signature(&self) -> String {
+        // A namespace is always referenced as a value (`$global`, `$fs`, ...), never
+        // as a bareword, so its own signature needs the same `$` every other dotted
+        // value reference in a signature gets.
         self.full_path()
-            .map(|p| p.join("."))
+            .map(|p| format!("${}", p.join(".")))
             .unwrap_or_else(|_| "<Anonymous scope>".to_string())
     }
 
