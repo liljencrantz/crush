@@ -84,19 +84,25 @@ fn has_type(value: &Value, pattern: &ValueType, max_depth: i8) -> bool {
     false
 }
 
-fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> &str {
+fn completion_suffix(
+    maybe_scope: CrushResult<Option<Value>>,
+    t: &ValueType,
+    allow_dot_chain: bool,
+) -> &'static str {
     match t {
-        // A completed name that itself resolves to a namespace (`Value::Scope`) used
-        // to suggest appending `:` to invite completing straight into a member of
-        // it. `.` can't play the same role unconditionally: a bare (no `$`) namespace
-        // name can't be dot-chained into a command the way it could be `:`-chained
-        // (see the dot_member_operator.crush test for why -- it'd be ambiguous with a
-        // real external command like `backup.sh`). A bare namespace name is still a
-        // complete, valid reference on its own (running it just lists its members),
-        // so a plain space is the suggestion that's never wrong -- at the cost of no
-        // longer inviting the chain for the `$namespace.` case where it would work.
+        // A completed name that itself resolves to a namespace (`Value::Scope`)
+        // invites completing straight into a member of it -- but only with `.` when
+        // `allow_dot_chain` says the completed text is (or already is part of) a
+        // `$`-rooted reference: a bare (no `$`) namespace name can't be dot-chained
+        // into a command the way `$name.member` can (see the dot_member_operator.crush
+        // test for why -- it'd be ambiguous with a real external command like
+        // `backup.sh`). A bare namespace name is still a complete, valid reference on
+        // its own (running it just lists its members), so a plain space -- never
+        // wrong, just not inviting the chain -- is the fallback for that case.
         ValueType::Any => match maybe_scope {
-            Ok(Some(Value::Scope(_))) => " ",
+            Ok(Some(Value::Scope(_))) => {
+                if allow_dot_chain { "." } else { " " }
+            }
             Ok(Some(Value::Empty))
             | Ok(Some(Value::Bool(_)))
             | Ok(Some(Value::String(_)))
@@ -115,12 +121,17 @@ fn completion_suffix(maybe_scope: CrushResult<Option<Value>>, t: &ValueType) -> 
                     } else {
                         " "
                     }
+                } else if allow_dot_chain {
+                    // Same reasoning as the `Value::Scope` case above, just for any
+                    // other member-having value (e.g. a struct) found while looking
+                    // for something of `target_type` nested inside it: a `$`-rooted
+                    // reference can safely be dot-chained into that member.
+                    "."
                 } else {
-                    // Same reasoning as the `Value::Scope` case above: this name
-                    // doesn't directly have the target type, but a bare (no `$`)
-                    // reference to it can't be dot-chained into a member that might,
-                    // so a plain space -- a complete, valid reference either way --
-                    // is the suggestion that's never wrong.
+                    // This name doesn't directly have the target type, but a bare
+                    // (no `$`) reference to it can't be dot-chained into a member
+                    // that might, so a plain space -- a complete, valid reference
+                    // either way -- is the suggestion that's never wrong.
                     " "
                 }
             }
@@ -140,6 +151,7 @@ fn complete_label(
     value: Value,
     prefix: &str,
     t: &ValueType,
+    allow_dot_chain: bool,
     cursor: usize,
     out: &mut Vec<Completion>,
 ) -> CrushResult<()> {
@@ -158,7 +170,7 @@ fn complete_label(
                 completion: format!(
                     "{}{}",
                     &k[prefix.len()..],
-                    completion_suffix(value.field(k), t)
+                    completion_suffix(value.field(k), t, allow_dot_chain)
                 ),
                 display: k.clone(),
                 position: cursor,
@@ -385,7 +397,14 @@ fn complete_partial_argument(
         }
 
         LastArgument::Unknown => {
-            complete_label(Value::Scope(scope.clone()), "", &argument_type, cursor, res)?;
+            complete_label(
+                Value::Scope(scope.clone()),
+                "",
+                &argument_type,
+                false,
+                cursor,
+                res,
+            )?;
             complete_file(lister, "", Unquoted, &argument_type, dirs_only, cursor, res)?;
             if parse_result.last_argument_name.is_none() {
                 if let CompletionCommand::Known(cmd) = parse_result.command {
@@ -399,6 +418,7 @@ fn complete_partial_argument(
                 Value::Scope(scope.clone()),
                 &label,
                 &argument_type,
+                true,
                 cursor,
                 res,
             )?;
@@ -414,7 +434,7 @@ fn complete_partial_argument(
         }
 
         LastArgument::Member(parent, field) => {
-            complete_label(parent, &field, &argument_type, cursor, res)?;
+            complete_label(parent, &field, &argument_type, true, cursor, res)?;
         }
 
         LastArgument::File(l, quoted) => {
@@ -449,6 +469,7 @@ pub fn complete(
                 Value::Scope(scope.clone()),
                 "",
                 &ValueType::Any,
+                false,
                 cursor,
                 &mut res,
             )?;
@@ -461,6 +482,7 @@ pub fn complete(
                 Value::Scope(scope.clone()),
                 &label,
                 &ValueType::Any,
+                true,
                 cursor,
                 &mut res,
             )?;
@@ -471,6 +493,7 @@ pub fn complete(
                 Value::Scope(scope.clone()),
                 &label,
                 &ValueType::Any,
+                false,
                 cursor,
                 &mut res,
             )?;
@@ -487,7 +510,7 @@ pub fn complete(
         }
 
         ParseResult::PartialMember(parent, label) => {
-            complete_label(parent, &label, &ValueType::Any, cursor, &mut res)?;
+            complete_label(parent, &label, &ValueType::Any, true, cursor, &mut res)?;
         }
 
         ParseResult::PartialFile(cmd, quoted) => {
@@ -774,6 +797,21 @@ mod tests {
         let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
         assert_eq!(completions.len(), 1);
         assert_eq!(&completions[0].complete(line), "$namespace.my_cmd ");
+    }
+
+    /// Unlike a bare namespace completion (below), completing a `$`-prefixed
+    /// reference to a namespace is always safe to dot-chain -- the `$` is already
+    /// there -- so it suggests `.` instead of a space, inviting straight into a
+    /// member of it, e.g. `$namespace.my_cmd` next.
+    #[test]
+    fn test_that_dollar_prefixed_namespace_completion_appends_a_dot() {
+        let line = "$namespac";
+        let cursor = line.len();
+
+        let s = scope_with_function();
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert_eq!(completions.len(), 1);
+        assert_eq!(&completions[0].complete(line), "$namespace.");
     }
 
     /// A bare (no `$`) namespace completion can't suggest chaining straight into a
