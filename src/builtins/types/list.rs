@@ -45,7 +45,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
 #[signature(
     types.list.repeat,
     can_block = false,
-    short = "Create a list containing the same value multiple times",
+    short = "Create a list containing the same value multiple times.",
 )]
 struct Repeat {
     #[description("the value to put into the list.")]
@@ -233,7 +233,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Push {
     #[unnamed()]
-    #[description("the values to push")]
+    #[description("the values to push.")]
     values: Vec<Value>,
 }
 
@@ -414,7 +414,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     short = "Extract a slice from this list.",
 )]
 struct Slice {
-    #[description("Starting index (inclusive). If unspecified, from start of list.")]
+    #[description("starting index (inclusive). If unspecified, from start of list.")]
     #[default(0usize)]
     from: usize,
     #[description("ending index (exclusive). If unspecified, to end of list.")]

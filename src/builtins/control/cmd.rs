@@ -24,14 +24,14 @@ use std::process::{Child, Stdio};
 
 #[signature(
     control.cmd,
-    short = "Execute an external command",
+    short = "Execute an external command.",
     long = "Globs are file-expanded. Argument and switch order is preserved.",
     output = Known(ValueType::BinaryInputStream),
     can_block = true,
 )]
 #[allow(unused)]
 pub struct Cmd {
-    #[description("The file path to the command to execute")]
+    #[description("the file path to the command to execute.")]
     command: PathBuf,
     #[named()]
     #[description(
@@ -39,7 +39,7 @@ pub struct Cmd {
     )]
     switches: OrderedStringMap<Value>,
     #[unnamed()]
-    #[description("Arguments to pass in to the command")]
+    #[description("arguments to pass in to the command.")]
     arguments: Vec<Value>,
 }
 

@@ -95,13 +95,13 @@ fn battery(context: CommandContext) -> CrushResult<()> {
     host.memory,
     can_block = false,
     output = Known(ValueType::Struct),
-    short = "memory usage of this host.",
+    short = "Memory usage of this host.",
     long = "The output struct contains the following fields:",
-    long = "* total, total amount of memory available to the host",
-    long = "* free, unused memory",
-    long = "* avail, available memory",
-    long = "* swap_total, total amount of swap available to the host",
-    long = "* swap_free, unused swap",
+    long = "* total, total amount of memory available to the host.",
+    long = "* free, unused memory.",
+    long = "* avail, available memory.",
+    long = "* swap_total, total amount of swap available to the host.",
+    long = "* swap_free, unused swap.",
 )]
 struct Memory {}
 
@@ -137,7 +137,7 @@ mod os {
         host.os.version,
         can_block = false,
         output = Known(ValueType::String),
-        short = "version of the operating system kernel"
+        short = "Version of the operating system kernel."
     )]
     pub struct Version {}
 
@@ -214,7 +214,7 @@ static PROCS_OUTPUT_TYPE: [ColumnType; 8] = [
 #[signature(
     host.procs,
     can_block = true,
-    short = "Return a table stream containing information on all running processes on this host",
+    short = "Return a table stream containing information on all running processes on this host.",
     output = Known(ValueType::table_input_stream(& PROCS_OUTPUT_TYPE)),
     long = "$host.procs accepts no arguments.")]
 pub struct Procs {}
@@ -271,7 +271,7 @@ mod macos {
     #[signature(
         host.threads,
         can_block = true,
-        short = "Return a table stream containing information on all running threads on this host",
+        short = "Return a table stream containing information on all running threads on this host.",
         output = Known(ValueType::table_input_stream(& THREADS_OUTPUT_TYPE)),
         long = "$host.threads accepts no arguments.")]
     pub struct Threads {}
@@ -351,7 +351,7 @@ mod linux {
     #[signature(
         host.threads,
         can_block = true,
-        short = "Return a table stream containing information on all running threads on this host",
+        short = "Return a table stream containing information on all running threads on this host.",
         output = Known(ValueType::table_input_stream(& THREADS_OUTPUT_TYPE)),
         long = "$host.threads accepts no arguments.")]
     pub struct Threads {}
@@ -385,7 +385,7 @@ mod linux {
 #[signature(
     host.signal,
     can_block = false,
-    short = "Send a signal to a set of processes",
+    short = "Send a signal to a set of processes.",
     output = Known(ValueType::Empty),
     long = "The set of existing signals is platform dependent, but common signals
     include SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE,

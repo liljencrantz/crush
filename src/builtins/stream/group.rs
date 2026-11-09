@@ -78,7 +78,7 @@ fn group_dynamic_output(
 #[signature(
     stream.group,
     can_block = true,
-    short = "Group stream by the specified column(s)",
+    short = "Group stream by the specified column(s).",
     example = "# Group files in current tree by the number of hardlinks pointing to them, show",
     example = "# the number of files and the sum total file size for each link count. Sort results",
     example = "# by size.",

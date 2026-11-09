@@ -90,7 +90,7 @@ fn __is_not__(mut context: CommandContext) -> CrushResult<()> {
     types.re.replace,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Replace the first match of the regex in text with the replacement",
+    short = "Replace the first match of the regex in text with the replacement.",
     long = "The replacement string may reference capture groups from the match: `$0` for \
     the whole match, `$1`, `$2`, ... for positional groups, or `$name` for a named group \
     (`(?P<name>...)`). Use `${1}` (or `${name}`) instead of `$1` when the reference is \
@@ -121,7 +121,7 @@ fn replace(mut context: CommandContext) -> CrushResult<()> {
     types.re.replace_all,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Replace all matches of the regex in text with the replacement",
+    short = "Replace all matches of the regex in text with the replacement.",
     long = "The replacement string may reference capture groups from each match: `$0` for \
     the whole match, `$1`, `$2`, ... for positional groups, or `$name` for a named group \
     (`(?P<name>...)`). Use `${1}` (or `${name}`) instead of `$1` when the reference is \

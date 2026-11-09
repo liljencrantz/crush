@@ -93,7 +93,7 @@ pub fn filter(mut context: CommandContext) -> CrushResult<()> {
     types.glob.new,
     can_block = false,
     output = Known(ValueType::Glob),
-    short = "Create a glob from a string",
+    short = "Create a glob from a string.",
 )]
 struct New {
     #[description("the string representation of the glob.")]

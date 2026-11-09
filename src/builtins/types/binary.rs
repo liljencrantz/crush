@@ -41,7 +41,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     example = "$($bin.from Cargo.toml)[4]",
 )]
 struct GetItem {
-    #[description("index")]
+    #[description("index.")]
     index: usize,
 }
 

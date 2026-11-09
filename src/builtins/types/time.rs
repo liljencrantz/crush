@@ -45,11 +45,11 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.integer.__add__,
     can_block = false,
     output = Known(ValueType::Time),
-    short = "Add the specified delta to this time",
+    short = "Add the specified delta to this time.",
 )]
 #[allow(unused)]
 struct Add {
-    #[description("the number to add")]
+    #[description("the number to add.")]
     term: Duration,
 }
 
@@ -83,7 +83,7 @@ fn now(context: CommandContext) -> CrushResult<()> {
     types.time.parse,
     can_block = false,
     output = Known(ValueType::Time),
-    short = "Parse a time string using a strptime-style pattern string",
+    short = "Parse a time string using a strptime-style pattern string.",
     long = "After parsing the date, it will be converted to the local time zone.",
     long = "Date specifiers:",
     long = " * `%Y` year with century.",
@@ -154,7 +154,7 @@ fn parse(mut context: CommandContext) -> CrushResult<()> {
     types.time.format,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Format this time using a strftime-style pattern string",
+    short = "Format this time using a strftime-style pattern string.",
     long = "Date specifiers:",
     long = " * `%Y` year with century.",
     long = " * `%y` year without century, zero padded.",

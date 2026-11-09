@@ -36,7 +36,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.float.__add__,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Add this number and the specified term and return the result",
+    short = "Add this number and the specified term and return the result.",
 )]
 #[allow(unused)]
 struct Add {
@@ -59,11 +59,11 @@ binary_op!(
     types.float.__sub__,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Subtract the specified term from this number and return the result",
+    short = "Subtract the specified term from this number and return the result.",
 )]
 #[allow(unused)]
 struct Sub {
-    #[description("the number to subtract")]
+    #[description("the number to subtract.")]
     term: Number,
 }
 
@@ -82,11 +82,11 @@ binary_op!(
     types.float.__mul__,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "multiply this number and the specified factor and return the result",
+    short = "Multiply this number and the specified factor and return the result.",
 )]
 #[allow(unused)]
 struct Mul {
-    #[description("the number to multiply")]
+    #[description("the number to multiply.")]
     term: Number,
 }
 
@@ -105,11 +105,11 @@ binary_op!(
     types.float.__div__,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Divide this number by the specified factor",
+    short = "Divide this number by the specified factor.",
 )]
 #[allow(unused)]
 struct Div {
-    #[description("the number to divide by")]
+    #[description("the number to divide by.")]
     term: Number,
 }
 binary_op!(
@@ -127,7 +127,7 @@ binary_op!(
     types.float.__neg__,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Negate this float",
+    short = "Negate this float.",
 )]
 struct Neg {}
 
@@ -140,7 +140,7 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     types.float.is_nan,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if this float is NaN",
+    short = "True if this float is NaN.",
 )]
 struct IsNan {}
 
@@ -170,7 +170,7 @@ fn is_infinite(mut context: CommandContext) -> CrushResult<()> {
     types.float.max,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Largest finite float value",
+    short = "Largest finite float value.",
 )]
 struct Max {}
 
@@ -183,7 +183,7 @@ fn max(context: CommandContext) -> CrushResult<()> {
     types.float.min,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Smallest finite float value",
+    short = "Smallest finite float value.",
 )]
 struct Min {}
 
@@ -196,7 +196,7 @@ fn min(context: CommandContext) -> CrushResult<()> {
     types.float.nan,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Not a number",
+    short = "Not a number.",
 )]
 struct Nan {}
 
@@ -209,7 +209,7 @@ fn nan(context: CommandContext) -> CrushResult<()> {
     types.float.infinity,
     can_block = false,
     output = Known(ValueType::Float),
-    short = "Infinity",
+    short = "Infinity.",
 )]
 struct Infinity {}
 

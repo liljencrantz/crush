@@ -78,7 +78,7 @@ fn get_output_type(
 #[allow(unused)]
 pub struct Join {
     #[named()]
-    #[description("Fields to join")]
+    #[description("fields to join.")]
     join: OrderedStringMap<Value>,
 }
 

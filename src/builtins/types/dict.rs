@@ -90,7 +90,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
     can_block = false,
     output = Known(ValueType::Dict(Box::from(ValueType::Any), Box::from(ValueType::Any))),
     short = "Create an empty new dict.",
-    long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string)",
+    long = "This method takes no arguments, but must not be called on a raw dict type. You must call it on a parametrized dict type, like $(dict $string $string).",
     example = "$my_dict := $($(dict $string $integer).new)",
 )]
 struct New {}
@@ -252,7 +252,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     types.dict.contains,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "Returns whether the given key is in the dict",
+    short = "Returns whether the given key is in the dict.",
 )]
 struct Contains {
     #[description("the value to check.")]
@@ -270,7 +270,7 @@ fn contains(mut context: CommandContext) -> CrushResult<()> {
     types.dict.remove,
     can_block = false,
     output = Unknown,
-    short = "Remove a mapping from the dict and return the value, or nothing if there was no value in the dict",
+    short = "Remove a mapping from the dict and return the value, or nothing if there was no value in the dict.",
 )]
 struct Remove {
     #[description("the value to remove.")]
@@ -349,7 +349,7 @@ fn empty(mut context: CommandContext) -> CrushResult<()> {
     types.dict.key_type,
     can_block = false,
     output = Known(ValueType::Type),
-    short = "the type of the keys in this dict.",
+    short = "The type of the keys in this dict.",
 )]
 struct KeyType {}
 
@@ -364,7 +364,7 @@ fn key_type(mut context: CommandContext) -> CrushResult<()> {
     types.dict.value_type,
     can_block = false,
     output = Known(ValueType::Type),
-    short = "the type of the values in this dict.",
+    short = "The type of the values in this dict.",
 )]
 struct ValueTypeMethod {}
 
@@ -387,9 +387,9 @@ fn value_type(mut context: CommandContext) -> CrushResult<()> {
     example = "seq 1 4 | select id={$value} name={\"item-{}\".format ($value)} | $dict.collect key_column=id value_column=name",
 )]
 struct Collect {
-    #[description("the name of the column to use as key")]
+    #[description("the name of the column to use as key.")]
     key_column: String,
-    #[description("the name of the column to use as value")]
+    #[description("the name of the column to use as value.")]
     value_column: String,
 }
 

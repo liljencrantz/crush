@@ -21,7 +21,7 @@ struct From {
     #[unnamed()]
     #[description("the files to read from (read from input if no file is specified).")]
     files: Vec<BinaryInput>,
-    #[description("characters to split on")]
+    #[description("characters to split on.")]
     separator: String,
     #[description("characters to trim from start and end of each token.")]
     trim: Option<String>,

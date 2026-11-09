@@ -70,7 +70,7 @@ fn from_dynamic_output(
 #[signature(
     io.csv.from,
     example = "$csv.from separator=\",\" head=1 name=$string age=$integer nick=$string",
-    short = "Parse specified files as CSV files",
+    short = "Parse specified files as CSV files.",
     dynamic_output = from_dynamic_output,
 )]
 struct From {

@@ -13,7 +13,7 @@ use signature::signature;
     io.bin.from,
     can_block = true,
     output = Known(ValueType::BinaryInputStream),
-    short = "Read specified files (or input) as a binary stream",
+    short = "Read specified files (or input) as a binary stream.",
     long = "If no file is specified, the input must be either binary or a string which will be converted to a binary using utf-8."
 )]
 struct From {
@@ -36,7 +36,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     io.bin.to,
     can_block = true,
     dynamic_output = files::writer_dynamic_output,
-    short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines"
+    short = "Write specified iterator of strings to a file (or convert to BinaryStream) separated by newlines."
 )]
 struct To {
     #[unnamed()]

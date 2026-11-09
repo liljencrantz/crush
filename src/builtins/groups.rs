@@ -17,7 +17,7 @@ static LIST_OUTPUT_TYPE: [ColumnType; 2] = [
     groups.list,
     can_block = true,
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-    short = "List all groups on the system",
+    short = "List all groups on the system.",
 )]
 struct List {}
 
@@ -38,7 +38,7 @@ fn list(context: CommandContext) -> CrushResult<()> {
     groups.__getitem__,
     can_block = false,
     output = Known(ValueType::Struct),
-    short = "find a group by name",
+    short = "Find a group by name.",
     example = "# Find the group staff",
     example = "groups[staff]",
 )]

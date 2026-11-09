@@ -137,7 +137,7 @@ fn to_json(value: Value) -> CrushResult<serde_json::Value> {
     io.json.from,
     can_block = true,
     output = Unknown,
-    short = "Parse json format",
+    short = "Parse json format.",
     long = "When deserializing a list, `$json.from` will try to infer the type of the list. If all of the elements of the list are of the same type, the list will be parametrized to the same type. If all elements are objects, and all objects have the same set of fields with the same types, the list will be turned into a table.",
     example = "http \"https://jsonplaceholder.typicode.com/todos/3\"| member body | $json.from")]
 struct FromSignature {
@@ -161,7 +161,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     can_block = true,
     output = Unknown,
     dynamic_output = files::writer_dynamic_output,
-    short = "Serialize to json format",
+    short = "Serialize to json format.",
     long = "When serializing a list, some types have to be squashed, because json does not have all the same types that Crush does:",
     long = "* `time` values are turned into strings in the RFC 3339 format.",
     long = "* `duration` values are turned into the integer number of seconds in the duration.",
@@ -170,7 +170,7 @@ struct To {
     #[unnamed()]
     #[description("destination file to write to. If unspecified, output is returned as a `binary_stream`.")]
     file: Option<Files>,
-    #[description("Disable line breaking and indentation.")]
+    #[description("disable line breaking and indentation.")]
     #[default(false)]
     compact: bool,
 }

@@ -54,7 +54,7 @@ fn r#break(context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.r#return,
     can_block = false,
-    short = "break execution of a closure command and optionally return a value.",
+    short = "Break execution of a closure command and optionally return a value.",
     long = "The `return` command can only be used when inside of a closure command. Closure blocks can not break early using the `return` command. Do note that you can use the `return` command inside of a closure block which is nested arbitrarily deeply inside of a closure command, which will stop execution of all inner blocks and return the closure command.",
     output = Unknown,
     example = "# Define a factorial command",
@@ -70,7 +70,7 @@ fn r#break(context: CommandContext) -> CrushResult<()> {
     example = "factorial 5"
 )]
 struct Return {
-    #[description("the value to return")]
+    #[description("the value to return.")]
     value: Option<Value>,
 }
 
@@ -156,7 +156,7 @@ impl BinaryReader for PipeReader {
     control.sleep,
     can_block = true,
     output = Known(ValueType::Empty),
-    short = "Pause execution of commands for the specified amount of time",
+    short = "Pause execution of commands for the specified amount of time.",
     example = "sleep 10s",
 )]
 struct Sleep {
@@ -343,7 +343,7 @@ fn bg(mut context: CommandContext) -> CrushResult<()> {
 
 #[signature(
     control.fg,
-    short = "Return the output of a background pipeline",
+    short = "Return the output of a background pipeline.",
     long = "A job started with a trailing `&` runs in the background and registers its",
     long = "eventual result for later retrieval; `fg` waits for and returns that result.",
     example = "# Create a pipe",
@@ -472,7 +472,7 @@ static JOB_OUTPUT_TYPE: [ColumnType; 5] = [
 #[signature(
     control.jobs,
     can_block = false,
-    short = "List running jobs",
+    short = "List running jobs.",
     output = Known(ValueType::table_input_stream(&JOB_OUTPUT_TYPE)),
     long = "All currently running jobs")]
 struct Jobs {}
@@ -519,7 +519,7 @@ static COMMAND_OUTPUT_TYPE: [ColumnType; 5] = [
 #[signature(
     control.commands,
     can_block = false,
-    short = "List currently executing commands",
+    short = "List currently executing commands.",
     output = Known(ValueType::table_input_stream(&COMMAND_OUTPUT_TYPE)),
     long = "All commands currently executing, one row per command rather than per job --",
     long = "see `jobs` for the job-level view a pipeline's several commands share.",
@@ -572,7 +572,7 @@ fn commands(context: CommandContext) -> CrushResult<()> {
     example = "$all_files | count",
 )]
 struct Terminate {
-    #[description("The job id for the job to terminate")]
+    #[description("the job id for the job to terminate.")]
     jid: usize,
 }
 
@@ -588,7 +588,7 @@ fn terminate(mut context: CommandContext) -> CrushResult<()> {
     short = "Pause the given job.",
 )]
 struct Pause {
-    #[description("The job id for the job to pause")]
+    #[description("the job id for the job to pause.")]
     jid: usize,
 }
 
@@ -604,7 +604,7 @@ fn pause(mut context: CommandContext) -> CrushResult<()> {
     short = "Resume the given job.",
 )]
 struct Resume {
-    #[description("The job id for the job to resume")]
+    #[description("the job id for the job to resume.")]
     jid: usize,
 }
 
@@ -617,16 +617,16 @@ fn resume(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     control.exit,
     output = Known(ValueType::Empty),
-    short = "Exit the shell",
+    short = "Exit the shell.",
     long = "If other jobs are still running, exit fails with an error unless `force` is",
     long = "set, in which case those jobs are terminated first.",
 )]
 struct Exit {
     #[default(0)]
-    #[description("The exit status to set for the process")]
+    #[description("the exit status to set for the process.")]
     status: i32,
     #[default(false)]
-    #[description("Terminate all running jobs")]
+    #[description("terminate all running jobs.")]
     force: bool,
 }
 
@@ -724,7 +724,7 @@ fn run_units(units: Vec<EvalUnit>, context: &CommandContext) -> CrushResult<()> 
 
 #[signature(
     control.source,
-    short = "Evaluate one or more files into current crush session",
+    short = "Evaluate one or more files into current crush session.",
     long = "The return value of `source` is the value of the last command actually",
     long = "executed in the sourced file(s) -- either the last top-level statement, or an",
     long = "earlier `return` (which also stops the rest of the input from running, same",
@@ -740,7 +740,7 @@ fn run_units(units: Vec<EvalUnit>, context: &CommandContext) -> CrushResult<()> 
 )]
 struct Source {
     #[unnamed()]
-    #[description("the files to source")]
+    #[description("the files to source.")]
     files: Vec<Files>,
 }
 
@@ -755,7 +755,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
 
 #[signature(
     control.eval,
-    short = "Evaluate a string, binary blob, or stream of crush code",
+    short = "Evaluate a string, binary blob, or stream of crush code.",
     long = "The return value of `eval` is the value of the last command actually",
     long = "executed in `input` -- either the last top-level statement, or an earlier",
     long = "`return` (which also stops the rest of the input from running, same as",
@@ -769,7 +769,7 @@ fn source(mut context: CommandContext) -> CrushResult<()> {
 )]
 struct Eval {
     #[unnamed()]
-    #[description("the code to evaluate")]
+    #[description("the code to evaluate.")]
     input: BinaryInput,
 }
 
@@ -803,7 +803,7 @@ fn eval(mut context: CommandContext) -> CrushResult<()> {
 
 #[signature(
     control.which,
-    short = "Find the path of an executable",
+    short = "Find the path of an executable.",
     long = "`which` searches the directories of the `$crush.end[PATH]` enivornment variable list for the specified command and returns the path to the first match.",
     output = Known(ValueType::File),
     example = "# Returns '/bin/ps'",

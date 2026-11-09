@@ -21,12 +21,12 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.one_of.__call__,
     can_block = false,
     output = Known(ValueType::Type),
-    short = "Construct a one_of value type with the specified allowed types",
+    short = "Construct a one_of value type with the specified allowed types.",
     example = "$one_of.of $file $string $regex",
 )]
 #[allow(unused)]
 struct Call {
-    #[description("The allowed types")]
+    #[description("the allowed types.")]
     #[unnamed]
     types: Vec<ValueType>,
 }

@@ -14,7 +14,7 @@ use signature::signature;
     can_block = true,
     output = Unknown,
     dynamic_output = files::writer_dynamic_output,
-    short = "Serialize to pup format",
+    short = "Serialize to pup format.",
     long = "Pup is the native crush serialization format. All Crush types, including",
     long = "lambdas can be serialized to this format.",
     example = "files | $pup.to")]
@@ -36,7 +36,7 @@ fn to(mut context: CommandContext) -> CrushResult<()> {
     io.pup.from,
     can_block = true,
     output = Unknown,
-    short = "Parse pup format",
+    short = "Parse pup format.",
     example = "$pup.from serialized.pup")]
 struct From {
     #[unnamed()]

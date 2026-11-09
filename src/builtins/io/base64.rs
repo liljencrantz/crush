@@ -74,7 +74,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     io.base64.to,
     can_block = true,
     output = Known(ValueType::BinaryInputStream),
-    short = "Write specified binary or string as Base64",
+    short = "Write specified binary or string as Base64.",
     long = "If no file is specified, produce a binary stream as output.",
     long = "",
     long = "The standard alphabet follows RFC 4648, and uses `a`-`z`, `A`-`Z`, `0`-`9`, `+`, and `/`. The urlsafe alphabet uses `a-`z, `A`-`Z`, `0`-`9`, `-`, and `.`. Both use `=` for padding.",

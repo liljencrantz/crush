@@ -140,7 +140,7 @@ pub fn neq(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     comp.not,
     can_block = false,
-    short = "Negates the argument",
+    short = "Negates the argument.",
     long = "In expression mode, this method can be used via the the `!` operator.",
     example = "not $true",
     example = "(!$true)",

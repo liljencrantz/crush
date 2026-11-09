@@ -170,7 +170,7 @@ fn sum_dynamic_output(
     example = "$host.procs | sum cpu",
     dynamic_output = sum_dynamic_output)]
 pub struct Sum {
-    #[description("The name of the column to find the sum of")]
+    #[description("the name of the column to find the sum of.")]
     field: Option<String>,
 }
 
@@ -267,7 +267,7 @@ fn avg_dynamic_output(
     example = "$host.procs | avg cpu",
     dynamic_output = avg_dynamic_output)]
 pub struct Avg {
-    #[description("The name of the column to find the average of")]
+    #[description("the name of the column to find the average of.")]
     field: Option<String>,
 }
 
@@ -368,7 +368,7 @@ fn median_dynamic_output(
     example = "$host.procs | median cpu",
     dynamic_output = median_dynamic_output)]
 pub struct Median {
-    #[description("The name of the column to find the median of")]
+    #[description("the name of the column to find the median of.")]
     field: Option<String>,
 }
 
@@ -487,7 +487,7 @@ fn min_max_dynamic_output(
     example = "$host.procs | min cpu",
     dynamic_output = min_max_dynamic_output)]
 pub struct Min {
-    #[description("The name of the column to find the minimum of")]
+    #[description("the name of the column to find the minimum of.")]
     field: Option<String>,
 }
 
@@ -514,7 +514,7 @@ fn min(mut context: CommandContext) -> CrushResult<()> {
     example = "$host.procs | max cpu",
     dynamic_output = min_max_dynamic_output)]
 pub struct Max {
-    #[description("The name of the column to find the maximum of")]
+    #[description("the name of the column to find the maximum of.")]
     field: Option<String>,
 }
 
@@ -575,7 +575,7 @@ fn prod_dynamic_output(
     example = "seq 5 10 | prod",
     dynamic_output = prod_dynamic_output)]
 pub struct Prod {
-    #[description("The name of the column to find the product of")]
+    #[description("the name of the column to find the product of.")]
     field: Option<String>,
 }
 
@@ -612,16 +612,16 @@ fn concat_dynamic_output(
 
 #[signature(
     stream.concat,
-    short = "Concatenate all values of the specified column across all rows",
+    short = "Concatenate all values of the specified column across all rows.",
     long = "If the input only has one column, the column name is optional.",
     long = "The column can be numeric, or textual.",
     example = "$host.procs | concat name \":\"",
     dynamic_output = concat_dynamic_output,
 )]
 pub struct Concat {
-    #[description("The name of the column to concatenate")]
+    #[description("the name of the column to concatenate.")]
     field: Option<String>,
-    #[description("The separator to insert between each element")]
+    #[description("the separator to insert between each element.")]
     #[default(", ")]
     separator: String,
 }

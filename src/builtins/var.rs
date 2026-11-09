@@ -39,7 +39,7 @@ pub fn r#let(mut context: CommandContext) -> CrushResult<()> {
     var.set,
     can_block = false,
     output = Known(ValueType::Empty),
-    short = "Reassign existing variables",
+    short = "Reassign existing variables.",
     long = "A variable by the specified name must already exist in some visible scope before calling 
     the `set` builtin, or an error will result.",
     long = "",
@@ -169,7 +169,7 @@ pub fn set_destructure(mut context: CommandContext) -> CrushResult<()> {
     var.get,
     can_block = false,
     output = Unknown,
-    short = "Returns the current value of a variable",
+    short = "Returns the current value of a variable.",
     long = "A variable by the specified name must already exist in some visible scope before calling
      the `get` builtin, or an error will result.",
     long = "",
@@ -196,7 +196,7 @@ pub fn get(mut context: CommandContext) -> CrushResult<()> {
     var.unset,
     can_block = false,
     output = Known(ValueType::Empty),
-    short = "Removes variables from the namespace",
+    short = "Removes variables from the namespace.",
     example = "# Remove the variable x",
     example = "$var.unset x",
 )]

@@ -27,7 +27,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.table_output_stream.__call__,
     can_block = false,
     output = Known(ValueType::Type),
-    short = "return the table_output_stream type with the specified column signature.",
+    short = "Return the table_output_stream type with the specified column signature.",
 )]
 struct Call {
     #[description("the columns of the stream.")]
@@ -63,7 +63,7 @@ fn __call__(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     types.table_output_stream.write,
     output = Known(ValueType::Empty),
-    short = "write input to this output stream",
+    short = "Write input to this output stream.",
 )]
 struct Write {}
 

@@ -21,7 +21,7 @@ static JOURNAL_OUTPUT_TYPE: [ColumnType; 2] = [
     systemd.journal,
     can_block = true,
     output = Known(ValueType::table_input_stream(&JOURNAL_OUTPUT_TYPE)),
-    short = "Show the systemd journal",
+    short = "Show the systemd journal.",
     example = "# Show last 10 entries for pid 123",
     example = "$systemd.journal _PID=\"123\" | tail"
 )]

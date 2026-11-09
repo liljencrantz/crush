@@ -29,20 +29,20 @@ fn parse_method(m: &str) -> CrushResult<Method> {
 
 #[signature(
 io.http,
-short = "Make a http request",
+short = "Make a http request.",
 long = "Returns a struct with the following fields:",
-long = "* `status_code` (integer) the http status code of the reply",
-long = "* `status_name` (string) the name associated with the http status code",
-long = "* `header` (list) the http headers of the reply",
-long = "* `body` (binary_stream) the content of the reply",
+long = "* `status_code` (integer) the http status code of the reply.",
+long = "* `status_name` (string) the name associated with the http status code.",
+long = "* `header` (list) the http headers of the reply.",
+long = "* `body` (binary_stream) the content of the reply.",
 long = "",
 long = "The http status codes and corresponding names are defined in",
-long = "https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml",
+long = "https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml.",
 example = "http \"https://example.com/\" header=$(\"Authorization: Bearer {}\".format $token)",
 can_block = true
 )]
 pub struct Http {
-    #[description("URI to request")]
+    #[description("URI to request.")]
     uri: String,
     #[description("the HTTP method to use in this request.")]
     #[values(

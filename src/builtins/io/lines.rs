@@ -17,7 +17,7 @@ static OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("line", ValueType::String
     io.lines.from,
     can_block = true,
     output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
-    short = "Read specified files (or input) as a table with one line of text per row"
+    short = "Read specified files (or input) as a table with one line of text per row."
 )]
 struct FromSignature {
     #[unnamed()]
@@ -67,7 +67,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     io.lines.to,
     can_block = true,
     dynamic_output = files::writer_dynamic_output,
-    short = "Write specified stream of strings to a file (or convert to BinaryStream) separated by newlines"
+    short = "Write specified stream of strings to a file (or convert to BinaryStream) separated by newlines."
 )]
 struct To {
     #[unnamed()]

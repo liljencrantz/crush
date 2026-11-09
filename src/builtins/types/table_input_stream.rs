@@ -65,7 +65,7 @@ pub fn write_value() -> &'static Value {
     types.table_input_stream.__call__,
     can_block = false,
     output = Known(ValueType::Type),
-    short = "return the table_input_stream type with the specified column signature.",
+    short = "Return the table_input_stream type with the specified column signature.",
     long = "You usually do this in order to create a pipe specialized to a specific column signature.",
     example = "$pipe := $($(table_input_stream value=$integer).pipe)",
 )]
@@ -126,7 +126,7 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     output = Known(ValueType::Struct),
     short = "Returns a pipe consisting of a read end and a write end.",
     long = "Each row of data in the pipe must have the columns specified by this table_input_stream specialization.",
-    long = "A pipe is usually created by specializing table_input_stream e.g. like",
+    long = "A pipe is usually created by specializing table_input_stream e.g. like:",
     long = "",
     long = "    $pipe := $($(table_input_stream value=$integer).pipe)",
     long = "",

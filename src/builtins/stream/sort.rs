@@ -87,7 +87,7 @@ fn sort_dynamic_output(
 #[signature(
     stream.sort,
     can_block = true,
-    short = "Sort input stream based on one or more of it's columns",
+    short = "Sort input stream based on one or more of it's columns.",
     long = "If any sort column contains a NaN float value, `sort` fails with an error rather \
     than picking an arbitrary position for it, since NaN has no defined ordering relative to \
     other floats.",

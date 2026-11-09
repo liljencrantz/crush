@@ -132,15 +132,15 @@ fn query_dynamic_output(
 #[signature(
     dns.query,
     can_block = true,
-    short = "Look up a DNS record",
+    short = "Look up a DNS record.",
     long = "The columns of the returned table depend on `record_type`:",
     long = "",
-    long = " * `A`, `AAAA`, `NS`, `PTR`, and `CNAME`: `target` (string) and `ttl` (duration)",
-    long = " * `MX`: `target`, `preference` (integer), and `ttl`",
-    long = " * `SRV`: `target`, `priority`, `weight`, `port` (all integer), and `ttl`",
-    long = " * `TXT`: `text` (binary) and `ttl`",
+    long = " * `A`, `AAAA`, `NS`, `PTR`, and `CNAME`: `target` (string) and `ttl` (duration).",
+    long = " * `MX`: `target`, `preference` (integer), and `ttl`.",
+    long = " * `SRV`: `target`, `priority`, `weight`, `port` (all integer), and `ttl`.",
+    long = " * `TXT`: `text` (binary) and `ttl`.",
     long = " * `SOA`: `mname`, `rname` (strings), `serial` (integer), and `refresh`,",
-    long = "   `retry`, `expire`, and `ttl` (all durations)",
+    long = "   `retry`, `expire`, and `ttl` (all durations).",
     long = "",
     long = "If a response's first answer is a `CNAME` record, it's followed",
     long = "transparently and the query is retried against the alias's target -- up to 8",
@@ -461,7 +461,7 @@ fn query(mut context: CommandContext) -> CrushResult<()> {
     dns.query_reverse,
     can_block = true,
     output = Known(ValueType::String),
-    short = "Perform a reverse DNS lookup on a given IP address",
+    short = "Perform a reverse DNS lookup on a given IP address.",
     long = "Looks up the hostname associated with `address` via a `PTR` record,",
     long = "automatically building the reverse-lookup name DNS uses for this (e.g. under",
     long = "`in-addr.arpa` for IPv4, `ip6.arpa` for IPv6) -- `address` should be given as",
@@ -475,18 +475,18 @@ struct QueryReverse {
     #[description("IP address to look up. Can be either IPv4 or IPv6.")]
     address: String,
 
-    #[description("Use TCP connection instead of UDP")]
+    #[description("use TCP connection instead of UDP.")]
     #[default(false)]
     tcp: bool,
 
-    #[description("Override the nameserver to talk to")]
+    #[description("override the nameserver to talk to.")]
     nameserver: Option<String>,
 
-    #[description("DNS port")]
+    #[description("DNS port.")]
     #[default(53)]
     port: i128,
 
-    #[description("Connection timeout.")]
+    #[description("connection timeout.")]
     #[default(Duration::seconds(5))]
     timeout: Duration,
 }
@@ -542,7 +542,7 @@ fn query_reverse_internal(
     dns.nameserver,
     can_block = true,
     output = Known(ValueType::List(Box::new(ValueType::String))),
-    short = "List of default nameservers",
+    short = "List of default nameservers.",
     long = "Reads the nameservers configured in `/etc/resolv.conf` -- no network query",
     long = "is made. This is exactly what `$dns.query`/`$dns.query_reverse` themselves fall",
     long = "back to when their own `nameserver` argument is left unset (specifically, the",
@@ -568,7 +568,7 @@ fn nameserver(context: CommandContext) -> CrushResult<()> {
     dns.search_paths,
     can_block = true,
     output = Known(ValueType::List(Box::new(ValueType::String))),
-    short = "List of DNS search paths",
+    short = "List of DNS search paths.",
     long = "Reads the DNS search domains configured in `/etc/resolv.conf` -- no network",
     long = "query is made. A system resolver normally appends these, in order, to an",
     long = "unqualified hostname before giving up (e.g. trying `host.example.com` when",
@@ -593,7 +593,7 @@ fn search_paths(context: CommandContext) -> CrushResult<()> {
 #[signature(
     dns.domain,
     can_block = true,
-    short = "DNS domain, if any",
+    short = "DNS domain, if any.",
     long = "Reads the local domain configured in `/etc/resolv.conf`'s `domain` line, if",
     long = "any -- no network query is made. Returns `$empty` if none is configured.",
     output = Known(ValueType::Any),

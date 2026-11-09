@@ -345,7 +345,7 @@ fn ssh_host_complete(
 #[signature(
     remote.exec,
     can_block = true,
-    short = "Execute a command on a remote host",
+    short = "Execute a command on a remote host.",
     long = "Serializes `command` (a closure), sends it over SSH to `host`, runs it there in a",
     long = "fresh crush process, and returns its result. The remote host's key is checked",
     long = "against `host_file` unless `ignore_host_file` is set. Security note: setting",
@@ -403,7 +403,7 @@ fn exec(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     remote.pexec,
     can_block = true,
-    short = "Execute a command on a set of hosts",
+    short = "Execute a command on a set of hosts.",
     long = "Like `exec`, but runs `command` on every host listed in `host` (up to `parallel`",
     long = "of them at a time). pexec always attempts every host in the list, regardless of",
     long = "whether earlier hosts failed to connect or authenticate -- it never fails outright",
@@ -531,7 +531,7 @@ fn pexec(mut context: CommandContext) -> CrushResult<()> {
     remote.identity,
     can_block = true,
     output = Known(ValueType::table_input_stream(&IDENTITY_OUTPUT_TYPE)),
-    short = "List all known ssh-agent identities"
+    short = "List all known ssh-agent identities."
 )]
 struct Identity {}
 
@@ -559,8 +559,8 @@ mod host {
         remote.host.list,
         can_block = true,
         output = Known(ValueType::table_input_stream(&HOST_OUTPUT_TYPE)),
-        short = "List all known hosts",
-        long = "If a given host key has no hostname, the `host` column will be `$empty`"
+        short = "List all known hosts.",
+        long = "If a given host key has no hostname, the `host` column will be `$empty`."
     )]
     pub struct List {
         #[description("(~/.ssh/known_hosts) known hosts file.")]
@@ -590,7 +590,7 @@ mod host {
     #[signature(
         remote.host.remove,
         can_block = true,
-        short = "Remove hosts from known_hosts file",
+        short = "Remove hosts from known_hosts file.",
         output = Known(ValueType::Integer),
         long = "Remove all hosts that match both the host and the key filters.\n    Returns the number of host entries deleted."
     )]

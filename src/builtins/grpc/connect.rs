@@ -29,7 +29,7 @@ use crate::lang::state::this::This;
     long = "If you want to pass exactly one message to the endpoint, e.g. because the endpoint does not use client streaming, you have the option of passing the fields of the message as arguments to the method call, e.g. `$conn.ReverseString input=hello`.",
     long = "The grpc methods support tab completion of argument names. They also come with help messages (e.g. `help $conn.ReverseString`) that describes the input and output format.",
     long = "",
-    long = "If you want to pass multiple messages to the endpoint, you must do so by piping in a table_input_stream, where the column names of the stream are identical to the field names of the message, e.g. `$list.of foo bar baz | select input={$value} | $conn.ReverseString`",
+    long = "If you want to pass multiple messages to the endpoint, you must do so by piping in a table_input_stream, where the column names of the stream are identical to the field names of the message, e.g. `$list.of foo bar baz | select input={$value} | $conn.ReverseString`.",
     long = "",
     long = "Output from a gRPC method call is always a `$table_input_stream`, with one row per message. If an endpoint does not use server side streaming, the output always has one row.",
     long = "",

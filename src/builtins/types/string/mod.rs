@@ -72,7 +72,7 @@ fn len(mut context: CommandContext) -> CrushResult<()> {
     types.string.bytes,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Returns the length (in number of bytes) of the string, as encoded using UTF-8",
+    short = "Returns the length (in number of bytes) of the string, as encoded using UTF-8.",
     long = "Note that there are often different ways to generate identical looking strings of different lengths, as in the example below.",
     example = "# Returns 2",
     example = "\"é\".bytes",
@@ -116,7 +116,7 @@ fn lower(mut context: CommandContext) -> CrushResult<()> {
     types.string.split,
     can_block = false,
     output = Known(ValueType::List(Box::from(ValueType::String))),
-    short = "Splits a string using the specified separator",
+    short = "Splits a string using the specified separator.",
     example = "# Returns [\"Hello\", \"World\"]",
     example = "\"Hello World\".split \" \"",
 )]
@@ -158,7 +158,7 @@ fn trim(mut context: CommandContext) -> CrushResult<()> {
     types.string.join,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Join all arguments by the specified string",
+    short = "Join all arguments by the specified string.",
     example = "# Returns \"1, 2, 3, 4\"",
     example = "\", \".join 1 2 3 4",
 )]
@@ -190,7 +190,7 @@ fn join(mut context: CommandContext) -> CrushResult<()> {
     types.string.lpad,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Returns a string truncated or left-padded to be the exact specified length",
+    short = "Returns a string truncated or left-padded to be the exact specified length.",
     example = "# Returns \"     Hello\"",
     example = "\"Hello\".lpad 10",
     example = "# Returns \"He\"",
@@ -228,7 +228,7 @@ fn lpad(mut context: CommandContext) -> CrushResult<()> {
     types.string.rpad,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Returns a string truncated or right-padded to be the exact specified length",
+    short = "Returns a string truncated or right-padded to be the exact specified length.",
     example = "# Returns \"Helloooooo\"",
     example = "\"Hello\".rpad length=10 padding=o",
     example = "# Returns \"He\"",
@@ -266,7 +266,7 @@ fn rpad(mut context: CommandContext) -> CrushResult<()> {
     types.string.repeat,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Returns this string repeated times times",
+    short = "Returns this string repeated times times.",
     example = "\"Around the world\\n\".repeat 8",
 )]
 struct Repeat {
@@ -286,10 +286,10 @@ fn repeat(mut context: CommandContext) -> CrushResult<()> {
     types.string.ends_with, can_block = false,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if this string ends with the specified suffix",
+    short = "True if this string ends with the specified suffix.",
 )]
 struct EndsWith {
-    #[description("suffix to check for")]
+    #[description("suffix to check for.")]
     suffix: String,
 }
 
@@ -304,10 +304,10 @@ fn ends_with(mut context: CommandContext) -> CrushResult<()> {
     types.string.starts_with, can_block = false,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if this string starts with the specified prefix",
+    short = "True if this string starts with the specified prefix.",
 )]
 struct StartsWith {
-    #[description("prefix to check for")]
+    #[description("prefix to check for.")]
     prefix: String,
 }
 
@@ -332,7 +332,7 @@ macro_rules! per_char_method {
     types.string.is_alphanumeric,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is alphabetic or numeric",
+    short = "True if every character of this string is alphabetic or numeric.",
 )]
 struct IsAlphanumeric {}
 
@@ -342,7 +342,7 @@ per_char_method!(is_alphanumeric, |ch| ch.is_alphanumeric());
     types.string.is_alphabetic,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is alphabetic",
+    short = "True if every character of this string is alphabetic.",
 )]
 struct IsAlphabetic {}
 per_char_method!(is_alphabetic, |ch| ch.is_alphabetic());
@@ -351,7 +351,7 @@ per_char_method!(is_alphabetic, |ch| ch.is_alphabetic());
     types.string.is_ascii,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is part of the ascii character set",
+    short = "True if every character of this string is part of the ascii character set.",
 )]
 struct IsAscii {}
 per_char_method!(is_ascii, |ch| ch.is_ascii());
@@ -360,7 +360,7 @@ per_char_method!(is_ascii, |ch| ch.is_ascii());
     types.string.is_lowercase,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is lower case",
+    short = "True if every character of this string is lower case.",
 )]
 struct IsLowercase {}
 per_char_method!(is_lowercase, |ch| ch.is_lowercase());
@@ -369,7 +369,7 @@ per_char_method!(is_lowercase, |ch| ch.is_lowercase());
     types.string.is_uppercase,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is upper case",
+    short = "True if every character of this string is upper case.",
 )]
 struct IsUppercase {}
 per_char_method!(is_uppercase, |ch| ch.is_uppercase());
@@ -378,7 +378,7 @@ per_char_method!(is_uppercase, |ch| ch.is_uppercase());
     types.string.is_whitespace,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is a whitespace character",
+    short = "True if every character of this string is a whitespace character.",
 )]
 struct IsWhitespace {}
 per_char_method!(is_whitespace, |ch| ch.is_whitespace());
@@ -387,7 +387,7 @@ per_char_method!(is_whitespace, |ch| ch.is_whitespace());
     types.string.is_control,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is a control character",
+    short = "True if every character of this string is a control character.",
 )]
 struct IsControl {}
 per_char_method!(is_control, |ch| ch.is_control());
@@ -396,11 +396,11 @@ per_char_method!(is_control, |ch| ch.is_control());
     types.string.is_digit,
     can_block = false,
     output = Known(ValueType::Bool),
-    short = "True if every character of this string is a digit in the specified radix",
+    short = "True if every character of this string is a digit in the specified radix.",
     long = "\"123\".is_digit # true"
 )]
 struct IsDigit {
-    #[description("radix to use")]
+    #[description("radix to use.")]
     #[default(10usize)]
     radix: usize,
 }
@@ -420,7 +420,7 @@ fn is_digit(mut context: CommandContext) -> CrushResult<()> {
     short = "Extract a substring from this string.",
 )]
 struct Substr {
-    #[description("Starting index (inclusive). If unspecified, from start of string.")]
+    #[description("starting index (inclusive). If unspecified, from start of string.")]
     #[default(0usize)]
     from: usize,
     #[description("ending index (exclusive). If unspecified, to end of string.")]
@@ -451,7 +451,7 @@ fn substr(mut context: CommandContext) -> CrushResult<()> {
     short = "Extract a one character substring from this string.",
 )]
 struct GetItem {
-    #[description("index")]
+    #[description("index.")]
     idx: usize,
 }
 

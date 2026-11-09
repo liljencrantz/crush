@@ -49,7 +49,7 @@ pub fn from(mut context: CommandContext) -> CrushResult<()> {
     io.hex.to,
     can_block = true,
     output = Known(ValueType::BinaryInputStream),
-    short = "Write specified binary or string as hexadecimal",
+    short = "Write specified binary or string as hexadecimal.",
     long = "If no file is specified, produce a binary stream as output.",
     example = "\"hello, world!\" | $hex.to",
 )]

@@ -252,42 +252,42 @@ fn run_for_single_directory_or_file(
     dynamic_output = files_dynamic_output)]
 pub struct FilesSignature {
     #[unnamed()]
-    #[description("directories and files to list")]
+    #[description("directories and files to list.")]
     directory: Vec<Files>,
-    #[description("recurse into subdirectories")]
+    #[description("recurse into subdirectories.")]
     #[default(false)]
     recurse: bool,
-    #[description("show permissions")]
+    #[description("show permissions.")]
     #[default(true)]
     permissions: bool,
-    #[description("show inode number")]
+    #[description("show inode number.")]
     #[default(false)]
     inode: bool,
-    #[description("show link count")]
+    #[description("show link count.")]
     #[default(true)]
     links: bool,
-    #[description("show username")]
+    #[description("show username.")]
     #[default(true)]
     user: bool,
-    #[description("show group name")]
+    #[description("show group name.")]
     #[default(true)]
     group: bool,
-    #[description("show file size")]
+    #[description("show file size.")]
     #[default(true)]
     size: bool,
-    #[description("show block count")]
+    #[description("show block count.")]
     #[default(false)]
     blocks: bool,
-    #[description("show modification time")]
+    #[description("show modification time.")]
     #[default(true)]
     modified: bool,
-    #[description("show time of last file access")]
+    #[description("show time of last file access.")]
     #[default(false)]
     accessed: bool,
-    #[description("show file type")]
+    #[description("show file type.")]
     #[default(true)]
     r#type: bool,
-    #[description("show file name")]
+    #[description("show file name.")]
     #[default(true)]
     file: bool,
 }

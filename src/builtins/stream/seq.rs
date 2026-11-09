@@ -7,7 +7,7 @@ use signature::signature;
 #[signature(
     stream.seq,
     can_block=true,
-    short = "Return a stream of sequential numbers",
+    short = "Return a stream of sequential numbers.",
     long = "With no arguments, seq counts forever starting at 0. Given one to three",
     long = "unnamed numbers, they're interpreted the same way Python's `range` does:",
     long = "`seq to` counts from 0 up to (but not including) `to`; `seq from to` starts",

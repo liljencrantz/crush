@@ -15,7 +15,7 @@ use crate::util::interruptible_sleep::interruptible_sleep;
 
 #[signature(
     control.schedule,
-    short = "Schedule events at specified time intervals",
+    short = "Schedule events at specified time intervals.",
     long = "* If a command is specified, timer will run the command at the specified cadence.",
     long = "* If timer is used inside a pipeline, it will read one row of input at the specified cadence and write it out again. This allows you to set the pace of the output of another command.",
     long = "* Otherwise, timer will simply write an empty row at the specified cadence. This empty row can then act as a heartbeat, allowing a downstream command to get woken up at the right interval.",

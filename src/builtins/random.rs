@@ -11,7 +11,7 @@ use signature::signature;
 #[signature(
     random.float,
     can_block = false,
-    short = "generate a random floating point number between 0 (inclusive) and 1 (exclusive)",
+    short = "Generate a random floating point number between 0 (inclusive) and 1 (exclusive).",
     output = Known(ValueType::Float),
 )]
 struct Float {
@@ -35,7 +35,7 @@ static INTEGER_STREAM_OUTPUT_TYPE: [ColumnType; 1] = [ColumnType::new("value", V
 #[signature(
     random.float_stream,
     can_block = true,
-    short = "generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive)",
+    short = "Generate a stream of random floating point numbers between 0 (inclusive) and 1 (exclusive).",
     output = Known(ValueType::table_input_stream(&FLOAT_STREAM_OUTPUT_TYPE)),
     example = "# Generate 20 floating point numbers between 0 and 100",
     example = "random.float_stream 100 | head 20",
@@ -58,7 +58,7 @@ fn float_stream(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     random.integer,
     can_block = false,
-    short = "generate a random integer between 0 and 1 (or some other specified number)",
+    short = "Generate a random integer between 0 and 1 (or some other specified number).",
     output = Known(ValueType::Integer),
 )]
 struct Integer {
@@ -77,7 +77,7 @@ fn integer(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     random.integer_stream,
     can_block = true,
-    short = "generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive)",
+    short = "Generate a stream of random integer numbers between 0 (inclusive) and 2 (exclusive).",
     output = Known(ValueType::table_input_stream(&INTEGER_STREAM_OUTPUT_TYPE)),
     example = "# Generate 20 integers between 0 and 100",
     example = "random.integer_stream 100 | head 20",

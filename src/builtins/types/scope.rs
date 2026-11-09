@@ -34,7 +34,7 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.scope.__getitem__,
     can_block = false,
     output = Unknown,
-    short = "Return the specified member in the current scope",
+    short = "Return the specified member in the current scope.",
 )]
 struct GetItem {
     #[description("the name of the member to look up.")]
@@ -55,8 +55,8 @@ fn __getitem__(mut context: CommandContext) -> CrushResult<()> {
     types.scope.__resolve__,
     can_block = false,
     output = Unknown,
-    short = "Resolve the specified member in the current scope",
-    long = "This method looks at the current scope as well as all it parents to resolve the specified member",
+    short = "Resolve the specified member in the current scope.",
+    long = "This method looks at the current scope as well as all it parents to resolve the specified member.",
 )]
 struct Resolve {
     #[description("the name of the member to resolve.")]

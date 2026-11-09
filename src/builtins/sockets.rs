@@ -22,7 +22,7 @@ static TCP_OUTPUT_TYPE: LazyLock<[ColumnType; 6]> = LazyLock::new(|| [
     sockets.tcp,
     can_block = true,
     output = Known(ValueType::table_input_stream(TCP_OUTPUT_TYPE.as_ref())),
-    short = "List open TCP sockets",
+    short = "List open TCP sockets.",
 )]
 
 struct TCP {}
@@ -61,7 +61,7 @@ static UDP_OUTPUT_TYPE: LazyLock<[ColumnType; 3]> = LazyLock::new(|| [
     sockets.udp,
     can_block = true,
     output = Known(ValueType::table_input_stream(UDP_OUTPUT_TYPE.as_ref())),
-    short = "List open UDP sockets",
+    short = "List open UDP sockets.",
 )]
 
 struct UDP {}

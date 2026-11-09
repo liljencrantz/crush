@@ -95,14 +95,14 @@ fn do_format(format: &str, param: Vec<Argument>) -> CrushResult<String> {
     types.string.format,
     can_block = false,
     output = Known(ValueType::String),
-    short = "Format arguments into a string",
+    short = "Format arguments into a string.",
     example = "\"Hello {name}\".format name=$name")]
 #[allow(unused)]
 pub struct Format {
-    #[description("The named parameters to format into the pattern string")]
+    #[description("the named parameters to format into the pattern string.")]
     #[named()]
     named: OrderedStringMap<Value>,
-    #[description("The unnamed parameters to format into the pattern string")]
+    #[description("the unnamed parameters to format into the pattern string.")]
     #[unnamed()]
     unnamed: Vec<Value>,
 }

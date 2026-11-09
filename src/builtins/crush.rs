@@ -28,10 +28,10 @@ mod env {
     #[signature(
     __getitem__,
     output = Known(ValueType::String),
-    short = "Gets the variable with the given name",
+    short = "Gets the variable with the given name.",
     )]
     pub(crate) struct GetItem {
-        #[description("The name of the environment variable to get")]
+        #[description("the name of the environment variable to get.")]
         name: String,
     }
 
@@ -44,12 +44,12 @@ mod env {
     #[signature(
     __setitem__,
     output = Known(ValueType::Empty),
-    short = "Sets the variable with the given name",
+    short = "Sets the variable with the given name.",
     )]
     pub(crate) struct SetItem {
-        #[description("The name of the environment variable to set")]
+        #[description("the name of the environment variable to set.")]
         name: String,
-        #[description("The value to set the environment variable to")]
+        #[description("the value to set the environment variable to.")]
         value: String,
     }
 
@@ -63,11 +63,11 @@ mod env {
     #[signature(
     unset,
     output = Known(ValueType::Empty),
-    short = "Removes the environment variables with the given names",
+    short = "Removes the environment variables with the given names.",
     example = "$crush.env.unset \"FOO\" \"BAR\"",
     )]
     pub(crate) struct Unset {
-        #[description("the names of the environment variables to remove")]
+        #[description("the names of the environment variables to remove.")]
         #[unnamed()]
         name: Vec<String>,
     }
@@ -89,7 +89,7 @@ mod env {
     #[signature(
     list,
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-    short = "Returns all environment variables and their values",
+    short = "Returns all environment variables and their values.",
     )]
     pub(crate) struct List {}
 
@@ -148,7 +148,7 @@ mod prompt {
         output = Known(ValueType::Empty)
     )]
     pub struct Set {
-        #[description("The new command to invoke in order to produce a prompt")]
+        #[description("the new command to invoke in order to produce a prompt.")]
         prompt: Option<Command>,
     }
 
@@ -220,11 +220,11 @@ mod title {
     #[signature(
         crush.title.set,
         can_block = false,
-        short = "Set a new title command",
+        short = "Set a new title command.",
         output = Known(ValueType::Empty)
     )]
     pub struct Set {
-        #[description("The new command to invoke in order to produce a title")]
+        #[description("the new command to invoke in order to produce a title.")]
         title: Option<Command>,
     }
 
@@ -262,7 +262,7 @@ static HISTORY_OUTPUT_TYPE: [ColumnType; 2] = [
 #[signature(
     crush.history,
     can_block = true,
-    short = "List previous commands",
+    short = "List previous commands.",
     output = Known(ValueType::table_input_stream(&HISTORY_OUTPUT_TYPE)),
     long = "All previous invocation")]
 struct HistoryCommand {}

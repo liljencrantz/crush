@@ -23,7 +23,7 @@ static OUTPUT_TYPE: [ColumnType; 7] = [
     fs.mounts,
     can_block = true,
     output = Known(ValueType::table_input_stream(&OUTPUT_TYPE)),
-    short = "List filesystem mount points",
+    short = "List filesystem mount points.",
 )]
 pub struct Mounts {}
 

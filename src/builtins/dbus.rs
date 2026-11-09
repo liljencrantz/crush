@@ -1532,7 +1532,7 @@ fn declare_bus(dbus: &mut ScopeLoader, bus: Bus) -> CrushResult<()> {
     dbus.refresh,
     can_block = true,
     output = Known(ValueType::Empty),
-    short = "Reload the list of D-Bus services and objects",
+    short = "Reload the list of D-Bus services and objects.",
     long = "The contents of `$dbus.system` and `$dbus.session` are loaded the first time they are used. Call this to pick up services and objects that have appeared or disappeared since. Values already stored in variables are not affected.",
     example = "$dbus.refresh",
 )]

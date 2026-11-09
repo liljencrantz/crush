@@ -7,7 +7,7 @@ use signature::signature;
 #[signature(
     stream.reverse,
     can_block = true,
-    short = "Reverses the order of the rows in the input",
+    short = "Reverses the order of the rows in the input.",
     output = Passthrough)]
 pub struct Reverse {}
 

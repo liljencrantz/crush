@@ -239,7 +239,7 @@ pub fn exists(mut context: CommandContext) -> CrushResult<()> {
     example = "$file := $base_directory[$filename]",
 )]
 struct GetItem {
-    #[description("the name of the file or subdirectory")]
+    #[description("the name of the file or subdirectory.")]
     name: Text,
 }
 
@@ -275,7 +275,7 @@ fn write(mut context: CommandContext) -> CrushResult<()> {
     types.file.read,
     can_block = true,
     output = Known(ValueType::BinaryInputStream),
-    short = "A read source for binary_stream values",
+    short = "A read source for binary_stream values.",
 )]
 struct Read {}
 
@@ -291,7 +291,7 @@ fn read(mut context: CommandContext) -> CrushResult<()> {
     types.file.name,
     can_block = false,
     output = Known(ValueType::String),
-    short = "The name (excluding path) of this file, as a string",
+    short = "The name (excluding path) of this file, as a string.",
 )]
 struct Name {}
 
@@ -311,7 +311,7 @@ fn name(mut context: CommandContext) -> CrushResult<()> {
     types.file.parent,
     can_block = false,
     output = Known(ValueType::File),
-    short = "The parent directory of this file",
+    short = "The parent directory of this file.",
 )]
 struct Parent {}
 
@@ -331,14 +331,14 @@ static REMOVE_OUTPUT_TYPE: [ColumnType; 3] = [
     types.file.remove,
     can_block = true,
     output = Known(ValueType::table_input_stream(& REMOVE_OUTPUT_TYPE)),
-    short = "Delete this file",
+    short = "Delete this file.",
     long = "Returns a stream of deletion failures."
 )]
 struct Remove {
-    #[description("If this file is a directory, recursively delete files and subdirectories")]
+    #[description("if this file is a directory, recursively delete files and subdirectories.")]
     #[default(false)]
     recursive: bool,
-    #[description("If true, emit status updates for deleted files, not just errors")]
+    #[description("if true, emit status updates for deleted files, not just errors.")]
     #[default(false)]
     verbose: bool,
 }
@@ -468,10 +468,10 @@ fn remove(mut context: CommandContext) -> CrushResult<()> {
     types.file.mkdir,
     can_block = false,
     output = Known(ValueType::Empty),
-    short = "Create directory",
+    short = "Create directory.",
 )]
 struct MkDir {
-    #[description("Do not throw and error if this directory already exists.")]
+    #[description("do not throw and error if this directory already exists.")]
     #[default(false)]
     ignore_existing: bool,
 }
@@ -506,7 +506,7 @@ fn mkdir(mut context: CommandContext) -> CrushResult<()> {
     long = "If the file doesn't exist, it is created.",
 )]
 struct Touch {
-    #[description("Do not create the file if it doesn't exist.")]
+    #[description("do not create the file if it doesn't exist.")]
     #[default(false)]
     no_create: bool,
 }

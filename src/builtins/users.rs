@@ -22,7 +22,7 @@ use std::sync::OnceLock;
     users.me,
     can_block = false,
     output = Known(ValueType::Struct),
-    short = "current user",
+    short = "Current user.",
     example = "# Show my own uid",
     example = "$users.me.uid",
 )]
@@ -192,7 +192,7 @@ fn r#do(mut context: CommandContext) -> CrushResult<()> {
     users.list,
     can_block = true,
     output = Known(ValueType::table_input_stream(&LIST_OUTPUT_TYPE)),
-    short = "List all users on the system",
+    short = "List all users on the system.",
 )]
 struct List {}
 
@@ -215,7 +215,7 @@ fn list(context: CommandContext) -> CrushResult<()> {
     users.__getitem__,
     can_block = false,
     output = Known(ValueType::Struct),
-    short = "find a user by name",
+    short = "Find a user by name.",
     example = "# Remove the file foo.txt as root",
     example = "users[root].do {rm foo.txt}",
 )]

@@ -34,11 +34,11 @@ pub fn methods() -> &'static OrderedMap<String, Command> {
     types.integer.__add__,
     can_block = false,
     output = Unknown,
-    short = "Add this number and the specified term and return the result",
+    short = "Add this number and the specified term and return the result.",
 )]
 #[allow(unused)]
 struct Add {
-    #[description("the number to add")]
+    #[description("the number to add.")]
     term: Number,
 }
 
@@ -67,11 +67,11 @@ fn __add__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.__sub__,
     can_block = false,
     output = Unknown,
-    short = "Subtract the specified term from this number and return the result",
+    short = "Subtract the specified term from this number and return the result.",
 )]
 #[allow(unused)]
 struct Sub {
-    #[description("the number to subtract")]
+    #[description("the number to subtract.")]
     term: Number,
 }
 
@@ -96,11 +96,11 @@ fn __sub__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.__mul__,
     can_block = false,
     output = Unknown,
-    short = "multiply this number and the specified factor and return the result",
+    short = "Multiply this number and the specified factor and return the result.",
 )]
 #[allow(unused)]
 struct Mul {
-    #[description("the number to multiply")]
+    #[description("the number to multiply.")]
     term: Number,
 }
 
@@ -125,13 +125,13 @@ fn __mul__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.__div__,
     can_block = false,
     output = Unknown,
-    short = "Divide this number by the specified factor",
+    short = "Divide this number by the specified factor.",
     long = "Dividing an integer by an integer zero is an error. Dividing by a float zero",
     long = "follows IEEE 754 (producing infinity or NaN), since the result is a float.",
 )]
 #[allow(unused)]
 struct Div {
-    #[description("the number to divide by")]
+    #[description("the number to divide by.")]
     term: Number,
 }
 // Not implemented via binary_op! like the other arithmetic operators: integer division
@@ -160,12 +160,12 @@ fn __div__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.__rem__,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Remainder after integer division",
+    short = "Remainder after integer division.",
     long = "A divisor of zero is an error.",
 )]
 #[allow(unused)]
 struct Rem {
-    #[description("the number to divide by")]
+    #[description("the number to divide by.")]
     term: i128,
 }
 
@@ -191,12 +191,12 @@ fn __rem__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.__mod__,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Least positive residue after integer division",
+    short = "Least positive residue after integer division.",
     long = "A divisor of zero is an error.",
 )]
 #[allow(unused)]
 struct Mod {
-    #[description("the number to divide by")]
+    #[description("the number to divide by.")]
     term: i128,
 }
 
@@ -223,7 +223,7 @@ fn __mod__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.__neg__,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Negate this integer",
+    short = "Negate this integer.",
 )]
 #[allow(unused)]
 struct Neg {}
@@ -242,7 +242,7 @@ fn __neg__(mut context: CommandContext) -> CrushResult<()> {
     types.integer.max,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Largest integer value",
+    short = "Largest integer value.",
 )]
 #[allow(unused)]
 struct Max {}
@@ -256,7 +256,7 @@ fn max(context: CommandContext) -> CrushResult<()> {
     types.integer.min,
     can_block = false,
     output = Known(ValueType::Integer),
-    short = "Smallest integer value",
+    short = "Smallest integer value.",
 )]
 #[allow(unused)]
 struct Min {}
