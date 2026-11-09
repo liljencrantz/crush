@@ -100,12 +100,19 @@ impl<'input> Lexer<'input> {
                 Some((i, '|')) => return Some(Token::Pipe(Location::from(i)).into()),
                 Some((i, ';')) => return Some(Token::Separator(";", Location::from(i)).into()),
                 Some((i, '\n')) => return Some(Token::Separator("\n", Location::from(i)).into()),
-                Some((_, '\\')) => match self.chars.peek() {
+                Some((i, '\\')) => match self.chars.peek() {
                     Some((_, '\n')) => {
                         self.chars.next();
                         continue;
                     }
-                    Some((_, ch)) => return Some(Err(LexicalError::UnexpectedCharacter(*ch))),
+                    // A `\` immediately followed by anything other than a newline
+                    // starts a bareword/glob/file literal with that escaped
+                    // character, e.g. `\ hello` (a literal leading space) -- see
+                    // `scan_string_or_file_or_glob`.
+                    Some(_) => {
+                        let (idx2, _) = self.chars.next().unwrap();
+                        return self.scan_string_or_file_or_glob(i, idx2);
+                    }
                     None => return Some(Err(LexicalError::UnexpectedEOFWithSuggestion('\n'))),
                 },
 
@@ -360,26 +367,7 @@ impl<'input> Lexer<'input> {
                 }
 
                 Some((i, ch)) if string_or_file_or_glob_first_char(ch) => {
-                    let mut end_idx = i;
-                    loop {
-                        let cc2 = self.chars.peek();
-                        match cc2 {
-                            Some((_, ch2)) if string_or_file_or_glob_char(*ch2) => {
-                                end_idx = self.chars.next().unwrap().0;
-                            }
-                            _ => break,
-                        }
-                    }
-
-                    let s = &self.full_str[i..end_idx + 1];
-
-                    return if s.contains('*') || s.contains('?') {
-                        Some(Token::Glob(s, Location::new(i, end_idx + 1)).into())
-                    } else if s.contains('/') || s.contains('.') || s.starts_with('~') {
-                        Some(Token::File(s, Location::new(i, end_idx + 1)).into())
-                    } else {
-                        Some(Token::String(s, Location::new(i, end_idx + 1)).into())
-                    };
+                    return self.scan_string_or_file_or_glob(i, i);
                 }
 
                 Some((i, '"')) => {
@@ -435,6 +423,61 @@ impl<'input> Lexer<'input> {
                 None => return None, // End of file
             }
         }
+    }
+
+    /// Scans the rest of a bareword/glob/file literal in command mode, given that
+    /// the token's first character has already been consumed from `self.chars` at
+    /// byte offset `start` -- `end_idx` is that same offset, unless the first
+    /// character was itself the second half of a `\`-escape (see the two call
+    /// sites), in which case it's the escaped character's offset instead.
+    ///
+    /// Continues consuming ordinary bareword characters (`string_or_file_or_glob_char`)
+    /// and `\`-escape pairs -- a backslash followed by any other character at all,
+    /// consumed as an atomic, never-terminating unit the same way a quoted
+    /// string's own `\`-escapes are -- until a real terminator. This is what lets
+    /// `\ ` embed a literal space in an otherwise bare token instead of ending it
+    /// early, the same escape syntax (`\n`, `\xHH`, `\uHHHH`, `\UHHHHHHHH`, `\` +
+    /// anything else literally) `unescape`/`unescape_file` give a *quoted*
+    /// string/file -- actually decoding those escapes happens later, once this
+    /// raw, still-escaped text is turned into a value (`Node::compile`), exactly
+    /// like it already does for a quoted literal.
+    ///
+    /// Classifying the result as `Glob`/`File`/`String` still happens on this raw
+    /// text, via the same substring-contains rules used elsewhere in this lexer --
+    /// a literal `.`/`/`/`~`/`*`/`?` produced by escaping (e.g. `\~` not meaning
+    /// home-dir expansion) still makes the raw text *contain* that character, so
+    /// escaping a classifying character changes what it means once unescaped, but
+    /// not which token kind it's classified as here.
+    fn scan_string_or_file_or_glob(
+        &mut self,
+        start: usize,
+        mut end_idx: usize,
+    ) -> Option<Spanned<'input>> {
+        loop {
+            match self.chars.peek() {
+                Some((_, '\\')) => {
+                    self.chars.next();
+                    match self.chars.next() {
+                        Some((idx2, _)) => end_idx = idx2,
+                        None => return Some(Err(LexicalError::UnexpectedEOF)),
+                    }
+                }
+                Some((_, ch2)) if string_or_file_or_glob_char(*ch2) => {
+                    end_idx = self.chars.next().unwrap().0;
+                }
+                _ => break,
+            }
+        }
+
+        let s = &self.full_str[start..end_idx + 1];
+
+        Some(if s.contains('*') || s.contains('?') {
+            Token::Glob(s, Location::new(start, end_idx + 1)).into()
+        } else if s.contains('/') || s.contains('.') || s.starts_with('~') {
+            Token::File(s, Location::new(start, end_idx + 1)).into()
+        } else {
+            Token::String(s, Location::new(start, end_idx + 1)).into()
+        })
     }
 
     fn next_expr(&mut self) -> Option<Spanned<'input>> {

@@ -9,12 +9,11 @@ use crate::lang::command_invocation::CommandInvocation;
 use crate::lang::errors::{CrushResult, compile_error, error};
 use crate::lang::job::Job;
 use crate::lang::value::{Value, ValueDefinition};
-use crate::util::escape::{unescape, unescape_file};
+use crate::util::escape::{unescape, unescape_file, unescape_file_raw, unescape_raw};
 use crate::util::glob::Glob;
 use chrono::Duration as ChronoDuration;
 use regex::Regex;
 use std::ops::Deref;
-use std::path::PathBuf;
 
 #[derive(Clone, Debug, Copy)]
 pub enum TextLiteralStyle {
@@ -294,7 +293,10 @@ impl Node {
                 if is_command {
                     ValueDefinition::Identifier(ctx.source.subtrackedstring(f), false)
                 } else {
-                    ValueDefinition::Value(Value::from(f), ctx.source.subtrackedstring(f))
+                    ValueDefinition::Value(
+                        Value::from(unescape_raw(&f.string)?),
+                        ctx.source.subtrackedstring(f),
+                    )
                 }
             }
             Node::Integer(s) => ValueDefinition::Value(
@@ -345,13 +347,13 @@ impl Node {
                 }
             }
             Node::Glob(g) => ValueDefinition::Value(
-                Value::Glob(Glob::new(&g.string)),
+                Value::Glob(Glob::new(&unescape_raw(&g.string)?)),
                 ctx.source.subtrackedstring(g),
             ),
             Node::File(s, quote_style) => ValueDefinition::Value(
                 Value::from(match quote_style {
                     Quoted => unescape_file(&s.string)?,
-                    Unquoted => PathBuf::from(&expand_user(&s.string)?),
+                    Unquoted => unescape_file_raw(&expand_user(&s.string)?)?,
                 }),
                 ctx.source.subtrackedstring(s),
             ),

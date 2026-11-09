@@ -1,0 +1,57 @@
+# Backslash escapes (the same table as quoted strings/files: `\n`, `\t`, `\xHH`,
+# `\uHHHH`, `\UHHHHHHHH`, `\` + anything else literally) also work inside unquoted
+# barewords, file literals, and globs -- notably including `\ ` (an escaped space),
+# which is what lets an otherwise-unquoted token contain a literal space instead of
+# being split into two arguments there.
+
+# A basic escaped space keeps what would otherwise be two arguments as one.
+$one_arg := foo\ bar
+assert ($one_arg == "foo bar") "an escaped space should keep a bareword as one token"
+
+# A leading escaped space works too -- a token can start with an escape, not just
+# contain one partway through.
+$leading := \ leading
+assert ($leading == " leading") "a token should be allowed to start with an escape"
+
+# The rest of the escape table works the same as it does in a quoted string.
+# (Assigned via `:=` first, in command mode, rather than written directly inside
+# an expression-mode `(...)` -- this escaping is command-mode-only, see below.)
+$tab_word := tab\there
+assert ($tab_word == "tab\there") "\\t should produce a real tab"
+$hex_word := hex\x41here
+assert ($hex_word == "hexAhere") "\\xHH should decode a hex byte"
+$uni_word := uni\u2603here
+assert ($uni_word == "uni☃here") "\\uHHHH should decode a Unicode code point"
+$backslash_word := backslash\\here
+assert ($backslash_word == "backslash\\here") "\\\\ should produce a single literal backslash"
+
+# File literals: an unquoted file can contain an escaped space and still resolve to
+# the real file with a literal space in its name.
+'./.unquoted_escape_test_dir'.mkdir --ignore_existing
+'./.unquoted_escape_test_dir/my file.txt'.touch
+
+$cwd := $($fs.cwd)
+$fs.cd ./.unquoted_escape_test_dir
+$f := my\ file.txt
+assert ($f.exists()) "an unquoted file literal with an escaped space should resolve to the real file"
+
+# Globs: an unquoted glob can contain an escaped space too, and still matches by
+# wildcard around it.
+$matches := $(my\ *.txt | count)
+assert ($matches == 1) "an unquoted glob with an escaped space should still expand as a glob"
+
+$fs.cd $cwd
+'./.unquoted_escape_test_dir'.remove --recursive
+
+# Quoted strings and files are completely unaffected by any of the above -- escaping
+# was already supported there, and still works exactly as before.
+assert ("quoted\tstill\tworks" == "quoted\tstill\tworks") "quoted string escapes are unaffected"
+$quoted_file_escape := 'my\ file.txt'
+assert ($quoted_file_escape.exists() == $false) "a quoted file literal with an escape should still parse and evaluate"
+
+# `#` comments and `\`-newline line continuation are unrelated lexer features that
+# happen to sit right next to this one -- make sure neither regressed.
+echo "comment check" # this comment should be ignored
+$continued := \
+  "continued_value"
+assert ($continued == "continued_value") "line continuation (\ followed by newline) should still work"

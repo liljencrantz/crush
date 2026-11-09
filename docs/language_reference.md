@@ -63,7 +63,15 @@ strings, e.g. `user` or `hat`.
 #### Escape sequences
 
 Inside a quoted string (or a quoted file literal, see below), `\` starts an escape
-sequence:
+sequence. The exact same escapes also work inside an *unquoted* bareword, file
+literal, or glob (command mode only -- not inside expression mode's `(...)`),
+including `\ ` for a literal space: this is what lets an otherwise-unquoted token
+contain a space instead of being split into two:
+
+```shell script
+crush# echo foo\ bar
+foo bar
+```
 
 | Escape        | Meaning                                                              |
 |---------------|-----------------------------------------------------------------------|

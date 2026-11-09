@@ -45,12 +45,24 @@ enum State {
     Unicode4(String),
 }
 
+/// Unescapes a *quoted* string, e.g. `"\n"` (with the surrounding quotes still in
+/// `s`, which are stripped here before processing). See `unescape_raw` for the same
+/// escape rules applied to text with no quotes to strip, e.g. an unquoted bareword.
 pub fn unescape(s: &str) -> CrushResult<String> {
+    unescape_raw(&s[1..s.len() - 1])
+}
+
+/// Unescapes the same backslash escapes `unescape` does (`\n`, `\xHH`, `\uHHHH`,
+/// `\UHHHHHHHH`, `\` + any other character literally, ...), but over the whole of
+/// `s` -- no surrounding quotes are assumed or stripped. Used for text that was
+/// never quoted in the first place, e.g. an unquoted bareword/glob/file literal
+/// that contains a `\ ` (escaped space) or similar.
+pub fn unescape_raw(s: &str) -> CrushResult<String> {
     use State::*;
 
     let mut res = "".to_string();
     let mut state = Normal;
-    for c in s[1..s.len() - 1].chars() {
+    for c in s.chars() {
         match state {
             Backslash => {
                 state = Normal;
@@ -123,12 +135,24 @@ pub fn unescape(s: &str) -> CrushResult<String> {
     Ok(res)
 }
 
+/// Unescapes a *quoted* file literal, e.g. `'\n'` (with the surrounding quotes
+/// still in `s`, stripped here before processing). See `unescape_file_raw` for the
+/// same escape rules applied to text with no quotes to strip.
 pub fn unescape_file(s: &str) -> CrushResult<PathBuf> {
+    unescape_file_raw(&s[1..s.len() - 1])
+}
+
+/// Unescapes the same backslash escapes `unescape_file` does, but over the whole
+/// of `s` -- no surrounding quotes are assumed or stripped. Used for an unquoted
+/// file literal that contains a `\ ` (escaped space) or similar. Unlike
+/// `unescape_raw`, the result doesn't have to be valid UTF-8 (a file path doesn't
+/// either), so `\x`/`\u`/`\U` write raw bytes instead of going through `char`.
+pub fn unescape_file_raw(s: &str) -> CrushResult<PathBuf> {
     use State::*;
     let mut res = Vec::new();
     let mut state = Normal;
 
-    for c in s[1..s.len() - 1].chars() {
+    for c in s.chars() {
         match state {
             Backslash => {
                 state = Normal;

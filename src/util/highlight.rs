@@ -12,12 +12,11 @@ use crate::lang::serialization::model::Element;
 use crate::lang::state::contexts::{CommandContext as CrushCommandContext, EvalContext};
 use crate::lang::state::scope::Scope;
 use crate::lang::value::{Value, ValueType};
-use crate::util::escape::{unescape, unescape_file};
+use crate::util::escape::{unescape, unescape_file, unescape_file_raw};
 use crate::util::html_escape;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::path::PathBuf;
 use std::sync::Arc;
 
 enum CommandContext {
@@ -883,7 +882,9 @@ fn get_category(
                 let path = if matches!(token, QuotedFile(_, _)) {
                     unescape_file(name).ok()
                 } else {
-                    expand_user(name).ok().map(PathBuf::from)
+                    expand_user(name)
+                        .ok()
+                        .and_then(|s| unescape_file_raw(&s).ok())
                 };
                 match path {
                     Some(p) if is_runnable_as_command(&p) => Some("file_literal"),
