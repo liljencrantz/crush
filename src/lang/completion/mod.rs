@@ -788,6 +788,36 @@ mod tests {
         assert_eq!(&completions[0].complete(line), "$namespace.my_cmd ");
     }
 
+    /// A variable completed as an argument to a real builtin with an unnamed
+    /// `Vec<Value>` parameter (e.g. `echo`) must not be filtered out just because
+    /// its own type isn't a list. `echo`'s `values: Vec<Value>` collects zero or
+    /// more *separate* positional arguments, each individually of type `Value`
+    /// (i.e. `Any`) -- `echo 1 "a" $true` passes three unrelated arguments, not one
+    /// list -- but the signature macro's `value_type` (used only for completion/
+    /// help, see `signature/src/signature.rs`'s `vec_type_data`) used to say
+    /// `List(Any)` for this case regardless of named vs. unnamed, which made
+    /// `is_or_has_type` reject any candidate -- like a plain integer variable --
+    /// that wasn't itself a list. This uses the real root scope with real builtins
+    /// declared, not the minimal `scope_with_function()` scope the other tests in
+    /// this module use, specifically so `echo`'s real, macro-generated signature is
+    /// what gets exercised.
+    #[test]
+    fn test_that_a_non_list_variable_completes_as_an_unnamed_vec_argument() {
+        let root = crate::lang::state::scope::Scope::create_root();
+        crate::builtins::declare(&root).unwrap();
+        let s = root.create_child(&root, crate::lang::state::scope::ScopeType::Namespace);
+        s.declare("foo", Value::Integer(5)).unwrap();
+        let line = "echo $f";
+        let cursor = line.len();
+
+        let completions = complete(line, cursor, &s, &parser(), &empty_lister()).unwrap();
+        assert!(
+            completions.iter().any(|c| c.display() == "foo"),
+            "expected a completion for the integer variable `foo`, got: {:?}",
+            completions.iter().map(|c| c.display()).collect::<Vec<_>>()
+        );
+    }
+
     #[test]
     fn test_that_empty_attribute_component_can_be_completed() {
         let line = "$namespace.";

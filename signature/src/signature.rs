@@ -452,7 +452,20 @@ impl Signature {
         Ok(TypeData {
             bullet_name: None,
             allowed_values: None,
-            crush_internal_type: quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))},
+            // An unnamed `Vec<T>` collects zero or more *separate*, individually-typed
+            // positional arguments (e.g. `echo`'s `values: Vec<Value>` -- `echo 1 "a"
+            // $true` passes three arguments, each checked against `T` on its own, not
+            // one `List(T)` argument) -- so this is the one case `value_type` (used
+            // only for completion/help, never for the real per-argument type checks
+            // in `mappings`/`unnamed_mutate` above, which already match against `T`
+            // directly) must say `T`, not `List(T)`, or completion filters out any
+            // candidate that isn't itself a list. A *named* `Vec<T>` (`foo=[1, 2, 3]`)
+            // takes the list as a single value, so `List(T)` is correct there.
+            crush_internal_type: if self.is_unnamed_target {
+                quote! { #sub_type }
+            } else {
+                quote! {crate::lang::value::ValueType::List(Box::from(#sub_type))}
+            },
             signature: format!(
                 "[{}={}...]",
                 self.name_str(),
