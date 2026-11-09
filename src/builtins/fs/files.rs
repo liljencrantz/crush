@@ -242,7 +242,7 @@ fn run_for_single_directory_or_file(
 
 #[signature(
     fs.files,
-    short = "Show information about files and directories",
+    short = "Show information about files and directories.",
     long = "If given no arguments, list the contents to the current working directory.",
     long = "If given any unnamed arguments, those will be the files and directories to list.",
     long = "",

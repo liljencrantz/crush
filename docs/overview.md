@@ -147,20 +147,33 @@ Hello!
 
 A block with a declared parameter list is a closure, with optional typed and/or
 defaulted parameters. See [Blocks and closures](language_reference.md#blocks-and-closures)
-for closures, early return, and the `@`/`@@` spread operators.
+for closures, early return via the `return` command, and the `@`/`@@` spread operators:
+
+```shell script
+crush# $nickname := {
+  | 
+    short_help="A simple command that returns a nickname for a given name"
+    $real_name: $string
+  |
+  match $real_name {
+    # Nancey is short for Ann.
+    case Ann {val Nancy}
+    # Polly is short for Mary.
+    case Mary {val Polly}
+    # Every name ending with a y is nicknamed Baloney. Common knowledge.
+    is *y {val Baloney}
+    # Everyone else is named Sport. That's just how it is.
+    default {val Sport}
+  }
+}
+```
 
 ## Namespaces and methods
 
-Crush relies on namespaces to organize commands and avoid clashes, and uses `:` (not
-`.`, which is too common in file names) for both namespace and member access:
-
-```shell script
-crush# help $sort
-$stream.sort [field=string...] [--reverse] [--case_insensitive]
-
-    Sort input stream based on one or more of it's columns
-    ...
-```
+Crush relies on namespaces to organize commands and avoid clashes, and uses `.` 
+for namespace/member access. The `sort` command is located in the `stream`
+namespace, so the full path to it is `$stream.sort`, but because the `stream` namespace
+is imported by default, you can simply write `$sort`. 
 
 ## Streams: lazy and materialized
 

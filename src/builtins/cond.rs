@@ -99,7 +99,7 @@ pub fn declare(root: &Scope) -> CrushResult<()> {
                         and,
                         vec!["cond".to_string(), "and".to_string()],
                         "and condition:(bool|command)... -> boolean",
-                        "True if all arguments are true",
+                        "`$true` if all arguments are true.",
                         Some("Every argument to and must be either a boolean or a command that returns a boolean.
 The and command will check all arguments in order, and if any of them are false, and
 will return false. If all conditions are true, and returns true.
@@ -128,7 +128,7 @@ and $($file.exists) {$(stat $file)[0].is_symlink}
                         or,
                         vec!["cond".to_string(), "or".to_string()],
                         "or condition:(bool|command)... -> boolean",
-                        "True if any argument is true",
+                        "`$true` if any argument is true.",
                         Some("Every argument to or must be either a `boolean` or a command that returns a `boolean`.
 The or command will check all arguments in order, and if any of them are `true`, or
 will return `true`. If all conditions are `false`, or returns `false`.

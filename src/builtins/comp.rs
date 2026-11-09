@@ -29,7 +29,7 @@ macro_rules! cmp {
 #[signature(
     comp.gt,
     can_block = false,
-    short = "True if left side is greater than right side",
+    short = "`$true` if left side is greater than right side.",
     long = "In expression mode, this method can be used via the the `>` operator.",
     example = "gt 10 5",
     example = "(10 > 5)",
@@ -45,7 +45,7 @@ struct Gt {
 #[signature(
     comp.lt,
     can_block = false,
-    short = "True if left side is less than right side",
+    short = "`$true` if left side is less than right side.",
     long = "In expression mode, this method can be used via the the `<` operator.",
     example = "lt 10 5",
     example = "(10 < 5)",
@@ -61,7 +61,7 @@ struct Lt {
 #[signature(
     comp.gte,
     can_block = false,
-    short = "True if left side is greater than or equal right side",
+    short = "`$true` if left side is greater than or equal right side.",
     long = "In expression mode, this method can be used via the the `>=` operator.",
     example = "gte 10 5",
     example = "(10 >= 5)",
@@ -77,7 +77,7 @@ struct Gte {
 #[signature(
     comp.lte,
     can_block = false,
-    short = "True if left side is less than or equal than right side",
+    short = "`$true` if left side is less than or equal than right side.",
     long = "In expression mode, this method can be used via the the `<=` operator.",
     example = "lte 10 5",
     example = "(10 <= 5)",
@@ -98,7 +98,7 @@ cmp!(Lte, lte, |o| o != Ordering::Greater);
 #[signature(
     comp.eq,
     can_block = false,
-    short = "True if left side is equal to right side",
+    short = "`$true` if left side is equal to right side.",
     long = "In expression mode, this method can be used via the the `==` operator.",
     example = "eq 10 5",
     example = "(10 == 5)",
@@ -119,7 +119,7 @@ pub fn eq(mut context: CommandContext) -> CrushResult<()> {
 #[signature(
     comp.neq,
     can_block = false,
-    short = "True if left side is not equal to right side",
+    short = "`$true` if left side is not equal to right side.",
     long = "In expression mode, this method can be used via the the `!=` operator.",
     example = "ne 10 5",
     example = "(10 != 5)",

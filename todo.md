@@ -18,10 +18,8 @@
 * $binary_stream:pipe
 * Namespace completions are sometimes wonky
 * Namespace highlighting is sometimes wonky
-* syntax highlighting does not understand using types as commands
 * syntax highlighting does not understand closure signatures
 * syntax highlighting does not understand closure parameters
 * Regular file completion of strings
 * Reserve `$global`. Possibly also `$true`, `$false` and a few more?
-* Drop chmod/chown/touch and more emthods from file. Make commands where appropriate.
-* 
+* Drop chmod/chown/touch and more methods from file. Make commands where appropriate.
