@@ -1,0 +1,22 @@
+# Tab completion erroring internally (e.g. completing right after the `.` in
+# `$totally_undefined.`, when `$totally_undefined` isn't bound to anything --
+# the completion engine fails to resolve it with an "Unknown value" error, see
+# fetch_value/parse.rs) must not discard the line being edited. It used to: the
+# rustyline Completer's error path returned `ReadlineError::Interrupted`, which
+# the outer interactive loop treats exactly like Ctrl-C -- printing "^C" and
+# starting a fresh, empty prompt, discarding whatever had been typed so far.
+#
+# The rest of the line typed after the tab keystroke (`exists`) only ends up part
+# of the same submitted command -- producing a distinctive "Unknown variable"
+# error, since `$totally_undefined` itself was never declared -- if the line
+# genuinely survived the tab intact. If it had been cleared instead, `exists`
+# would be submitted as its own fresh, unrelated command (and fail a different
+# way: an external/builtin command lookup, not a variable lookup).
+source tests/pty_test_helpers.crush
+$t := $(pty_spawn)
+$n := $(pty_enable_counted_prompt $t)
+
+$n = $(pty_run $t $n "$totally_undefined.\texists")
+$t.wait_for "Unknown variable"
+
+$t.close

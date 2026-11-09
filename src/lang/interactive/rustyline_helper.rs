@@ -71,13 +71,17 @@ impl Completer for RustylineHelper {
         pos: usize,
         ctx: &Context<'_>,
     ) -> Result<(usize, Vec<Pair>), ReadlineError> {
-        match self.complete_internal(line, pos, ctx) {
-            Ok(res) => Ok(res),
-            Err(err) => {
-                println!("Error! {}", err.message());
-                Err(ReadlineError::Interrupted)
-            }
-        }
+        // A completion failure (e.g. `$foo.` completed while `$foo` isn't bound to
+        // anything yet -- an "Unknown value" error from the completion engine, not
+        // anything wrong with the line itself) is routine while the user is still
+        // typing, not a reason to disturb what they've typed. `ReadlineError` has no
+        // "ignore and keep editing" variant of its own, only ones rustyline's outer
+        // edit loop treats as ending the line (e.g. `Interrupted`, handled the same
+        // as Ctrl-C -- discarding the in-progress line and starting a fresh prompt,
+        // which is what used to happen here). Reporting no completions at all, the
+        // same way a line that simply has nothing to complete does, is the only
+        // option that leaves the line alone.
+        Ok(self.complete_internal(line, pos, ctx).unwrap_or((pos, vec![])))
     }
 }
 
